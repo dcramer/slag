@@ -4,6 +4,7 @@ import { harvester, liveFence, REEL_REACH } from '../stage/farm';
 import { cannons, pendulums, vehicles, wheels } from './builders';
 import { defineSetPiece } from './contract';
 import { best, makeStyle, type Piece, type Recipe, type Run, SAFE_TILES, type Site } from './place';
+import { DOWN } from '../../core/geom';
 
 /**
  * Farm: a tractor ploughing a field, a windmill with rideable sails, a swinging hay bale on a hoist and a
@@ -14,7 +15,6 @@ import { best, makeStyle, type Piece, type Recipe, type Run, SAFE_TILES, type Si
  * level, and everything that hangs hangs from a post that stands on the ground (docs/SETPIECES.md).
  */
 
-const DOWN = Math.PI / 2;
 const pick = (rng: Rng, a: readonly string[]) => rng.pick(a);
 
 /** A live fence across a path: two posts a few columns apart on a ground run, the wire at knee height. */

@@ -9,7 +9,7 @@ import { bulb, glowDot, light, type RC } from '../../kit';
 import { beamOf, type DrawCtx } from '../common';
 import { letterPts } from '../modules/neon';
 import { SHELLS } from '../modules/deco-shells';
-import type { Deco, DecoSkin, PieceSkin, ThemeSkins } from './common';
+import { boxOf, type Deco, type DecoSkin, flat, type Haze, hazer, type HazeSpec, type PieceSkin, type ThemeSkins } from './common';
 
 /**
  * Rooftops skins (docs/SETPIECES.md, Rooftops): the backdrop shells of the city's stage concepts, drawn as
@@ -32,13 +32,7 @@ import type { Deco, DecoSkin, PieceSkin, ThemeSkins } from './common';
  */
 
 const HAZE = 0.3;
-function hz(d: DrawCtx, haze = HAZE) {
-  const fog = d.o.level?.theme.fog;
-  const k = fog ? `${fog.h | 0},${fog.l | 0},${haze}` : '-';
-  const hsl = (c: HSL): HSL => (fog ? { h: c.h, s: c.s * (1 - haze), l: c.l + (fog.l - c.l) * haze } : c);
-  return { k, hsl, c: (b: HSL, dl = 0, a = 1) => css(hsl(b), dl, a), ink: (b: HSL) => css({ h: b.h, s: b.s * 0.5, l: Math.max(4, hsl(b).l * 0.3) }) };
-}
-type Hz = ReturnType<typeof hz>;
+const SHELL: HazeSpec = { haze: HAZE, pen: { dark: 0.3, floor: 4 }, depth: 0.8 };
 
 const OXIDE: HSL = { h: 10, s: 44, l: 36 };
 /** The site's red-oxide primer, a shade lighter than the decks so the frame behind them still reads. */
@@ -55,12 +49,12 @@ const LAMP: HSL = { h: 44, s: 90, l: 68 };
 const CONCRETE: HSL = { h: 30, s: 5, l: 50 };
 
 /** A member drawn with the backdrop pen: its hazed tone in a thin rim of its own dark, a lit flange on a heavy one. */
-function member(g: CanvasRenderingContext2D, ax: number, ay: number, bx: number, by: number, w: number, base: HSL, t: Hz, seed: number) {
+function member(g: CanvasRenderingContext2D, ax: number, ay: number, bx: number, by: number, w: number, base: HSL, t: Haze, seed: number) {
   barLine(g, ax, ay, bx, by, w, t.hsl(base), seed, { ink: t.ink(base), rim: 0.3, press: 0.05, lit: w > 1.5 ? 12 : 0 });
 }
 
 /** An open lattice between two points: two chords and a zigzag of web. */
-function truss(g: CanvasRenderingContext2D, ax: number, ay: number, bx: number, by: number, width: number, base: HSL, t: Hz, seed: number) {
+function truss(g: CanvasRenderingContext2D, ax: number, ay: number, bx: number, by: number, width: number, base: HSL, t: Haze, seed: number) {
   const len = Math.hypot(bx - ax, by - ay) || 1;
   const nx = (-(by - ay) / len) * (width / 2);
   const ny = ((bx - ax) / len) * (width / 2);
@@ -73,15 +67,6 @@ function truss(g: CanvasRenderingContext2D, ax: number, ay: number, bx: number, 
   }
   for (const k of [-1, 1]) member(g, ax + nx * k, ay + ny * k, bx + nx * k, by + ny * k, 1.2, base, t, seed + 50 + k);
 }
-
-/** A flat shape in a hazed tone, penned thin. */
-function flat(g: CanvasRenderingContext2D, pts: readonly P[], base: HSL, t: Hz, seed: number, depth = 0.8) {
-  tone(g, pts, t.hsl(base), { depth });
-  pen(g, pts, seed, 0.3, 0.8, 3, t.ink(base));
-}
-
-/** Rows and columns of a shell's box, in tiles. */
-const boxOf = (m: Deco) => ({ x: Math.round(m.at[0] / TILE), y: Math.round(m.at[1] / TILE), w: Math.round(m.w / TILE), h: Math.round(m.h / TILE) });
 
 /** The roof row under column x: the first solid tile at or below `from`. */
 function roofRow(lv: Level, x: number, from: number): number {
@@ -118,7 +103,7 @@ function girders(rc: RC, m: Deco, d: DrawCtx) {
   const lv = d.o.level;
   if (!lv) return SHELLS.facade?.(rc, m, d);
   // The steel stands nearer than the city behind it: hazed less, so the frame reads at night.
-  const t = hz(d, 0.16);
+  const t = hazer(d, { ...SHELL, haze: 0.16 });
   const b = boxOf(m);
   const decks = decksOf(lv, b);
   if (!decks.length) return;
@@ -252,7 +237,7 @@ function pip(g: CanvasRenderingContext2D, x: number, y: number, r: number, col: 
 function billboardBack(rc: RC, m: Deco, d: DrawCtx) {
   const lv = d.o.level;
   if (!lv) return SHELLS.billboard?.(rc, m, d);
-  const t = hz(d);
+  const t = hazer(d, SHELL);
   const b = boxOf(m);
   // The board's bottom row: the lowest solid row in the box's middle column.
   const mx = b.x + Math.floor(b.w / 2);
@@ -447,7 +432,7 @@ function tanksOf(lv: Level, b: ReturnType<typeof boxOf>, G: number): { x0: numbe
 function towersBack(rc: RC, m: Deco, d: DrawCtx) {
   const lv = d.o.level;
   if (!lv) return SHELLS.facade?.(rc, m, d);
-  const t = hz(d);
+  const t = hazer(d, SHELL);
   const b = boxOf(m);
   const G = b.y + b.h;
   const tanks = tanksOf(lv, b, G);
@@ -650,7 +635,7 @@ function towerOf(lv: Level, b: ReturnType<typeof boxOf>): { x0: number; x1: numb
 }
 
 /** The belfry frame on the tower's top: two posts, a beam the bell hangs from, a pitched roof and a weathervane, hazed back. */
-function belfry(m: Deco, t: Hz) {
+function belfry(m: Deco, t: Haze) {
   return sprite(`roof|belfry|${m.w}|${m.h}|${m.seed}|${t.k}`, -6, -TILE * 2, m.w + 12, m.h + TILE * 2, (g) => {
     const w = m.w;
     const h = m.h;
@@ -682,7 +667,7 @@ function belfry(m: Deco, t: Hz) {
 
 /** The clockwork in the arch's dark: big toothed wheels turning slowly behind the pendulum. */
 function clockwork(rc: RC, m: Deco, d: DrawCtx) {
-  const t = hz(d);
+  const t = hazer(d, SHELL);
   const x = m.at[0] + d.off[0];
   const y = m.at[1] + d.off[1];
   const s = rc.s;
@@ -832,7 +817,7 @@ function bell(rc: RC, m: ModuleOf<'swinger'>, d: DrawCtx) {
 function elBack(rc: RC, m: Deco, d: DrawCtx) {
   const lv = d.o.level;
   if (!lv) return SHELLS.facade?.(rc, m, d);
-  const t = hz(d);
+  const t = hazer(d, SHELL);
   const b = boxOf(m);
   const G = b.y + b.h;
   // The deck: the solid row in the box with the street open under it.
@@ -948,7 +933,7 @@ function train(rc: RC, m: ModuleOf<'vehicle'>, d: DrawCtx) {
 
 const facade: DecoSkin = (rc, m, d) => {
   const concept = d.o.level?.landmark?.concept;
-  const t = hz(d);
+  const t = hazer(d, SHELL);
   if (concept === 'girder-works') girders(rc, m, d);
   else if (concept === 'neon-billboard') billboardBack(rc, m, d);
   else if (concept === 'water-towers') towersBack(rc, m, d);
@@ -965,7 +950,7 @@ const facade: DecoSkin = (rc, m, d) => {
  * stair's stringers) fixed to something, not slats hung in the air. Rungs are two-wide one-way rows; one
  * alone (low gravity's tall step) gets its rails too.
  */
-function rails(rc: RC, m: Deco, d: DrawCtx, t: Hz) {
+function rails(rc: RC, m: Deco, d: DrawCtx, t: Haze) {
   const lv = d.o.level;
   if (!lv) return;
   const b = boxOf(m);

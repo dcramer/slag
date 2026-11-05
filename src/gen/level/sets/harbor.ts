@@ -1,5 +1,6 @@
 import type { Rng } from '../../../core/rng';
-import { FAR_ROOM, NEAR_QUAY, berthMax } from '../../stage/harbor-kit';
+import { FAR_ROOM, NEAR_QUAY } from '../../stage/harbor-kit';
+import { oneGap } from '../../stage/kit';
 import { finish, Grid, hintGap } from '../kit';
 import { jumpProfile } from '../probe';
 import type { SculptCtx, Shape } from '../types';
@@ -104,7 +105,7 @@ function harborStage(ctx: SculptCtx, kn: Knobs): Shape {
   const extra = challenges > 1;
   const hardW = extra ? hardGap(rng) : 0;
   // Room past the landmark for a mooring and the second crossing, when it asks for one and there's room.
-  const wideRoom = W - (2 + 7 + berthMax() + 6) - w;
+  const wideRoom = W - (2 + 7 + oneGap() + 6) - w;
   const hi = extra && wideRoom >= NEAR_QUAY ? wideRoom : W - FAR_ROOM - w;
   if (hi < NEAR_QUAY) return finish(g, { row: G - 1 }, { row: G - 1 }, 'harbor:unclaimed');
   const x = rng.int(NEAR_QUAY, hi);

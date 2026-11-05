@@ -1,33 +1,15 @@
-import type { Vec } from '../../core/geom';
+import { DOWN, type Vec } from '../../core/geom';
 import type { Rng } from '../../core/rng';
 import type { LevelProfile, TileRect } from '../../sim/level';
 import type { Module } from '../../sim/props';
 import type { Grid } from '../level/kit';
 import { hopGap, type Knobs } from '../level/sculptors/common';
 import type { Piece, Site } from '../setpieces/place';
-import {
-  boxH,
-  classicRoom,
-  DOOR,
-  DOWN,
-  digMoat,
-  footing,
-  GILT,
-  IRON,
-  ledges,
-  listOf,
-  merlons,
-  moatMax,
-  passage,
-  record,
-  shell,
-  SITE_MARGIN,
-  structureOf,
-  ways,
-} from './castle-kit';
+import { classicRoom, digMoat, footing, GILT, IRON, merlons, structureOf } from './castle-kit';
 import { defineConcept } from './contract';
 import { capFlood } from './flood';
 import type { Landmark } from './types';
+import { boxH, DOOR, ledges, listOf, oneGap, passage, record, shell, SITE_MARGIN, ways } from './kit';
 
 /**
  * Three more castle places (docs/SETPIECES.md, Castle), each laid out afresh from its seed, each owning the
@@ -52,7 +34,7 @@ const roomFor = (p: Partial<LevelProfile>, min: number) => min <= classicRoom(p.
 
 /** Columns of structure: at least `min`, a few more by the seed, a lot more on a wide level, never more than the middle leaves. */
 function structCols(k: Knobs, rng: Rng, min: number, wide: readonly [number, number]): number {
-  const room = k.W - 2 * SITE_MARGIN - moatMax() - 1;
+  const room = k.W - 2 * SITE_MARGIN - oneGap() - 1;
   return Math.max(min, Math.min(room, k.W > 56 ? rng.int(wide[0], wide[1]) : min + rng.int(0, 4)));
 }
 
@@ -184,7 +166,7 @@ export const GATEHOUSE = defineConcept({
     about:
       'Two towers and a gate, a portcullis waiting for whoever stops under it and fire from the murder holes. Through the passage, or up the tower and along the wall-walk.',
   },
-  box: (k, rng) => ({ w: moatMax() + 1 + structCols(k, rng, GATE_MIN, [16, 22]), h: boxH(k.H, DOOR + 3 + 4 + 2) }),
+  box: (k, rng) => ({ w: oneGap() + 1 + structCols(k, rng, GATE_MIN, [16, 22]), h: boxH(k.H, DOOR + 3 + 4 + 2) }),
   build: buildGatehouse,
   pieces: (rng, s, l) => gatehousePieces(rng, s, l),
 });
@@ -333,7 +315,7 @@ export const BELL_TOWER = defineConcept({
     about:
       'A chapel and its belfry. Through the arch and down the nave under a chandelier hung to drop, or up the tower, past the swinging bell and over the gable.',
   },
-  box: (k, rng) => ({ w: moatMax() + 1 + structCols(k, rng, BELL_MIN, [16, 22]), h: boxH(k.H, 20) }),
+  box: (k, rng) => ({ w: oneGap() + 1 + structCols(k, rng, BELL_MIN, [16, 22]), h: boxH(k.H, 20) }),
   build: buildBellTower,
   pieces: (rng, s, l) => bellTowerPieces(rng, s, l),
 });
@@ -494,7 +476,7 @@ function* bossBridgePieces(rng: Rng, s: Site, l: Landmark): Generator<Piece> {
 }
 
 /** The bridge's gaps, as tiles: [x, width] each (tests). */
-export const bridgeGaps = (l: Landmark): Vec[] => listOf(l.anchors, 'gap');
+export const bridgeGaps = (l: Landmark): Vec[] => listOf(l, 'gap');
 
 export const BOSS_BRIDGE = defineConcept({
   id: 'boss-bridge',
@@ -511,7 +493,7 @@ export const BOSS_BRIDGE = defineConcept({
     about:
       'Two keeps over a trench of lava, firebars turning over the bridge between them. Across the bridge while the lava breathes, or up and over the walkway. The lever does nothing.',
   },
-  box: (k, rng) => ({ w: moatMax() + 1 + structCols(k, rng, BRIDGE_MIN, [18, 24]), h: boxH(k.H, 8 + 2 + 3) }),
+  box: (k, rng) => ({ w: oneGap() + 1 + structCols(k, rng, BRIDGE_MIN, [18, 24]), h: boxH(k.H, 8 + 2 + 3) }),
   build: buildBossBridge,
   pieces: (rng, s, l) => bossBridgePieces(rng, s, l),
 });

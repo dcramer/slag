@@ -10,7 +10,7 @@ import { bulb, circle, glowDot, light, type RC } from '../../kit';
 import type { DrawCtx } from '../common';
 import { SHELLS } from '../modules/deco-shells';
 import { rope } from '../modules/setpiece';
-import type { Cannon, CannonPose, Deco, DecoSkin, PieceSkin, RotorSkin } from './common';
+import { boxOf, type Cannon, type CannonPose, type Deco, type DecoSkin, flat, type Haze, hazer, type HazeSpec, type PieceSkin, type RotorSkin } from './common';
 
 /**
  * Space's stage concepts (gen/stage/space.ts), drawn: the backdrop shell behind each landmark (the deco
@@ -33,13 +33,7 @@ import type { Cannon, CannonPose, Deco, DecoSkin, PieceSkin, RotorSkin } from '.
  */
 
 const HAZE = 0.32;
-function hz(d: DrawCtx) {
-  const fog = d.o.level?.theme.fog;
-  const k = fog ? `${fog.h | 0},${fog.l | 0}` : '-';
-  const hsl = (c: HSL): HSL => (fog ? { h: c.h, s: c.s * (1 - HAZE), l: c.l + (fog.l - c.l) * HAZE } : c);
-  return { k, hsl, c: (b: HSL, dl = 0, a = 1) => css(hsl(b), dl, a), ink: (b: HSL) => css({ h: b.h, s: b.s * 0.5, l: Math.max(4, hsl(b).l * 0.3) }) };
-}
-type Hz = ReturnType<typeof hz>;
+const SHELL: HazeSpec = { haze: HAZE, pen: { dark: 0.3, floor: 4 }, depth: 0.8 };
 
 const HULL: HSL = { h: 212, s: 10, l: 70 };
 const PANEL: HSL = { h: 214, s: 12, l: 46 };
@@ -52,12 +46,10 @@ const MAGMA: HSL = { h: 20, s: 100, l: 55 };
 const MOON: HSL = { h: 40, s: 6, l: 64 };
 const WHITE: HSL = { h: 210, s: 8, l: 90 };
 
-/** The shell's box in tiles. */
-const boxOf = (m: Deco) => ({ x: Math.round(m.at[0] / TILE), y: Math.round(m.at[1] / TILE), w: Math.round(m.w / TILE), h: Math.round(m.h / TILE) });
 const solid = (lv: Level, x: number, y: number) => tileAt(lv, x, y) === T_SOLID;
 
 /** A member drawn with the backdrop pen: its hazed tone in a thin rim of its own dark. */
-function member(g: CanvasRenderingContext2D, ax: number, ay: number, bx: number, by: number, w: number, base: HSL, t: Hz, seed: number) {
+function member(g: CanvasRenderingContext2D, ax: number, ay: number, bx: number, by: number, w: number, base: HSL, t: Haze, seed: number) {
   barLine(g, ax, ay, bx, by, w, t.hsl(base), seed, { ink: t.ink(base), rim: 0.3, press: 0.05 });
 }
 
@@ -94,7 +86,7 @@ function round(pts: readonly P[], n = 2): P[] {
 }
 
 /** A vertical lattice mast: two chords and a zigzag of web. */
-function mast(g: CanvasRenderingContext2D, x: number, y0: number, y1: number, w: number, base: HSL, t: Hz, seed: number) {
+function mast(g: CanvasRenderingContext2D, x: number, y0: number, y1: number, w: number, base: HSL, t: Haze, seed: number) {
   for (const ox of [-w / 2, w / 2]) member(g, x + ox, y0, x + ox, y1, 1.3, base, t, seed + ox);
   let flip = false;
   for (let y = y1; y > y0 + 0.5; y -= w * 1.1) {
@@ -109,12 +101,6 @@ function mast(g: CanvasRenderingContext2D, x: number, y0: number, y1: number, w:
 function cut(g: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, seed: number, r = 0.6) {
   path(g, boxPts(x, y, w, h, Math.min(r, w / 2, h / 2), seed, 0.15));
   g.fill();
-}
-
-/** A flat shape in a hazed tone, penned thin. */
-function flat(g: CanvasRenderingContext2D, pts: readonly P[], base: HSL, t: Hz, seed: number, depth = 0.8) {
-  tone(g, pts, t.hsl(base), { depth });
-  pen(g, pts, seed, 0.3, 0.8, 3, t.ink(base));
 }
 
 /** Blinking nav light, red or green: a flat bulb, on half the time. */
@@ -166,7 +152,7 @@ function shipPlan(lv: Level, b: ReturnType<typeof boxOf>) {
   return { D, h0, h1, roof, i0, i1, itop };
 }
 
-function shipBack(m: Deco, lv: Level, t: Hz) {
+function shipBack(m: Deco, lv: Level, t: Haze) {
   const b = boxOf(m);
   const p = shipPlan(lv, b);
   return sprite(`space|ship|${b.x},${b.y},${b.w},${b.h}|${m.seed}|${t.k}|${p.h0},${p.h1},${p.i0},${p.roof}`, -TILE, 0, m.w + TILE * 3, m.h + TILE, (g) => {
@@ -269,7 +255,7 @@ function shipLive(rc: RC, m: Deco, d: DrawCtx) {
   nav(rc, p.h0 * TILE + 1, p.roof * TILE - 1, { h: 2, s: 100, l: 55 }, 0);
   nav(rc, (p.h1 + 1) * TILE - 2, p.roof * TILE + 1, { h: 130, s: 90, l: 48 }, 0.5);
   if (p.i0 >= 0) {
-    const t = hz(d);
+    const t = hazer(d, SHELL);
     const x = ((p.i0 + p.i1 + 1) / 2) * TILE - 4;
     const y = p.itop * TILE - TILE * 3.2 - 2;
     const w = 6 * Math.abs(Math.cos(rc.t * 1.2 + m.seed));
@@ -306,7 +292,7 @@ function shipLivery(rc: RC, m: Deco, d: DrawCtx) {
 
 // ------------------------------------------------------------------------------------------------ ring station
 
-function ringBack(m: Deco, t: Hz) {
+function ringBack(m: Deco, t: Haze) {
   const b = boxOf(m);
   const Ro = (b.w - 5) / 2;
   const Ri = Ro - 2;
@@ -388,7 +374,7 @@ function ringLive(rc: RC, m: Deco) {
 
 // ------------------------------------------------------------------------------------------------ planetoid
 
-function planetBack(m: Deco, lv: Level, t: Hz) {
+function planetBack(m: Deco, lv: Level, t: Haze) {
   const b = boxOf(m);
   const Rm = (b.w - 3) / 2;
   const Rp = Rm - 3;
@@ -476,7 +462,7 @@ function gantryPlan(lv: Level, b: ReturnType<typeof boxOf>) {
   return { rt, D, rx0, rx1: rx0 + 2, s0: b.x, shaft };
 }
 
-function gantryBack(m: Deco, lv: Level, t: Hz) {
+function gantryBack(m: Deco, lv: Level, t: Haze) {
   const b = boxOf(m);
   const p = gantryPlan(lv, b);
   return sprite(`space|gantry|${b.x},${b.y},${b.w},${b.h}|${m.seed}|${t.k}|${p.rx0}|${p.shaft}`, 0, 0, m.w, m.h, (g) => {
@@ -625,7 +611,7 @@ function rigPlan(lv: Level, b: ReturnType<typeof boxOf>) {
   return { surf, D, dx, c0: b.x + 2, s1: b.x + b.w - 1 };
 }
 
-function rigBack(m: Deco, lv: Level, t: Hz) {
+function rigBack(m: Deco, lv: Level, t: Haze) {
   const b = boxOf(m);
   const p = rigPlan(lv, b);
   return sprite(`space|rig|${b.x},${b.y},${b.w},${b.h}|${m.seed}|${t.k}|${p.dx}`, 0, 0, m.w, m.h, (g) => {
@@ -707,7 +693,7 @@ function rigLive(rc: RC, m: Deco, d: DrawCtx) {
 export const spaceFacade: DecoSkin = (rc, m, d) => {
   const lv = d.o.level;
   const concept = lv?.landmark?.concept;
-  const t = hz(d);
+  const t = hazer(d, SHELL);
   const x = m.at[0] + d.off[0];
   const y = m.at[1] + d.off[1];
   if (!lv) return SHELLS.facade?.(rc, m, d);

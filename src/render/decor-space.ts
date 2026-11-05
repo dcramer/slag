@@ -3,6 +3,7 @@ import type { DecorDef } from './decor';
 import { blob, inkFor, type P, stroke } from './ink';
 import { boxPts, glint, ovalPts, part, path, poly, tick } from './ink-props';
 import { bulb, light } from './kit';
+import { bits01, low16 } from './decor-kit';
 
 /**
  * Space's decor, small and cosmetic like all decor: on a station, cargo pods, a solar panel on its stand,
@@ -11,9 +12,6 @@ import { bulb, light } from './kit';
  * (`inkFor`), every surface two flat hand-cut tones. A lamp's lens is a flat bulb, never a halo; the wrench
  * hangs a hair above the ground in the low gravity and turns, slowly.
  */
-
-const k01 = (seed: number, n: number) => ((seed >>> n) % 1000) / 1000;
-const sd = (seed: number) => seed & 0xffff;
 
 const STEEL: HSL = hsl3(212, 8, 62);
 const DARK: HSL = hsl3(220, 14, 26);
@@ -63,8 +61,8 @@ export const SPACE_DECOR = {
         for (const bx of [cx - w / 2 + 2.6, cx + w / 2 - 2.6]) mark(s, bx, cy - 3, bx, cy + 3, d.color, seed + bx, 0.7);
         tick(s, cx - 1.5, cy - 0.6, cx + 1.5, cy - 0.6, 0.45, seed + 1, css(WHITE, -8));
       };
-      pod(d.x, d.y - 3.6, 12, sd(d.seed));
-      if (k01(d.seed, 2) < 0.4) pod(d.x + f * 2, d.y - 10.8, 10, sd(d.seed) + 3);
+      pod(d.x, d.y - 3.6, 12, low16(d.seed));
+      if (bits01(d.seed, 2) < 0.4) pod(d.x + f * 2, d.y - 10.8, 10, low16(d.seed) + 3);
     },
   },
   solarpanel: {
@@ -72,9 +70,9 @@ export const SPACE_DECOR = {
     bake(s, d) {
       // A panel tilted on a post, cut into cells, the sun catching one corner.
       const f = d.flip ? -1 : 1;
-      rod(s, at(d.x, d.y, f, 0, 0, 0, -7), 0.9, STEEL, sd(d.seed));
+      rod(s, at(d.x, d.y, f, 0, 0, 0, -7), 0.9, STEEL, low16(d.seed));
       const panel = at(d.x, d.y, f, -7, -6, 7, -10, 8, -7.5, -6, -3.5);
-      part(s, panel, d.color, sd(d.seed) + 1, { depth: 0.4, thin: 0.4, thick: 0.85 });
+      part(s, panel, d.color, low16(d.seed) + 1, { depth: 0.4, thin: 0.4, thick: 0.85 });
       for (const u of [0.33, 0.66]) {
         const a = { x: panel[0].x + (panel[1].x - panel[0].x) * u, y: panel[0].y + (panel[1].y - panel[0].y) * u };
         const b = { x: panel[3].x + (panel[2].x - panel[3].x) * u, y: panel[3].y + (panel[2].y - panel[3].y) * u };
@@ -87,9 +85,9 @@ export const SPACE_DECOR = {
     color: (_th, rng) => (rng.chance(0.6) ? hsl3(40, 100, 58) : hsl3(2, 100, 55)),
     bake(s, d) {
       // A squat lamp housing on a hazard-striped base.
-      part(s, boxPts(d.x - 4, d.y - 3, 8, 3, 0.6, sd(d.seed), 0.12), STRIPE, sd(d.seed), { depth: 0.3, thin: 0.4, thick: 0.85 });
+      part(s, boxPts(d.x - 4, d.y - 3, 8, 3, 0.6, low16(d.seed), 0.12), STRIPE, low16(d.seed), { depth: 0.3, thin: 0.4, thick: 0.85 });
       for (let k = -3; k <= 2; k += 2) mark(s, d.x + k, d.y - 0.3, d.x + k + 1.3, d.y - 2.7, STRIPE, k, 0.6);
-      part(s, boxPts(d.x - 2.6, d.y - 7.6, 5.2, 4.8, 2, sd(d.seed) + 1, 0.12), DARK, sd(d.seed) + 1, { depth: 0.4, thin: 0.4, thick: 0.85 });
+      part(s, boxPts(d.x - 2.6, d.y - 7.6, 5.2, 4.8, 2, low16(d.seed) + 1, 0.12), DARK, low16(d.seed) + 1, { depth: 0.4, thin: 0.4, thick: 0.85 });
     },
     live(rc, d) {
       // It turns: on for a beat in every turn, a flat lens.
@@ -109,8 +107,8 @@ export const SPACE_DECOR = {
       const y = d.y - 4.5 - Math.sin(rc.t * 0.9 + (d.seed % 11)) * 1.2;
       const a = rc.t * 0.35 + (d.seed % 13);
       const { handle, jaw } = wrenchPts(d.x, y, a);
-      part(rc.s, handle, d.color, sd(d.seed), { depth: 0.3, thin: 0.4, thick: 0.75 });
-      part(rc.s, jaw, d.color, sd(d.seed) + 1, { depth: 0.3, thin: 0.4, thick: 0.75 });
+      part(rc.s, handle, d.color, low16(d.seed), { depth: 0.3, thin: 0.4, thick: 0.75 });
+      part(rc.s, jaw, d.color, low16(d.seed) + 1, { depth: 0.3, thin: 0.4, thick: 0.75 });
       // Its shadow on the ground, which is how you can tell it isn't standing on it.
       rc.bg.fillStyle = css(th.terrain.dark, -6, 0.45);
       path(rc.bg, ovalPts(d.x, d.y - 0.3, 5, 0.9, 1, 0.02, 10));
@@ -122,8 +120,8 @@ export const SPACE_DECOR = {
     bake(s, d) {
       // A space helmet left on its side: a round shell, a gold visor, the collar ring under it.
       const f = d.flip ? -1 : 1;
-      part(s, boxPts(d.x - f * 5 - 1.4, d.y - 3.8, 2.8, 3.8, 0.8, sd(d.seed) + 2, 0.15), DARK, sd(d.seed) + 2, { depth: 0.3, thin: 0.35, thick: 0.7 });
-      part(s, ovalPts(d.x, d.y - 5, 5.6, 5, sd(d.seed), 0.02, 18), d.color, sd(d.seed), { depth: 0.9, thin: 0.4, thick: 0.9 });
+      part(s, boxPts(d.x - f * 5 - 1.4, d.y - 3.8, 2.8, 3.8, 0.8, low16(d.seed) + 2, 0.15), DARK, low16(d.seed) + 2, { depth: 0.3, thin: 0.35, thick: 0.7 });
+      part(s, ovalPts(d.x, d.y - 5, 5.6, 5, low16(d.seed), 0.02, 18), d.color, low16(d.seed), { depth: 0.9, thin: 0.4, thick: 0.9 });
       // The visor: a wide faceplate filling the front of the shell, never a round disc (that reads as an eye), with
       // the reflection cut across it as a hard band.
       const vx = d.x + f * 1.4;
@@ -143,7 +141,7 @@ export const SPACE_DECOR = {
         vx - f * 3.8,
         d.y - 4.6,
       );
-      part(s, visor, GOLD, sd(d.seed) + 1, { depth: 0.5, thin: 0.35, thick: 0.75 });
+      part(s, visor, GOLD, low16(d.seed) + 1, { depth: 0.5, thin: 0.35, thick: 0.75 });
       s.save();
       path(s, visor);
       s.clip();
@@ -185,9 +183,9 @@ export const SPACE_DECOR = {
       // Planted and stiff: there's no wind to fly it, so a rod along its top holds it out.
       const f = d.flip ? -1 : 1;
       const h = 17 + (d.seed % 5);
-      rod(s, at(d.x, d.y, f, 0, 0, 0, -h), 0.7, WHITE, sd(d.seed));
+      rod(s, at(d.x, d.y, f, 0, 0, 0, -h), 0.7, WHITE, low16(d.seed));
       const cloth = at(d.x, d.y, f, 0, -h + 0.5, 10, -h + 0.7, 9.8, -h + 6.6, 0, -h + 6.4);
-      part(s, cloth, d.color, sd(d.seed) + 1, { depth: 0.3, thin: 0.35, thick: 0.75 });
+      part(s, cloth, d.color, low16(d.seed) + 1, { depth: 0.3, thin: 0.35, thick: 0.75 });
       for (const y of [-h + 2.6, -h + 4.6]) tick(s, d.x + f * 1, d.y + y, d.x + f * 9, d.y + y, 0.6, y, css(WHITE, -4));
     },
   },
@@ -196,13 +194,13 @@ export const SPACE_DECOR = {
     bake(s, d) {
       // A little satellite that came down here: a foil body on its side, one wing snapped, a bent antenna.
       const f = d.flip ? -1 : 1;
-      part(s, at(d.x, d.y, f, 3.5, -4, 10, -2.5, 9.5, 0, 3.5, -1.5), CELL, sd(d.seed) + 1, { depth: 0.3, thin: 0.35, thick: 0.75 });
-      part(s, boxPts(d.x - 3.5, d.y - 6, 7, 6, 0.8, sd(d.seed), 0.15), d.color, sd(d.seed), { depth: 0.6, thin: 0.4, thick: 0.85 });
+      part(s, at(d.x, d.y, f, 3.5, -4, 10, -2.5, 9.5, 0, 3.5, -1.5), CELL, low16(d.seed) + 1, { depth: 0.3, thin: 0.35, thick: 0.75 });
+      part(s, boxPts(d.x - 3.5, d.y - 6, 7, 6, 0.8, low16(d.seed), 0.15), d.color, low16(d.seed), { depth: 0.6, thin: 0.4, thick: 0.85 });
       for (const u of [-1.5, 1.5]) mark(s, d.x + u, d.y - 5.4, d.x + u, d.y - 0.8, d.color, u, 0.45);
-      part(s, at(d.x, d.y, f, -3.5, -4, -6, -4.6, -6, -2.6, -3.5, -2.4), CELL, sd(d.seed) + 2, { depth: 0.2, thin: 0.35, thick: 0.7 });
-      rod(s, at(d.x, d.y, f, 0, -6, 1, -9, 3.5, -10.5), 0.4, STEEL, sd(d.seed) + 3);
+      part(s, at(d.x, d.y, f, -3.5, -4, -6, -4.6, -6, -2.6, -3.5, -2.4), CELL, low16(d.seed) + 2, { depth: 0.2, thin: 0.35, thick: 0.7 });
+      rod(s, at(d.x, d.y, f, 0, -6, 1, -9, 3.5, -10.5), 0.4, STEEL, low16(d.seed) + 3);
       s.fillStyle = inkFor(STEEL);
-      blob(s, d.x + f * 3.5, d.y - 10.5, 0.8, sd(d.seed) + 4, 1, 0.1);
+      blob(s, d.x + f * 3.5, d.y - 10.5, 0.8, low16(d.seed) + 4, 1, 0.1);
       s.fill();
     },
   },

@@ -9,8 +9,8 @@ import { circle, flame, glowDot, light, type RC } from '../../kit';
 import type { DrawCtx } from '../common';
 import { SHELLS } from '../modules/deco-shells';
 import { castleStagePiece, castleStageShell } from './castle-stage';
-import { BANNER, CANDLE, doorway, flat, GILT, type Hz, hz, MOON, STONE, WOOD } from './castle-ink';
-import type { Deco, DecoSkin, ThemeSkins } from './common';
+import { BANNER, CANDLE, doorway, GILT, MOON, SHELL, STONE, WOOD } from './castle-ink';
+import { type Deco, type DecoSkin, flat, type Haze, hazer, type ThemeSkins } from './common';
 
 /**
  * Castle skins: the back walls of the Haunted Wing and the Throne Hall (docs/SETPIECES.md, Castle), drawn
@@ -76,7 +76,7 @@ function portraits(m: Deco): { x: number; y: number; r: number; seed: number }[]
   return out;
 }
 
-function manorWall(m: Deco, t: Hz) {
+function manorWall(m: Deco, t: Haze) {
   return sprite(`castle|manor|${m.w}|${m.h}|${m.seed}|${t.k}`, -2, -2, m.w + 4, m.h + 4, (g) => {
     const { rooms: rs, plan } = rooms(m);
     rs.forEach((r, i) => {
@@ -195,7 +195,7 @@ function sconces(m: Deco): { x: number; y: number }[] {
 }
 
 /** The eyes follow the nearest runner. */
-function eyes(rc: RC, m: Deco, d: DrawCtx, t: Hz) {
+function eyes(rc: RC, m: Deco, d: DrawCtx, t: Haze) {
   const runners = d.o.runners ?? [];
   for (const p of portraits(m)) {
     const ex = m.at[0] + d.off[0] + p.x;
@@ -227,7 +227,7 @@ function candles(rc: RC, m: Deco, d: DrawCtx) {
 }
 
 const manor: DecoSkin = (rc, m, d) => {
-  const t = hz(d);
+  const t = hazer(d, SHELL);
   stamp(rc.s, manorWall(m, t), m.at[0] + d.off[0], m.at[1] + d.off[1]);
   eyes(rc, m, d, t);
   candles(rc, m, d);
@@ -238,7 +238,7 @@ const manor: DecoSkin = (rc, m, d) => {
 
 // -------------------------------------------------------------------------------------------- throne hall
 
-function hallWall(m: Deco, t: Hz, level: Level | undefined) {
+function hallWall(m: Deco, t: Haze, level: Level | undefined) {
   return sprite(`castle|hall|${m.w}|${m.h}|${m.seed}|${t.k}`, -2, -2, m.w + 4, m.h + 4, (g) => {
     // The box runs tower to tower and down to the ground: the hall's air sits between the towers.
     const at = { x: Math.round(m.at[0] / TILE), y: 0, w: Math.round(m.w / TILE), h: 0 };
@@ -323,7 +323,7 @@ function hallWall(m: Deco, t: Hz, level: Level | undefined) {
 }
 
 const hall: DecoSkin = (rc, m, d) => {
-  const t = hz(d);
+  const t = hazer(d, SHELL);
   stamp(rc.s, hallWall(m, t, d.o.level ?? undefined), m.at[0] + d.off[0], m.at[1] + d.off[1]);
   // Moonlight through the stained glass.
   const iw = m.w - 2 * TOWER * TILE;

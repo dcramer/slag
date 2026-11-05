@@ -1,15 +1,14 @@
 import { datan2, dcos, dsin } from '../../core/dmath';
-import type { Vec } from '../../core/geom';
+import { DOWN, UP, type Vec } from '../../core/geom';
 import type { Rng } from '../../core/rng';
 import { type LevelProfile, T_ONEWAY, type TileRect } from '../../sim/level';
 import type { Module, PropStyle } from '../../sim/props';
 import { type Grid, hintGap, noise1D } from '../level/kit';
-import { jumpProfile } from '../level/probe';
 import { easyRise, hardGap, hopGap, type Knobs, TWO_PART_TRIES } from '../level/sculptors/common';
-import { BRIDGE_W } from '../level/types';
 import { makeStyle, type Piece, type Site } from '../setpieces/place';
 import { defineConcept } from './contract';
 import type { Concept, Landmark } from './types';
+import { DOOR, oneGap, shell, twoGap, ways, ledges as rungs } from './kit';
 
 /**
  * Space stage concepts (docs/SETPIECES.md, Space): five places floating in the void, each one landmark that
@@ -41,23 +40,6 @@ export const SPACE_DOCK = 6;
 export const SPACE_UNDER = 6;
 /** Fewest columns of gangway between the void and the structure: somewhere to land and a step. */
 const ARM = 3;
-/** Rows a passage is tall: a runner's height and a jump's start. */
-const DOOR = 3;
-
-const UP = -Math.PI / 2;
-const DOWN = Math.PI / 2;
-
-/** The widest one-part crossing at this gravity (hardGap's top end). */
-function oneGap(gravity?: number): number {
-  const j = jumpProfile(gravity);
-  return Math.max(j.gap + 2, BRIDGE_W + 2 * j.walkGap);
-}
-
-/** The widest two-part crossing at this gravity. */
-function twoGap(gravity?: number): number {
-  const j = jumpProfile(gravity);
-  return Math.max(j.gapAt(-6) + j.rise + 1, j.gap + 2 * BRIDGE_W + j.walkGap + 1);
-}
 
 /** Columns between the docks. */
 const middle = (w: number) => w - 2 * SPACE_DOCK;
@@ -89,7 +71,7 @@ function structCols(k: Knobs, rng: Rng, min: number, wide: readonly [number, num
 }
 
 /** Rows a box asks for: `above` its deck (never more than a level this tall has) and the rows under it. */
-const boxH = (k: Knobs, above: number) => Math.min(k.H - SPACE_UNDER - 2, above) + SPACE_UNDER;
+const deckBox = (k: Knobs, above: number) => Math.min(k.H - SPACE_UNDER - 2, above) + SPACE_UNDER;
 
 /** The deck row of a landmark's box: the row its gangway, floors and the crossing's banks stand on. */
 export const deckOf = (at: TileRect) => at.y + at.h - SPACE_UNDER;
@@ -111,30 +93,6 @@ function approach(g: Grid, rng: Rng, at: TileRect, parts: number, min: number): 
   if (parts > 0) hintGap(g, a, b, D);
   return { a, b, s0, D };
 }
-
-/** One-way rungs two wide at columns x, x+1, a comfortable hop apart from the deck row D up to (not past) row `top`. */
-function rungs(g: Grid, x: number, top: number, D: number): number[] {
-  const R = easyRise();
-  const rows: number[] = [];
-  for (let y = D - R; y > top; y -= R) {
-    for (const c of [x, x + 1]) g.set(c, y, T_ONEWAY, true);
-    rows.push(y);
-  }
-  return rows;
-}
-
-/** The anchors of the ways through: each a rect that, filled, shuts that way. */
-function ways(rects: readonly TileRect[]): Record<string, Vec> {
-  const out: Record<string, Vec> = {};
-  rects.forEach((r, i) => {
-    out[`way${i}`] = [r.x, r.y];
-    out[`way${i}s`] = [r.w, r.h];
-  });
-  return out;
-}
-
-/** A backdrop shell (drawn by the space skin, chosen by the level's concept and the shell's shape). */
-const shell = (rng: Rng, at: Vec, w: number, h: number): Module => ({ type: 'deco', kind: 'facade', at, w, h, seed: rng.int(0, 1 << 20) });
 
 const HULL = (rng: Rng): PropStyle => makeStyle(rng, 'steel', [205, 215, 48], { trim: 'stripes', glowHue: rng.pick([190, 330, 120, 48]) });
 const ROCK = (rng: Rng): PropStyle => makeStyle(rng, ['steel', 'rust'], [30, 200, 280], { glowHue: rng.pick([20, 170, 280]) });
@@ -298,7 +256,7 @@ export const STARSHIP = defineConcept({
   },
   box: (k, rng) => {
     const struct = structCols(k, rng, SHIP_MIN, [22, 34], true);
-    return { w: crossFor(k, SHIP_MIN) + ARM + struct, h: boxH(k, DOOR + 2 + 3 + 7) };
+    return { w: crossFor(k, SHIP_MIN) + ARM + struct, h: deckBox(k, DOOR + 2 + 3 + 7) };
   },
   build: buildStarship,
   pieces: (rng, _s, l) => starshipPieces(rng, l),
@@ -428,7 +386,7 @@ export const RING_STATION = defineConcept({
   box: (k, rng) => {
     const struct = structCols(k, rng, RING_MIN, [17, 23], true);
     const Ro = Math.min(9, Math.floor((struct - 2) / 2));
-    return { w: crossFor(k, RING_MIN) + ARM + struct, h: boxH(k, 2 * Ro + 1) };
+    return { w: crossFor(k, RING_MIN) + ARM + struct, h: deckBox(k, 2 * Ro + 1) };
   },
   build: buildRing,
   pieces: (rng, s, l) => ringPieces(rng, s, l),
@@ -570,7 +528,7 @@ export const PLANETOID = defineConcept({
   box: (k, rng) => {
     const struct = structCols(k, rng, PLANET_MIN, [19, 25]);
     const Rp = Math.min(7, Math.floor((struct - 2 * ORBIT_GAP - 1) / 2));
-    return { w: crossFor(k, PLANET_MIN) + ARM + struct, h: boxH(k, Rp + 6) };
+    return { w: crossFor(k, PLANET_MIN) + ARM + struct, h: deckBox(k, Rp + 6) };
   },
   build: buildPlanetoid,
   pieces: (rng, _s, l) => planetoidPieces(rng, l),
@@ -805,7 +763,7 @@ export const LAUNCH_GANTRY = defineConcept({
   },
   box: (k, rng) => {
     const struct = structCols(k, rng, GANTRY_MIN, [12, 16]);
-    return { w: crossFor(k, GANTRY_MIN) + ARM + struct, h: boxH(k, DOOR + 1 + 3 * easyRise() + 2 + 6) };
+    return { w: crossFor(k, GANTRY_MIN) + ARM + struct, h: deckBox(k, DOOR + 1 + 3 * easyRise() + 2 + 6) };
   },
   build: buildGantry,
   pieces: (rng, _s, l) => gantryPieces(rng, l),
@@ -948,7 +906,7 @@ export const MINING_RIG = defineConcept({
   codex: { about: 'A long asteroid bored through, a drill plunging down its shaft. Through the bore past the hauler or the cutter, or over the rock.' },
   box: (k, rng) => {
     const struct = structCols(k, rng, RIG_MIN, [16, 26]);
-    return { w: crossFor(k, RIG_MIN) + ARM + struct, h: boxH(k, DOOR + 3 + easyRise() + 8) };
+    return { w: crossFor(k, RIG_MIN) + ARM + struct, h: deckBox(k, DOOR + 3 + easyRise() + 8) };
   },
   build: buildRig,
   pieces: (rng, _s, l) => rigPieces(rng, l),

@@ -1,15 +1,14 @@
-import type { Vec } from '../../core/geom';
+import { DOWN, UP, type Vec } from '../../core/geom';
 import type { Rng } from '../../core/rng';
-import { type LevelProfile, T_ONEWAY, type TileRect } from '../../sim/level';
-import type { Module, PropStyle } from '../../sim/props';
-import { type Grid, hintGap, POCKET } from '../level/kit';
-import { jumpProfile } from '../level/probe';
-import { easyRise, hardGap, type Knobs, pit, TWO_PART_TRIES, undercut } from '../level/sculptors/common';
-import { BRIDGE_W } from '../level/types';
-import { makeStyle, type Piece, SAFE_TILES, type Site } from '../setpieces/place';
+import { T_ONEWAY, type TileRect } from '../../sim/level';
+import type { PropStyle } from '../../sim/props';
+import { type Grid } from '../level/kit';
+import { easyRise, type Knobs, TWO_PART_TRIES } from '../level/sculptors/common';
+import { makeStyle, type Piece, type Site } from '../setpieces/place';
 import { CITY, neonModules, neonPiece, signModule, signPiece, wireModule, wirePiece } from '../setpieces/rooftops';
 import { defineConcept } from './contract';
 import type { Concept, Landmark } from './types';
+import { bankCrossing, bankKit, boxH, DOOR, ledges, listOf, listSig, oneGap, record, shell, twoGap, ways } from './kit';
 
 /**
  * Rooftops stage concepts (docs/SETPIECES.md, Rooftops): five places on the city's roofs, each one
@@ -39,119 +38,15 @@ import type { Concept, Landmark } from './types';
  * (each a genuine alternative), and `sig{i}` are the structural numbers the seed rolled.
  */
 
-/** Columns a landmark keeps from either end. */
-const SITE_MARGIN = POCKET + SAFE_TILES;
 /** Flat roof between the alley and the structure: the bridge's landing and a run-up. */
 const BANK = 3;
-/** Rows a passage under a structure is tall: a runner's height and a jump's start. */
-const DOOR = 3;
 
-const UP = -Math.PI / 2;
-const DOWN = Math.PI / 2;
-
-/** The widest one-part alley at this gravity (hardGap's top end). */
-function oneGap(gravity?: number): number {
-  const j = jumpProfile(gravity);
-  return Math.max(j.gap + 2, BRIDGE_W + 2 * j.walkGap);
-}
-
-/** The one-part alley a classic level's box makes room for: a column short of hardGap's widest. */
-function snugGap(gravity?: number): number {
-  return Math.min(oneGap(gravity), jumpProfile(gravity).gap + 3);
-}
-
-/** The widest two-part alley at this gravity. */
-function twoGap(gravity?: number): number {
-  const j = jumpProfile(gravity);
-  return Math.max(j.gapAt(-6) + j.rise + 1, j.gap + 2 * BRIDGE_W + j.walkGap + 1);
-}
-
-/**
- * Share of levels whose landmark's own alley takes two parts, where the box has room for one (wide levels).
- * A classic level built round a landmark has little room left for a second alley, so the wide ones ask
- * more often, to keep the theme near TWO_PARTS (measured with `pnpm level --stats 200 --theme rooftops`).
- */
-const LANDMARK_TWO = 0.45;
-const asksTwo = (k: Knobs) => k.challenge < Math.max(k.twoParts, LANDMARK_TWO);
-
-/** Columns for the alley a landmark owns: two-part where asked and there's room, else one-part. Never rolls. */
-function crossFor(k: Knobs, struct: number): number {
-  if (asksTwo(k) && twoGap() + struct <= k.W - 2 * SITE_MARGIN) return twoGap();
-  return k.W > 56 ? oneGap() : snugGap();
-}
-
-/** Does a landmark of `struct` columns fit beside a one-part alley on this level? */
-function roomFor(p: Partial<LevelProfile>, struct: number): boolean {
-  return snugGap(p.gravity) + struct <= (p.w ?? 48) - 2 * SITE_MARGIN;
-}
-
-/** The alley the build digs: as wide as `parts` take. */
-const crossCols = (parts: number) => (parts >= 2 ? twoGap() : oneGap());
-
-/** Columns of structure for a box: what a classic level's middle leaves, more on a wide one. */
-function structCols(k: Knobs, rng: Rng, min: number, wide: readonly [number, number], grand = false): number {
-  const room = k.W - 2 * SITE_MARGIN - crossFor(k, min + BANK) - BANK;
-  return Math.min(room, k.W > 56 ? rng.int(wide[0], wide[1]) : grand ? room : min + rng.int(0, 3));
-}
-
-/** Rows a box asks for, never more than a level of this height has over its roofs. */
-const boxH = (k: Knobs, h: number) => Math.min(k.H - 9, h);
-
-/**
- * The alley in front of a landmark: a `hardGap` drop to the street at the right end of its `cols` columns,
- * its bridge hinted and the far building's top floor cantilevered over it (undercut), so nobody climbs
- * its facade out of the street. Columns it doesn't need stay the near roof. Returns the gap's columns.
- */
-function alley(g: Grid, rng: Rng, x0: number, cols: number, G: number, parts: number): [number, number] {
-  const b = x0 + cols - 1;
-  if (parts <= 0) return [b + 1, b];
-  const gw = Math.min(cols, hardGap(rng, parts));
-  const a = b - gw + 1;
-  pit(g, a, b, G, false);
-  hintGap(g, a, b, G);
-  undercut(g, b + 1, 2, G);
-  return [a, b];
-}
-
-/** One-way rungs two wide at columns x, x+1, a comfortable hop apart from the roof row G up to the surface row `top`. */
-function rungs(g: Grid, x: number, top: number, G: number): number[] {
-  const R = easyRise();
-  const rows: number[] = [];
-  for (let y = G - R; y > top; y -= R) {
-    for (const c of [x, x + 1]) g.set(c, y, T_ONEWAY, true);
-    rows.push(y);
-  }
-  return rows;
-}
+const { crossFor, roomFor, crossCols, structCols } = bankKit({ bank: BANK, two: 0.45 });
 
 /** A one-way deck from column a to b on row y. */
 function deck(g: Grid, a: number, b: number, y: number): void {
   for (let c = a; c <= b; c++) g.set(c, y, T_ONEWAY, true);
 }
-
-/** The anchors of the ways through: each a rect that, filled, shuts that way. */
-function ways(rects: readonly TileRect[]): Record<string, Vec> {
-  const out: Record<string, Vec> = {};
-  rects.forEach((r, i) => {
-    out[`way${i}`] = [r.x, r.y];
-    out[`way${i}s`] = [r.w, r.h];
-  });
-  return out;
-}
-
-/** A list of layout numbers as one signature pair: how many, and a sum weighted by place, so a reorder shows. */
-const listSig = (xs: readonly number[]): Vec => [xs.length, xs.reduce((t, v, i) => t + v * (i + 1), 0)];
-
-/** Points recorded as `${key}{i}` anchors, back as a list. */
-function listOf(l: Landmark, key: string): Vec[] {
-  const out: Vec[] = [];
-  for (let i = 0; l.anchors[`${key}${i}`]; i++) out.push(l.anchors[`${key}${i}`]);
-  return out;
-}
-const record = (key: string, xs: readonly Vec[]) => Object.fromEntries(xs.map((v, i) => [`${key}${i}`, v]));
-
-/** A backdrop shell, drawn by the rooftops skin (chosen by the level's concept). */
-const shell = (rng: Rng, at: Vec, w: number, h: number): Module => ({ type: 'deco', kind: 'facade', at, w, h, seed: rng.int(0, 1 << 20) });
 
 /** The landmark's box over its roof: from `top` (clamped to the level) down to the roof row G. */
 const rectOver = (at: TileRect, top: number, G: number): TileRect => {
@@ -172,7 +67,7 @@ function buildGirders(g: Grid, rng: Rng, at: TileRect, parts: number): Landmark 
   const G = at.y + at.h;
   const cross = Math.min(at.w - GIRDER_MIN - BANK, crossCols(parts));
   g.clear(at.x, 0, at.x + at.w - 1, G - 1);
-  alley(g, rng, at.x, cross, G, parts);
+  bankCrossing(g, rng, at.x, cross, G, parts);
   const s0 = at.x + cross + BANK;
   const s1 = at.x + at.w - 1;
   // Storeys: a runner's height and a deck each, as many as the sky leaves room for with the crane over them.
@@ -191,7 +86,7 @@ function buildGirders(g: Grid, rng: Rng, at: TileRect, parts: number): Landmark 
   for (let k = 0; k < n; k++) ladders.push(k % 2 === 0 ? d0 + rng.int(0, 2) : d1 - 1 - rng.int(0, 2));
   for (let k = 0; k < n; k++) {
     deck(g, d0, d1, decks[k]);
-    rungs(g, ladders[k], decks[k], k === 0 ? G : decks[k - 1]);
+    ledges(g, ladders[k], decks[k], k === 0 ? G : decks[k - 1]);
   }
   // A bay left out of the lower decks here and there: a hop across, or a drop to the storey under it.
   const holes: Vec[] = [];
@@ -325,7 +220,7 @@ export const GIRDER_WORKS = defineConcept({
   },
   box: (k, rng) => {
     const cross = crossFor(k, GIRDER_MIN + BANK);
-    return { w: cross + BANK + structCols(k, rng, GIRDER_MIN, [22, 32], true), h: boxH(k, 4 * (DOOR + 2) + 7) };
+    return { w: cross + BANK + structCols(k, rng, GIRDER_MIN, [22, 32], true), h: boxH(k.H, 4 * (DOOR + 2) + 7) };
   },
   build: buildGirders,
   pieces: (rng, _s, l) => girderPieces(rng, l),
@@ -339,7 +234,7 @@ function buildBillboard(g: Grid, rng: Rng, at: TileRect, parts: number): Landmar
   const G = at.y + at.h;
   const cross = Math.min(at.w - BILL_MIN - BANK, crossCols(parts));
   g.clear(at.x, 0, at.x + at.w - 1, G - 1);
-  alley(g, rng, at.x, cross, G, parts);
+  bankCrossing(g, rng, at.x, cross, G, parts);
   const s0 = at.x + cross + BANK;
   const s1 = at.x + at.w - 1;
   // The board on its legs: a runner's height (or a little more) clear under it, three to five rows of sign.
@@ -351,7 +246,7 @@ function buildBillboard(g: Grid, rng: Rng, at: TileRect, parts: number): Landmar
   const bt = bb - bh + 1;
   g.fill(b0, bt, b1, bb, 1, true);
   // Up the service ladder on the near leg and over the top; or along the roof under it.
-  rungs(g, s0, bt, G);
+  ledges(g, s0, bt, G);
   // The word on top: a column of board left dark at each end to stand on.
   const free = b1 - b0 + 1 - 2;
   const n = Math.max(3, Math.min(free - 1, rng.int(4, 7)));
@@ -408,7 +303,7 @@ export const NEON_BILLBOARD = defineConcept({
   },
   box: (k, rng) => {
     const cross = crossFor(k, BILL_MIN + BANK);
-    return { w: cross + BANK + structCols(k, rng, BILL_MIN, [18, 28]), h: boxH(k, DOOR + 1 + 5 + 5) };
+    return { w: cross + BANK + structCols(k, rng, BILL_MIN, [18, 28]), h: boxH(k.H, DOOR + 1 + 5 + 5) };
   },
   build: buildBillboard,
   pieces: (rng, _s, l) => billboardPieces(rng, l),
@@ -423,7 +318,7 @@ function buildTowers(g: Grid, rng: Rng, at: TileRect, parts: number): Landmark {
   const G = at.y + at.h;
   const cross = Math.min(at.w - TOWER_MIN - BANK, crossCols(parts));
   g.clear(at.x, 0, at.x + at.w - 1, G - 1);
-  alley(g, rng, at.x, cross, G, parts);
+  bankCrossing(g, rng, at.x, cross, G, parts);
   const s0 = at.x + cross + BANK;
   const s1 = at.x + at.w - 1;
   // Tanks on legs, two or three of them (more on a wide roof), a hop apart, each a little higher or lower.
@@ -450,7 +345,7 @@ function buildTowers(g: Grid, rng: Rng, at: TileRect, parts: number): Landmark {
     g.fill(t.x + 1, top - 1, t.x + t.w - 2, top - 1, 1, true);
     tops.push([t.x, top]);
   }
-  rungs(g, s0, tops[0][1], G);
+  ledges(g, s0, tops[0][1], G);
   const first = tanks[0];
   const last = tanks[tanks.length - 1];
   const hi = Math.min(...tops.map(([, y]) => y));
@@ -538,7 +433,7 @@ export const WATER_TOWERS = defineConcept({
   },
   box: (k, rng) => {
     const cross = crossFor(k, TOWER_MIN + BANK);
-    return { w: cross + BANK + structCols(k, rng, TOWER_MIN, [18, 30]), h: boxH(k, DOOR + 2 + 5 + 5) };
+    return { w: cross + BANK + structCols(k, rng, TOWER_MIN, [18, 30]), h: boxH(k.H, DOOR + 2 + 5 + 5) };
   },
   build: buildTowers,
   pieces: (rng, s, l) => towerPieces(rng, s, l),
@@ -555,7 +450,7 @@ function buildClock(g: Grid, rng: Rng, at: TileRect, parts: number): Landmark {
   const G = at.y + at.h;
   const cross = Math.min(at.w - CLOCK_MIN - BANK, crossCols(parts));
   g.clear(at.x, 0, at.x + at.w - 1, G - 1);
-  alley(g, rng, at.x, cross, G, parts);
+  bankCrossing(g, rng, at.x, cross, G, parts);
   const s0 = at.x + cross + BANK;
   const s1 = at.x + at.w - 1;
   // The tower: tall, a landing strip of roof past it, a spire or a belfry frame on top.
@@ -572,7 +467,7 @@ function buildClock(g: Grid, rng: Rng, at: TileRect, parts: number): Landmark {
     g.set(t0, tt - 1, 1, true);
     g.set(t1, tt - 1, 1, true);
   }
-  const ledgeRows = rungs(g, s0, tt - (crown ? 1 : 0), G);
+  const ledgeRows = ledges(g, s0, tt - (crown ? 1 : 0), G);
   const mid = Math.floor((t0 + t1) / 2);
   // The bell hangs over the roof's middle third, from a frame on top.
   const bell = mid + rng.int(-1, 1);
@@ -665,7 +560,7 @@ export const CLOCK_TOWER = defineConcept({
   codex: { about: 'A town clock keeping the race’s time. Through the arch under the swinging pendulum, or up the ledges and over the top under the bell.' },
   box: (k, rng) => {
     const cross = crossFor(k, CLOCK_MIN + BANK);
-    return { w: cross + BANK + structCols(k, rng, CLOCK_MIN, [16, 24], true), h: boxH(k, 5 * easyRise() + 18) };
+    return { w: cross + BANK + structCols(k, rng, CLOCK_MIN, [16, 24], true), h: boxH(k.H, 5 * easyRise() + 18) };
   },
   build: buildClock,
   pieces: (rng, _s, l) => clockPieces(rng, l),
@@ -679,7 +574,7 @@ function buildEl(g: Grid, rng: Rng, at: TileRect, parts: number): Landmark {
   const G = at.y + at.h;
   const cross = Math.min(at.w - EL_MIN - BANK, crossCols(parts));
   g.clear(at.x, 0, at.x + at.w - 1, G - 1);
-  alley(g, rng, at.x, cross, G, parts);
+  bankCrossing(g, rng, at.x, cross, G, parts);
   const s0 = at.x + cross + BANK;
   const s1 = at.x + at.w - 1;
   // The viaduct: a track bed on piers, a runner's height and a bit over the street.
@@ -689,9 +584,9 @@ function buildEl(g: Grid, rng: Rng, at: TileRect, parts: number): Landmark {
   const v1 = s1 - rng.int(0, 2);
   g.fill(v0, V, v1, V, 1, true);
   // Up the station stairs at the near end; off the far end, down its own stairs where there's room.
-  rungs(g, s0, V, G);
+  ledges(g, s0, V, G);
   const down = v1 + 2 <= s1 && rng.chance(0.6);
-  if (down) rungs(g, v1 + 1, V, G);
+  if (down) ledges(g, v1 + 1, V, G);
   // A signal bridge over the track somewhere along it: a perch over the trains.
   const sig = V - 4 >= 2 && v1 - v0 >= 10 && rng.chance(0.65) ? rng.int(v0 + 4, v1 - 6) : -1;
   if (sig >= 0) deck(g, sig, sig + 2, V - 4);
@@ -772,7 +667,7 @@ export const EL_STATION = defineConcept({
   codex: { about: 'An elevated railway and a train that waits for no one, mostly. Along the track, or along the street under it.' },
   box: (k, rng) => {
     const cross = crossFor(k, EL_MIN + BANK);
-    return { w: cross + BANK + structCols(k, rng, EL_MIN, [22, 34]), h: boxH(k, DOOR + 3 + 7) };
+    return { w: cross + BANK + structCols(k, rng, EL_MIN, [22, 34]), h: boxH(k.H, DOOR + 3 + 7) };
   },
   build: buildEl,
   pieces: (rng, _s, l) => elPieces(rng, l),

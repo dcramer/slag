@@ -4,7 +4,7 @@ import { generateLevel, lastGenInfo, withBridges } from '../src/gen/level';
 import { rollProfile } from '../src/gen/level/profile';
 import { hazardSignature, SET_PIECES } from '../src/gen/setpieces';
 import { rollConcept } from '../src/gen/stage';
-import { waysOf } from '../src/gen/stage/volcano';
+import { waysOf } from '../src/gen/stage/kit';
 import { TILE } from '../src/sim/constants';
 import { type Level, T_EMPTY, T_SOLID, tileAt } from '../src/sim/level';
 import { type Module, type ModuleOf, resolveProp } from '../src/sim/props';

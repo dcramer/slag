@@ -1,5 +1,5 @@
 import { dcos, dsin } from '../../core/dmath';
-import type { Cell } from '../../core/geom';
+import { type Cell, DOWN } from '../../core/geom';
 import type { Rng } from '../../core/rng';
 import { cannons, pendulums, vehicles } from './builders';
 import { best, makeStyle, type Piece, type Recipe, SAFE_TILES, type Site } from './place';
@@ -9,8 +9,6 @@ import { best, makeStyle, type Piece, type Recipe, SAFE_TILES, type Site } from 
  * broken windows bristling with glass, a battering ram trundling the halls. Everything that hangs
  * hangs from a real ceiling (docs/SETPIECES.md, Grounding).
  */
-
-const DOWN = Math.PI / 2;
 
 const gilt = (rng: Rng) => makeStyle(rng, ['gold', 'brass', 'steel'], [40], { glowHue: rng.range(30, 45) });
 
