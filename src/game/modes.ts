@@ -4,7 +4,6 @@
  * shared, so a new mode is an entry here, not a branch in the match.
  */
 import type { ProfileOverride } from '../gen/level';
-import { buildsTowers } from '../gen/level/profile';
 import { type CrateMix, RACE_CRATE } from '../gen/props';
 import type { ThemeId } from '../themes';
 import { TILE } from '../sim/constants';
@@ -61,8 +60,8 @@ export const MODES: Record<ModeId, ModeDef> = {
     // A loop climbs bare, so no bridge is owed: the crate leans to what you put in each other's way, and to
     // utility, and away from building (a shortcut for whoever's ahead) and demolition (nothing needs clearing).
     crate: { bridges: false, roles: { hazard: 1.6, utility: 1.3, build: 0.6, demolish: 0.35 } },
-    // A looping shaft is a tower's storeys: sets with no tower shapes yet (farm, harbor, space) climb a classic level.
-    builds: buildsTowers,
+    // Every set builds a looping shaft: its tower kit (gen/level/sculptors/tall.ts).
+    builds: () => true,
     score: ({ run, standings }) =>
       scoreSurvival(
         run.runners.map((r) => ({ slot: r.slot, alive: r.alive, deathFrame: r.deathFrame })),

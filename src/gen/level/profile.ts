@@ -138,7 +138,8 @@ export function gravityClass(g: number): GravityClass {
 export function rollProfile(seed: number, themeId: ThemeId, o: ProfileOverride = {}, salt = ''): LevelProfile {
   const rng = new Rng(deriveSeed(seed, `profile:${themeId}${salt}`));
   const rolled = rng.weighted(SIZE_WEIGHTS[themeId]);
-  const size = o.size && SIZE_WEIGHTS[themeId].some(([s]) => s === o.size) ? o.size : o.size === 'tall' ? 'wide' : o.tide ? climbSize(themeId) : rolled;
+  // Rising Slag's level is a looping shaft in every set (sculptors/tall.ts has a tower kit for each).
+  const size = o.tide ? 'tall' : o.size && SIZE_WEIGHTS[themeId].some(([s]) => s === o.size) ? o.size : o.size === 'tall' ? 'wide' : rolled;
   let w: number = LEVEL_W;
   let h: number = LEVEL_H;
   if (size === 'wide') {
@@ -204,21 +205,8 @@ export function rollProfile(seed: number, themeId: ThemeId, o: ProfileOverride =
   };
 }
 
-/** Does this theme build towers? Rising Slag plays only those, unless the host picked another theme. */
-export function buildsTowers(themeId: ThemeId): boolean {
-  return SIZE_WEIGHTS[themeId].some(([s]) => s === 'tall');
-}
-
 /** Routes that go up: a level the slag rises through has to climb (game/modes.ts, Rising Slag). */
 const CLIMBS: ReadonlySet<RouteShape> = new Set(['climb', 'zigzag']);
-
-/**
- * A Rising Slag level's size: a tower where the theme builds towers, else a classic level that climbs. Every theme
- * climbs at classic size, so any theme can host the mode in its own shape language (farms and harbors never go tall).
- */
-function climbSize(themeId: ThemeId): SizeClass {
-  return buildsTowers(themeId) ? 'tall' : 'classic';
-}
 
 /** The rolled route if it climbs; otherwise the climbing route it maps to, so the rest of the roll stays the seed's. */
 function climbRoute(routes: Weights<RouteShape>, rolled: RouteShape): RouteShape {

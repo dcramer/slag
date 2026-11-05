@@ -2,6 +2,7 @@ import type { Rng } from '../../../core/rng';
 import { deckOf, SPACE_DOCK, SPACE_UNDER, spaceAsksTwo, spaceOwns } from '../../stage/space';
 import { finish, Grid, hintGap } from '../kit';
 import { jumpProfile } from '../probe';
+import { spaceTall } from './tall';
 import type { SculptCtx, Sculptor, Shape } from '../types';
 import { easyRise, hardGap, type Knobs, knobs, raiseLandmark, rollChallenges } from './common';
 
@@ -46,6 +47,8 @@ export function spaceHop(density: number): { lo: number; hi: number } {
  * bridge and a jump back up crosses it.
  */
 export const space: Sculptor = (ctx) => {
+  // Only Rising Slag asks this set for a tower (its races never go tall): its shaft is the tall builder's (./tall.ts).
+  if (ctx.profile.size === 'tall') return spaceTall(ctx);
   if (ctx.concept) return spaceStage(ctx);
   const { rng, attempt } = ctx;
   const style: SpaceStyle = ctx.theme?.terrain?.kind === 'hull' ? 'station' : 'asteroids';
