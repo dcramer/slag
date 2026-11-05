@@ -677,6 +677,10 @@ export const BRIEFS: Record<string, Brief> = {
     // sash is a fluffy dressing-gown cord.
     // The palette is neutral (Decisions 4): the dress in the player's colour, its trim a light of it; the skin,
     // hair, socks, boots, collars and cord neutrals.
+    // What ships came from two more edits of the worn design (art/sprites/fighter/design.prompt.txt): big buns on top
+    // of the big head read as a bear's ears and at the temples they sank into the head, so they are smaller, at the
+    // head's top corners, the socks' toes flopping under them. Not yet read blind as her (a nameless fighter, or, with
+    // the buns clear of the head, a bear): the next design wants a smaller head and the buns straight out sideways.
     design:
       'The character: a strong, stocky cartoon martial-artist woman in a wide fighting stance, body facing right, her head turned toward us so both hair buns show. ' +
       'Colours: a blue dress (#3f6fb5) with pale blue trim (#a8c4e8), peach skin (#efc9a4), dark brown hair (#3a2a20), white socks and boots (#f2f0ea), black collars (#2e2a2a) with steel spikes (#b8bcc4). ' +

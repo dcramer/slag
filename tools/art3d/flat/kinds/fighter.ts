@@ -3,8 +3,9 @@ import type { FlatKind } from '../kinds';
 // Every pose keeps what carries her (art/sprites/fighter/design.prompt.txt): the two round sock-covered hair buns
 // standing out one each side of the top of her head, both showing, so the head is turned toward us (side on, the far
 // one hides behind it); the puffed shoulders and the spiked dog collars on both wrists; thick strong legs under a
-// short dress, in a fighter's stance or a kick. Bigger and higher, the buns read as a bear's or a mouse's ears in
-// the design read; lower at the temples they vanished into the head.
+// short dress, in a fighter's stance or a kick. Big and high on the head the buns read as a bear's ears, in the design
+// read and in round 2's blind read (art/sprites/fighter/r2/); low at the temples they sank into the head. These are
+// round 1's drawings, the socks' toes flopping under the buns: blind, "a martial-arts fighter", not yet her.
 const KEEP =
   'her head always turned toward us so both round white sock-covered hair buns stand out, one on each side of the top of her head, the big puffed shoulders, the black spiked collars on both wrists, the thick strong legs under the short dress';
 
@@ -83,7 +84,7 @@ export const kind: FlatKind = {
   wear: {
     on: ['dress'],
     chin: 4,
-    marks: [[['scuff', 0.5, 0.4, 0.28]], [['scorch', 0.5, 0.55, 0.32]]],
+    marks: [[['scuff', 0.5, 0.4, 0.28]], [['scorch', 0.55, 0.5, 0.26]]],
   },
   accessories: [{ slot: 'plaster', role: 'plaster', at: 'cheek', size: [1.4, 0.6] }],
   // Her drawing's eyes are small black ovals, no white: the kit's `dot`, which acts with no brows (`tall` draws the
