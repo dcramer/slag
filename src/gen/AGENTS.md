@@ -2,7 +2,7 @@
 
 Every generator is deterministic given its seed: same seed (and theme), same output, on every machine.
 
-- `generateLevel` is a pure function of its arguments and of nothing generated before it: the browser builds the next levels ahead in a worker (`src/level-ahead.ts`) and the match takes them through `buildLevel` (`level/pregen.ts`). Module-level caches are fine only if they can't change an answer.
+- `generateLevel` is a pure function of its arguments and of nothing generated before it: the browser builds the next levels ahead in a worker (`src/level-ahead.ts`) and the match takes them through `buildLevel` (`level/pregen.ts`). Module-level caches are fine only if they can't change an answer. A new way to change the lobby's level (a rule in `rulesProfile`, a menu action) adds its requests to `Match.upcoming()` (rules go in `LEVEL_RULES`); one that isn't built ahead freezes every peer while the main thread generates it.
 - Reachability questions about one level go through one `ReachCache` (`src/sim/reach.ts`): it re-traces only what a change touches, with exactly a fresh analysis's answer. Pass the level's cache down instead of calling `analyzeReach` again.
 
 - Randomness only from a seeded `Rng`; derive independent streams with `deriveSeed(seed, 'label')` so adding a roll in one place doesn't shift every other stream. No `Math.random`, wall clock, DOM, or imports from `render/`, `input/`, `audio/`, `ui/` (lint enforces this).
@@ -30,7 +30,7 @@ A conformance failure names the rule and the entry (`landmark/castle/haunted-win
 
 ### Add a landmark (stage concept)
 
-`stage/<theme>.ts`: `export const MILL = defineConcept({ ... })`, listed in the theme's array in `CONCEPTS` (`stage/index.ts`); the builder calls `claimSite` (or the kit's `site`) and `raiseLandmark` (see the pipeline above). A plain `Concept` literal still works: absent contract fields take the same defaults.
+`stage/<theme>.ts`: `export const MILL = defineConcept({ ... })`, listed in the theme's array in `CONCEPTS` (`stage/index.ts`); the builder calls `claimSite` (or the kit's `site`) and `raiseLandmark` (see the pipeline above). A plain `Concept` literal still works: absent contract fields take the same defaults. Build it from `stage/kit.ts`: the crossing it owns (`bankKit` with the theme's bank and two-part share, `bankCrossing`, gaps from `hardGapRange`), ledges, passages, shells and the anchors the tests read (`ways`, `record`, `listSig`). `slag/no-copied-kit` (lint) stops a theme file redefining one; give the shared one a parameter instead.
 
 | Field                                                 | Contract                                                                                                                     | Checked while generating                                                        | Checked in conformance                                                                                                         |
 | ----------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------ |

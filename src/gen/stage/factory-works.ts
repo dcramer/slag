@@ -6,8 +6,9 @@ import type { Grid } from '../level/kit';
 import { ladleAt, LADLE_NAMES, robotArm, ARM_NAMES, ARM_SWEEP } from '../setpieces/factory';
 import { makeStyle, type Piece, type Site } from '../setpieces/place';
 import { defineConcept } from './contract';
-import { APRON, BANK, listOf, record, roomFor, rungs, shell, structCols, vatBefore, ways, widestGap } from './factory-kit';
+import { APRON, BANK, roomFor, structCols, vatBefore } from './factory-kit';
 import type { Landmark } from './types';
+import { DOOR, ledges as rungs, listOf, oneGap, record, shell, ways } from './kit';
 
 /**
  * Three more factory places (docs/SETPIECES.md, Factory), each laid out afresh from its seed, each owning
@@ -25,9 +26,6 @@ import type { Landmark } from './types';
  *   welding over the deck. Along the deck between the arms, or under it, down the service trench on some.
  */
 
-/** Rows a passage through a structure is tall: a runner's height and a jump's start. */
-const DOOR = 3;
-
 const RUST = (rng: Rng) => makeStyle(rng, ['rust', 'steel'], [20, 30]);
 
 // ---------------------------------------------------------------------------------------------- the foundry
@@ -43,7 +41,7 @@ const foundryRows = (H: number) => Math.min(H - 9, 18);
 
 function buildFoundry(g: Grid, rng: Rng, at: TileRect, parts: number): Landmark {
   const G = at.y + at.h;
-  const s0 = at.x + widestGap() + BANK;
+  const s0 = at.x + oneGap() + BANK;
   const E = at.x + at.w - 1;
   const R = E - APRON;
   vatBefore(g, rng, s0, G, parts);
@@ -111,8 +109,8 @@ function buildFoundry(g: Grid, rng: Rng, at: TileRect, parts: number): Landmark 
 function* foundryPieces(rng: Rng, _s: Site, l: Landmark): Generator<Piece> {
   const [f0, B] = l.anchors.hall;
   const [G, sunk] = l.anchors.floor;
-  const lips = listOf(l.anchors, 'lip');
-  const spills = listOf(l.anchors, 'spill');
+  const lips = listOf(l, 'lip');
+  const spills = listOf(l, 'spill');
   const [c0, R] = l.anchors.cupola;
   const [stackTop, T] = l.anchors.stack;
   for (let i = 0; i < lips.length; i++) {
@@ -125,10 +123,10 @@ function* foundryPieces(rng: Rng, _s: Site, l: Landmark): Generator<Piece> {
     // columns down to the floor and the cupola's lining, standing on the ground under its open foot.
     if (i === 0)
       mods.unshift(
-        shell(rng, 'facade', [f0, B + 1], c0 - f0, G - B - 1 + sunk),
+        shell(rng, [f0, B + 1], c0 - f0, G - B - 1 + sunk, 'facade'),
         // The cupola's own shell, behind its tower from its top to the floor: the lining through both its openings.
-        shell(rng, 'facade', [c0, T], R - c0 + 1, G - T),
-        shell(rng, 'smokestack', [c0 + (R - c0 > 3 ? 1 : 0.5), stackTop], R - c0 > 3 ? R - c0 - 1 : R - c0, T - stackTop),
+        shell(rng, [c0, T], R - c0 + 1, G - T, 'facade'),
+        shell(rng, [c0 + (R - c0 > 3 ? 1 : 0.5), stackTop], R - c0 > 3 ? R - c0 - 1 : R - c0, T - stackTop, 'smokestack'),
       );
     yield { name: rng.pick(LADLE_NAMES), archetype: 'flamer', role: 'hazard', style: RUST(rng), modules: mods };
   }
@@ -149,7 +147,7 @@ export const FOUNDRY = defineConcept({
   },
   scale: 'grand',
   varies: ['vat width', 'foundry length (wide)', 'cupola width and height', 'runway height', 'a casting pit', 'ladles: how many, where, how high'],
-  box: (k, rng) => ({ w: widestGap() + BANK + structCols(k, rng, FOUNDRY_MIN, [20, 30]), h: foundryRows(k.H) }),
+  box: (k, rng) => ({ w: oneGap() + BANK + structCols(k, rng, FOUNDRY_MIN, [20, 30]), h: foundryRows(k.H) }),
   build: buildFoundry,
   pieces: foundryPieces,
 });
@@ -161,7 +159,7 @@ const BOILER_MIN = 15 + APRON;
 
 function buildBoiler(g: Grid, rng: Rng, at: TileRect, parts: number): Landmark {
   const G = at.y + at.h;
-  const s0 = at.x + widestGap() + BANK;
+  const s0 = at.x + oneGap() + BANK;
   const E = at.x + at.w - 1;
   const R = E - APRON;
   vatBefore(g, rng, s0, G, parts);
@@ -243,8 +241,8 @@ function* boilerPieces(rng: Rng, _s: Site, l: Landmark): Generator<Piece> {
   const [sx, stackTop] = l.anchors.stack;
   const [sw] = l.anchors.stackW;
   const [, b1] = l.anchors.walls;
-  const boilers = listOf(l.anchors, 'boiler');
-  const tall = listOf(l.anchors, 'tall').map(([h]) => h);
+  const boilers = listOf(l, 'boiler');
+  const tall = listOf(l, 'tall').map(([h]) => h);
   // One boiler's safety valve vents steam to the roof, shoving whoever's over it up into the rafters.
   const valve = rng.int(0, boilers.length - 1);
   for (let i = 0; i < boilers.length; i++) {
@@ -280,8 +278,8 @@ function* boilerPieces(rng: Rng, _s: Site, l: Landmark): Generator<Piece> {
     if (i === 0)
       mods.unshift(
         // The boiler room's back wall, down to its floor through both doors, and the stack on the roof.
-        shell(rng, 'facade', [b0, roofBot + 1], b1 - b0 + 1, G - roofBot - 1),
-        shell(rng, 'smokestack', [sx, stackTop], sw, roofTop - stackTop),
+        shell(rng, [b0, roofBot + 1], b1 - b0 + 1, G - roofBot - 1, 'facade'),
+        shell(rng, [sx, stackTop], sw, roofTop - stackTop, 'smokestack'),
       );
     yield {
       name: rng.pick(['Boiler No. ' + (i + 1), 'Firebox', 'Back Draft', 'Stoker']),
@@ -315,7 +313,7 @@ export const BOILER_HOUSE = defineConcept({
     'which valve vents',
     'the stack',
   ],
-  box: (k, rng) => ({ w: widestGap() + BANK + structCols(k, rng, BOILER_MIN, [20, 30]), h: Math.min(k.H - 9, 17) }),
+  box: (k, rng) => ({ w: oneGap() + BANK + structCols(k, rng, BOILER_MIN, [20, 30]), h: Math.min(k.H - 9, 17) }),
   build: buildBoiler,
   pieces: boilerPieces,
 });
@@ -345,7 +343,7 @@ function armLayout(rng: Rng, d0: number, d1: number): Vec[] {
 
 function buildRobotLine(g: Grid, rng: Rng, at: TileRect, parts: number): Landmark {
   const G = at.y + at.h;
-  const s0 = at.x + widestGap() + BANK;
+  const s0 = at.x + oneGap() + BANK;
   const E = at.x + at.w - 1;
   const R = E - APRON;
   vatBefore(g, rng, s0, G, parts);
@@ -386,7 +384,7 @@ function* robotPieces(rng: Rng, _s: Site, l: Landmark): Generator<Piece> {
   const [d0, D] = l.anchors.deck;
   const [under] = l.anchors.under;
   const [d1] = l.anchors.deckEnd;
-  const arms = listOf(l.anchors, 'arm');
+  const arms = listOf(l, 'arm');
   // A car body on its jig between each pair of robots, where they weld: a step up onto the line's way. The
   // cars go in first: an arm's sweep claims the deck it swings over.
   const xs = arms.map(([x]) => x).sort((a, b) => a - b);
@@ -408,7 +406,7 @@ function* robotPieces(rng: Rng, _s: Site, l: Landmark): Generator<Piece> {
     const mods = robotArm(rng, x, D - 1, dir as 1 | -1, reach);
     // The line behind it all rides in the first arm's piece: legs down to the floor, the robot cells' backs,
     // car bodies going by on the overhead hooks.
-    if (i === 0) mods.unshift(shell(rng, 'facade', [d0, D - ARM_HEAD + 1], d1 - d0 + 1, ARM_HEAD + under));
+    if (i === 0) mods.unshift(shell(rng, [d0, D - ARM_HEAD + 1], d1 - d0 + 1, ARM_HEAD + under, 'facade'));
     yield { name: rng.pick(ARM_NAMES), archetype: 'saw', role: 'hazard', style: makeStyle(rng, ['steel'], [30]), modules: mods };
   }
 }
@@ -436,7 +434,7 @@ export const ROBOT_LINE = defineConcept({
   names: ['The Robot Line at {place}', '{place} Assembly Plant', 'The Line at {place}', '{place} Motor Works'],
   codex: { about: 'Robot arms welding car bodies along a raised deck. Along the deck between strikes, or under it all, down the service trench.' },
   varies: ['vat width', 'line length (wide)', 'deck height', 'a service trench', 'robots: how many, where, which way', 'car bodies: where, which way'],
-  box: (k, rng) => ({ w: widestGap() + BANK + structCols(k, rng, LINE_MIN, [22, 32]), h: 4 + ARM_HEAD + 2 }),
+  box: (k, rng) => ({ w: oneGap() + BANK + structCols(k, rng, LINE_MIN, [22, 32]), h: 4 + ARM_HEAD + 2 }),
   build: buildRobotLine,
   pieces: robotPieces,
 });

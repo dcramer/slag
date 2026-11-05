@@ -1,8 +1,7 @@
 import type { Rng } from '../../../core/rng';
 import { jungleOwns } from '../../stage/jungle';
 import { carveCorridor, type Grid, noise1D, noise2D, smoothCA } from '../kit';
-import { type Claim, claimSite, easyRise, flatten, type Knobs, type Slots } from '../sculptors/common';
-import type { SculptCtx } from '../types';
+import { claimFlatSite, easyRise } from '../sculptors/common';
 import type { CourseKit, Stamp } from './types';
 
 /** An overgrown stepped ziggurat, standing on ground levelled under its whole width. */
@@ -68,7 +67,7 @@ export const JUNGLE_COURSE: CourseKit = {
     margin: 1,
     level: 'inner',
   },
-  site: (c) => claimJungleSite(c.ctx, c.k, c.slots, c.surf, c.locked),
+  site: (c) => claimFlatSite(c.ctx, c.k, c.slots, c.surf, c.locked),
   owns: jungleOwns,
   // Mid-map trees on free ground.
   standing: [
@@ -99,22 +98,6 @@ export const JUNGLE_COURSE: CourseKit = {
     }
   },
 };
-
-/**
- * The landmark's site (claimSite), on ground levelled a couple of columns past it either side and never so
- * low that its river has no bank under it. Nothing else lands within a running jump of its far side, where
- * a pool could be cleared bare off its top.
- */
-function claimJungleSite(ctx: SculptCtx, k: Knobs, slots: Slots, surf: number[], locked: Uint8Array): Claim | null {
-  const claim = claimSite(ctx, k, slots, surf, locked);
-  if (!claim) return null;
-  const { x, w } = claim.at;
-  const ground = Math.min(claim.ground, k.H - 5);
-  slots.mark(x - 3, x + w + 8);
-  flatten(surf, k.H, x - 2, x + w + 1, ground);
-  for (let i = Math.max(0, x - 3); i <= Math.min(k.W - 1, x + w + 2); i++) locked[i] = 1;
-  return { ...claim, ground, at: { ...claim.at, y: ground - claim.at.h } };
-}
 
 /** CA canopy band hanging from the top edge, with vine one-ways dangling from it, none of it in columns `off[0]..off[1]`. */
 function canopy(g: Grid, rng: Rng, depth: number, off: readonly [number, number]): void {

@@ -1,96 +1,71 @@
 import type { FlatKind } from '../kinds';
 
-// Tall and lean in a long coat, the white hair tied back, and a sword and a furled umbrella (the twist) slung together
-// over one shoulder, their handles up behind it. One each side of the head, the hilts read as horns in two blind
-// reads; together over one shoulder they don't. Every pose keeps them clear of the head. The poses were drawn three
-// to a 16:9 image with the design as the reference and cut apart (art/sprites/slayer/design.prompt.txt), then
-// whites.py tinted the hair in each.
+// Broad-shouldered in a short coat over two legs in tall boots, a long silver sword in his hand held low in a guard,
+// and two straight hilts side by side above his back shoulder: the steel sword's and the umbrella's wooden knob (the
+// twist). The first version (a long coat, flowing hair, a slim figure) read as a princess in a gown in a full-cast
+// blind read; it is in art/sprites/slayer/r1/. The poses were drawn three to a 16:9 image with the design as the
+// reference and cut apart (art/sprites/slayer/design.prompt.txt), then whites.py tinted the hair in each.
 const KEEP =
-  "the sword and the furled umbrella always slung together over one shoulder only, their two handles, the sword's cross-guard hilt and the umbrella's hooked crook, sticking far up and back together behind his back shoulder and clear of his head, their two tips poking out together below his coat at the other hip, nothing over the other shoulder, the white ponytail hanging down his back, the round bottle cap on his chest, his eyes open";
+  "the two straight hilts, the steel sword's cross-guard hilt and the umbrella's wooden knob handle, always side by side above his back shoulder and well clear of his head, his white hair tied back tight in a short tail, the round bottle cap on his chest, the long straight silver sword always in his hand, his eyes open";
 
 export const kind: FlatKind = {
-  body: 178,
+  body: 214,
   map: {
     roles: ['black', 'steel', 'hair', 'coat', 'leather', 'skin', 'eye', 'dark'],
-    // Sampled from the design (art/sprites/slayer/design.png, `swatch.py`) and its run and fall drawings.
+    // Sampled from the design (art/sprites/slayer/design.png, `swatch.py`); the first version's are in r1/.
     families: [
-      // The coat, its cel shade and the collar's; the sword's grip is drawn in the coat's shade, so it is the coat.
-      ['coat', [86, 94, 81]],
-      ['coat', [84, 89, 79]],
-      ['coat', [85, 92, 81]],
-      ['coat', [84, 92, 78]],
-      ['coat', [88, 95, 83]],
-      ['coat', [87, 89, 80]],
-      ['coat', [80, 85, 77]],
-      ['coat', [83, 90, 75]],
-      ['coat', [86, 89, 76]],
-      ['coat', [72, 74, 66]],
-      ['coat', [61, 65, 59]],
+      // The coat and its cel shade. The trousers under it are drawn in the coat's shade, so they are the coat too,
+      // and so is the sword's grip.
+      ['coat', [83, 90, 73]],
+      ['coat', [79, 84, 69]],
+      ['coat', [84, 87, 73]],
+      ['coat', [82, 85, 71]],
+      ['coat', [77, 79, 67]],
+      ['coat', [80, 88, 71]],
+      ['coat', [88, 88, 76]],
+      ['coat', [83, 81, 70]],
+      ['coat', [95, 98, 86]],
+      ['coat', [56, 56, 51]],
+      ['coat', [58, 59, 52]],
+      ['coat', [61, 63, 55]],
       ['coat', [66, 71, 65]],
-      ['coat', [62, 67, 61]],
-      ['coat', [63, 67, 65]],
-      ['coat', [60, 65, 57]],
-      ['coat', [69, 76, 65]],
-      ['coat', [65, 67, 58]],
-      // Gloves, boots and the shoelace: one leather (the gloves and boots repainted brown in the design, so their
-      // colour stays apart from the coat's shade).
-      ['leather', [84, 56, 38]],
-      ['leather', [86, 60, 40]],
+      // Gloves, boots, the shoelace and the umbrella's handle: one leather, all drawn in the same brown.
+      ['leather', [73, 46, 35]],
+      ['leather', [84, 58, 45]],
+      ['leather', [80, 50, 40]],
+      ['leather', [73, 63, 55]],
       ['leather', [62, 45, 35]],
-      ['leather', [58, 39, 31]],
-      ['leather', [78, 52, 39]],
-      ['leather', [70, 60, 51]],
-      ['leather', [113, 88, 75]],
-      ['leather', [96, 75, 66]],
-      // The furled umbrella, the trousers under the coat and the soles: neutral dark cloth.
-      ['black', [53, 51, 55]],
-      ['black', [59, 55, 62]],
-      ['black', [45, 43, 53]],
-      ['black', [55, 55, 57]],
-      ['black', [50, 49, 46]],
-      ['black', [51, 51, 48]],
-      ['black', [68, 68, 59]],
-      ['black', [62, 61, 56]],
+      // The soles and the umbrella's furled cloth.
       ['black', [43, 43, 44]],
-      // The sword's cross and pommel, the bottle cap and the broken spoke.
-      ['steel', [179, 184, 188]],
-      ['steel', [175, 182, 190]],
-      ['steel', [162, 169, 176]],
+      ['black', [45, 43, 53]],
+      ['black', [49, 43, 44]],
+      // The swords' blades, cross-guards and pommels, and the bottle cap.
+      ['steel', [182, 183, 184]],
+      ['steel', [167, 164, 167]],
+      ['steel', [133, 132, 135]],
+      ['steel', [141, 142, 139]],
+      ['steel', [159, 144, 143]],
+      ['steel', [165, 164, 168]],
       ['steel', [183, 191, 194]],
-      ['steel', [168, 173, 180]],
-      ['steel', [155, 158, 163]],
-      ['steel', [186, 186, 187]],
-      ['steel', [128, 132, 140]],
       ['steel', [119, 119, 129]],
-      ['steel', [100, 102, 112]],
-      ['steel', [103, 104, 97]],
-      ['steel', [107, 104, 98]],
       // The hair as whites.py tints it (20 under the drawing's), so `holes` leaves it, and as drawn.
       ['hair', [222, 222, 221]],
-      ['hair', [224, 223, 221]],
-      ['hair', [213, 207, 203]],
+      ['hair', [227, 225, 222]],
       ['hair', [242, 242, 241]],
-      ['hair', [233, 227, 214]],
-      ['hair', [233, 223, 217]],
-      ['hair', [207, 197, 193]],
+      ['skin', [230, 196, 181]],
       ['skin', [242, 204, 183]],
-      ['skin', [238, 213, 197]],
-      ['skin', [233, 202, 186]],
       ['skin', [222, 197, 183]],
       ['skin', [191, 155, 145]],
-      ['skin', [129, 119, 116]],
       // The yellow of the cat's eyes, a role of its own: the landmark the face kit finds them by, since the slit
       // pupils are thinner than the ink.
       ['eye', [228, 210, 106]],
       ['eye', [184, 168, 112]],
       ['dark', [255, 255, 255]],
-      ['dark', [26, 22, 30]],
-      ['dark', [28, 26, 34]],
-      ['dark', [17, 15, 23]],
-      ['dark', [31, 29, 37]],
-      ['dark', [35, 34, 42]],
-      ['dark', [4, 3, 8]],
-      ['dark', [12, 10, 16]],
+      ['dark', [32, 27, 30]],
+      ['dark', [27, 21, 24]],
+      ['dark', [45, 30, 32]],
+      ['dark', [22, 12, 15]],
+      ['dark', [8, 4, 6]],
     ],
     line: 'dark',
     // Not the eyes' yellow: a narrow almond is as thin as the ink's fringe, and went with it.
@@ -150,43 +125,50 @@ export const kind: FlatKind = {
     idle2: { frames: ['idle2', 'idle'], loop: true, holds: [1.8, 2.4] },
     walk: { frames: ['walk-1', 'walk-2'], loop: true, stride: 30 },
     run: { frames: ['run-1', 'run-2'], loop: true, stride: 44 },
-    // Smaller in the air: the fall's flung-up ponytail over the hilts reached past the box's top.
-    air: { frames: ['air-1', 'air-2'], loop: false, vy: [-200, 200], centre: 'box', scale: 0.92 },
+    // Smaller in the air: the hilts over the shoulder reached past the box's top.
+    air: { frames: ['air-1', 'air-2'], loop: false, vy: [-200, 200], centre: 'box', scale: 0.88 },
     // Smaller on the wall: the hilts over his raised shoulder reached past the box's top.
     wall: { frames: ['wall'], loop: true, fps: 1, centre: 'box', scale: 0.9 },
     cheer: { frames: ['cheer', 'idle'], loop: true, holds: [0.5, 0.25] },
     cheer2: { frames: ['cheer2', 'idle'], loop: true, holds: [0.6, 0.3] },
-    death: { frames: ['death'], loop: false, fps: 1, eyes: false, centre: 'box' },
+    // Smaller knocked out: lying flat with the dropped sword beside him, he was wider than the box.
+    death: { frames: ['death'], loop: false, fps: 1, eyes: false, centre: 'box', scale: 0.85 },
   },
   // Drawn three to a 16:9 image and cut apart (README → 3. Poses); the sheets' prompts are in
   // art/sprites/slayer/design.prompt.txt. These are each pose alone, for a redraw.
   poses: {
-    // Not reaching up for the hilt: an arm raised to the shoulder read as "arms raised" in the first blind read.
-    idle2: { pose: `standing wary, his head turned a little toward us, one gloved hand resting on the bottle cap on his chest; ${KEEP}.` },
-    'walk-1': {
-      pose: `prowling to the right, mid-step, the near boot forward and the far boot back, leaning a little forward, his gloved hands low and ready; ${KEEP}.`,
+    idle2: {
+      pose: `standing wary in a wide stance, one gloved hand resting on the bottle cap on his chest, the silver sword held low in the other hand pointing at the ground; ${KEEP}.`,
     },
-    'walk-2': { pose: `prowling to the right, the legs passing under the body, one boot planted and the other just lifted, his hands low and ready; ${KEEP}.` },
+    'walk-1': {
+      pose: `prowling to the right in a wide stance, mid-step, the front boot forward and the back boot back, the silver sword held low in front of him; ${KEEP}.`,
+    },
+    'walk-2': {
+      pose: `prowling to the right, the legs passing under the body, one boot planted and the other just lifted, the silver sword held low; ${KEEP}.`,
+    },
     'run-1': {
-      pose: `running fast to the right, leaning forward, one knee high and the other leg pushing off far back, the arms pumping, the coat tails flying out behind him; ${KEEP}.`,
+      pose: `running fast to the right, leaning forward, one knee high and the other leg pushing off far back, the silver sword held low and trailing out behind him, its blade clear of his legs; ${KEEP}.`,
     },
     'run-2': {
-      pose: `running fast to the right, leaning forward, both boots off the ground with the legs gathered under him, the coat tails flying out behind; ${KEEP}.`,
+      pose: `running fast to the right, leaning forward, both boots off the ground with the legs gathered under him, the silver sword trailing out behind; ${KEEP}.`,
     },
-    'air-1': { pose: `jumping up, both knees tucked up high, the arms out to the sides, the coat flaring out below; ${KEEP}.` },
+    'air-1': { pose: `leaping up, both knees tucked up high, the silver sword held out level to the side, clear of his body; ${KEEP}.` },
     'air-2': {
-      pose: `falling, both legs reaching straight down, both arms out to the sides for balance, the coat tails flapping up, his eyes wide and his mouth open in alarm; ${KEEP}.`,
+      pose: `falling, both legs reaching straight down, his free arm out to the side for balance, the silver sword held out to the other side, his eyes wide and his mouth open in alarm; ${KEEP}.`,
     },
+    // Drawn facing left with the wall on the left, and mirrored.
     wall: {
-      pose: 'seen from his side, facing right: he is sliding down a tall wall on the right edge of his space (do not draw the wall), one gloved hand flat against it and both boots braced on it, his coat hanging down, his head turned to look back at us, his eyes open.',
+      pose: 'seen from his side, facing right: he is sliding down a tall wall on the right edge of his space (do not draw the wall), one gloved hand flat against it and both boots braced on it, the silver sword hanging down in his other hand, his head turned to look back at us, his eyes open.',
       far: true,
     },
     cheer: {
-      pose: `cheering, one gloved fist punched straight forward out in front of him at shoulder height, never above his head, a grim little grin; ${KEEP}.`,
+      pose: `cheering, his free gloved fist punched straight forward at shoulder height, never above his head, the silver sword held low in the other hand, a grim little grin; ${KEEP}.`,
     },
-    cheer2: { pose: `standing with his arms folded across his chest, a small satisfied smirk, turned a little toward us; ${KEEP}.` },
+    cheer2: {
+      pose: `standing in a wide stance resting the flat of the silver sword on his front shoulder, its blade pointing up and back, his other hand on his hip, a smirk; ${KEEP}.`,
+    },
     death: {
-      pose: 'he has been knocked out and lies flat on his back on the floor, the whole body horizontal, his head on the left and his boots on the right, arms and legs splayed limp, his eyes shut. Seen from the side.',
+      pose: 'he has been knocked out and lies flat on his back on the floor, the whole body horizontal, his head on the left and his boots on the right, arms and legs splayed limp, the silver sword dropped beside him, his eyes shut. Seen from the side.',
       far: true,
     },
   },

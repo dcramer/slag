@@ -1,15 +1,15 @@
 import { datan2 } from '../../core/dmath';
-import type { Cell, Vec } from '../../core/geom';
+import { type Cell, DOWN, UP, type Vec } from '../../core/geom';
 import type { Rng } from '../../core/rng';
 import { T_ONEWAY, type TileRect } from '../../sim/level';
 import type { Module, PropStyle } from '../../sim/props';
-import { type Grid, POCKET } from '../level/kit';
+import { type Grid } from '../level/kit';
 import { jumpProfile } from '../level/probe';
 import { easyRise, hardGap, hopGap, pit } from '../level/sculptors/common';
-import { BRIDGE_W } from '../level/types';
-import { makeStyle, type Piece, SAFE_TILES } from '../setpieces/place';
+import { makeStyle, type Piece } from '../setpieces/place';
 import { defineConcept } from './contract';
 import type { Concept, Landmark } from './types';
+import { oneGap, SITE_MARGIN } from './kit';
 
 /**
  * Farm stage concepts (docs/SETPIECES.md, Farm). Every one owns the level's crossing the way the castle's
@@ -38,24 +38,13 @@ import type { Concept, Landmark } from './types';
  * tall), so a test can shut each in turn.
  */
 
-const UP = -Math.PI / 2;
 /** arcsin over [0, 1] through datan2: Math.asin differs across browsers. */
 const asin = (v: number) => datan2(v, Math.sqrt(Math.max(0, 1 - v * v)));
-const DOWN = Math.PI / 2;
-
-/** Columns a landmark keeps from either end (sculptors/common.ts claimSite). */
-const SITE_MARGIN = POCKET + SAFE_TILES;
 
 // ------------------------------------------------------------------------------------------------ pond
 
-/** The widest one-part pond at this gravity (hardGap's top end): the box always has room for it. */
-export function pondMax(): number {
-  const j = jumpProfile();
-  return Math.max(j.gap + 2, BRIDGE_W + 2 * j.walkGap);
-}
-
 /** Columns in front of the structure: the pond and the bank it lands on. */
-const front = () => pondMax() + 1;
+const front = () => oneGap() + 1;
 
 /** The structure's own box: everything right of the pond and its far bank. */
 export function structureOf(box: TileRect): TileRect {
@@ -73,7 +62,7 @@ function digPond(g: Grid, rng: Rng, box: TileRect, parts: number): void {
   g.clear(box.x, 0, s.x + s.w - 1, G - 1);
   if (parts <= 0) return;
   const x1 = s.x - 2;
-  pit(g, x1 - Math.min(pondMax(), hardGap(rng, parts)) + 1, x1, G, true);
+  pit(g, x1 - Math.min(oneGap(), hardGap(rng, parts)) + 1, x1, G, true);
 }
 
 /** Columns the structure gets on a level `W` wide: what a classic level's middle leaves past the pond, more on a wide one. */

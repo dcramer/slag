@@ -3,6 +3,7 @@ import type { DecorDef } from './decor';
 import { blob, inkFor, line, type P, stroke } from './ink';
 import { boxPts, glint, ovalPts, part, path, poly, tick } from './ink-props';
 import { flutter } from './kit';
+import { bits01, low16 } from './decor-kit';
 
 /**
  * The factory's decor, small and cosmetic like all decor: a pressure gauge on its riser, the time clock
@@ -11,9 +12,6 @@ import { flutter } from './kit';
  * surface two flat hand-cut tones, at most a mark or two inside. Nothing glows; the hook swings only when a
  * gust really blows (`flutter`, 0 in still air).
  */
-
-const k01 = (seed: number, n: number) => ((seed >>> n) % 1000) / 1000;
-const sd = (seed: number) => seed & 0xffff;
 
 const STEEL: HSL = hsl3(212, 8, 56);
 const IRON: HSL = hsl3(215, 9, 32);
@@ -51,15 +49,15 @@ export const FACTORY_DECOR = {
     bake(s, d) {
       // A pressure gauge on a riser out of the floor: a hand wheel on the valve, the dial on top.
       const f = d.flip ? -1 : 1;
-      rod(s, at(d.x, d.y, f, 0, 0, 0, -9), 1.6, d.color, sd(d.seed));
-      part(s, boxPts(d.x - 2.6, d.y - 1.6, 5.2, 1.6, 0.4, sd(d.seed) + 1, 0.1), d.color, sd(d.seed) + 1, { depth: 0.3, thin: 0.3, thick: 0.6 });
+      rod(s, at(d.x, d.y, f, 0, 0, 0, -9), 1.6, d.color, low16(d.seed));
+      part(s, boxPts(d.x - 2.6, d.y - 1.6, 5.2, 1.6, 0.4, low16(d.seed) + 1, 0.1), d.color, low16(d.seed) + 1, { depth: 0.3, thin: 0.3, thick: 0.6 });
       // The valve's hand wheel, seen edge on: a red bar across the riser.
-      rod(s, at(d.x, d.y, f, -2.6, -4.6, 2.6, -4.2), 0.9, RED, sd(d.seed) + 2);
+      rod(s, at(d.x, d.y, f, -2.6, -4.6, 2.6, -4.2), 0.9, RED, low16(d.seed) + 2);
       const r = 3.4 * d.size;
       const cy = d.y - 9 - r * 0.7;
-      part(s, ovalPts(d.x, cy, r + 0.8, r + 0.8, sd(d.seed) + 3, 0.02, 14), IRON, sd(d.seed) + 3, { depth: 0.5, thin: 0.35, thick: 0.8 });
+      part(s, ovalPts(d.x, cy, r + 0.8, r + 0.8, low16(d.seed) + 3, 0.02, 14), IRON, low16(d.seed) + 3, { depth: 0.5, thin: 0.35, thick: 0.8 });
       s.fillStyle = css(FACE);
-      path(s, ovalPts(d.x, cy, r, r, sd(d.seed) + 4, 0.02, 14));
+      path(s, ovalPts(d.x, cy, r, r, low16(d.seed) + 4, 0.02, 14));
       s.fill();
       // The red zone, two ticks, and the needle, past the middle.
       s.fillStyle = css(RED, 4);
@@ -67,8 +65,8 @@ export const FACTORY_DECOR = {
       s.fill();
       for (const a of [-2.4, -0.7])
         mark(s, d.x + Math.cos(a) * r * 0.75, cy + Math.sin(a) * r * 0.75, d.x + Math.cos(a) * r * 0.95, cy + Math.sin(a) * r * 0.95, FACE, a * 10, 0.4);
-      const n = -1.2 + k01(d.seed, 3) * 1.1;
-      tick(s, d.x, cy, d.x + Math.cos(n) * r * 0.85, cy + Math.sin(n) * r * 0.85, 0.5, sd(d.seed) + 5, inkFor(IRON));
+      const n = -1.2 + bits01(d.seed, 3) * 1.1;
+      tick(s, d.x, cy, d.x + Math.cos(n) * r * 0.85, cy + Math.sin(n) * r * 0.85, 0.5, low16(d.seed) + 5, inkFor(IRON));
     },
   },
   timeclock: {
@@ -77,13 +75,13 @@ export const FACTORY_DECOR = {
       // The time clock on its post, a rack of cards beside it with one sticking out: punch in, run.
       const f = d.flip ? -1 : 1;
       const k = d.size;
-      rod(s, at(d.x, d.y, f, 0, 0, 0, -16 * k), 1.3, IRON, sd(d.seed));
-      part(s, boxPts(d.x - 4.5, d.y - 25 * k, 9, 9 * k, 1.2, sd(d.seed) + 1, 0.12), d.color, sd(d.seed) + 1, { depth: 0.8, thin: 0.4, thick: 0.9 });
+      rod(s, at(d.x, d.y, f, 0, 0, 0, -16 * k), 1.3, IRON, low16(d.seed));
+      part(s, boxPts(d.x - 4.5, d.y - 25 * k, 9, 9 * k, 1.2, low16(d.seed) + 1, 0.12), d.color, low16(d.seed) + 1, { depth: 0.8, thin: 0.4, thick: 0.9 });
       // Its face: a small round clock, hands at a time nobody wants to be at work.
       const cx = d.x;
       const cy = d.y - 21.5 * k;
       s.fillStyle = css(FACE);
-      path(s, ovalPts(cx, cy, 2.6, 2.6, sd(d.seed) + 2, 0.02, 12));
+      path(s, ovalPts(cx, cy, 2.6, 2.6, low16(d.seed) + 2, 0.02, 12));
       s.fill();
       mark(s, cx, cy, cx, cy - 2, FACE, 3, 0.45);
       mark(s, cx, cy, cx + f * 1.5, cy + 0.6, FACE, 4, 0.45);
@@ -92,15 +90,15 @@ export const FACTORY_DECOR = {
       s.fillRect(cx - 2.2, d.y - 17.5 * k, 4.4, 0.9);
       // The rack on the post, its cards.
       const rx = d.x + f * 4.5;
-      part(s, poly(rx - 2.2 * f, d.y - 14 * k, rx + 2.4 * f, d.y - 14 * k, rx + 2.4 * f, d.y - 6 * k, rx - 2.2 * f, d.y - 6 * k), IRON, sd(d.seed) + 5, {
+      part(s, poly(rx - 2.2 * f, d.y - 14 * k, rx + 2.4 * f, d.y - 14 * k, rx + 2.4 * f, d.y - 6 * k, rx - 2.2 * f, d.y - 6 * k), IRON, low16(d.seed) + 5, {
         depth: 0.3,
         thin: 0.3,
         thick: 0.6,
       });
       for (let i = 0; i < 3; i++) {
         const y = d.y - (13 - i * 2.6) * k;
-        const up = i === Math.floor(k01(d.seed, 5) * 3) ? 1.6 : 0;
-        part(s, boxPts(rx - 1.6, y - up, 3.2, 2.4 + up, 0.2, sd(d.seed) + 6 + i, 0.05), CARD, sd(d.seed) + 6 + i, { depth: 0.2, thin: 0.25, thick: 0.5 });
+        const up = i === Math.floor(bits01(d.seed, 5) * 3) ? 1.6 : 0;
+        part(s, boxPts(rx - 1.6, y - up, 3.2, 2.4 + up, 0.2, low16(d.seed) + 6 + i, 0.05), CARD, low16(d.seed) + 6 + i, { depth: 0.2, thin: 0.25, thick: 0.5 });
       }
     },
   },
@@ -111,17 +109,17 @@ export const FACTORY_DECOR = {
       const f = d.flip ? -1 : 1;
       const k = d.size;
       const h = 9 * k;
-      part(s, boxPts(d.x - 2.4, d.y - h, 4.8, h, 2, sd(d.seed), 0.1), d.color, sd(d.seed), { depth: 0.7, thin: 0.4, thick: 0.9 });
+      part(s, boxPts(d.x - 2.4, d.y - h, 4.8, h, 2, low16(d.seed), 0.1), d.color, low16(d.seed), { depth: 0.7, thin: 0.4, thick: 0.9 });
       glint(s, poly(d.x - 1.4, d.y - h + 2, d.x - 1.5, d.y - 2.5), css(d.color, 22), 0.6);
       // The neck and handle, the hose down its side.
-      part(s, boxPts(d.x - 1, d.y - h - 1.8, 2, 2, 0.4, sd(d.seed) + 1, 0.05), IRON, sd(d.seed) + 1, { depth: 0.2, thin: 0.25, thick: 0.5 });
-      rod(s, at(d.x, d.y, f, -0.5, -h - 1.8, 2.8, -h - 2.4), 0.7, IRON, sd(d.seed) + 2);
+      part(s, boxPts(d.x - 1, d.y - h - 1.8, 2, 2, 0.4, low16(d.seed) + 1, 0.05), IRON, low16(d.seed) + 1, { depth: 0.2, thin: 0.25, thick: 0.5 });
+      rod(s, at(d.x, d.y, f, -0.5, -h - 1.8, 2.8, -h - 2.4), 0.7, IRON, low16(d.seed) + 2);
       const hose: P[] = [];
       for (let i = 0; i <= 6; i++) {
         const u = i / 6;
         hose.push({ x: d.x + f * (1.2 + Math.sin(u * Math.PI) * 2.2), y: d.y - h - 1 + u * (h * 0.7) });
       }
-      rod(s, hose, 0.6, hsl3(220, 10, 20), sd(d.seed) + 3);
+      rod(s, hose, 0.6, hsl3(220, 10, 20), low16(d.seed) + 3);
       // A white label band.
       s.fillStyle = css(FACE, -4);
       s.fillRect(d.x - 2.1, d.y - h * 0.55, 4.2, 1.6);
@@ -147,8 +145,8 @@ export const FACTORY_DECOR = {
         };
         band(0.42, 0.62);
       };
-      one(d.x, 8 * d.size, sd(d.seed));
-      if (k01(d.seed, 2) < 0.45) one(d.x + f * 6.5, 6.5 * d.size, sd(d.seed) + 7);
+      one(d.x, 8 * d.size, low16(d.seed));
+      if (bits01(d.seed, 2) < 0.45) one(d.x + f * 6.5, 6.5 * d.size, low16(d.seed) + 7);
     },
   },
   pallet: {
@@ -159,14 +157,14 @@ export const FACTORY_DECOR = {
       const w = 12 * k;
       const x = d.x - w / 2;
       for (const bx of [x + 0.4, d.x - 1.2, x + w - 2.8])
-        part(s, boxPts(bx, d.y - 1.8, 2.4, 1.8, 0.2, sd(d.seed) + bx, 0.05), WOOD, bx, { depth: 0.2, thin: 0.25, thick: 0.5 });
-      part(s, boxPts(x, d.y - 2.8, w, 1.1, 0.2, sd(d.seed) + 1, 0.05), WOOD, sd(d.seed) + 1, { depth: 0.2, thin: 0.3, thick: 0.6 });
-      const rows = k01(d.seed, 3) < 0.5 ? 2 : 1;
+        part(s, boxPts(bx, d.y - 1.8, 2.4, 1.8, 0.2, low16(d.seed) + bx, 0.05), WOOD, bx, { depth: 0.2, thin: 0.25, thick: 0.5 });
+      part(s, boxPts(x, d.y - 2.8, w, 1.1, 0.2, low16(d.seed) + 1, 0.05), WOOD, low16(d.seed) + 1, { depth: 0.2, thin: 0.3, thick: 0.6 });
+      const rows = bits01(d.seed, 3) < 0.5 ? 2 : 1;
       for (let r = 0; r < rows; r++)
         for (let c = 0; c < 2; c++) {
           const bw = w / 2 - 0.4 - r * 0.6;
           const by = d.y - 2.8 - (r + 1) * 4.4;
-          part(s, boxPts(x + 0.2 + c * (w / 2) + r * 0.6, by, bw, 4.4, 0.3, sd(d.seed) + r * 2 + c + 2, 0.08), d.color, sd(d.seed) + r * 2 + c + 2, {
+          part(s, boxPts(x + 0.2 + c * (w / 2) + r * 0.6, by, bw, 4.4, 0.3, low16(d.seed) + r * 2 + c + 2, 0.08), d.color, low16(d.seed) + r * 2 + c + 2, {
             depth: 0.4,
             thin: 0.3,
             thick: 0.7,
@@ -183,7 +181,7 @@ export const FACTORY_DECOR = {
       path(s, poly(x + w * 0.62, d.y - 3.6, x + w * 0.62 + 0.8, d.y - 3.6, x + w - 0.8, top + 3.6, x + w - 0.8, top + 2.6));
       s.fill();
       s.fillStyle = film;
-      stroke(s, poly(x - 0.2, top + 0.9, x + w * 0.5, top + 0.5, x + w + 0.2, top + 1), { w: 0.9, seed: sd(d.seed) + 9, taper: [0.1, 0.2], press: 0.3 });
+      stroke(s, poly(x - 0.2, top + 0.9, x + w * 0.5, top + 0.5, x + w + 0.2, top + 1), { w: 0.9, seed: low16(d.seed) + 9, taper: [0.1, 0.2], press: 0.3 });
       for (const cx of [x + 0.6, x + w - 0.6]) tick(s, cx, top + 1, cx - Math.sign(cx - d.x) * 1.4, top + 2.6, 0.45, cx | 0, css(FILM, -14));
       glint(s, poly(x + w * 0.2, top + 2.4, x + w * 0.38, top + 1.6), css(FILM, 6), 0.5);
     },
@@ -209,7 +207,7 @@ export const FACTORY_DECOR = {
           s.fill();
         }
       }
-      part(s, boxPts(hx - 3, hy, 6, 4.5, 0.8, sd(d.seed), 0.1), d.color, sd(d.seed), { depth: 0.5, thin: 0.35, thick: 0.8 });
+      part(s, boxPts(hx - 3, hy, 6, 4.5, 0.8, low16(d.seed), 0.1), d.color, low16(d.seed), { depth: 0.5, thin: 0.35, thick: 0.8 });
       mark(s, hx - 1.8, hy + 1.2, hx - 0.4, hy + 3.4, d.color, 3, 0.6);
       mark(s, hx + 0.4, hy + 1.2, hx + 1.8, hy + 3.4, d.color, 4, 0.6);
       const f = d.flip ? -1 : 1;
