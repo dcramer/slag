@@ -279,5 +279,5 @@
       "rules": { "no-restricted-properties": "off" }
     }
   ],
-  "ignorePatterns": [".next/**", ".claude/**", "shots/**", "node_modules/**", "next-env.d.ts"]
+  "ignorePatterns": [".next/**", ".claude/**", "shots/**", "node_modules/**", "next-env.d.ts", "src/render/cast/sprites/*/frames.ts"]
 }
