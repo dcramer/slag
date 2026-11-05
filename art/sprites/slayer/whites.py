@@ -5,7 +5,7 @@ background pure white, so every near-white patch the figure closes in (not flood
 is under 250 is hair: it is painted 20 a channel darker, its shades with it, under the hole test's
 228 (the hair's families include the tinted colours), while the gaps (between an arm and
 the coat, under a hilt) average 254 and stay white, to be cut through.
-Unpainted, design.png is drafts/one-3.png; the poses are cut from sheets3/ by `build.ts cut slayer … --design`
+Unpainted, design.png is drafts/straight-1.png; the poses are cut from sheets/ by `build.ts cut slayer … --design`
 (design.prompt.txt). Run it once on a fresh cut.
 """
 import sys
