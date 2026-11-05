@@ -102,6 +102,10 @@ Every game design decision, preference and direction the owner has given, groupe
   2026-11-04 · `done` for the boxes (every loop places its own, dealing by rank: `src/gen/level/loop-boxes.ts`, `CATCH_UP`); which items exist is `open` (a grapple, a shot that hits whoever is above you) · DESIGN.md → Modes, TODO.md → 31
 - **Each mode's targets come from the game it imitates, and every mode, the planned ones too, gets a list of its key mechanics, attributes and measurements against that game's.** "for the target it really should be similar to speedrunners i imagine? like each game mode we're using another game as inspo which helps us with mechanics" / "its probably worth evaluating that for both modes, plus the future modes, and making a list of the key mechanics and attributes and measurements and where they should be based on the games we're imitating" / "might be our level design? idk how ours looks vs speedrunners"
   2026-11-04 · `done` · DESIGN.md → Modes, MODES.md; catch-up's fixes are `planned` · TODO.md → 31
+- **Catch-up items for a climb: a swap with the runner above and a shot straight up.** "Upward items"
+  2026-11-05 · `done` (the Queue Jumper and the Upper Hand, dealt only by a loop's boxes, to whoever is behind) · DESIGN.md → Parts, PARODY.md · Replaced: the boomerang in the chasers' deal.
+- **Rising Slag stays vertical; its level design is most of what keeps it from being fun.** The shaft is floors with two holes each, so the climb runs single file. "so maybe we keep vertical and try to figure out how to make it a more fun game?" / "yeah i think level design is a huge part of the problem, agreed"
+  2026-11-05 · `planned`: open storeys with several lines up, wall-jump fast lanes, bumping the runner above from below, then catch-up again · TODO.md → 31. Considered: a horizontal looping track like the lead-camera racer's.
 - **A rule the level is built from (gravity, weather) rebuilds the lobby's level for everyone at once.**
   2026-11-02 · git `e64c3e5` · `done` · DESIGN.md → Rules
 

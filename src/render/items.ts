@@ -4,6 +4,7 @@ import { DROP_BLINK, DROP_LIFE, type ItemKind, ROCKET, SHIELD, SWORD } from '../
 import type { Projectile, Runner, RunWorld } from '../sim/run';
 import type { GameEvent } from '../sim/types';
 import type { Fx } from './fx';
+import { CLIMB_ICONS } from './items-climb';
 import { drawBat, drawRaisedBrick, EXTRA_ICONS } from './items-extra';
 import { blob, inkFor, line, type P, stroke } from './ink';
 import { ball, boxPts, glint, part, path, pen, poly, sprite, stamp, tick } from './ink-props';
@@ -27,6 +28,8 @@ export const ITEM_HUE: Record<ItemKind, HSL> = {
   tremor: { h: 14, s: 85, l: 56 },
   tax: { h: 222, s: 70, l: 62 },
   block: { h: 98, s: 60, l: 50 },
+  hook: { h: 44, s: 78, l: 56 },
+  upper: { h: 4, s: 72, l: 54 },
 };
 
 const NOODLE: HSL = { h: 96, s: 72, l: 56 };
@@ -249,6 +252,7 @@ const ICONS: Record<ItemKind, Icon> = {
     circle(s, 3.7, -6, 0.9);
   },
   ...EXTRA_ICONS,
+  ...CLIMB_ICONS,
 };
 
 /** Draw an item icon centered at (x, y), scaled by k, mirrored when facing left. */
@@ -743,6 +747,22 @@ const KIND_FX: Record<string, (fx: Fx, e: ItemEvent, shake: (k: number) => void)
   'fizzle:block'(fx, e) {
     fx.burst('debris', e.x, e.y, 10, 90, [DIRT, TURF], 1.1, 0.7, 60);
     fx.burst('dust', e.x, e.y, 6, 50, [{ h: 28, s: 20, l: 60 }], 1.6, 0.6);
+  },
+  // Two runners trade places: a puff of velvet and brass where the one ahead stood.
+  'hit:hook'(fx, e, shake) {
+    fx.add('ring', e.x, e.y, 0, 0, ITEM_HUE.hook, 22, 0.3);
+    fx.burst('confetti', e.x, e.y, 10, 110, [ITEM_HUE.hook, { h: 352, s: 62, l: 42 }, WHITE], 1, 0.6, 60);
+    shake(3);
+  },
+  // The glove lands: a starburst, and the firework goes off with it.
+  'hit:upper'(fx, e, shake) {
+    fx.add('flash', e.x, e.y, 0, 0, GOLD, 24, 0.22);
+    fx.add('ring', e.x, e.y, 0, 0, WHITE, 30, 0.3);
+    fx.burst('spark', e.x, e.y, 18, 220, [GOLD, ITEM_HUE.upper, WHITE], 1.2, 0.45);
+    shake(6);
+  },
+  'fizzle:upper'(fx, e) {
+    fx.burst('spark', e.x, e.y, 14, 160, [GOLD, { h: 200, s: 90, l: 65 }, ITEM_HUE.upper], 1, 0.6);
   },
   'use:tremor'(fx, e) {
     fx.burst('dust', e.x, e.y + 14, 4, 40, [{ h: 0, s: 0, l: 85 }], 1, 0.3);
