@@ -4,7 +4,7 @@ import { RUN_COUNTDOWN, TILE } from '../sim/constants';
 import type { GameEvent } from '../sim/types';
 import { RunnerTracker } from './actions';
 import { type Cue, type CueEnv, cuesForEvent, GROUND_TONE, slotPitch } from './cues';
-import { collectEmitters, type Emitter, type PropCue, propTransients, weatherEmitters } from './emitters';
+import { collectEmitters, type Emitter, type PropCue, propTransients, slagEmitters, slagTransients, weatherEmitters } from './emitters';
 import { AudioEngine } from './engine';
 import type { AudioSystem, UiCue } from './index';
 import { composeSong, type Song } from './music/compose';
@@ -310,11 +310,16 @@ export class WebAudioSystem implements AudioSystem {
       }
       for (const c of this.tracker.update(run, GROUND_TONE[match.level.theme.id], slotPitch)) play(c);
       this.transients.length = 0;
-      if (f0 >= 0) for (let f = Math.max(f0 + 1, f1 - 4); f <= f1; f++) propTransients(run, f, this.transients);
+      if (f0 >= 0)
+        for (let f = Math.max(f0 + 1, f1 - 4); f <= f1; f++) {
+          propTransients(run, f, this.transients);
+          slagTransients(run, f, L.x, L.y, this.transients);
+        }
       for (const c of this.transients) play({ name: c.name, x: c.x, y: c.y, pitch: c.pitch });
       this.emitters.length = 0;
       collectEmitters(run, f1, this.emitters);
       weatherEmitters(match.level, f1, L.x, L.y, this.emitters);
+      slagEmitters(run, f1, L.x, L.y, this.emitters);
       e.loops.update(this.emitters, L);
       this.loopsLive = true;
       this.runFrame = f1;

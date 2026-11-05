@@ -2,6 +2,7 @@ import type { Rng } from '../../../core/rng';
 import { FAR_ROOM, NEAR_QUAY } from '../../stage/harbor-kit';
 import { finish, Grid, hintGap } from '../kit';
 import { jumpProfile } from '../probe';
+import { harborTall } from './tall';
 import type { SculptCtx, Sculptor, Shape } from '../types';
 import { jumpGap, easyRise, hardGap, hopGap, type Knobs, knobs, raiseLandmark, rollChallenges } from './common';
 import { oneGap } from '../../stage/kit';
@@ -18,6 +19,8 @@ type Kind = 'pier' | 'ship' | 'boat' | 'buoys';
  * ratlines and a crow's nest), small boats, and buoy hops.
  */
 export const harbor: Sculptor = (ctx) => {
+  // Only Rising Slag asks this set for a tower (its races never go tall): its shaft is the tall builder's (./tall.ts).
+  if (ctx.profile.size === 'tall') return harborTall(ctx);
   const { rng, attempt } = ctx;
   const kn = knobs(ctx, 5);
   if (ctx.concept) return harborStage(ctx, kn);

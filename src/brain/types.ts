@@ -12,7 +12,7 @@ import type { Temperament } from './temperament';
  */
 
 /** Bumped when BrainView changes shape. A player's script will declare the version it was written against. */
-export const BRAIN_VIEW_VERSION = 3;
+export const BRAIN_VIEW_VERSION = 4;
 
 /** How fast across the ground, as a player would say it. */
 export type Pace = 'still' | 'walking' | 'running' | 'flying';
@@ -103,6 +103,8 @@ export interface BrainView {
     tiles: Uint8Array;
     spawn: { tx: number; ty: number };
     goal: { tx: number; ty: number };
+    /** False when the mode races for no flag (Rising Slag): the goal is the top of the climb, a place to hold, and nobody finishes. */
+    flag: boolean;
     /** Bridges that would finish the level as it stands, left end first (BRIDGE_W wide). Empty when it's open. */
     plan: { tx: number; ty: number }[];
   };

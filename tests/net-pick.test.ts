@@ -41,8 +41,8 @@ class Room {
   }
 }
 
-/** Three seated peers, in pick. */
-function inPick() {
+/** Three seated peers, in pick: `after` frames after the host got there (the guests a little less). */
+function inPick(after = 40) {
   const r = new Room();
   const a = r.join('aaaa');
   r.run(5);
@@ -55,8 +55,8 @@ function inPick() {
   const ready = press({ confirmPressed: true });
   r.tick({ aaaa: { kb1: ready }, bbbb: { kb1: ready }, cccc: { kb1: ready } });
   for (let i = 0; i < 90 && a.match.phase !== 'pick'; i++) r.tick();
-  r.run(40);
-  expect(c.match.phase).toBe('pick');
+  r.run(after);
+  if (after >= 40) expect(c.match.phase).toBe('pick');
   return { r, a, b, c };
 }
 
@@ -65,6 +65,29 @@ const center = (s: NetSession, i: number) => {
   return { x: c.x + c.w / 2, y: c.y + c.h / 2 };
 };
 const mine = (s: NetSession, peer: string) => s.match.players.find((p) => p.device === `${peer}:kb1`)!;
+
+describe('the claim gate', () => {
+  it('a guest marks a click pending only when the host takes it: shut at the start of pick for both, then open for both', () => {
+    const seen: { wait: number; pending: boolean; claimed: boolean }[] = [];
+    for (const wait of [0, 4, 8, 14]) {
+      const { r, a, b } = inPick(0);
+      while (b.match.phase !== 'pick') r.tick();
+      r.run(wait);
+      const at = center(a, 2);
+      let pending = false;
+      r.tick({ bbbb: { kb1: press({ pointer: at, confirmPressed: true }) } });
+      for (let i = 0; i < 40; i++) {
+        pending ||= b.pendingCard === 2;
+        r.tick();
+      }
+      const claimed = a.match.crate[2].claimedBy === mine(a, 'bbbb').slot;
+      seen.push({ wait, pending, claimed });
+      if (pending) expect(claimed, `wait ${wait}`).toBe(true);
+    }
+    expect(seen[0]).toMatchObject({ pending: false, claimed: false });
+    expect(seen.at(-1)).toMatchObject({ pending: true, claimed: true });
+  });
+});
 
 describe('claim races', () => {
   it('two peers clicking one card in the same tick: one winner everywhere, and the loser never sees it as theirs', () => {

@@ -9,23 +9,26 @@ import {
   bannedFor,
   cleanCharacter,
   cleanName,
+  deviceId,
   freeSeats,
+  guestMay,
   KICK_BAN_FRAMES,
+  localOf,
   type NetAction,
   type NetState,
   newNetState,
   peerOf,
   personOf,
   relayAction,
-  sanitizeRules,
   SEAT_PHASES,
   type Watcher,
 } from './actions';
 import { CONFIRM_BIT, decode, type Enc, encode, held, heldPeerFrame, mergePeerFrames, type PeerFrame, PRESSED } from './codec';
 import { Predictor } from './predict';
-import type { RoomListing } from './signal-protocol';
+import { MAX_PEERS, type RoomListing } from './signal-protocol';
 import { hashMatch, hashSnap, type MatchSnap, restoreMatch, snapshotMatch } from './snapshot';
 import type { LinkStatus, Member, Transport } from './transport';
+import { ACTS_PER_BUNDLE, ACTS_PER_MSG, type Bundle, BUNDLES_PER_MSG, FRAMES_PER_MSG, type Msg, parseMsg } from './wire';
 
 /**
  * Online session: host election, host-sequenced lockstep, prediction,
@@ -49,7 +52,6 @@ const PING_MS = 1000;
 const HELLO_RETRY_MS = 1000;
 const REFUSED_RETRY_MS = 10_000;
 const NEED_AFTER_MS = 150;
-const MAX_UNACKED = 90;
 /**
  * Frames a guest may have waiting on the host. Every frame beyond one is 17 ms
  * of lag for everyone watching, and the host only eats one a tick, so a queue
@@ -81,6 +83,13 @@ const CORRECTION_MAX_STEPS = 4;
  * From there the idle rules (game/match.ts) decide when the room stops waiting on it.
  */
 const SOFT_TICKS = 60;
+/**
+ * Requests one guest gets sequenced per host tick; the rest wait in its next message, unacked. A guest flooding
+ * requests (or messages) only ever gets this many, so nobody else's wait on the host grows with it.
+ */
+export const ACTS_PER_TICK = 4;
+/** Ack entries a guest keeps before forgetting peers no longer here (the host forgets them as they go). */
+const ACKS_KEEP = 2 * MAX_PEERS;
 /** An observer ahead of a player in join order waits this long, then moves to the back (see maybeReorder). */
 const REORDER_AFTER_MS = 2000;
 const REORDER_EVERY_MS = 10_000;
@@ -120,31 +129,6 @@ export interface PeerInfo {
   /** Watching by choice, or moved there for being idle. */
   watching?: Watcher;
 }
-
-interface Bundle {
-  f: number;
-  /** Global device → input; devices with no buttons are omitted. */
-  i?: Record<string, Enc>;
-  a?: NetAction[];
-  /** Ack deltas: peer → [last consumed input seq, last accepted action n]. */
-  k?: Record<string, [number, number]>;
-}
-
-type Msg =
-  | { t: 'in'; s: number; f: PeerFrame[]; a?: [number, NetAction][]; c: number; h?: [number, number] }
-  | { t: 'b'; b: Bundle[] }
-  | { t: 'sync'; s: MatchSnap; k: Record<string, [number, number]>; ns: NetState; last: Record<string, Enc>; why: string }
-  /** `f`: the furthest frame this peer holds, -1 if it never joined this room's timeline. */
-  | { t: 'hello'; f: number; c?: string }
-  | { t: 'need'; f: number }
-  /** New host to the furthest guest: send me your state. */
-  | { t: 'pull' }
-  | { t: 'state'; s: MatchSnap; k: Record<string, [number, number]>; ns: NetState; last: Record<string, Enc> }
-  | { t: 'ping'; ts: number }
-  | { t: 'pong'; ts: number }
-  | { t: 'pings'; p: Record<string, number> }
-  /** Host to a peer it removed, or refuses: `left` ms until it may come back. */
-  | { t: 'kicked'; left?: number };
 
 export interface SessionOptions {
   transport: Transport | null;
@@ -187,6 +171,8 @@ interface RemoteQueue {
   last: PeerFrame;
   /** Host ticks in a row with nothing queued. */
   dry: number;
+  /** Requests sequenced from this peer since the host's last tick (see ACTS_PER_TICK). */
+  took: number;
 }
 
 export class NetSession {
@@ -211,7 +197,7 @@ export class NetSession {
   /** The last Join: still with the host, won (seated, or owed a seat at the round boundary), or lost to someone quicker. */
   seatAsk: SeatAsk = 'none';
   /** Counters for the HUD/debug overlay and tests. */
-  stats = { desyncs: 0, syncs: 0, migrations: 0, bundles: 0, predicted: 0, dryTicks: 0, foldedFrames: 0, queuedFrames: 0, hostTicks: 0 };
+  stats = { desyncs: 0, syncs: 0, migrations: 0, bundles: 0, predicted: 0, dryTicks: 0, foldedFrames: 0, queuedFrames: 0, hostTicks: 0, malformed: 0 };
 
   private now: () => number;
   private sendEvery: number;
@@ -321,7 +307,7 @@ export class NetSession {
     opts.transport?.start({
       status: (s, d) => this.onStatus(s, d),
       members: (l) => this.onMembers(l),
-      message: (from, d) => this.onMessage(from, d as Msg),
+      message: (from, d) => this.onWire(from, d),
     });
   }
 
@@ -363,7 +349,7 @@ export class NetSession {
 
   /** Global id for a local device ('kb1' → '<peer>:kb1'). Offline sessions keep raw ids. */
   globalDevice(local: string): string {
-    return this.transport ? `${this.self}:${local}` : local;
+    return this.transport ? deviceId(this.self, local) : local;
   }
 
   /** True if this global device belongs to this machine. */
@@ -429,6 +415,7 @@ export class NetSession {
     };
     const host = this.nameOf(this.self);
     if (host) l.host = host;
+    if (this.match.rules.mode !== 'race') l.mode = this.match.rules.mode;
     return l;
   }
 
@@ -648,6 +635,8 @@ export class NetSession {
       this.queues.delete(id);
       this.sentK.delete(id);
     }
+    // A peer that comes back says hello and is measured again.
+    for (const map of [this.rtt, this.heard, this.clients]) for (const id of map.keys()) if (!present.has(id)) map.delete(id);
     if (host !== this.hostId) this.changeHost(host);
     else if (this.role === 'host' && !this.resumed && list.length === 1) this.tryResume();
     if (this.collecting && this.role !== 'host') this.collecting = null;
@@ -716,8 +705,8 @@ export class NetSession {
       if (m.id === this.self) continue;
       const k = this.acks[m.id] ?? [0, 0];
       const last: PeerFrame = {};
-      for (const [dev, e] of Object.entries(this.lastInputs)) if (peerOf(dev) === m.id) last[dev.slice(m.id.length + 1)] = e;
-      this.queues.set(m.id, { frames: [], consumed: k[0], actN: k[1], ackN: k[1], last: heldPeerFrame(last), dry: 0 });
+      for (const [dev, e] of Object.entries(this.lastInputs)) if (peerOf(dev) === m.id) last[localOf(dev)] = e;
+      this.queues.set(m.id, { frames: [], consumed: k[0], actN: k[1], ackN: k[1], last: heldPeerFrame(last), dry: 0, took: 0 });
     }
   }
 
@@ -831,6 +820,14 @@ export class NetSession {
     this.transport?.send(m, to, lossy);
   }
 
+  /** Everything a peer sends arrives here, and only what parses goes further (wire.ts). */
+  private onWire(from: string, data: unknown) {
+    const msg = parseMsg(data);
+    if (msg) return this.onMessage(from, msg);
+    // A hostile or broken peer can send one every frame: the first few say who, and the count says the rest.
+    if (++this.stats.malformed <= 5) this.log(`malformed message from ${from} dropped`);
+  }
+
   private onMessage(from: string, msg: Msg) {
     if (this.closed) return;
     this.heard.set(from, this.now());
@@ -847,14 +844,14 @@ export class NetSession {
     }
     if (this.role === 'host') {
       if (msg.t === 'in') this.onInput(from, msg);
-      else if (msg.t === 'hello') this.onHello(from, msg.f, typeof msg.c === 'string' ? msg.c : undefined);
+      else if (msg.t === 'hello') this.onHello(from, msg.f, msg.c);
       else if (msg.t === 'need') this.onNeed(from, msg.f);
       else if (msg.t === 'state') this.onState(from, msg);
       else if (msg.t === 'b' || msg.t === 'sync') this.stashMsg(from, msg); // someone else thinks they're host: presence lag
       return;
     }
     if (msg.t === 'kicked') {
-      if (from === this.hostId) this.onKicked(typeof msg.left === 'number' ? msg.left : (this.banFrames * 1000) / 60);
+      if (from === this.hostId) this.onKicked(msg.left ?? (this.banFrames * 1000) / 60);
       return;
     }
     if (msg.t === 'pull') {
@@ -892,7 +889,7 @@ export class NetSession {
   private queue(peer: string): RemoteQueue {
     let q = this.queues.get(peer);
     if (!q) {
-      q = { frames: [], consumed: 0, actN: 0, ackN: 0, last: {}, dry: 0 };
+      q = { frames: [], consumed: 0, actN: 0, ackN: 0, last: {}, dry: 0, took: 0 };
       this.queues.set(peer, q);
     }
     return q;
@@ -904,17 +901,17 @@ export class NetSession {
     const tail = q.frames.length ? q.frames[q.frames.length - 1].seq : q.consumed;
     // Observers send no input, and anything one sends anyway (a seat just given up) plays no part.
     if (this.match.players.some((p) => peerOf(p.device) === from)) {
-      msg.f.forEach((f, j) => {
-        const seq = msg.s + j;
-        if (seq > tail) q.frames.push({ seq, f });
-      });
+      for (const [j, f] of msg.f.entries()) if (msg.s + j > tail) q.frames.push({ seq: msg.s + j, f });
     }
     for (const [n, a] of msg.a ?? []) {
       if (n <= q.actN) continue;
+      // Unacked, so the guest sends it again: its requests stay in order, only later.
+      if (q.took >= ACTS_PER_TICK) break;
+      q.took++;
       q.actN = n;
       if (a.t === 'join') {
         if (peerOf(a.dev) === from) this.wants.add(a.dev); // seated by reconcile() between rounds
-      } else if (this.allowed(from, a)) this.hostActions.push(relayAction(this.match, a));
+      } else if (guestMay(from, a)) this.hostActions.push(relayAction(this.match, a));
     }
     if (msg.h) {
       const mine = this.hashes.get(msg.h[0]);
@@ -927,12 +924,6 @@ export class NetSession {
     }
   }
 
-  /** Guests may only act for their own devices; rules, the level and seating belong to the host. */
-  private allowed(from: string, a: NetAction): boolean {
-    if (a.t === 'rules' || a.t === 'level' || a.t === 'join' || a.t === 'salt' || a.t === 'kick' || a.t === 'adopt') return false;
-    return peerOf(a.dev) === from;
-  }
-
   private onHello(from: string, f: number, client?: string) {
     if (client) this.clients.set(from, client);
     const left = this.banLeft(from, client);
@@ -940,7 +931,7 @@ export class NetSession {
       addBreadcrumb('room', 'rejoin refused (banned)', { peer: from, left: Math.round(left) });
       return this.send({ t: 'kicked', left }, from);
     }
-    if (this.collecting) this.collecting.got.set(from, typeof f === 'number' ? f : -1);
+    if (this.collecting) this.collecting.got.set(from, f);
     else this.send(this.syncMsg('hello'), from);
   }
 
@@ -948,7 +939,7 @@ export class NetSession {
     const first = this.history[0]?.f ?? Infinity;
     if (f >= first && f <= this.match.frame) {
       const slice = this.history.slice(f - first);
-      for (let i = 0; i < slice.length; i += 120) this.send({ t: 'b', b: slice.slice(i, i + 120) }, from);
+      for (let i = 0; i < slice.length; i += BUNDLES_PER_MSG) this.send({ t: 'b', b: slice.slice(i, i + BUNDLES_PER_MSG) }, from);
     } else {
       this.send(this.syncMsg('behind'), from);
     }
@@ -960,7 +951,7 @@ export class NetSession {
     // the asker, which then reads its answer from a state that doesn't have it (or loses it if we die first).
     for (const [p, q] of this.queues) k[p] = [q.consumed, q.ackN];
     const last: Record<string, Enc> = {};
-    for (const [p, q] of this.queues) for (const [d, e] of Object.entries(q.last)) last[`${p}:${d}`] = e;
+    for (const [p, q] of this.queues) for (const [d, e] of Object.entries(q.last)) last[deviceId(p, d)] = e;
     return { t: 'sync', s: snapshotMatch(this.match), k, ns: structuredCloneJson(this.ns), last, why };
   }
 
@@ -973,6 +964,7 @@ export class NetSession {
     const k: Record<string, [number, number]> = {};
     for (const [peer, q] of this.queues) {
       q.ackN = q.actN; // every action sequenced so far goes out in this bundle
+      q.took = 0;
       const sig = `${q.consumed},${q.actN}`;
       if (this.sentK.get(peer) !== sig) {
         this.sentK.set(peer, sig);
@@ -1005,9 +997,11 @@ export class NetSession {
         // Never wait: hold its buttons through a hiccup, then let go of them (soft disconnect, see SOFT_TICKS).
         f = ++q.dry > SOFT_TICKS ? {} : heldPeerFrame(q.last);
       }
-      for (const [d, e] of Object.entries(f)) if (e !== 0 && this.counts(`${peer}:${d}`)) inputs[`${peer}:${d}`] = e;
+      for (const [d, e] of Object.entries(f)) if (e !== 0 && this.counts(deviceId(peer, d))) inputs[deviceId(peer, d)] = e;
     }
-    const actions = [...this.reconcile(), ...this.hostActions.splice(0)];
+    // What a bundle can't carry waits a frame: guests refuse a longer one (wire.ts).
+    const settled = this.reconcile();
+    const actions = [...settled, ...this.hostActions.splice(0, Math.max(0, ACTS_PER_BUNDLE - settled.length))];
     const b: Bundle = { f: this.match.frame };
     if (Object.keys(inputs).length) b.i = inputs;
     if (actions.length) b.a = actions;
@@ -1057,8 +1051,8 @@ export class NetSession {
       // Bot seats are the room's, run by whoever hosts: never away or dropped with a peer, but taken over, fresh.
       if (isBotDevice(p.device)) {
         if (peer === this.self) continue;
-        while (devices.has(`${this.self}:${botDevice(n)}`)) n++;
-        const to = `${this.self}:${botDevice(n)}`;
+        while (devices.has(deviceId(this.self, botDevice(n)))) n++;
+        const to = deviceId(this.self, botDevice(n));
         devices.add(to);
         out.push({ t: 'adopt', dev: p.device, to });
         continue;
@@ -1132,7 +1126,7 @@ export class NetSession {
     if (seated) {
       this.unacked.push({ seq: ++this.seq, f: own });
       // Fold, not drop: through a long stall the oldest frames can hold a click.
-      if (this.unacked.length > MAX_UNACKED) {
+      if (this.unacked.length > FRAMES_PER_MSG) {
         const [a, b] = this.unacked;
         this.unacked.splice(0, 2, { seq: b.seq, f: mergePeerFrames(a.f, b.f) });
       }
@@ -1142,7 +1136,8 @@ export class NetSession {
     const pressed = seated && Object.values(own).some((e) => (typeof e === 'number' ? e : e[0]) & PRESSED);
     if ((seated && this.ticks % this.sendEvery === 0) || pressed || this.pendingActs.length || this.pendingHash) {
       const msg: Msg = { t: 'in', s: this.unacked[0]?.seq ?? this.seq + 1, f: this.unacked.map((u) => u.f), c: this.match.frame };
-      if (this.pendingActs.length) msg.a = this.pendingActs;
+      // The oldest first, a message's worth at a time: the host acks them and the next message carries on.
+      if (this.pendingActs.length) msg.a = this.pendingActs.slice(0, ACTS_PER_MSG);
       if (this.pendingHash) msg.h = this.pendingHash;
       this.pendingHash = undefined;
       this.send(msg, this.hostId, true);
@@ -1231,8 +1226,7 @@ export class NetSession {
     const m = this.match;
     for (const a of b.a ?? []) {
       const was = a.t === 'kick' ? this.ns.kicked[a.peer] : undefined;
-      if (a.t === 'rules') applyAction(m, this.ns, { t: 'rules', rules: sanitizeRules(a.rules) });
-      else applyAction(m, this.ns, a);
+      applyAction(m, this.ns, a);
       if (a.t === 'join' || a.t === 'leave') addBreadcrumb('room', a.t, { dev: a.dev });
       else if (a.t === 'away') addBreadcrumb('room', a.on ? 'away' : 'back', { dev: a.dev });
       // By what was applied, not what was asked: outside the lobby this did nothing.
@@ -1252,6 +1246,12 @@ export class NetSession {
     this.lastInputs = b.i ?? {};
     if (b.k) {
       for (const [p, v] of Object.entries(b.k)) this.acks[p] = v;
+      // Only a member's acks seed a new host's queues (rebuildQueues). Kept until the table grows, so a peer that
+      // drops out of our list for a moment keeps its place.
+      if (Object.keys(this.acks).length > ACKS_KEEP) {
+        const present = new Set(this.members.map((x) => x.id));
+        for (const p of Object.keys(this.acks)) if (!present.has(p)) delete this.acks[p];
+      }
       const mine = b.k[this.self];
       if (mine) this.prune(mine);
     }
@@ -1268,11 +1268,10 @@ export class NetSession {
 
   private localFrame(local: Readonly<Record<string, InputFrame>>): PeerFrame {
     const out: PeerFrame = {};
-    const prefix = `${this.self}:`;
     for (const [dev, f] of Object.entries(local)) {
-      let d = dev;
-      if (d.startsWith(prefix)) d = d.slice(prefix.length);
-      else if (this.transport && d.includes(':')) continue; // a HUD button for someone else's player
+      const mine = peerOf(dev) === this.self;
+      if (!mine && this.transport && dev.includes(':')) continue; // a HUD button for someone else's player
+      const d = mine ? localOf(dev) : dev;
       const e = encode(f);
       if (e === 0) continue;
       out[d] = out[d] !== undefined ? mergePeerFrames({ x: out[d] }, { x: e }).x : e;
@@ -1353,11 +1352,11 @@ export class NetSession {
     const pick = m.phase === 'pick';
     for (const p of d.players) {
       if (this.isLocal(p.device)) {
-        const dev = p.device.slice(p.device.indexOf(':') + 1);
+        const dev = localOf(p.device);
         for (const u of this.unacked) {
           const inp = decode(u.f[dev]); // a frame with no buttons still ends a held direction's speed ramp
           d.moveCursor(p, inp);
-          if (pick && inp.confirmPressed && p.claim < 0 && m.phaseFrame > 10) {
+          if (pick && inp.confirmPressed && p.claim < 0 && m.acceptsConfirm()) {
             const i = m.crateItemAt(p.cursor.x, p.cursor.y);
             if (i >= 0 && m.crate[i].claimedBy < 0) this.pendingCard = i;
           }

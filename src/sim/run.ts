@@ -1,7 +1,7 @@
 import { inset, overlaps, type Rect, type Vec } from '../core/geom';
 import { deriveSeed, Rng } from '../core/rng';
 import { type BloodCell, buildBlood, groundOf, spillBlood } from './blood';
-import { FPS, PLAYER_W, POP_HOLD, RUN_COUNTDOWN } from './constants';
+import { FPS, PLAYER_W, POP_HOLD, RUN_COUNTDOWN, TILE } from './constants';
 import { collideRunners, contactStart, footing as stackFooting } from './collide';
 import {
   absorbHit,
@@ -19,7 +19,8 @@ import {
   spawnItem,
   stepItems,
 } from './items';
-import { goalRect, killY, type Level, offMap, spawnZone, tileAt } from './level';
+import { goalRect, killY, lapShift, type Level, offMap, spawnZone, tileAt } from './level';
+import { stepTide, tideStart } from './tide';
 import { type Body, bodyAtCell, type CollisionWorld, firstOverlap, type Solid, stepBody } from './physics';
 import {
   type Beam,
@@ -96,6 +97,13 @@ export interface Runner {
   pop: number;
   /** Frames this runner has been held up by other bodies; enough of them and it slips through (sim/collide.ts). */
   press: number;
+  /** Laps climbed round a looping shaft (`Level.loop`): +1 each time it carries on a lap up, -1 a lap down. */
+  lap: number;
+}
+
+/** Feet of `r` in climbed coordinates (world y, minus a loop's rows for every lap up): what the slag measures. */
+export function feetUp(level: Level, r: Pick<Runner, 'body' | 'lap'>): number {
+  return r.body.y + r.body.h - r.lap * (level.loop ?? 0) * TILE;
 }
 
 /**
@@ -115,6 +123,20 @@ export function popCountdown(pop: number): { secs: number; since: number } {
 }
 
 /**
+ * What a race is played for, as the match's mode sets it (game/modes.ts). Plain data the run reads, so the
+ * run knows nothing of modes: a new mode picks its numbers here instead of branching in the step.
+ */
+export interface RunRules {
+  /** Reaching the flag finishes you. Off, the goal is only the top of the level, and nobody finishes. */
+  flag: boolean;
+  /** With more than one runner, the race ends when one is left standing. */
+  lastStanding: boolean;
+}
+
+/** The race the game was built on: run for the flag. */
+export const RACE_RUN: RunRules = { flag: true, lastStanding: false };
+
+/**
  * One race through the level. Pure function of (level, set pieces, placed
  * props, inputs); all time is measured in sim frames since the round
  * started. Prop behavior is delegated to module plugins (src/sim/props).
@@ -127,6 +149,8 @@ export class RunWorld {
   kills: { victim: number; killer: number }[] = [];
   /** Frame the race ended (everyone done), or -1. */
   endFrame = -1;
+  /** Rising Slag: world y of the slag's surface (sim/tide.ts), or null on a level without one. Under it, everything burns. */
+  slag: number | null;
   propState = new Map<number, PropState>();
   /** Set pieces first, then player props. */
   resolved: Resolved[];
@@ -164,6 +188,8 @@ export class RunWorld {
     public blood: BloodCell[] = [],
     /** False under the blood rule's Off: deaths spill nothing. */
     public bleeds = true,
+    /** What the race is played for (the match's mode). */
+    readonly rules: RunRules = RACE_RUN,
   ) {
     const n = slots.length;
     this.runners = slots.map((slot, i) => ({
@@ -184,6 +210,7 @@ export class RunWorld {
       perch: 0,
       pop: 0,
       press: 0,
+      lap: 0,
     }));
     this.resolved = [...level.setPieces, ...placed].map(resolveProp);
     for (const r of this.resolved) {
@@ -200,6 +227,7 @@ export class RunWorld {
       surfaceAt: groundSurfaceAt(level),
     };
     this.goal = goalRect(level);
+    this.slag = tideStart(level);
     this.safeZone = spawnZone(level);
     this.killY = killY(level);
     this.buildProps(0); // A race can be drawn before its first step, and the art reads what the build reports.
@@ -266,6 +294,7 @@ export class RunWorld {
     const f = this.frame;
     this.struck.length = 0;
     this.buildProps(f);
+    if (this.slag !== null) this.slag = stepTide(this.level, this.slag, f, this.leaderFeet());
     const live = f >= RUN_COUNTDOWN && this.endFrame < 0;
     const start = contactStart(this.runners);
 
@@ -295,6 +324,12 @@ export class RunWorld {
         return this.kill(r, owner, 'crush');
       }
       statusPostStep(r.status, b);
+      // Round a loop: climbing into its top band carries on from the same place in the bottom one, a lap up.
+      const laps = lapShift(this.level, b.y + b.h);
+      if (laps) {
+        b.y += laps * this.level.loop! * TILE;
+        r.lap += laps;
+      }
       if (!held) itemPostStep(r.items, b);
 
       if (b.onGround && b.groundRef >= 0) {
@@ -345,7 +380,9 @@ export class RunWorld {
       }
       if (b.y > this.killY) return this.kill(r, -1, 'fall');
       if (offMap(b, this.level.w)) return this.kill(r, -1, 'out');
-      if (overlaps(b, this.goal)) {
+      // Slag burns wherever it is, the spawn zone included, as the pit takes you anywhere.
+      if (this.slag !== null && hb.y + hb.h - r.lap * (this.level.loop ?? 0) * TILE > this.slag) return this.kill(r, -1, 'hazard');
+      if (this.rules.flag && overlaps(b, this.goal)) {
         letGo(r);
         r.finished = true;
         r.finishFrame = f;
@@ -361,13 +398,28 @@ export class RunWorld {
 
     stepItems(this, inputs, live);
     this.stepProjectiles(f);
+    this.lapThings();
     for (const rp of this.resolved) rp.mods.forEach((m, mi) => moduleSim(m.type).tick?.(m, this.tickCtx(rp, mi, f)));
 
     if (this.endFrame < 0) {
       if (live && this.timeLeft === 0) for (const r of this.active) this.kill(r, -1, 'timeout');
-      if (this.active.length === 0) this.endFrame = f;
+      if (this.active.length <= (this.rules.lastStanding && this.runners.length > 1 ? 1 : 0)) this.endFrame = f;
     }
     this.frame++;
+  }
+
+  /** The highest feet (climbed coordinates, `feetUp`) of anyone still racing, or null: where the slag's leash is tied. */
+  private leaderFeet(): number | null {
+    let top: number | null = null;
+    for (const r of this.runners) if (r.alive && !r.finished) top = Math.min(top ?? Infinity, feetUp(this.level, r));
+    return top;
+  }
+
+  /** Shots and loose items round a loop go a lap with whatever crosses its line, as runners do. */
+  private lapThings() {
+    if (!this.level.loop) return;
+    const rows = this.level.loop * TILE;
+    for (const t of [...this.projectiles, ...this.items.drops]) t.y += lapShift(this.level, t.y) * rows;
   }
 
   /** Kill a runner, unless a shield cancels it. Bonks pass kill credit on. */

@@ -1,13 +1,15 @@
 import { css, type HSL, shift, toRgb } from '../core/color';
 import { clamp } from '../core/geom';
 import type { Match, Player } from '../game/match';
+import { MODES } from '../game/modes';
 import { overview, raceFloor, type ViewXform } from '../game/view';
-import { PLAYER_H, TILE, VIEW_H, VIEW_W } from '../sim/constants';
+import { FPS, PLAYER_H, RUN_COUNTDOWN, TILE, VIEW_H, VIEW_W } from '../sim/constants';
 import { floorY, type Level, tileAt } from '../sim/level';
 import type { Solid } from '../sim/physics';
 import type { Cell } from '../core/geom';
 import { type Beam, footprint, motionOffset, placeFaults, previewProps, type Resolved, resolveProp } from '../sim/props';
-import type { RunWorld } from '../sim/run';
+import { feetUp, type RunWorld } from '../sim/run';
+import { leashRows } from '../sim/tide';
 import type { GameEvent } from '../sim/types';
 import { Backdrop } from './background';
 import { drawBlood } from './blood';
@@ -25,6 +27,7 @@ import { Hud } from './hud';
 import { drawClouds, drawDrops, drawRunnerItems, itemFx } from './items';
 import { drawPocketBlocks, drawShells, drawShellShadows } from './items-extra';
 import { circle, flutter, type Light, light, type RC } from './kit';
+import { drawTideBody, drawTideSurface, slagEmbers } from './tide';
 import { type Compositor, createCompositor } from './post';
 import {
   drawBackdrop,
@@ -155,7 +158,7 @@ export class Renderer {
   ) {
     this.comp = createCompositor(glCanvas);
     this.hud = new Hud(hudCanvas.getContext('2d')!);
-    this.hud.worldToView = (x, y) => this.cam.worldToView(x, y);
+    this.hud.worldToView = (x, y) => this.cam.worldToView(x, this.cam.nearest(y));
     this.viewBox.dataset.slagView = '';
     this.viewBox.style.cssText = 'position:absolute;visibility:hidden;pointer-events:none';
     glCanvas.parentElement?.append(this.viewBox);
@@ -327,30 +330,65 @@ export class Renderer {
     // --- world
     this.cam.apply(s, this.pw);
     this.cam.apply(g, this.pw);
-    this.surround.draw(rc);
     const run = m.phase === 'run' ? m.run : null;
+    // A looping shaft's race (Level.loop) repeats a lap up and down: the level and what's built in it are drawn once
+    // per copy the view can see, by moving the camera a lap, and the runners and the slag once, on the leader's
+    // lap (PhoneCam.lap). Everywhere else there's one copy.
+    const L = run && level.loop ? level.loop * TILE : 0;
+    const lap = L ? this.phone.lap : 0;
+    const copies = L ? lapCopies(this.cam.visible(), wh, L) : [0];
+    const baseY = this.cam.y;
+    const at = (k: number) => {
+      this.cam.y = baseY - k * L;
+      for (const c of new Set([s, g, rc.s])) this.cam.apply(c, this.pw);
+    };
+    /** Draw `paint` in every copy; the lights it throws are moved to where its copy shows. */
+    const each = (paint: (k: number) => void) => {
+      for (const k of copies) {
+        const n = lights.length;
+        at(k);
+        paint(k);
+        for (let i = n; i < lights.length; i++) lights[i].y += k * L;
+      }
+      at(0);
+    };
+    if (!L) this.surround.draw(rc);
     // Set pieces are part of the level: show them in every phase (lobby, pick, place), not just races.
     const resolved = run ? run.resolved : [...level.setPieces, ...m.placed].map(resolveProp);
     // Scenery goes down first so the terrain stands in front of it and shadows it.
-    for (const r of resolved) drawBackdrop(rc, r, { level });
+    each(() => {
+      for (const r of resolved) drawBackdrop(rc, r, { level });
+    });
+    // Rising Slag: the slag is only there in a race, so every other phase shows the level dry.
+    if (run?.slag != null) {
+      const vis = this.cam.visible();
+      drawTideBody(rc, level, run.slag + lap * L, this.surround.margin, vis.y + vis.h);
+    }
     // The rest of the world goes on its own transparent layer (see ForegroundLayer); `s` stays the background.
     rc.s = this.foreground.begin(this.scene, s, g, level.theme.ambientLight);
     this.cam.apply(rc.s, this.pw);
-    // Liquids sit behind the terrain (docs/DESIGN.md, render layers): it stands in the pool, and its bake cuts the pool's glow.
-    const dry = this.backdrop.drawLiquid(rc, level.theme, ww, wh, this.cam.visible(), this.surround.margin, (c) => this.surround.drawSunken(c, level));
-    for (const c of [rc.s, g]) this.surround.cutPool(c, level, POOL_ROWS, dry);
-    // Ground stands in the pool down to the world's bottom, but the surface is above that: what's under it is the pool's sunken pass.
-    for (const c of [rc.s, g]) {
-      c.save();
-      c.clip(dry);
+    if (L) {
+      // A loop has no bottom, so no pool: the shaft just carries on down.
+      each(() => this.terrain.draw(rc));
+    } else {
+      // Liquids sit behind the terrain (docs/DESIGN.md, render layers): it stands in the pool, and its bake cuts the pool's glow.
+      const dry = this.backdrop.drawLiquid(rc, level.theme, ww, wh, this.cam.visible(), this.surround.margin, (c) => this.surround.drawSunken(c, level));
+      for (const c of [rc.s, g]) this.surround.cutPool(c, level, POOL_ROWS, dry);
+      // Ground stands in the pool down to the world's bottom, but the surface is above that: what's under it is the pool's sunken pass.
+      for (const c of [rc.s, g]) {
+        c.save();
+        c.clip(dry);
+      }
+      this.terrain.draw(rc);
+      rc.s.restore();
+      g.restore();
     }
-    this.terrain.draw(rc);
-    rc.s.restore();
-    g.restore();
     const pushers = m.run ? m.run.runners.filter((r) => r.alive).map((r) => ({ x: r.body.x + r.body.w / 2, y: r.body.y + r.body.h, vy: r.body.vy })) : [];
     this.terrain.drawLive(rc, level, pushers);
-    this.drawMarkers(rc, level);
-    drawBlood(rc, m, frame);
+    each(() => {
+      this.drawMarkers(rc, level, MODES[m.rules.mode].run.flag);
+      drawBlood(rc, m, frame);
+    });
 
     const grips = run?.runners.flatMap((r) => r.attach.grip ?? []);
     // A race's beams are the ones the sim hurts with. Before one, ghosts join in: a block you're holding cuts the flame it would stop.
@@ -359,68 +397,88 @@ export class Renderer {
     const beams = still ? still.beams : run!.beams;
     // Weather lies on what's built in every phase, but not on a ghost: that's only where a part would go.
     const solids = still ? still.solids.filter((x) => !ghosts.some((gh) => gh.pp.uid === x.propUid)) : run!.solids;
-    for (const r of resolved) {
-      drawForeground(rc, r, {
-        level,
-        state: run?.propState.get(r.pp.uid),
-        broken: run ? run.isBroken(r.pp.uid) : false,
-        showPath: m.phase !== 'run',
-        emit: run ? emit : undefined,
-        grips,
-        placed: m.placed,
-        beams,
-        solids,
-        runners: pushers,
-      });
-    }
+    each((k) => {
+      for (const r of resolved) {
+        drawForeground(rc, r, {
+          level,
+          state: run?.propState.get(r.pp.uid),
+          broken: run ? run.isBroken(r.pp.uid) : false,
+          showPath: m.phase !== 'run',
+          // Sparks and smoke come off a part once, whichever copy you see.
+          emit: run && k === 0 ? emit : undefined,
+          grips,
+          placed: m.placed,
+          beams,
+          solids,
+          runners: pushers,
+        });
+      }
+    });
 
+    if (run?.slag != null) {
+      drawTideSurface(rc, level, run.slag + lap * L, run.frame);
+      if (run.frame >= RUN_COUNTDOWN + level.tide!.wait * FPS) slagEmbers(this.fx, level, run.slag + lap * L, this.cam.visible(), dt, this.slagRush(run));
+    }
     if (m.phase === 'place') this.drawGhosts(rc, m, beams, still?.solids ?? []);
     if (m.phase === 'lobby' || m.phase === 'pick' || m.phase === 'place') this.drawIdlers(rc, m, dt);
 
     if (run) {
-      for (const p of run.projectiles) drawProjectile(rc, p, emit);
+      each((k) => {
+        for (const p of run.projectiles) drawProjectile(rc, p, k === 0 ? emit : () => {});
+        drawPocketBlocks(rc, run);
+        drawShellShadows(rc, run);
+        drawDrops(rc, run);
+      });
       this.drawSafeZone(rc, level, run);
-      drawPocketBlocks(rc, run);
-      drawShellShadows(rc, run);
-      drawDrops(rc, run);
+      // Runners round a loop stand on the leader's lap, each a loop up or down by its own: drawn once, there.
+      const up = (r: { lap: number }) => (r.lap - lap) * L;
       // All trails first: in a pack, nobody's trail may paint over another runner.
       for (const r of run.runners) {
         const pl = m.player(r.slot);
-        if (r.alive && pl) this.drawTrail(pl.character, r.slot, r.body.x + r.body.w / 2, r.body.y + r.body.h, r.body.vx, r.body.vy, dt);
+        if (r.alive && pl) this.drawTrail(pl.character, r.slot, r.body.x + r.body.w / 2, r.body.y + r.body.h - up(r), r.body.vx, r.body.vy, dt);
       }
       for (const r of run.runners) {
         if (!r.alive) continue;
         const pl = m.player(r.slot);
         if (!pl) continue;
+        const dy = up(r);
+        if (dy) for (const c of new Set([s, g, rc.s])) c.translate(0, -dy);
         if (r.attach.grip?.sealed) {
           drawHeld(rc, run, r, pl.character);
           drawRunnerStatus(rc, r.body, r.status);
-          continue;
+        } else {
+          this.drawRunner(
+            rc,
+            level,
+            pl.character,
+            r.slot,
+            r.body.x + r.body.w / 2,
+            r.body.y + r.body.h,
+            r.body.vx,
+            r.body.vy,
+            r.body.onGround,
+            r.body.facing,
+            r.finished,
+            dt,
+            r.body.wallDir,
+          );
+          if (!r.finished && run.isSafe(r)) this.drawShield(rc, level, r.body.x + r.body.w / 2, r.body.y + r.body.h, r.slot);
+          drawRunnerStatus(rc, r.body, r.status, r.attach.soot - run.frame);
+          drawRunnerItems(rc, r);
         }
-        this.drawRunner(
-          rc,
-          level,
-          pl.character,
-          r.slot,
-          r.body.x + r.body.w / 2,
-          r.body.y + r.body.h,
-          r.body.vx,
-          r.body.vy,
-          r.body.onGround,
-          r.body.facing,
-          r.finished,
-          dt,
-          r.body.wallDir,
-        );
-        if (!r.finished && run.isSafe(r)) this.drawShield(rc, level, r.body.x + r.body.w / 2, r.body.y + r.body.h, r.slot);
-        drawRunnerStatus(rc, r.body, r.status, r.attach.soot - run.frame);
-        drawRunnerItems(rc, r);
+        if (dy) at(0);
       }
-      drawClouds(rc, run);
-      drawShells(rc, run);
+      each(() => {
+        drawClouds(rc, run);
+        drawShells(rc, run);
+      });
     }
-    this.drawFallen(rc, dt);
-    this.fx.draw(rc);
+    this.ageFallen(dt);
+    // Ragdolls and particles are things in the shaft, like its terrain: every copy has them.
+    each(() => {
+      this.drawFallen(rc);
+      this.fx.draw(rc);
+    });
     this.backdrop.drawMotes(rc, level.theme, dt, this.cam.visible());
     this.weather.draw(rc, m, this.cam.visible(), this.fx, solids);
     g.globalCompositeOperation = 'source-over';
@@ -480,6 +538,9 @@ export class Renderer {
     const lv = m.level;
     const ww = lv.w * TILE;
     const wh = lv.h * TILE;
+    // A loop's race has no top or bottom to stop at; every other phase shows the level as built.
+    this.cam.wrapY = m.phase === 'run' && !!lv.loop && !this.pin;
+    this.cam.lapPx = this.cam.wrapY ? lv.loop! * TILE : 0;
     if (this.pin) {
       this.cam.setBounds(ww, wh, 0);
       this.cam.snap(this.pin);
@@ -570,7 +631,8 @@ export class Renderer {
     l.setTransform(1, 0, 0, 1, 0, 0);
   }
 
-  private drawMarkers(rc: RC, level: Level) {
+  /** The spawn portal, and the goal's flag where the mode races for one. */
+  private drawMarkers(rc: RC, level: Level, flag: boolean) {
     const s = rc.s;
     const g = rc.g;
     const t = rc.t;
@@ -592,6 +654,7 @@ export class Renderer {
     g.fillStyle = css(pc, 10, 0.07);
     g.fillRect(sx - 12, sy - 14, 24, 14);
 
+    if (!flag) return;
     // Goal beacon: flag + light column.
     const gx = level.goal.tx * TILE + TILE / 2;
     const gy = floorY(level.goal);
@@ -714,9 +777,21 @@ export class Renderer {
   }
 
   /** A rendered kind knocked flat where it died, under its burst, for as long as the clip takes. */
-  private drawFallen(rc: RC, dt: number) {
-    if (!this.fallen.length) return;
-    this.fallen = this.fallen.filter((f) => (f.age += dt) < FALLEN_LIFE);
+  /** Is the slag tearing up after a leader who got more than its leash ahead (sim/tide.ts)? The embers thicken. */
+  private slagRush(run: RunWorld): boolean {
+    const tide = run.level.tide!;
+    let lead: number | null = null;
+    for (const r of run.runners) if (r.alive && !r.finished) lead = Math.min(lead ?? Infinity, feetUp(run.level, r));
+    if (lead === null || run.slag === null) return false;
+    const climbed = ((run.level.spawn.ty + 1) * TILE - lead) / TILE;
+    return run.slag - lead > (leashRows(tide, climbed, run.frame) + 0.5) * TILE;
+  }
+
+  private ageFallen(dt: number) {
+    if (this.fallen.length) this.fallen = this.fallen.filter((f) => (f.age += dt) < FALLEN_LIFE);
+  }
+
+  private drawFallen(rc: RC) {
     for (const f of this.fallen) {
       rc.s.save();
       rc.s.globalAlpha = Math.min(1, (FALLEN_LIFE - f.age) / 0.15);
@@ -987,4 +1062,14 @@ function drawFaults(rc: RC, cells: readonly Cell[]) {
     g.lineTo(x * TILE + k, (y + 1) * TILE - k);
   }
   g.stroke();
+}
+
+/**
+ * Which copies of a looping shaft (`k` laps away: its rows `k * lap` px further down) the view `vis` can see, the
+ * level being `wh` px tall: always this lap's, and whichever others reach into the view.
+ */
+function lapCopies(vis: { y: number; h: number }, wh: number, lap: number): number[] {
+  const out: number[] = [0];
+  for (let k = -2; k <= 2; k++) if (k && k * lap < vis.y + vis.h && k * lap + wh > vis.y) out.push(k);
+  return out;
 }
