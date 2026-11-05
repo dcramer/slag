@@ -22,6 +22,11 @@ FAMILIES = [(r, tuple(c)) for r, c in KIND['families']]
 INK, THIN, FEET, LOOSE = KIND['line'], KIND.get('thin', []), KIND['feet'], KIND.get('loose', [])
 # How thin (image px) a `thin` role's shape may be and still be only the line's fringe.
 FRINGE = KIND.get('fringe', 7)
+# How thick (image px) the ink must be to stay a fill, not a line: `map.ink`.
+OPEN = int(sys.argv[5]) if len(sys.argv) > 5 else 9
+for name, n in (('ink', OPEN), ('fringe', FRINGE)):
+    if n % 2 == 0:
+        sys.exit(f'map.{name} is {n}: it must be odd, since its opening is a square filter centred on each pixel. Use {n - 1} or {n + 1}.')
 # The shortest interior line kept as a stroke (world px): shorter ones are flecks at play size.
 
 im = Image.open(SRC).convert('RGB')
@@ -128,7 +133,6 @@ if GLINT:
 # Thick black is a fill (ear tips, cord, eyes); thin black is the ink line. An opening keeps only the thick.
 dark = Image.new('L', (w, h))
 dark.putdata([255 if r == D else 0 for r in role])
-OPEN = int(sys.argv[5]) if len(sys.argv) > 5 else 9
 fill = dark.filter(ImageFilter.MinFilter(OPEN)).filter(ImageFilter.MaxFilter(OPEN))
 fd = fill.load()
 LINE = -2
