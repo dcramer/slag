@@ -92,9 +92,10 @@ export interface SpriteGait {
  * pupil, `tall` a black oval twice as tall as wide with no white (the mug's, the puffball's), `dot` a small black
  * eye (the electric mouse's), `pill` a tall white with a tall pupil, `profile` a side-on head's eye with the pupil
  * against its front, `scowl` an almond under a hard slanted lid round a slit, `heavy` a round white half under a
- * flat lid, `anime` a big iris under a thick lash, `square` a white block and an iris block.
+ * flat lid, `anime` a big iris under a thick lash, `square` a white block and an iris block, `cat` an almond all
+ * iris round a slit pupil (the monster slayer's).
  */
-export type EyeStyle = 'round' | 'tall' | 'dot' | 'pill' | 'profile' | 'scowl' | 'heavy' | 'anime' | 'square';
+export type EyeStyle = 'round' | 'tall' | 'dot' | 'pill' | 'profile' | 'scowl' | 'heavy' | 'anime' | 'square' | 'cat';
 
 /**
  * The face kit's settings for a kind: eye size (world px, the near eye's at rest), iris, its eye style (`round` if
