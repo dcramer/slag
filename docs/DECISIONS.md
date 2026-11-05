@@ -104,6 +104,8 @@ Every game design decision, preference and direction the owner has given, groupe
   Changed: 18, 15 and 8 rows (the hard laps about 2 s), squeezing from 45 s.
 - **Catch-up for the trailing pack: rethink which items exist, and maybe give loops mystery boxes of their own rather than only placed ones.** "im not sure on (2) we might wanna rethink which items exist, and/or add mystery boxes by default maybe? not just placed ones?" / "Boxes first"
   2026-11-04 · `done` for the boxes (every loop places its own, dealing by rank: `src/gen/level/loop-boxes.ts`, `CATCH_UP`); which items exist is `open` (a grapple, a shot that hits whoever is above you) · DESIGN.md → Modes, TODO.md → 31
+- **Each mode's targets come from the game it imitates, and every mode, the planned ones too, gets a list of its key mechanics, attributes and measurements against that game's.** "for the target it really should be similar to speedrunners i imagine? like each game mode we're using another game as inspo which helps us with mechanics" / "its probably worth evaluating that for both modes, plus the future modes, and making a list of the key mechanics and attributes and measurements and where they should be based on the games we're imitating" / "might be our level design? idk how ours looks vs speedrunners"
+  2026-11-04 · `done` · DESIGN.md → Modes, MODES.md; catch-up's fixes are `planned` · TODO.md → 31
 - **A rule the level is built from (gravity, weather) rebuilds the lobby's level for everyone at once.**
   2026-11-02 · git `e64c3e5` · `done` · DESIGN.md → Rules
 
