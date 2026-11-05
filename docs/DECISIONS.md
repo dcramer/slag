@@ -754,6 +754,12 @@ Every game design decision, preference and direction the owner has given, groupe
   2026-11-02 15:27Z · `done` · git `8b1ea2e`
 - **Resume interrupted agents, and resume merging.** "Resume all" / "Yes, resume merging"
   2026-11-02 07:22Z, 16:20Z · `done`
+- **Unused code is part of the gate: knip runs in `pnpm check` and CI, and what it finds is deleted, not ignored.** "add knip if it snot there too"
+  2026-11-04 · `done` · AGENTS.md → Commands
+- **Full sweeps move out of `pnpm test`: it runs a rotation of each sweep and `tests/stats/` runs the whole product, through one helper in `tests/lib/`.** "some of our tests could maybe be a dedicated suite or benchmark or something else thats not run on every change?"
+  2026-11-04 · `done` · AGENTS.md → Definition of done
+- **Keep what an audit or a fix teaches, in short docs: a line in the owning AGENTS.md for a rule, a TODO item for open work, no long write-ups.** "we dont need crazy docs but i wanna make sure we keep learnings"
+  2026-11-04 · `done` · AGENTS.md, TODO.md → 33
 - **Make the GitHub Actions check required (an owner step).**
   2026-11-02 · `open` · TODO.md → 10
 - **Apply the quick wins from the transcript review: guard-safe commands for worktree agents, one `pnpm land` per batch instead of a merge and a gate per branch, and `SNAP_VERSION` bumped once at landing, never in a branch.** "Apply quick wins"

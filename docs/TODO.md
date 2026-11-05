@@ -104,6 +104,17 @@ Owner direction (docs/DECISIONS.md → Levels): a level set is a kit of pieces w
 1. **A Brawl arena builder** (TODO 31 → 2): a `BuilderDef` asking for ground, gap, stamps and the tower pieces, composing every set's kit.
 2. **Landmark levels onto the plans.** Harbor, space, rooftops and mine still lay out a level round a landmark their own way (each kit's `stage`), and mine's has a loop that re-rolls its own length every pass. Move them onto the chain and carved plans, holding `pnpm level --stats 50`. The two-part ask share is still keyed by theme in `TWO_PART_ASK` (`sculptors/common.ts`); it belongs on the kit.
 
+## 33. Audit leftovers (2026-11-04)
+An audit of the loop, sim, netcode, generator and renderer found the core sound. Render interpolation, a time budget for bots and a jitter buffer for guest inputs each have their own session; the rest is here, one agent each, with what was measured.
+
+1. **Fewer proofs per level.** Reach is fast warm (0.01–0.4 ms); the cost is how often it's asked, about 200 analyses a level. `analyzeRoutes` runs up to 5 times on the same input (`validate.ts` `judge`, `lanes.ts` `openUp`, three times in `level/index.ts`), `oneBridgeEnough` repeats `judge`'s `loneBridge`, and `precision.ts` re-runs all 20 policies per route cell to recover one move the analysis already found (record the policy on each edge). Together about 40% of a hard level's time. Hold `pnpm level --stats 50` byte-identical.
+2. **Difficulty by redraw.** 35–49% of gentle and hard levels use every draw and ship outside their band anyway (see 3 above), then the nearest draw is sculpted again from scratch (`level/index.ts`, after `keepIf`). Keep the best draw's state instead of rebuilding it; sizing crossings toward the target as they're laid is the real fix.
+3. **Generation context.** `setProbeGravity` and `setLevelDifficulty` are module globals read from 34 places through `jumpProfile()` and `difficultyKnobs()`, so `generateLevel` can't be re-entered and a helper called later sees the previous level's gravity. Pass a context down.
+4. **A late joiner's level.** A restore generates the level on the main thread (`net/snapshot.ts`), and builds it twice if the worker is already on it. Wait for the worker (`LevelAhead.first`) before applying.
+5. **Renderer per-frame work.** Four full canvases go up with `texImage2D` every frame (`post.ts`: `texStorage2D` + `texSubImage2D`, flip in the shader); nothing is culled to the camera (props, every grass tuft, live decor, up to 5× in looping shafts); each light builds a gradient every frame (`paintLights`, `glowDot`); the HUD repaints two full canvases; outside races `previewProps` and `ghostProp` rerun every frame. No frame-time numbers back these yet: run `pnpm perf` before and after.
+6. **Prop sprite cache** (`ink-props.ts`): FIFO at 220 entries re-bakes pieces still in use, every stamp bakes at a fixed 6× density (aliases at 1080p, blurry at 4K), and keys are strings built per draw. The runner cache (scale buckets, LRU, byte budget) already does this right.
+7. **Who hosts.** The first to join hosts, phone or not, and a host's hitch stalls everyone. Prefer a desktop on a good link, or let the host hand over (`handOn` exists). Further out: a standby link to the next host in line so migration skips signaling (4–8 s today).
+
 ## 30. Native build
 A real game binary that runs the same TypeScript in a native host (owner decision: no Electron). The sim and generators stay as they are, because lockstep crossplay with the web build needs the same code. Steps, one agent each:
 
