@@ -1,0 +1,22 @@
+# The black mage with the glowing eyes
+
+A kind of the cast: [CHARACTERS.md](../CHARACTERS.md) has the rules every kind follows.
+
+- **Kind:** `mage` · **Name:** Vivvy
+- **A stranger should say:** "the little black mage with the big pointed hat and the glowing eyes."
+- **Silhouette:** small and round-shouldered: a huge straw hat, its brim wider than his shoulders and its tall crown folded over into a bent point, and under the brim no face at all, only darkness with two round glowing eyes; a long robe to the ankles, its cuffs flared over his hands; a staff held upright beside him.
+- **Traits:** the wide hat with the bent point; the dark face with two glowing yellow eyes; a robe with wide cuffs and a broad belt; a staff; small and shy.
+- **Palette:** costume (the player's, `#4a5fa8` on the sheets): the robe and its cuffs. The belt, the feet and the face one neutral dark `#1e1a24` (the design drew the belt black, and below the high collar it reads as a belt); the hat a neutral straw `#dcb66a`, the eyes a yellow glow `#ffd23c` (a face mark), the broom handle and the peg wood `#94683e`, the patch and tape grey `#a4a09a`, the bulb `#f0e6c0`.
+- **Color slot:** costume: the robe.
+- **Gait:** a shuffling, timid walk, the hat bobbing; a hop with the staff held over his head.
+- **The nod:** the hat and the dark face with two glowing eyes (the read: nobody else in the cast has a face that is only eyes); the robe and staff.
+- **Our twist:** the hat is a battered straw sun hat folded into a point and held with a clothes peg, the staff a broom handle with a light bulb taped on its tip.
+- **Palette alts:** the hat's straw `#dcb66a`, weathered `#e2cc92` or toasted `#c99c52`.
+- **Gait range:** a bounce of 0.2–0.8 px on each step, a lean of up to 0.03.
+- **Idles and cheers:** the idle from the design; holding the broom upright in front of him with both hands, the hat tipped forward. The broom thrust up and forward; a shy bow, holding his brim.
+- **Wear:** in the drawing, the brim's torn notch with straw ends sticking out, the grey patch on the robe, its ragged hem and the tape round the mended handle; scuffed is a pale scuff on the robe, scorched a soot mark low on it (tones of the robe).
+- **Swaps:** a plaster on the hat's crown (`plaster`): his face is only darkness and eyes. The peg's colour and a crack in the bulb aren't drawn: specks at play size.
+- **Rig:** drawn flat (2026-11-05, `art/sprites/mage/design.prompt.txt`), three-quarter view, 23 px tall with the hat. All four designs drew the twist (the peg, the broom handle, the taped bulb); the wear edit tore the brim and the hem, patched the robe and taped the handle. The eyes are the two yellow glows found in the role map (`from: 'map'`: squinting under the brim in the bow they were too thin to survive the tracer), drawn by the face kit's `glow` eye, added to `EYES` for him: a round all glow, no white or pupil, a paler core, its shut eyes and cheer arcs in its own yellow (`lit`), since ink is lost on his dark face. The knockout's dropped broom is whitened out of its drawing (`art/sprites/mage/nobroom.py`): it reached past the cast's box. Design read, design-4 and design-3 black at 24 px beside six cast designs, two fresh readers: "Black Mage (Final Fantasy), medium. A tall pointed wizard hat with a wide brim, a staff held upright on the right and a flared robe"; "black mage or generic wizard, high for "wizard" and medium for the black mage specifically. A wide-brimmed pointed hat, a robe that flares at the bottom, and a staff held upright on the right." The blind sheet, two fresh readers:
+  - **Round 1** (what ships): "medium confidence. The Final Fantasy black mage. Clues: a wide pointed wizard hat, a robe, a staff" and "black mage or wizard (Final Fantasy style), medium. Wide-brimmed pointed hat, robe, tall staff". Neither paired him with anyone.
+  - **Sizes:** the jump is drawn at 0.85 (the broom raised over the hat), the wall slide at 0.9 and the knockout at 0.7, inside the shared box.
+- **Concept prompt:** A small shy cartoon wizard in three-quarter view, a huge battered straw sun hat with a brim wider than his shoulders, its tall crown folded over into a bent point and held with a wooden clothes peg, under the brim no face at all, only black shadow with two round glowing yellow eyes, a long robe to the ankles with wide flared cuffs over his hands and a broad belt, holding a broom handle upright with a light bulb taped to its tip with grey tape.
