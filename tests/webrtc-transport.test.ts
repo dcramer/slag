@@ -39,7 +39,7 @@ describe('joining', () => {
     const [a, b] = await w.room('aaaa', 'bbbb');
     const big = 'x'.repeat(50_000);
     const got: unknown[] = [];
-    (a.session as any).onMessage = (_from: string, m: { blob?: string }) => m.blob && got.push(m);
+    (a.session as any).onWire = (_from: string, m: { blob?: string }) => m.blob && got.push(m);
     b.transport.send({ blob: big }, 'aaaa');
     await w.run(100);
     expect(got).toEqual([{ blob: big }]);
