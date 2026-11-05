@@ -385,6 +385,9 @@ function drawPlatform(rc: RC, m: Rotor, d: DrawCtx, a: RotorArm, i: number) {
     case 'gondola':
       stamp(s, gondola(p.w, p.h, d), p.x, p.y);
       break;
+    default:
+      // A moon is space's alone, drawn by its skin (props/skins/space.ts).
+      break;
   }
 }
 

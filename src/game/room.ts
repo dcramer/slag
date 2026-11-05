@@ -8,7 +8,8 @@ import { deriveSeed, hashString } from '../core/rng';
 const ALPHABET = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789'; // no 0/O/1/I/L
 const ROOM_LEN = 5;
 
-export function newRoomCode(random: () => number = Math.random): string {
+/** A fresh code. `random` is the caller's: game/ stays deterministic, and a new room is the one place that wants chance. */
+export function newRoomCode(random: () => number): string {
   let s = '';
   for (let i = 0; i < ROOM_LEN; i++) s += ALPHABET[Math.floor(random() * ALPHABET.length)];
   return s;

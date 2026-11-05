@@ -700,6 +700,8 @@ Every game design decision, preference and direction the owner has given, groupe
   2026-11-04 · `done` · AGENTS.md → Definition of done
 - **Keep what an audit or a fix teaches, in short docs: a line in the owning AGENTS.md for a rule, a TODO item for open work, no long write-ups.** "we dont need crazy docs but i wanna make sure we keep learnings"
   2026-11-04 · `done` · AGENTS.md, TODO.md → 33
+- **Tighten lint where the audit found gaps: one generated config, the determinism rules over all deterministic code, exhaustive switches, no import cycles, no focused tests or bare numeric sorts, and tools that fail on an option nothing read.** "Yes, start them"
+  2026-11-05 · `done` · AGENTS.md → Commands (Lint), `tools/lint/config.ts`
 - **Make the GitHub Actions check required (an owner step).**
   2026-11-02 · `open` · TODO.md → 10
 - **Apply the quick wins from the transcript review: guard-safe commands for worktree agents, one `pnpm land` per batch instead of a merge and a gate per branch, and `SNAP_VERSION` bumped once at landing, never in a branch.** "Apply quick wins"

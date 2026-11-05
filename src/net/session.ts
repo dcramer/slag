@@ -942,6 +942,9 @@ export class NetSession {
       case 'pings':
         if (from === this.hostId) this.remotePings = msg.p;
         return;
+      default:
+        // Everything else depends on our role, below.
+        break;
     }
     if (this.role === 'host') {
       if (msg.t === 'in') this.onInput(from, msg);

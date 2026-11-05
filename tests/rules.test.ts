@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 import { Match } from '../src/game/match';
-import { DEFAULT_RULES, loadRules, type MatchRules, saveRules } from '../src/game/rules';
+import { DEFAULT_RULES, type MatchRules } from '../src/game/rules';
 import { rollKind } from '../src/gen/level/weather';
 import { applyAction, newNetState, sanitizeRules } from '../src/net/actions';
 import { cloneSnap, hashMatch, restoreMatch, snapshotMatch } from '../src/net/snapshot';
@@ -8,6 +8,7 @@ import { NetSession } from '../src/net/session';
 import { LoopbackHub } from '../src/net/transport';
 import { parseAction } from '../src/net/wire';
 import { levelKey } from '../src/sim/level';
+import { loadRules, saveRules } from '../src/ui/rule-prefs';
 
 /** A legal value other than the default for every rule. Add a rule and this test fails until it says so. */
 const CHANGED: MatchRules = {

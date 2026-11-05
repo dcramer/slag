@@ -1,7 +1,7 @@
 /**
  * Match rules ("level settings"). Part of the deterministic match config:
  * online, the host's rules are authoritative. Persisted locally as the
- * host's preferences. 0 seconds = no time limit.
+ * host's preferences (src/ui/rule-prefs.ts). 0 seconds = no time limit.
  *
  * More variations will land here (crate size, scoring tweaks, modifiers…).
  */
@@ -132,30 +132,12 @@ export function nearestLength(targetScore: number): MatchLength {
   return MATCH_LENGTHS.reduce((best, l) => (Math.abs(l.targetScore - targetScore) < Math.abs(best.targetScore - targetScore) ? l : best), NORMAL);
 }
 
-const KEY = 'slag.rules.v1';
-
-export function loadRules(): MatchRules {
-  try {
-    const raw = localStorage.getItem(KEY);
-    if (raw) {
-      const saved = JSON.parse(raw) as Partial<MatchRules>;
-      const { targetScore, maxRounds } = nearestLength(saved.targetScore ?? NORMAL.targetScore);
-      // A mode from another build plays as a race here.
-      const mode = saved.mode && MODE_IDS.includes(saved.mode) ? saved.mode : DEFAULT_RULES.mode;
-      return { ...DEFAULT_RULES, ...saved, mode, targetScore, maxRounds, private: false };
-    }
-  } catch {
-    // ignore
-  }
-  return { ...DEFAULT_RULES };
-}
-
-/** The host's preferences, for its next lobby: everything but Private, since every lobby starts public. */
-export function saveRules(r: MatchRules) {
-  try {
-    const { private: _room, ...prefs } = r;
-    localStorage.setItem(KEY, JSON.stringify(prefs));
-  } catch {
-    // ignore
-  }
+/**
+ * Rules from a host's saved preferences (src/ui/rule-prefs.ts): the length snapped to one on offer, a mode from
+ * another build played as a race, and Private off, since every lobby starts public.
+ */
+export function restoreRules(saved: Partial<MatchRules>): MatchRules {
+  const { targetScore, maxRounds } = nearestLength(saved.targetScore ?? NORMAL.targetScore);
+  const mode = saved.mode && MODE_IDS.includes(saved.mode) ? saved.mode : DEFAULT_RULES.mode;
+  return { ...DEFAULT_RULES, ...saved, mode, targetScore, maxRounds, private: false };
 }
