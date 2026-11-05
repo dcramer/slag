@@ -83,10 +83,13 @@ Every game design decision, preference and direction the owner has given, groupe
   2026-11-04 · `done` · DESIGN.md → Difficulty, Modes; `src/game/expectations.ts`, `TOWER_CURVE`, `tests/stats/slag-climb.test.ts`
   Changed: the race's targets lived only in its stats suite; the slag rose at 1.5 tiles/s gaining 0.1 after 2 s, now 2.6 gaining 0.12 after 3 s, fitted to Normal bots.
 - **A looping tower (its top wrapping to its bottom) is a nice hack for an endless climb, but complicated: not now.** "the level could loopp maybe but thats a little complicated? thats a nice hack tho"
-  2026-11-04 · `open` · TODO.md → 31
+  2026-11-04 · `done` the same day: see the looping shaft below
 - **Rising Slag plays in the style of SpeedRunners: the slag follows the leader like its camera, so falling behind the pack is falling off the screen.** "speedrunners i think is what we want like that style" (after a survey of how other games pace a shared hazard)
   2026-11-04 · `done` · DESIGN.md → Modes; `src/sim/tide.ts`, `src/gen/level/tide.ts`, `src/render/camera-follow.ts`
   Changed: a fixed slag pace (2.6 tiles/s gaining 0.12), which only punished slowness: Easy bots got through 8% of medium stretches, now 43%.
+- **Rising Slag is a looping shaft: climb out of the top and carry on from the bottom, so the map fits the screen and every part placed is met once a lap.** "i can see the whole map... while item placement is fine its not super useful if its randomly in the middle of a huge map?... it could be more like a map that scrolls infinitely so when you place you're in a loop?" / "yeah rising slag as a looping shaft is more interesting"
+  2026-11-04 · `done` · DESIGN.md → Modes; `Level.loop`, `closeLoop` in `src/gen/level/sculptors/tall.ts`, `lapShift` in `src/sim/level.ts`
+  Changed: a 200-row tower with a difficulty curve up its height. The curve now runs lap by lap through the slag's leash. Also takes in the level-edge feedback relayed from another session: walled sides, 48+ columns wide.
 - **A rule the level is built from (gravity, weather) rebuilds the lobby's level for everyone at once.**
   2026-11-02 · git `e64c3e5` · `done` · DESIGN.md → Rules
 

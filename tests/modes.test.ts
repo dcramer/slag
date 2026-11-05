@@ -3,15 +3,15 @@ import { Match } from '../src/game/match';
 import { climbed, MODES } from '../src/game/modes';
 import { DEFAULT_RULES } from '../src/game/rules';
 import { POINTS, scoreSurvival } from '../src/game/scoring';
-import { lastGenInfo, TOWER_CURVE } from '../src/gen/level';
-import { buildsTowers, rollProfile, TIDE_TOWER_H } from '../src/gen/level/profile';
+import { buildsTowers, LOOP_ROWS, LOOP_W, rollProfile } from '../src/gen/level/profile';
+import { LOOP_HEAD_START } from '../src/gen/level/tide';
 import { generateTheme } from '../src/gen/theme';
 import { hashMatch, restoreMatch, snapshotMatch } from '../src/net/snapshot';
 import { FPS, LEVEL_H, LEVEL_W, POP_HOLD, RUN_COUNTDOWN, TILE } from '../src/sim/constants';
-import type { Level } from '../src/sim/level';
+import { lapShift, type Level, LOOP_BAND, LOOP_SPAWN } from '../src/sim/level';
 import { bodyAtCell } from '../src/sim/physics';
 import { RunWorld } from '../src/sim/run';
-import { floorRise, leashRows, stepTide, type Tide, tideStart } from '../src/sim/tide';
+import { leashRows, stepTide, type Tide } from '../src/sim/tide';
 import { type InputFrame, NO_INPUT } from '../src/sim/types';
 import { pickThemeId, THEME_IDS } from '../src/themes';
 
@@ -44,14 +44,17 @@ function flatLevel(tide?: Tide): Level {
 const pop = (f: number): InputFrame => ({ ...NO_INPUT, alt: true, altPressed: f === 0 });
 
 describe('Rising Slag levels', () => {
-  it('climb in every theme: a tower too tall to top where the theme builds them, a classic climb where it never does', () => {
+  it('climb in every theme: a looping shaft where the theme builds towers, a classic climb where it never does', () => {
     for (const theme of THEME_IDS) {
       for (const seed of [1, 2, 3]) {
         const p = rollProfile(seed, theme, { tide: true });
         expect(['climb', 'zigzag'], `${theme} ${seed}`).toContain(p.route);
         expect(p.tide).toBe(true);
         expect(p.size === 'tall' || (p.size === 'classic' && p.route === 'climb'), `${theme} ${seed}: ${p.size}`).toBe(true);
-        if (p.size === 'tall') expect(p.h).toBe(TIDE_TOWER_H);
+        if (p.size === 'tall') {
+          expect(p.h).toBe(LOOP_ROWS + LOOP_BAND);
+          expect(p.w).toBeGreaterThanOrEqual(LOOP_W[0]);
+        }
       }
       expect(rollProfile(1, theme, { tide: true }).size).toBe(buildsTowers(theme) ? 'tall' : 'classic');
     }
@@ -66,26 +69,24 @@ describe('Rising Slag levels', () => {
     expect(level.profile!.size).toBe('tall');
   });
 
-  it('a match in the mode builds a tower that carries the slag, whose floor pace alone tops it', () => {
+  it('a match in the mode builds a walled shaft that loops, climbs bare, and carries the slag', () => {
     const m = new Match(31, 'mine', SLAG);
-    expect(m.level.tide).toBeDefined();
-    expect(m.level.profile?.tide).toBe(true);
-    expect(m.level.h).toBe(TIDE_TOWER_H);
-    expect(m.level.goal.ty).toBeLessThan(m.level.spawn.ty);
-    expect(tideStart(m.level)! - floorRise(m.level.tide!, RUN_COUNTDOWN + 75 * FPS)).toBeLessThan(0);
-    // On a leash that shortens with the curve: most of a screen at the bottom, shorter in the hard stretch.
-    const rows = m.level.tide!.leash.map((l) => l.rows);
+    const lv = m.level;
+    expect(lv.tide).toBeDefined();
+    expect(lv.loop).toBe(LOOP_ROWS);
+    // Its top band is its bottom one: the same rows a lap apart.
+    for (let r = 0; r < LOOP_BAND; r++)
+      expect(lv.tiles.slice(r * lv.w, (r + 1) * lv.w)).toEqual(lv.tiles.slice((r + lv.loop!) * lv.w, (r + lv.loop! + 1) * lv.w));
+    // Terrain walls up both sides, all the way.
+    for (let y = 0; y < lv.h; y++) expect([lv.tiles[y * lv.w], lv.tiles[y * lv.w + lv.w - 1]]).toEqual([1, 1]);
+    // The goal is the spawn a lap up, and a lap takes no part.
+    expect(lv.goal).toEqual({ tx: lv.spawn.tx, ty: lv.spawn.ty - lv.loop! });
+    expect(lv.solution ?? []).toEqual([]);
+    // The slag starts a storey under the spawn's floor, on a leash that shortens lap by lap.
+    expect(lv.tide!.from).toBe(lv.spawn.ty + 1 + LOOP_HEAD_START);
+    const rows = lv.tide!.leash.map((l) => l.rows);
     expect(rows[0]).toBeGreaterThan(rows[2]);
-    // Its curve: the perch flights of the medium and hard stretches ask for more than the gentle start's stairs.
-    const tight = lastGenInfo.stretches!;
-    expect(tight).toHaveLength(TOWER_CURVE.length);
-    expect(tight[1] + tight[2]).toBeGreaterThan(tight[0]);
-    // One part asked, at the top: the climb from the spawn needs none.
-    expect(m.level.solution!.length).toBe(1);
-    expect(m.level.solution![0].y).toBeLessThan(m.level.h / 4);
-    // It pools in the lowest open row, in sight from GO, never over the spawn.
-    expect(m.level.tide!.from).toBeGreaterThan(m.level.spawn.ty);
-    expect(m.level.tiles.slice(m.level.tide!.from! * m.level.w).every((t) => t === 1)).toBe(true);
+    expect(lv.tide!.leash[1].from).toBe(LOOP_ROWS);
     // Back to a race, the lobby's level is rebuilt without it.
     m.setRules(DEFAULT_RULES);
     expect(m.level.tide).toBeUndefined();
@@ -137,6 +138,21 @@ describe('the slag', () => {
 });
 
 describe('Rising Slag races', () => {
+  it('carries a runner round the loop: up through the lap line, and down through the bottom', () => {
+    const lv = new Match(31, 'mine', SLAG).level;
+    const run = new RunWorld(lv, [], [0], 0, 1, [], true, MODES.slag.run);
+    const r = run.runners[0];
+    // Standing on the spawn's copy a lap up is standing on the spawn, a lap on.
+    r.body = bodyAtCell(lv.goal.tx, lv.goal.ty);
+    run.step([NO_INPUT]);
+    expect(r.lap).toBe(1);
+    expect(Math.abs(r.body.y + r.body.h - (lv.spawn.ty + 1) * TILE)).toBeLessThan(TILE);
+    // Under the bottom band you're in the lap below, a loop up the level; the spawn's own floor is neither line.
+    expect(lapShift(lv, (lv.loop! + LOOP_BAND) * TILE)).toBe(-1);
+    expect(lapShift(lv, (lv.spawn.ty + 1) * TILE)).toBe(0);
+    expect(lapShift(lv, (LOOP_SPAWN + 1) * TILE)).toBe(1);
+  });
+
   it('has no flag to finish at', () => {
     const run = new RunWorld(flatLevel(), [], [0], 0, 1, [], true, MODES.slag.run);
     run.runners[0].body = bodyAtCell(40, FLOOR - 1);
@@ -153,7 +169,7 @@ describe('Rising Slag races', () => {
     expect(run.runners.map((r) => r.alive)).toEqual([false, false, true]);
   });
 
-  it('plays a solo round to the score screen, scored by how high the slag had to come', () => {
+  it('plays a solo round to the score screen, scored by how far the slag had to climb', () => {
     const m = new Match(31, 'mine', SLAG);
     m.join('kb1');
     m.startMatch();
@@ -162,10 +178,13 @@ describe('Rising Slag races', () => {
     expect(m.phase).toBe('score');
     const r = m.run!.runners[0];
     expect(r.alive).toBe(false);
-    const share = climbed(m.run!, r.slot);
-    expect(share).toBeGreaterThan(0);
-    expect(share).toBeLessThan(1);
-    expect(m.result!.awards.every((a) => a.reason === 'survive')).toBe(true);
+    // Standing still on the spawn's floor climbs nothing and scores nothing.
+    expect(climbed(m.run!, r.slot)).toBe(0);
+    expect(m.result!.awards).toEqual([]);
+    // A lap and a half up is half the way to the hard laps.
+    r.lap = 1;
+    r.body.y -= (m.level.loop! / 2) * TILE;
+    expect(climbed(m.run!, r.slot)).toBeCloseTo(0.5, 1);
   });
 
   it('restores a race mid-slag and steps on in lockstep', () => {

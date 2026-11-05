@@ -1,6 +1,6 @@
 import { deriveSeed, Rng } from '../../core/rng';
 import { LEVEL_H, LEVEL_W } from '../../sim/constants';
-import type { LevelProfile, RouteShape, SizeClass } from '../../sim/level';
+import { type LevelProfile, LOOP_BAND, type RouteShape, type SizeClass } from '../../sim/level';
 import { DIFFICULTY, rollDifficulty } from './difficulty';
 import type { WeatherKind } from '../../sim/weather';
 import type { ThemeId } from '../../themes';
@@ -93,8 +93,9 @@ const ROUTE_WEIGHTS: Record<SizeClass, Weights<RouteShape>> = {
 };
 
 const TALL_SIZES = { w: [32, 40], h: [40, 60] } as const;
-/** Rows of a Rising Slag tower: more than anyone climbs before the slag catches them (`SLAG_TIDE`, sim/tide.ts). */
-export const TIDE_TOWER_H = 200;
+/** Rows a Rising Slag shaft climbs in a lap before it repeats (Level.loop), and its width in columns, inclusive. */
+export const LOOP_ROWS = 48;
+export const LOOP_W = [48, 56] as const;
 const WIDE_SIZES = { w: [64, 96], h: [24, 30] } as const;
 
 /** Debug/tools: force some knobs (the rest still roll from the seed). A size the theme can't do falls back to its widest. */
@@ -147,8 +148,12 @@ export function rollProfile(seed: number, themeId: ThemeId, o: ProfileOverride =
     w = rng.int(TALL_SIZES.w[0] / 2, TALL_SIZES.w[1] / 2) * 2;
     // Taller than wide by a clear margin: 40×40 is a square, not a tower.
     h = rng.int(Math.max(TALL_SIZES.h[0], w + 6), TALL_SIZES.h[1]);
-    // Rising Slag's tower has no top anyone reaches: the slag outclimbs everyone first (sim/tide.ts).
-    if (o.tide) h = TIDE_TOWER_H;
+    // A Rising Slag shaft loops (Level.loop): a lap's rows and the band it repeats, a screen wide or more so its
+    // walls sit on the screen's edges.
+    if (o.tide) {
+      w = rng.int(LOOP_W[0] / 2, LOOP_W[1] / 2) * 2;
+      h = LOOP_ROWS + LOOP_BAND;
+    }
   }
   const rolledRoute = rng.weighted(ROUTE_WEIGHTS[size]);
   const routes = o.tide ? ROUTE_WEIGHTS[size].filter(([r]) => CLIMBS.has(r)) : ROUTE_WEIGHTS[size];
@@ -194,7 +199,7 @@ export function rollProfile(seed: number, themeId: ThemeId, o: ProfileOverride =
       ],
     difficulty,
     ...(o.tide ? { tide: true } : {}),
-    // A tower climbs through the difficulty curve unless the host fixed one difficulty for every level.
+    // A shaft's laps climb the difficulty curve unless the host fixed one difficulty for every level.
     ...(o.tide && size === 'tall' && (o.curve ?? !o.difficulty) ? { curve: true } : {}),
   };
 }

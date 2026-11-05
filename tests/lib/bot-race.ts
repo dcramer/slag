@@ -6,6 +6,7 @@ import { isBridgePart } from '../../src/gen/props';
 import type { Difficulty } from '../../src/sim/level';
 import type { PlacedProp } from '../../src/sim/props';
 import { RUN_COUNTDOWN, TILE } from '../../src/sim/constants';
+import { feetUp } from '../../src/sim/run';
 import type { ModeId } from '../../src/game/modes';
 import { DEFAULT_RULES } from '../../src/game/rules';
 import type { ThemeId } from '../../src/themes';
@@ -72,8 +73,8 @@ function botMatch(
 }
 
 /** Was the slag at `r`'s feet when it died? (A lone bot's race ends with it, so the slag is still there.) */
-function slagAt(slag: number | null, r: { body: { y: number; h: number } }): boolean {
-  return slag !== null && slag < r.body.y + r.body.h + 2;
+function slagAt(slag: number | null, level: Match['level'], r: Parameters<typeof feetUp>[1]): boolean {
+  return slag !== null && slag < feetUp(level, r) + 2;
 }
 
 /**
@@ -113,7 +114,7 @@ export function botRace(
   const splits: number[] = [];
   while (m.phase === 'run' && r.alive && !r.finished && run.frame < limit) {
     if (r.body.onGround) {
-      top = Math.min(top, r.body.y + r.body.h);
+      top = Math.min(top, feetUp(m.level, r));
       while ((floor - top) / TILE >= (splits.length + 1) * SPLIT_ROWS) splits.push(run.frame);
     }
     const frames = bots.frames(m);
@@ -129,6 +130,6 @@ export function botRace(
     pause,
     climbed: Math.round((floor - top) / TILE),
     splits,
-    slagged: !r.alive && slagAt(run.slag, r),
+    slagged: !r.alive && slagAt(run.slag, m.level, r),
   };
 }

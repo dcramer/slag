@@ -52,7 +52,7 @@ export interface LevelProfile {
   draw?: number;
   /** Built for Rising Slag (game/modes.ts): a climb with slag rising under it (Level.tide). */
   tide?: boolean;
-  /** A tower whose stretches follow the difficulty curve (gen/level/difficulty.ts `TOWER_CURVE`), gentle at the bottom to hard; absent, every stretch is `difficulty`. */
+  /** A Rising Slag shaft whose laps follow the difficulty curve (gen/level/difficulty.ts `LAP_TIERS`), the first gentle to hard; absent, every lap is `difficulty`. */
   curve?: boolean;
 }
 
@@ -88,6 +88,12 @@ export interface Level {
   weather?: Weather;
   /** Slag rising from the bottom (sim/tide.ts), on a level built for Rising Slag. Absent means none. */
   tide?: Tide;
+  /**
+   * A Rising Slag shaft that loops (`LOOP_BAND`): rows climbed before the shaft repeats. Its top `LOOP_BAND` rows
+   * are its bottom ones over again, and a runner climbing into the top band carries on from the same place in the
+   * bottom one, a lap up (RunWorld). Absent: the level ends where it ends.
+   */
+  loop?: number;
   /** Bumped whenever tiles change so renderers can invalidate caches. */
   version: number;
   /** The stage concept's landmark (gen/stage), for the renderer: its box and how its tiles are drawn. The sim ignores it. */
@@ -167,9 +173,30 @@ export function offMap(b: { x: number; w: number }, cols: number): boolean {
   return b.x + b.w <= 0 || b.x >= cols * TILE;
 }
 
-/** Bodies below this y have sunk into the pit at the bottom of the level. */
+/** Bodies below this y have sunk into the pit at the bottom of the level. A loop has no bottom: you fall into the lap below. */
 export function killY(level: Level): number {
-  return level.h * TILE - 2;
+  return level.loop ? Infinity : level.h * TILE - 2;
+}
+
+/**
+ * Rows a looping shaft repeats at its top and bottom (`Level.loop`): rows [0, LOOP_BAND) are rows
+ * [loop, loop + LOOP_BAND) again. Enough above the lap's line for a full jump, below it for a fall to read.
+ */
+export const LOOP_BAND = 8;
+/** The spawn storey's stand row inside the band: it stands at `loop + LOOP_SPAWN`, and again a lap up at `LOOP_SPAWN`. */
+export const LOOP_SPAWN = 5;
+
+/**
+ * How many laps (+1 up, -1 down) a body whose feet are at world y `feet` should be carried by on a looping level, 0
+ * inside the shaft. Up once its feet reach the spawn storey's floor a lap up (standing on that copy is standing on
+ * the spawn, a lap on); down once they fall past the bottom band. The two lines sit a band apart, so a carried body
+ * never comes straight back.
+ */
+export function lapShift(level: Level, feet: number): -1 | 0 | 1 {
+  if (!level.loop) return 0;
+  if (feet <= (LOOP_SPAWN + 1) * TILE + 0.5) return 1;
+  if (feet > (level.loop + LOOP_BAND) * TILE - 0.5) return -1;
+  return 0;
 }
 
 /** Goal trigger reach: px past each side of the flag cell, and tiles above it. */

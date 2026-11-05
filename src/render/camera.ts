@@ -42,6 +42,8 @@ export class Camera {
   frame: ViewFrame = VIEW_FRAME;
   /** Points `frameAll` must keep in view; re-supplied every frame. */
   private held: readonly { x: number; y: number }[] = [];
+  /** A looping shaft's race (Level.loop): the world repeats up and down, so nothing stops the view vertically. */
+  wrapY = false;
 
   setBounds(ww: number, wh: number, minZoom: number) {
     if (ww !== this.ww || wh !== this.wh) {
@@ -120,6 +122,7 @@ export class Camera {
   }
 
   private clampY(v: number, zoom = this.zoom): number {
+    if (this.wrapY) return v;
     return this.clampAxis(v, (VIEW_H / 2 - this.frame.y0) / zoom, (this.frame.y1 - VIEW_H / 2) / zoom, this.wh);
   }
 
@@ -176,6 +179,12 @@ export class Camera {
     const px = pw / f.w;
     const k = px * this.zoom;
     ctx.setTransform(k, 0, 0, k, (VIEW_W / 2 - f.x0) * px - (this.x + this.sx) * k, (VIEW_H / 2 - f.y0) * px - (this.y + this.sy) * k);
+  }
+
+  /** Move the view and where it's heading by `dy` world px at once: a loop's lap line, crossed without a jump on screen. */
+  shiftY(dy: number) {
+    this.y += dy;
+    this.ty += dy;
   }
 
   /** World → view coords (0..VIEW_W × 0..VIEW_H inside the play view, beyond it in the frame), ignoring shake. */

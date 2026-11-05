@@ -2,6 +2,7 @@ import { clamp } from '../core/geom';
 import type { Match } from '../game/match';
 import { overview, viewToWorld, type ViewXform, worldToView } from '../game/view';
 import { PHYS, RUN_COUNTDOWN, TILE, VIEW_H, VIEW_W } from '../sim/constants';
+import { feetUp } from '../sim/run';
 import type { Camera } from './camera';
 
 /**
@@ -156,9 +157,13 @@ export class PhoneCam {
 
   constructor(private cam: Camera) {}
 
+  /** The lap a loop's race is framed on: the leader's (frameRace). The renderer draws runners and the slag in it. */
+  lap = 0;
+
   private enter(phase: string) {
     if (phase === this.phase) return;
     this.phase = phase;
+    this.lap = 0;
     this.follow.reset();
     this.pose = null;
   }
@@ -168,6 +173,15 @@ export class PhoneCam {
     const cam = this.cam;
     this.enter(m.phase);
     const run = m.run!;
+    const racing = run.runners.filter((r) => r.alive && !r.finished);
+    // Round a loop the view is the leader's lap (`lap`): the others sit a loop up or down by their own, and the
+    // camera crosses the lap line with the leader, which shows the same rows.
+    const L = (m.level.loop ?? 0) * TILE;
+    if (L && racing.length) {
+      const lap = racing.reduce((a, b) => (feetUp(m.level, b) < feetUp(m.level, a) ? b : a)).lap;
+      if (lap !== this.lap) cam.shiftY((lap - this.lap) * L);
+      this.lap = lap;
+    }
     const solo = this.enabled ? soloRunner(m) : null;
     if (solo && run.frame >= RUN_COUNTDOWN / 2) {
       const b = solo.body;
@@ -176,13 +190,13 @@ export class PhoneCam {
       cam.update(dt, false);
       return;
     }
-    const pts = run.runners.filter((r) => r.alive && !r.finished).map((r) => ({ x: r.body.x + r.body.w / 2, y: r.body.y }));
+    const pts = racing.map((r) => ({ x: r.body.x + r.body.w / 2, y: r.body.y - (r.lap - this.lap) * L }));
     const slag = run.slag !== null && pts.length > 0;
     if (slag) {
       // Rising Slag frames like a racer that follows the leader: from a few rows over whoever is highest down to
       // the slag, so the slag is the bottom of the screen and falling behind is falling off it.
       const lead = pts.reduce((a, b) => (b.y < a.y ? b : a));
-      pts.push({ x: lead.x, y: lead.y - SLAG_LOOK_UP * TILE }, { x: lead.x, y: Math.min(run.slag!, lead.y + SLAG_VIEW_DOWN * TILE) });
+      pts.push({ x: lead.x, y: lead.y - SLAG_LOOK_UP * TILE }, { x: lead.x, y: Math.min(run.slag! + this.lap * L, lead.y + SLAG_VIEW_DOWN * TILE) });
     }
     if (pts.length && !solo) cam.frameAll(pts, this.enabled ? Math.max(RACE_MAX_ZOOM, this.zoom) : RACE_MAX_ZOOM, slag ? SLAG_PAD : RACE_PAD);
     else cam.wide();

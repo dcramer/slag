@@ -2,8 +2,8 @@ import type { Rng } from '../../../core/rng';
 import { finish, Grid, hintGap, noise2D, POCKET, smoothCA, T_EMPTY, T_ONEWAY, T_SOLID } from '../kit';
 import { jumpProfile } from '../probe';
 import type { SculptCtx, Shape } from '../types';
-import type { Difficulty } from '../../../sim/level';
-import { difficultyKnobs, stretchAt, stretchesOf, withDifficulty } from '../difficulty';
+import { LOOP_BAND, LOOP_SPAWN } from '../../../sim/level';
+import { difficultyKnobs, withDifficulty } from '../difficulty';
 import { jumpGap, easyRise, hardGap, type Knobs, knobs, rollChallenges, undercut } from './common';
 
 /** Columns a storey's second connector occupies. */
@@ -90,12 +90,12 @@ function sculptTall(ctx: SculptCtx, kit: TallKit): Shape {
   // A descent's connectors are holes in the floor, however wide the kit's stairs are.
   const lw = descent ? ALT_W : kit.linkW(rise, j.gap);
 
-  // --- storey rows, bottom first.
-  const bottom = H - rng.int(4, 6);
-  // A Rising Slag tower's stretches (gen/level/difficulty.ts): each storey is built to the tier of the rows it sits at.
-  const stretches = stretchesOf(ctx.profile);
-  const tierAt = (row: number): Difficulty => stretchAt(stretches, bottom - row).tier;
-  const top = rng.int(5, 7);
+  // --- storey rows, bottom first. A Rising Slag shaft loops (closeLoop): its top storey is its spawn storey a lap
+  // up, at the same row inside the band the two ends share.
+  const loop = ctx.profile.tide ? H - LOOP_BAND : 0;
+  const bottom = loop ? loop + LOOP_SPAWN : H - rng.int(4, 6);
+  const top = loop ? LOOP_SPAWN : rng.int(5, 7);
+  const tier = ctx.profile.difficulty;
   // Storeys sit more than a (wall-assisted) climb apart, so connectors matter; dense = tighter.
   const sMin = j.rise + 1;
   const sMax = j.rise + 2 + Math.round((1 - k.density) * 2);
@@ -113,7 +113,8 @@ function sculptTall(ctx: SculptCtx, kit: TallKit): Shape {
   // around, and a second one guards the spawn storey (a descent's goal storey is the ground, the one
   // storey you can't drop past, so it just gets a wider pit). Moats, not broken ladders: walls climb
   // and storeys sit two plain jumps apart, so a missing connector is free or takes two bridges.
-  const challenges = rollChallenges(attempt, k);
+  // A loop asks for no part: every lap climbs bare, and parts are what players put in each other's way.
+  const challenges = loop ? 0 : rollChallenges(attempt, k);
   const goalMoat = challenges ? hardGap(rng, descent ? challenges : 1) : 0;
   let spawnMoat = challenges === 2 && !descent ? hardGap(rng) : 0;
   const goalMoatX = W - POCKET - 1 - goalMoat;
@@ -176,9 +177,9 @@ function sculptTall(ctx: SculptCtx, kit: TallKit): Shape {
     const dir: 1 | -1 = onward >= mid ? 1 : -1;
     const l: Link = { lower, upper, x: linkX[i], w: linkW[i], dir };
     links.push(l);
-    // A tower's medium and hard stretches climb by perches, both ways up, so the forgiving way asks for them too.
-    const tier = tierAt(upper.row);
-    const perched = !!ctx.profile.tide && tier !== 'gentle';
+    // A medium or hard shaft climbs some storeys by perches (every other one on medium, all on hard), both ways up,
+    // so the forgiving way asks for them too.
+    const perched = !!loop && (tier === 'hard' || (tier === 'medium' && i % 2 === 1));
     if (descent) dropHole(g, l);
     else if (perched) withDifficulty(tier, () => perchFlight(g, l));
     else if (linkW[i] < lw) rungShaft(g, l, rise);
@@ -266,7 +267,49 @@ function sculptTall(ctx: SculptCtx, kit: TallKit): Shape {
   kit.shell?.(g, rng, storeys, k);
   const sp = storeys[order[0]];
   const gl = storeys[order[n - 1]];
-  return finish(g, { row: sp.row, depth: order[0] === 0 ? undefined : 2 }, { row: gl.row, depth: order[n - 1] === 0 ? undefined : 2 }, `${kit.style}:${route}`);
+  const shape = finish(
+    g,
+    { row: sp.row, depth: order[0] === 0 ? undefined : 2 },
+    { row: gl.row, depth: order[n - 1] === 0 ? undefined : 2 },
+    `${kit.style}:${route}`,
+  );
+  return loop ? closeLoop(shape, loop) : shape;
+}
+
+/**
+ * Close a Rising Slag shaft into a loop (`Level.loop`): make its top band the same rows as its bottom one. Above the
+ * spawn storey's floor the spawn storey wins (its air, and the foot of the climb out of it); from the floor down the
+ * top storey wins (the head of the climb into it), except under the spawn pocket. Then wall both sides, terrain you
+ * can see all the way up, and put the goal on the spawn's copy a lap up: proving it reachable proves a lap. The
+ * band is protected, both copies, so nothing placed can make the two differ.
+ */
+function closeLoop(shape: Shape, loop: number): Shape {
+  const { w, h, tiles } = shape;
+  const sync = (a: Uint8Array) => {
+    for (let r = 0; r < LOOP_BAND; r++)
+      for (let x = 0; x < w; x++) {
+        const upper = r * w + x;
+        const lower = (r + loop) * w + x;
+        if (r <= LOOP_SPAWN || x < POCKET) a[upper] = a[lower];
+        else a[lower] = a[upper];
+      }
+  };
+  sync(tiles);
+  if (shape.ground) sync(shape.ground);
+  for (let y = 0; y < h; y++) {
+    tiles[y * w] = T_SOLID;
+    tiles[y * w + w - 1] = T_SOLID;
+  }
+  return {
+    ...shape,
+    spawn: { tx: shape.spawn.tx, ty: loop + LOOP_SPAWN },
+    goal: { tx: shape.spawn.tx, ty: LOOP_SPAWN },
+    protectedRects: [
+      { x: 0, y: 0, w, h: LOOP_BAND },
+      { x: 0, y: loop, w, h: LOOP_BAND },
+    ],
+    bridgeHints: [],
+  };
 }
 
 /** Descent connector: a hole in the upper storey's floor (drop through to the storey below). */

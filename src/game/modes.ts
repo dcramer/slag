@@ -5,8 +5,7 @@
  */
 import type { ProfileOverride } from '../gen/level';
 import { TILE } from '../sim/constants';
-import { RACE_RUN, type RunRules, type RunWorld } from '../sim/run';
-import { tideStart } from '../sim/tide';
+import { feetUp, RACE_RUN, type RunRules, type RunWorld } from '../sim/run';
 import { type RoundResult, scoreRound, scoreSurvival, type Standing } from './scoring';
 
 export type ModeId = 'race' | 'slag';
@@ -56,11 +55,12 @@ export const MODES: Record<ModeId, ModeDef> = {
   },
 };
 
-/** Share of the climb to the top `slot` made before the slag took it: 1 at the goal's floor. */
+/** Share of the climb from the spawn's floor to the top `slot` made before the slag took it: 1 at the goal's floor, or three laps round a loop. */
 export function climbed(run: RunWorld, slot: number): number {
-  const start = tideStart(run.level);
   const r = run.runners.find((x) => x.slot === slot);
-  if (start === null || !r) return 0;
-  const top = (run.level.goal.ty + 1) * TILE;
-  return (start - (r.body.y + r.body.h)) / Math.max(TILE, start - top);
+  if (!run.level.tide || !r) return 0;
+  const start = (run.level.spawn.ty + 1) * TILE;
+  // Round a loop, the top is three laps up, where the hard laps start; anywhere else, the goal's floor.
+  const top = run.level.loop ? start - 3 * run.level.loop * TILE : (run.level.goal.ty + 1) * TILE;
+  return (start - feetUp(run.level, r)) / Math.max(TILE, start - top);
 }

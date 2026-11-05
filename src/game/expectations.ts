@@ -1,8 +1,8 @@
 /**
  * What difficulty is supposed to mean, as numbers (docs/DESIGN.md → Difficulty). One expectation for every mode:
  * how often a lone bot of each level gets through a stretch of route of each tier (gen/level/difficulty.ts
- * `Stretch`). A race level is one stretch, finished at the flag; a Rising Slag tower is a stack of them, passed by
- * climbing out of the top of each before the slag catches you. The stats suites in tests/stats/ measure against
+ * `Stretch`). A race level is one stretch, finished at the flag; a Rising Slag loop has one a lap, passed by
+ * climbing the lap before the slag catches you. The stats suites in tests/stats/ measure against
  * these, and nothing in the game reads them: they're the owner's targets and the bands a measurement may wander in.
  */
 import type { Difficulty } from '../sim/level';
@@ -18,7 +18,7 @@ export const PASS_TARGETS: Record<BotLevel, Record<Difficulty, number>> = {
 
 /**
  * Where each mode's measurement may land today before its suite fails: bands around what the suite measured
- * (seeds 1–40 for a race, 1–16 for a tower), so they catch a regression, not the distance to the target. A band
+ * (seeds 1–40 for a race, 1–16 for a loop), so they catch a regression, not the distance to the target. A band
  * that sits away from its target is a known gap, said beside it; close the gap and move the band, never the target.
  */
 export const PASS_BANDS: Record<ModeId, Record<BotLevel, Record<Difficulty, readonly [number, number]>>> = {
@@ -30,11 +30,11 @@ export const PASS_BANDS: Record<ModeId, Record<BotLevel, Record<Difficulty, read
     normal: { gentle: [0.8, 1], medium: [0.55, 0.82], hard: [0.5, 0.8] },
     hard: { gentle: [0.88, 1], medium: [0.68, 0.92], hard: [0.7, 0.95] },
   },
-  // Measured Easy 88 43 17, Normal 94 80 42, Hard 100 81 77 (seeds 1–16), the slag on its leash to the leader
-  // (gen/level/tide.ts): every level within about 13 points of its targets. Few Easy bots reach the hard stretch.
+  // Measured lap by lap round the loop (seeds 1–16): Easy 81 62 38, Normal 94 80 42, Hard 94 73 64, the slag on
+  // its leash to the leader (gen/level/tide.ts): every level within about 12 points of its targets.
   slag: {
-    easy: { gentle: [0.7, 1], medium: [0.28, 0.6], hard: [0, 0.45] },
-    normal: { gentle: [0.8, 1], medium: [0.62, 0.92], hard: [0.28, 0.62] },
-    hard: { gentle: [0.88, 1], medium: [0.66, 0.95], hard: [0.6, 0.92] },
+    easy: { gentle: [0.65, 0.95], medium: [0.45, 0.8], hard: [0.2, 0.6] },
+    normal: { gentle: [0.8, 1], medium: [0.62, 0.95], hard: [0.25, 0.6] },
+    hard: { gentle: [0.8, 1], medium: [0.58, 0.9], hard: [0.45, 0.82] },
   },
 };

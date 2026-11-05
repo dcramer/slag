@@ -5,7 +5,6 @@ import { movesOn } from '../../sim/reach';
 import { groundSurfaceAt } from '../../sim/ground';
 import { footing } from '../../sim/weather';
 import type { Routes } from './routes';
-import { type Stretch, stretchAt } from './difficulty';
 import { BRIDGE_W, type BridgeHint } from './types';
 
 /**
@@ -179,24 +178,6 @@ export function routeJumps(level: Level, route: readonly number[], bridges: read
 export function routePrecision(level: Level, route: readonly number[], bridges: readonly BridgeHint[] = []): RoutePrecision {
   const jumps = routeJumps(level, route, bridges);
   return { jumps: jumps.length, tight: jumps.filter((j) => j.tight).length };
-}
-
-/**
- * Tight jumps per stretch (./difficulty.ts `Stretch`) on the level's more forgiving route, stretch by stretch: a
- * player takes the forgiving way through each. A race level is one stretch, so this is `levelPrecision` in a list.
- * Rows climbed count from the spawn's floor.
- */
-export function stretchPrecision(level: Level, routes: Routes, stretches: readonly Stretch[], bridges: readonly BridgeHint[] = []): number[] {
-  const floor = level.spawn.ty;
-  const count = (route: readonly number[]) => {
-    const n = stretches.map(() => 0);
-    for (const j of routeJumps(level, route, bridges)) if (j.tight) n[stretches.indexOf(stretchAt(stretches, floor - j.row))]++;
-    return n;
-  };
-  const fast = count(routes.fastest);
-  if (!routes.alternative.length) return fast;
-  const alt = count(routes.alternative);
-  return fast.map((x, i) => Math.min(x, alt[i]));
 }
 
 /** Tight jumps on the level's more forgiving route: what a player who picks the safe way still has to land. */

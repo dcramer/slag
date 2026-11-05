@@ -1,20 +1,24 @@
 import { describe, expect, it } from 'vitest';
 import { PASS_BANDS, PASS_TARGETS } from '../../src/game/expectations';
 import type { BotLevel } from '../../src/game/match';
-import { TOWER_CURVE } from '../../src/gen/level';
+import { stretchesOf } from '../../src/gen/level';
+import { LOOP_ROWS } from '../../src/gen/level/profile';
+import { LOOP_BAND } from '../../src/sim/level';
 import { botRace } from '../lib/bot-race';
 
 /**
  * Rising Slag against the difficulty standard (src/game/expectations.ts): a lone bot climbs a tower with the slag
- * on, and each stretch of the curve (gen/level/difficulty.ts `TOWER_CURVE`) it got into counts as passed when it
- * climbed out of the top before the slag caught it. The share passed per tier is measured against the same targets
+ * on, and each lap of the shaft's curve (gen/level/difficulty.ts `LAP_TIERS`) it got into counts as passed when
+ * it climbed it before the slag caught it. The share passed per tier is measured against the same targets
  * as a race level of that tier (`PASS_TARGETS`), and held to the bands it measures today (`PASS_BANDS.slag`). A
  * stretch fewer than four bots got into isn't judged. The run-out past the hard stretch has no band: the slag always
  * wins there.
  */
 const SEEDS = Array.from({ length: 16 }, (_, i) => i + 1);
 const LEVELS: readonly BotLevel[] = ['easy', 'normal', 'hard'];
-const BANDED = TOWER_CURVE.filter((s) => Number.isFinite(s.to));
+/** A shaft's laps, as every Rising Slag shaft has them (gen/level/difficulty.ts `stretchesOf`). */
+const LAPS = stretchesOf({ tide: true, curve: true, size: 'tall', h: LOOP_ROWS + LOOP_BAND, difficulty: 'medium' });
+const BANDED = LAPS.filter((s) => Number.isFinite(s.to));
 const DIFFS = ['gentle', 'medium', 'hard'] as const;
 
 const climbs = new Map<BotLevel, number[]>();

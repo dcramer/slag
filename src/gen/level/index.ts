@@ -1,7 +1,7 @@
 import { footprintCells, type PlacedProp } from '../../sim/props';
 import { BRIDGE_W } from './validate';
 import { deriveSeed, Rng } from '../../core/rng';
-import type { Level, LevelProfile } from '../../sim/level';
+import { type Level, type LevelProfile, LOOP_BAND } from '../../sim/level';
 import { pickThemeId, THEME_IDS, type ThemeId } from '../../themes';
 import { commit, finalize, SET_PIECE_UID, SET_PIECES, Site, tellFaults } from '../setpieces';
 import { type Concept, conceptName, fits, type Landmark, landmarkFaults, rollConcept } from '../stage';
@@ -12,8 +12,8 @@ import { footing } from '../../sim/weather';
 import { openUp } from './lanes';
 import { setProbeGravity } from './probe';
 import { buildsTowers, type ProfileOverride, rollProfile } from './profile';
-import { DIFFICULTY, setLevelDifficulty, type Stretch, stretchesOf } from './difficulty';
-import { levelPrecision, stretchPrecision } from './precision';
+import { DIFFICULTY, setLevelDifficulty } from './difficulty';
+import { levelPrecision } from './precision';
 import { analyzeRoutes, MAX_SHARED } from './routes';
 import { FALLBACK_SCULPTOR, SCULPTORS } from './sculptors';
 import { LAST_RESORT } from './sculptors/common';
@@ -24,7 +24,7 @@ import { rollWeather } from './weather';
 import { noFreeRide, planHolds } from './winnable';
 
 export type { BridgeHint, SculptCtx, Sculptor, Shape } from './types';
-export { DIFFICULTIES, DIFFICULTY, levelDifficulty, setLevelDifficulty, type Stretch, stretchAt, stretchesOf, TOWER_CURVE } from './difficulty';
+export { DIFFICULTIES, DIFFICULTY, LAP_TIERS, levelDifficulty, setLevelDifficulty, type Stretch, stretchAt, stretchesOf } from './difficulty';
 export { describeProfile, GRAVITY, type GravityClass, gravityClass, type ProfileOverride, rollProfile } from './profile';
 export { BRIDGE_W, type Bridge, canPlaceBridge, isAcceptable, judge, MAX_BRIDGES, withBridges } from './validate';
 export { fieldOf, partsNeeded, planHolds, prove, settled } from './winnable';
@@ -62,8 +62,6 @@ export interface GenInfo {
   /** Tight jumps on the level's more forgiving route (./precision.ts), and the sculpts drawn to fit its difficulty (the tier's `draws` + 1 when none fit and the nearest was redrawn). */
   precision: number;
   draws: number;
-  /** A tower's tight jumps per stretch of its curve (./difficulty.ts `TOWER_CURVE`), bottom first; absent on a level of one stretch. */
-  stretches?: number[];
 }
 
 export let lastGenInfo: GenInfo = {
@@ -127,10 +125,7 @@ export function generateLevel(seed: number, themeOverride?: ThemeId, profileOver
   setLevelDifficulty(first.profile.difficulty);
   const challenge = new Rng(deriveSeed(seed, `challenge:${themeId}`)).next();
   // Picked by difficulty: draws of the whole sculpt until one's precision fits the level's (./precision.ts), or the nearest of its tier's `draws`.
-  // A tower is measured stretch by stretch, each against its own tier: its score is how far its stretches sit off their bands, 0 in all of them.
-  const stretches = stretchesOf(first.profile);
-  const tower = stretches.length > 1;
-  const { precision: band, draws } = tower ? { precision: [0, 0] as const, draws: TOWER_DRAWS } : DIFFICULTY[first.profile.difficulty];
+  const { precision: band, draws } = DIFFICULTY[first.profile.difficulty];
   const off = (score: number) => (score < band[0] ? band[0] - score : score > band[1] ? score - band[1] : 0);
   // Draws turned down so far. Each draw is a function of the seed, its number and its layout alone, so a snapshot's profile names one and it rebuilds.
   let turned = 0;
@@ -193,13 +188,15 @@ export function generateLevel(seed: number, themeOverride?: ThemeId, profileOver
         level.rides = rides;
       }
       // Passable bare: not a level. Only the very last attempts accept it, to keep generation total.
-      const insist = attempt < LAST_RESORT;
+      // A Rising Slag loop is meant to climb bare (sculptors/tall.ts closeLoop): only race levels must ask for parts.
+      const insist = attempt < LAST_RESORT && !level.loop;
       if (insist && cache.analyze(level).goalReached) {
         rejects.tooEasy++;
         continue;
       }
       const v = judge(level, shape.bridgeHints, shape.crossings, cache);
-      if (!v.ok) {
+      // A loop that takes a part to climb would stop every lap there.
+      if (!v.ok || (level.loop && v.bridges.length)) {
         rejects.unsolvable++;
         continue;
       }
@@ -233,11 +230,8 @@ export function generateLevel(seed: number, themeOverride?: ThemeId, profileOver
         }
       }
       level.solution = bridges;
-      const measured = analyzeRoutes(level, bridges, cache);
-      const per = tower ? stretchPrecision(level, measured, stretches, bridges) : null;
-      const precision = per ? per.reduce((a, b) => a + b, 0) : levelPrecision(level, measured, bridges);
-      const score = per ? stretchesOff(per, stretches) : precision;
-      if (keepIf && !keepIf(score)) return score;
+      const precision = levelPrecision(level, analyzeRoutes(level, bridges, cache), bridges);
+      if (keepIf && !keepIf(precision)) return precision;
       // Set pieces must never block the known prop solution: a match starts from it, keeping clear of every
       // piece's barrier (./winnable.ts), so a piece goes in only if the solution still holds that way.
       const keep = (pieces: readonly PlacedProp[]) => planHolds(level, pieces, bridges, cache);
@@ -279,7 +273,6 @@ export function generateLevel(seed: number, themeOverride?: ThemeId, profileOver
         ...(faults.length ? { landmarkFaults: faults } : {}),
         precision,
         draws: 0,
-        ...(per ? { stretches: per } : {}),
       };
       const budget = live ? (live.budget ?? fixed.length) : 0;
       const pieces = SET_PIECES[themeId](new Rng(deriveSeed(seed, lab(`setpieces:${attempt}`))), level, {
@@ -362,24 +355,8 @@ function toLevel(seed: number, s: Shape, theme: Theme, profile: LevelProfile): L
     version: 0,
     setPieces: [],
     ...(profile.tide ? { tide: slagTide(profile, s.tiles, s.w, s.h) } : {}),
+    ...(profile.tide && profile.size === 'tall' ? { loop: profile.h - LOOP_BAND } : {}),
   };
-}
-
-/** Whole sculpts a tower draws to fit its curve: each is seconds of work, and the lobby waits on the first. */
-const TOWER_DRAWS = 2;
-
-/**
- * How far a tower's tight jumps per stretch sit off their tiers' bands, summed: 0 when every stretch fits. The
- * run-out past the last stretch with an end has no band: the slag always wins there.
- */
-function stretchesOff(per: readonly number[], stretches: readonly Stretch[]): number {
-  let off = 0;
-  stretches.forEach((s, i) => {
-    if (!Number.isFinite(s.to) && i > 0) return;
-    const [lo, hi] = DIFFICULTY[s.tier].precision;
-    off += per[i] < lo ? lo - per[i] : per[i] > hi ? per[i] - hi : 0;
-  });
-  return off;
 }
 
 /**

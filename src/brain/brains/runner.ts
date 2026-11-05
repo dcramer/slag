@@ -13,6 +13,8 @@ const STUCK_FRAMES = 6 * 60;
 const LOST_FRAMES = 4 * 60;
 const LEAP_FRAMES = 120;
 const LAST_FRAMES = 120;
+/** How much further the route gets at once for a bot to take it as a loop's lap line crossed (route tiles, rounded as `togo` is). */
+const LAP_RESET = 8;
 /**
  * How long it takes over each choice, in frames [min, max]: a person reads the
  * crate and points at a card or two before taking one, then looks the level
@@ -248,6 +250,11 @@ export function runnerBrain(seed: number, traits: Personality, mood: Temperament
       }
     }
     if (!v.live || !me || !me.alive || me.finished) return { do: 'wait' };
+    // Round a loop the goal is the lap line: crossing it puts the whole climb ahead again, which is a new lap, not a loss.
+    if (!v.level.flag && Number.isFinite(me.togo) && Number.isFinite(best) && me.togo > best + LAP_RESET) {
+      best = me.togo;
+      since = 0;
+    }
     if (me.togo < best) {
       best = me.togo;
       since = 0;

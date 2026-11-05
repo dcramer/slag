@@ -1,7 +1,7 @@
 import { inset, overlaps, type Rect, type Vec } from '../core/geom';
 import { deriveSeed, Rng } from '../core/rng';
 import { type BloodCell, buildBlood, groundOf, spillBlood } from './blood';
-import { FPS, PLAYER_W, POP_HOLD, RUN_COUNTDOWN } from './constants';
+import { FPS, PLAYER_W, POP_HOLD, RUN_COUNTDOWN, TILE } from './constants';
 import { collideRunners, contactStart, footing as stackFooting } from './collide';
 import {
   absorbHit,
@@ -19,7 +19,7 @@ import {
   spawnItem,
   stepItems,
 } from './items';
-import { goalRect, killY, type Level, offMap, spawnZone, tileAt } from './level';
+import { goalRect, killY, lapShift, type Level, offMap, spawnZone, tileAt } from './level';
 import { stepTide, tideStart } from './tide';
 import { type Body, bodyAtCell, type CollisionWorld, firstOverlap, type Solid, stepBody } from './physics';
 import {
@@ -97,6 +97,13 @@ export interface Runner {
   pop: number;
   /** Frames this runner has been held up by other bodies; enough of them and it slips through (sim/collide.ts). */
   press: number;
+  /** Laps climbed round a looping shaft (`Level.loop`): +1 each time it carries on a lap up, -1 a lap down. */
+  lap: number;
+}
+
+/** Feet of `r` in climbed coordinates (world y, minus a loop's rows for every lap up): what the slag measures. */
+export function feetUp(level: Level, r: Pick<Runner, 'body' | 'lap'>): number {
+  return r.body.y + r.body.h - r.lap * (level.loop ?? 0) * TILE;
 }
 
 /**
@@ -203,6 +210,7 @@ export class RunWorld {
       perch: 0,
       pop: 0,
       press: 0,
+      lap: 0,
     }));
     this.resolved = [...level.setPieces, ...placed].map(resolveProp);
     for (const r of this.resolved) {
@@ -316,6 +324,12 @@ export class RunWorld {
         return this.kill(r, owner, 'crush');
       }
       statusPostStep(r.status, b);
+      // Round a loop: climbing into its top band carries on from the same place in the bottom one, a lap up.
+      const laps = lapShift(this.level, b.y + b.h);
+      if (laps) {
+        b.y += laps * this.level.loop! * TILE;
+        r.lap += laps;
+      }
       if (!held) itemPostStep(r.items, b);
 
       if (b.onGround && b.groundRef >= 0) {
@@ -367,7 +381,7 @@ export class RunWorld {
       if (b.y > this.killY) return this.kill(r, -1, 'fall');
       if (offMap(b, this.level.w)) return this.kill(r, -1, 'out');
       // Slag burns wherever it is, the spawn zone included, as the pit takes you anywhere.
-      if (this.slag !== null && hb.y + hb.h > this.slag) return this.kill(r, -1, 'hazard');
+      if (this.slag !== null && hb.y + hb.h - r.lap * (this.level.loop ?? 0) * TILE > this.slag) return this.kill(r, -1, 'hazard');
       if (this.rules.flag && overlaps(b, this.goal)) {
         letGo(r);
         r.finished = true;
@@ -384,6 +398,7 @@ export class RunWorld {
 
     stepItems(this, inputs, live);
     this.stepProjectiles(f);
+    this.lapThings();
     for (const rp of this.resolved) rp.mods.forEach((m, mi) => moduleSim(m.type).tick?.(m, this.tickCtx(rp, mi, f)));
 
     if (this.endFrame < 0) {
@@ -393,11 +408,18 @@ export class RunWorld {
     this.frame++;
   }
 
-  /** The highest feet (world y) of anyone still racing, or null: where the slag's leash is tied. */
+  /** The highest feet (climbed coordinates, `feetUp`) of anyone still racing, or null: where the slag's leash is tied. */
   private leaderFeet(): number | null {
     let top: number | null = null;
-    for (const r of this.runners) if (r.alive && !r.finished) top = Math.min(top ?? Infinity, r.body.y + r.body.h);
+    for (const r of this.runners) if (r.alive && !r.finished) top = Math.min(top ?? Infinity, feetUp(this.level, r));
     return top;
+  }
+
+  /** Shots and loose items round a loop go a lap with whatever crosses its line, as runners do. */
+  private lapThings() {
+    if (!this.level.loop) return;
+    const rows = this.level.loop * TILE;
+    for (const t of [...this.projectiles, ...this.items.drops]) t.y += lapShift(this.level, t.y) * rows;
   }
 
   /** Kill a runner, unless a shield cancels it. Bonks pass kill credit on. */
