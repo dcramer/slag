@@ -72,15 +72,17 @@ export const kind: FlatKind = {
   roles: [
     // The shell, a dark of the player's colour; the skin is the costume (Decisions 4, the neutral palette), the
     // largest region on him: a fixed gold there made every king the same king.
-    { name: 'shell', color: '#808080', on: 3, tone: -22 },
+    { name: 'shell', color: '#808080', on: 3, tone: -20 },
     // A colourway is the patch plate (VARIETY.palette): steel, black iron, tin.
     { name: 'plate', color: '#9aa0a8', alts: ['#5d6168', '#bdb6a6'], vary: 6 },
     { name: 'bone', color: '#efe2c0' },
     { name: 'skin', color: '#e8b23c', slot: 'player' },
     { name: 'belly', color: '#e9d29a' },
-    { name: 'mane', color: '#808080', on: 3, tone: -36 },
-    // The paper crown: a light tone of the player's colour.
-    { name: 'crown', color: '#808080', on: 3, tone: 26 },
+    // The mane, a light of the skin. As a dark below the shell's (−36) it was as dark as the silhouette's ink on
+    // the blue, purple and sky kings, and sank into the outline and the shell.
+    { name: 'mane', color: '#808080', on: 3, tone: 20 },
+    // The paper crown: a lighter tone still, so it stays a shape on the mane behind it.
+    { name: 'crown', color: '#808080', on: 3, tone: 38 },
     { name: 'mouth', color: '#9a3d36' },
     { name: 'dark', color: '#2a1f1a' },
     { name: 'scuff', color: '#808080', on: 0, tone: 12 },
