@@ -271,6 +271,15 @@ export const EYES: Record<EyeStyle, EyeArt> = {
       poly(s, box(x0, -ry + Math.max(0, lift), x1, ry + lift), dark);
     },
   },
+  // A hole cut through the figure, the level showing in it: the box creeper's square eyes, which are its frame's own
+  // holes (`map.holes`), since in black his outline alone is a post. Open, the kit draws nothing over the hole; it
+  // acts in the brows, and shuts the hole with the body's colour (`face.lid`) under the blink, the cheer's arcs and
+  // the death's crosses.
+  cutout: {
+    extent: [1, 1],
+    brow: true,
+    open() {},
+  },
 };
 
 /** An almond, pointed at the back and round at the front. */
