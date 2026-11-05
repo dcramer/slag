@@ -8,7 +8,6 @@ import type { PlacedProp } from '../../src/sim/props';
 import { RUN_COUNTDOWN, TILE } from '../../src/sim/constants';
 import type { ModeId } from '../../src/game/modes';
 import { DEFAULT_RULES } from '../../src/game/rules';
-import { tideLine } from '../../src/sim/tide';
 import type { ThemeId } from '../../src/themes';
 
 export interface BotRace {
@@ -72,18 +71,17 @@ function botMatch(
   return { m, bots };
 }
 
+/** Was the slag at `r`'s feet when it died? (A lone bot's race ends with it, so the slag is still there.) */
+function slagAt(slag: number | null, r: { body: { y: number; h: number } }): boolean {
+  return slag !== null && slag < r.body.y + r.body.h + 2;
+}
+
 /**
  * One bot alone on `seed`'s level with the plan's bridges already built
  * (unless `build` is false), or over the parts `parts` bots placed in a
  * round of their own, raced to the end: does it find its way to the flag?
  * Shared by tests/brain.test.ts and the finish-rate suites in tests/stats/.
  */
-/** Was the slag at `r`'s feet when it died? */
-function slagAt(level: Match['level'], r: { deathFrame: number; body: { y: number; h: number } }): boolean {
-  const line = tideLine(level, r.deathFrame);
-  return line !== null && line < r.body.y + r.body.h + 2;
-}
-
 export function botRace(
   seed: number,
   { theme, size, limit = 60 * 60, build = true, level, parts = 0, difficulty, steady = false, hands = (p) => p, mode = 'race' }: BotRaceOptions = {},
@@ -131,6 +129,6 @@ export function botRace(
     pause,
     climbed: Math.round((floor - top) / TILE),
     splits,
-    slagged: !r.alive && slagAt(m.level, r),
+    slagged: !r.alive && slagAt(run.slag, r),
   };
 }

@@ -30,12 +30,11 @@ export const PASS_BANDS: Record<ModeId, Record<BotLevel, Record<Difficulty, read
     normal: { gentle: [0.8, 1], medium: [0.55, 0.82], hard: [0.5, 0.8] },
     hard: { gentle: [0.88, 1], medium: [0.68, 0.92], hard: [0.7, 0.95] },
   },
-  // Measured Easy 81 8 (one reached hard), Normal 94 67 40, Hard 100 81 69, the slag fitted to Normal
-  // (sim/tide.ts). Every death in a tower is the slag, so slowness is what it punishes: Easy bots climb too slowly
-  // for any pace that still presses Normal and Hard, and fall far short of their medium target.
+  // Measured Easy 88 43 17, Normal 94 80 42, Hard 100 81 77 (seeds 1–16), the slag on its leash to the leader
+  // (gen/level/tide.ts): every level within about 13 points of its targets. Few Easy bots reach the hard stretch.
   slag: {
-    easy: { gentle: [0.65, 0.95], medium: [0, 0.35], hard: [0, 0.4] },
-    normal: { gentle: [0.8, 1], medium: [0.5, 0.85], hard: [0.25, 0.65] },
-    hard: { gentle: [0.88, 1], medium: [0.65, 0.95], hard: [0.5, 0.85] },
+    easy: { gentle: [0.7, 1], medium: [0.28, 0.6], hard: [0, 0.45] },
+    normal: { gentle: [0.8, 1], medium: [0.62, 0.92], hard: [0.28, 0.62] },
+    hard: { gentle: [0.88, 1], medium: [0.66, 0.95], hard: [0.6, 0.92] },
   },
 };

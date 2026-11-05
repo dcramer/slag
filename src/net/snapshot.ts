@@ -47,6 +47,7 @@ export interface RunSnap {
   seq: number;
   items: unknown;
   itemSeed: number;
+  slag: number | null;
 }
 
 export interface MatchSnap {
@@ -247,6 +248,7 @@ export function snapshotMatch(m: Match): MatchSnap {
           seq: (run as unknown as RunPrivate).seq,
           items: toWire(run.items),
           itemSeed: run.itemSeed,
+          slag: run.slag,
         }
       : null,
   };
@@ -336,6 +338,7 @@ function restoreRun(run: RunWorld, s: RunSnap): RunWorld {
   run.runners = fromWire(s.runners) as RunWorld['runners'];
   run.projectiles = fromWire(s.projectiles) as RunWorld['projectiles'];
   run.finishOrder = [...s.finishOrder];
+  run.slag = s.slag ?? null;
   run.kills = s.kills.map((k) => ({ ...k }));
   run.endFrame = s.endFrame;
   run.propState = fromWire(s.propState) as RunWorld['propState'];

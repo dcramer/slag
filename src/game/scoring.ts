@@ -90,18 +90,18 @@ function underdogs(slots: readonly number[], scorers: readonly number[], standin
  * - Every kill pays its killer, standing or not: shoving is free, but a bonk into the slag or a part's
  *   kill is credited the usual way. A trailing survivor gets the underdog bonus.
  * - Alone, nobody can outlast you, so you score for how far the slag had to climb to catch you:
- *   `progress` is that share of the climb to the top (0…1), and reaching the top pays a full win.
+ *   `progress` is that share of the climb to the top (0…1) for a slot, and reaching the top pays a full win.
  */
 export function scoreSurvival(
   fates: readonly Fate[],
   kills: readonly { victim: number; killer: number }[],
   standings: Readonly<Record<number, Standing>> = {},
-  progress: (deathFrame: number) => number = () => 0,
+  progress: (slot: number) => number = () => 0,
 ): RoundResult {
   const slots = fates.map((f) => f.slot);
   if (fates.length === 1) {
     const f = fates[0];
-    const points = f.alive ? POINTS.survive : Math.round(POINTS.survive * Math.max(0, Math.min(1, progress(f.deathFrame))));
+    const points = f.alive ? POINTS.survive : Math.round(POINTS.survive * Math.max(0, Math.min(1, progress(f.slot))));
     if (points <= 0) return { verdict: 'too-hard', awards: [], finishers: [] };
     return { verdict: 'normal', awards: [{ slot: f.slot, points, reason: 'survive' }], finishers: points === POINTS.survive ? [f.slot] : [] };
   }

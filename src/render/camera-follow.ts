@@ -13,6 +13,7 @@ import type { Camera } from './camera';
  *   dead zone, clamped to the level). The whole level shows for the first half
  *   of the countdown, then it closes in.
  * - **Race, more than one player, local or remote:** `Camera.frameAll`, always.
+ *   Rising Slag adds the slag and a few rows over the leader to the frame.
  *   Every live runner stays on screen, whatever that costs in tile size. Only
  *   the zoom cap rises, so a tight pack still gets close.
  * - **Pick and place:** start on the overview; pinch zooms about the fingers,
@@ -33,6 +34,10 @@ const FORCED_ZOOM = 2;
 /** The race camera's zoom cap and framing pad off phones. */
 const RACE_MAX_ZOOM = 1.45;
 const RACE_PAD = 120;
+/** Rising Slag's frame: rows shown over the leader, the most shown below it (about the longest leash), and a tighter pad. */
+const SLAG_LOOK_UP = 4;
+const SLAG_VIEW_DOWN = 20;
+const SLAG_PAD = 40;
 
 /** Look-ahead at full run speed, as a share of the visible width. */
 const LOOK_AHEAD = 0.2;
@@ -172,7 +177,14 @@ export class PhoneCam {
       return;
     }
     const pts = run.runners.filter((r) => r.alive && !r.finished).map((r) => ({ x: r.body.x + r.body.w / 2, y: r.body.y }));
-    if (pts.length && !solo) cam.frameAll(pts, this.enabled ? Math.max(RACE_MAX_ZOOM, this.zoom) : RACE_MAX_ZOOM, RACE_PAD);
+    const slag = run.slag !== null && pts.length > 0;
+    if (slag) {
+      // Rising Slag frames like a racer that follows the leader: from a few rows over whoever is highest down to
+      // the slag, so the slag is the bottom of the screen and falling behind is falling off it.
+      const lead = pts.reduce((a, b) => (b.y < a.y ? b : a));
+      pts.push({ x: lead.x, y: lead.y - SLAG_LOOK_UP * TILE }, { x: lead.x, y: Math.min(run.slag!, lead.y + SLAG_VIEW_DOWN * TILE) });
+    }
+    if (pts.length && !solo) cam.frameAll(pts, this.enabled ? Math.max(RACE_MAX_ZOOM, this.zoom) : RACE_MAX_ZOOM, slag ? SLAG_PAD : RACE_PAD);
     else cam.wide();
     cam.update(dt);
   }

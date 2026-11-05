@@ -11,14 +11,16 @@ import { FPS, LEVEL_H, LEVEL_W, POP_HOLD, RUN_COUNTDOWN, TILE } from '../src/sim
 import type { Level } from '../src/sim/level';
 import { bodyAtCell } from '../src/sim/physics';
 import { RunWorld } from '../src/sim/run';
-import { type Tide, tideLine } from '../src/sim/tide';
+import { floorRise, leashRows, stepTide, type Tide, tideStart } from '../src/sim/tide';
 import { type InputFrame, NO_INPUT } from '../src/sim/types';
 import { pickThemeId, THEME_IDS } from '../src/themes';
 
 const FLOOR = 20; // first solid row
 const SLAG = { ...DEFAULT_RULES, mode: 'slag' as const };
-/** A quick tide for hand-built levels: moves half a second after GO, 4 tiles/s, steady. */
-const QUICK: Tide = { wait: 0.5, speed: 4, gain: 0 };
+/** A quick tide for hand-built levels: moves half a second after GO, 4 tiles/s, steady, on no leash. */
+const QUICK: Tide = { wait: 0.5, speed: 4, gain: 0, leash: [], squeeze: { after: 999, rate: 0, min: 0 }, rush: 10 };
+/** A tide on a 5-row leash that never moves by itself: what it does is all the leash's. */
+const LEASHED: Tide = { wait: 0, speed: 0, gain: 0, leash: [{ from: 0, rows: 5 }], squeeze: { after: 2, rate: 1, min: 2 }, rush: 6 };
 
 function flatLevel(tide?: Tide): Level {
   const tiles = new Uint8Array(LEVEL_W * LEVEL_H);
@@ -64,13 +66,16 @@ describe('Rising Slag levels', () => {
     expect(level.profile!.size).toBe('tall');
   });
 
-  it('a match in the mode builds a tower that carries the slag, which tops it inside a minute', () => {
+  it('a match in the mode builds a tower that carries the slag, whose floor pace alone tops it', () => {
     const m = new Match(31, 'mine', SLAG);
     expect(m.level.tide).toBeDefined();
     expect(m.level.profile?.tide).toBe(true);
     expect(m.level.h).toBe(TIDE_TOWER_H);
     expect(m.level.goal.ty).toBeLessThan(m.level.spawn.ty);
-    expect(tideLine(m.level, RUN_COUNTDOWN + 60 * FPS)!).toBeLessThan(0);
+    expect(tideStart(m.level)! - floorRise(m.level.tide!, RUN_COUNTDOWN + 75 * FPS)).toBeLessThan(0);
+    // On a leash that shortens with the curve: most of a screen at the bottom, shorter in the hard stretch.
+    const rows = m.level.tide!.leash.map((l) => l.rows);
+    expect(rows[0]).toBeGreaterThan(rows[2]);
     // Its curve: the perch flights of the medium and hard stretches ask for more than the gentle start's stairs.
     const tight = lastGenInfo.stretches!;
     expect(tight).toHaveLength(TOWER_CURVE.length);
@@ -92,16 +97,33 @@ describe('the slag', () => {
     const level = flatLevel(QUICK);
     const run = new RunWorld(level, [], [0]);
     const r = run.runners[0];
-    expect(tideLine(level, RUN_COUNTDOWN + 29)).toBe(LEVEL_H * TILE);
+    const lines: number[] = [];
     while (r.alive && run.frame < 600) {
       expect(run.isSafe(r)).toBe(true);
       run.step([NO_INPUT]);
+      lines.push(run.slag!);
     }
+    expect(lines[RUN_COUNTDOWN + 28]).toBe(LEVEL_H * TILE);
     expect(r.alive).toBe(false);
     expect(r.cause).toBe('hazard');
     // It took the runner the frame its surface passed their feet, not before.
-    expect(tideLine(level, r.deathFrame)!).toBeLessThan(FLOOR * TILE);
-    expect(tideLine(level, r.deathFrame - 2)!).toBeGreaterThan(FLOOR * TILE - 3);
+    expect(lines[r.deathFrame]).toBeLessThan(FLOOR * TILE);
+    expect(lines[r.deathFrame - 2]).toBeGreaterThan(FLOOR * TILE - 3);
+  });
+
+  it('stays on its leash: rushes up to a leader too far ahead, never sinks, and tightens late', () => {
+    const level = flatLevel(LEASHED);
+    const feet = FLOOR * TILE;
+    const go = RUN_COUNTDOWN + 1;
+    // 20 rows behind a 5-row leash: it closes at its rush, no faster.
+    expect(stepTide(level, feet + 20 * TILE, go, feet)).toBeCloseTo(feet + 20 * TILE - (6 * TILE) / FPS);
+    // Inside the leash it holds (this tide has no floor pace), and a leader who falls back doesn't pull it down.
+    expect(stepTide(level, feet + 3 * TILE, go, feet)).toBe(feet + 3 * TILE);
+    expect(stepTide(level, feet + 3 * TILE, go, feet + 10 * TILE)).toBe(feet + 3 * TILE);
+    // Sudden death: two seconds in the leash starts losing a row a second, down to two.
+    expect(leashRows(LEASHED, 0, RUN_COUNTDOWN + FPS)).toBe(5);
+    expect(leashRows(LEASHED, 0, RUN_COUNTDOWN + 4 * FPS)).toBe(3);
+    expect(leashRows(LEASHED, 0, RUN_COUNTDOWN + 60 * FPS)).toBe(2);
   });
 
   it('credits the bonk that knocked someone in', () => {
@@ -140,7 +162,7 @@ describe('Rising Slag races', () => {
     expect(m.phase).toBe('score');
     const r = m.run!.runners[0];
     expect(r.alive).toBe(false);
-    const share = climbed(m.level, r.deathFrame);
+    const share = climbed(m.run!, r.slot);
     expect(share).toBeGreaterThan(0);
     expect(share).toBeLessThan(1);
     expect(m.result!.awards.every((a) => a.reason === 'survive')).toBe(true);

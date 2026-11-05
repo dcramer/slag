@@ -1,6 +1,6 @@
 import { TILE } from '../sim/constants';
 import type { Level } from '../sim/level';
-import { tideLine, tideRise, tideWarn } from '../sim/tide';
+import { tideWarn } from '../sim/tide';
 import type { RC } from './kit';
 import { type Liquid, paintBody, paintSurface } from './props/modules/flood';
 
@@ -22,24 +22,17 @@ const SLAG: Liquid = {
 /** How far down past the crest the body is drawn below the world: the surroundings reach about this far. */
 const SUNK = 12 * TILE;
 
-/** The surface's height above the world's bottom edge on `frame`, px, or null on a level without slag. */
-function depth(level: Level, frame: number): number | null {
-  const line = tideLine(level, frame);
-  return line === null ? null : level.h * TILE - line;
-}
-
-/** The slag's body, before the terrain. `margin` is how far past the world's sides the view can see. */
-export function drawTideBody(rc: RC, level: Level, frame: number, margin: number) {
-  const h = depth(level, frame);
-  if (h === null || h <= 0) return;
+/** The slag's body, before the terrain, its surface at world y `line`. `margin` is how far past the world's sides the view can see. */
+export function drawTideBody(rc: RC, level: Level, line: number, margin: number) {
+  const h = level.h * TILE - line;
+  if (h <= 0) return;
   const floor = level.h * TILE;
   paintBody(rc, SLAG, -margin, level.w * TILE + margin * 2, floor + SUNK, h + SUNK);
 }
 
-/** The slag's crest, glints and glow, in front of the terrain. Before it moves, it boils where it pools. */
-export function drawTideSurface(rc: RC, level: Level, frame: number) {
-  const h = depth(level, frame);
-  if (h === null) return;
-  const warn = tideRise(level.tide!, frame) > 0 ? 0 : tideWarn(level, frame);
+/** The slag's crest, glints and glow, in front of the terrain, on run frame `frame`. Before it moves, it boils where it pools. */
+export function drawTideSurface(rc: RC, level: Level, line: number, frame: number) {
+  const h = level.h * TILE - line;
+  const warn = tideWarn(level, frame) < 1 ? tideWarn(level, frame) : 0;
   paintSurface(rc, level, SLAG, 0, level.w * TILE, level.h * TILE, h, warn);
 }

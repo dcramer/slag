@@ -84,6 +84,9 @@ Every game design decision, preference and direction the owner has given, groupe
   Changed: the race's targets lived only in its stats suite; the slag rose at 1.5 tiles/s gaining 0.1 after 2 s, now 2.6 gaining 0.12 after 3 s, fitted to Normal bots.
 - **A looping tower (its top wrapping to its bottom) is a nice hack for an endless climb, but complicated: not now.** "the level could loopp maybe but thats a little complicated? thats a nice hack tho"
   2026-11-04 · `open` · TODO.md → 31
+- **Rising Slag plays in the style of SpeedRunners: the slag follows the leader like its camera, so falling behind the pack is falling off the screen.** "speedrunners i think is what we want like that style" (after a survey of how other games pace a shared hazard)
+  2026-11-04 · `done` · DESIGN.md → Modes; `src/sim/tide.ts`, `src/gen/level/tide.ts`, `src/render/camera-follow.ts`
+  Changed: a fixed slag pace (2.6 tiles/s gaining 0.12), which only punished slowness: Easy bots got through 8% of medium stretches, now 43%.
 - **A rule the level is built from (gravity, weather) rebuilds the lobby's level for everyone at once.**
   2026-11-02 · git `e64c3e5` · `done` · DESIGN.md → Rules
 

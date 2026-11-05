@@ -20,7 +20,7 @@ import {
   stepItems,
 } from './items';
 import { goalRect, killY, type Level, spawnZone, tileAt } from './level';
-import { tideLine } from './tide';
+import { stepTide, tideStart } from './tide';
 import { type Body, bodyAtCell, type CollisionWorld, firstOverlap, type Solid, stepBody } from './physics';
 import {
   type Beam,
@@ -141,6 +141,8 @@ export class RunWorld {
   kills: { victim: number; killer: number }[] = [];
   /** Frame the race ended (everyone done), or -1. */
   endFrame = -1;
+  /** Rising Slag: world y of the slag's surface (sim/tide.ts), or null on a level without one. Under it, everything burns. */
+  slag: number | null;
   propState = new Map<number, PropState>();
   /** Set pieces first, then player props. */
   resolved: Resolved[];
@@ -215,6 +217,7 @@ export class RunWorld {
       surfaceAt: groundSurfaceAt(level),
     };
     this.goal = goalRect(level);
+    this.slag = tideStart(level);
     this.safeZone = spawnZone(level);
     this.killY = killY(level);
     this.buildProps(0); // A race can be drawn before its first step, and the art reads what the build reports.
@@ -281,6 +284,7 @@ export class RunWorld {
     const f = this.frame;
     this.struck.length = 0;
     this.buildProps(f);
+    if (this.slag !== null) this.slag = stepTide(this.level, this.slag, f, this.leaderFeet());
     const live = f >= RUN_COUNTDOWN && this.endFrame < 0;
     const start = contactStart(this.runners);
 
@@ -360,8 +364,7 @@ export class RunWorld {
       }
       if (b.y > this.killY) return this.kill(r, -1, 'fall');
       // Slag burns wherever it is, the spawn zone included, as the pit takes you anywhere.
-      const slag = tideLine(this.level, f);
-      if (slag !== null && hb.y + hb.h > slag) return this.kill(r, -1, 'hazard');
+      if (this.slag !== null && hb.y + hb.h > this.slag) return this.kill(r, -1, 'hazard');
       if (this.rules.flag && overlaps(b, this.goal)) {
         letGo(r);
         r.finished = true;
@@ -385,6 +388,13 @@ export class RunWorld {
       if (this.active.length <= (this.rules.lastStanding && this.runners.length > 1 ? 1 : 0)) this.endFrame = f;
     }
     this.frame++;
+  }
+
+  /** The highest feet (world y) of anyone still racing, or null: where the slag's leash is tied. */
+  private leaderFeet(): number | null {
+    let top: number | null = null;
+    for (const r of this.runners) if (r.alive && !r.finished) top = Math.min(top ?? Infinity, r.body.y + r.body.h);
+    return top;
   }
 
   /** Kill a runner, unless a shield cancels it. Bonks pass kill credit on. */

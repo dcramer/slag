@@ -5,9 +5,8 @@
  */
 import type { ProfileOverride } from '../gen/level';
 import { TILE } from '../sim/constants';
-import type { Level } from '../sim/level';
 import { RACE_RUN, type RunRules, type RunWorld } from '../sim/run';
-import { tideLine, tideStart } from '../sim/tide';
+import { tideStart } from '../sim/tide';
 import { type RoundResult, scoreRound, scoreSurvival, type Standing } from './scoring';
 
 export type ModeId = 'race' | 'slag';
@@ -52,16 +51,16 @@ export const MODES: Record<ModeId, ModeDef> = {
         run.runners.map((r) => ({ slot: r.slot, alive: r.alive, deathFrame: r.deathFrame })),
         run.kills,
         standings,
-        (f) => climbed(run.level, f),
+        (slot) => climbed(run, slot),
       ),
   },
 };
 
-/** Share of the climb to the top the slag had made by run frame `f`: 1 once it covers the goal's floor. */
-export function climbed(level: Level, f: number): number {
-  const line = tideLine(level, f);
-  const start = tideStart(level);
-  if (line === null || start === null) return 0;
-  const top = (level.goal.ty + 1) * TILE;
-  return (start - line) / Math.max(TILE, start - top);
+/** Share of the climb to the top `slot` made before the slag took it: 1 at the goal's floor. */
+export function climbed(run: RunWorld, slot: number): number {
+  const start = tideStart(run.level);
+  const r = run.runners.find((x) => x.slot === slot);
+  if (start === null || !r) return 0;
+  const top = (run.level.goal.ty + 1) * TILE;
+  return (start - (r.body.y + r.body.h)) / Math.max(TILE, start - top);
 }

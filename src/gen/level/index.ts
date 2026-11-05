@@ -7,7 +7,7 @@ import { commit, finalize, SET_PIECE_UID, SET_PIECES, Site, tellFaults } from '.
 import { type Concept, conceptName, fits, type Landmark, landmarkFaults, rollConcept } from '../stage';
 import { generateTheme, type Theme } from '../theme';
 import { ReachCache } from '../../sim/reach';
-import { lowestOpen, SLAG_TIDE } from '../../sim/tide';
+import { slagTide } from './tide';
 import { footing } from '../../sim/weather';
 import { openUp } from './lanes';
 import { setProbeGravity } from './probe';
@@ -361,7 +361,7 @@ function toLevel(seed: number, s: Shape, theme: Theme, profile: LevelProfile): L
     style: s.style,
     version: 0,
     setPieces: [],
-    ...(profile.tide ? { tide: { ...SLAG_TIDE, from: lowestOpen(s.tiles, s.w, s.h) } } : {}),
+    ...(profile.tide ? { tide: slagTide(profile, s.tiles, s.w, s.h) } : {}),
   };
 }
 

@@ -325,7 +325,7 @@ export class Renderer {
     // Scenery goes down first so the terrain stands in front of it and shadows it.
     for (const r of resolved) drawBackdrop(rc, r, { level });
     // Rising Slag: the slag is only there in a race, so every other phase shows the level dry.
-    if (run) drawTideBody(rc, level, run.frame, this.surround.margin);
+    if (run?.slag != null) drawTideBody(rc, level, run.slag, this.surround.margin);
     // The rest of the world goes on its own transparent layer (see ForegroundLayer); `s` stays the background.
     rc.s = this.foreground.begin(this.scene, s, g, level.theme.ambientLight);
     this.cam.apply(rc.s, this.pw);
@@ -367,7 +367,7 @@ export class Renderer {
       });
     }
 
-    if (run) drawTideSurface(rc, level, run.frame);
+    if (run?.slag != null) drawTideSurface(rc, level, run.slag, run.frame);
     if (m.phase === 'place') this.drawGhosts(rc, m, beams, still?.solids ?? []);
     if (m.phase === 'lobby' || m.phase === 'pick' || m.phase === 'place') this.drawIdlers(rc, m, dt);
 
