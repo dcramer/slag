@@ -97,6 +97,8 @@ Every game design decision, preference and direction the owner has given, groupe
   2026-11-04 · `done` · DESIGN.md → Modes; `SURVIVE_PLACES`, `ModeDef.crate`
 - **Level sets should be fully interchangeable across modes, since the engine builds the level; until they are, a set may show which modes it supports.** "its totally ok if level sets show which modes they support while they're wip" / "tho ideally the level sets are fully interchangeable since the main engine should build the level."
   2026-11-04 · `done` for the marker (`ModeDef.builds`, the Level card); interchangeable sets `planned` · DESIGN.md → Modes, TODO.md → 31
+- **A level set is a kit of pieces with declared sizes and attributes (landmarks, hazards, decor, floors, connectors, walls), and the level builders, one per shape or mode, are set-agnostic and compose any set's kit, so every set supports every mode.** "i guess really all level sets should support all modes right because isnt it just retyling stuff etc?" / "i was thinking the landmarks etc are part of the set kit and the level builders just know how to use them (because tey know their sizes/attributes/etc)"
+  2026-11-04 · `planned` · TODO.md → 32; the tall builder over per-set kits (`TallKit`, `src/gen/level/sculptors/tall.ts`) is the pattern today
 - **A rule the level is built from (gravity, weather) rebuilds the lobby's level for everyone at once.**
   2026-11-02 · git `e64c3e5` · `done` · DESIGN.md → Rules
 

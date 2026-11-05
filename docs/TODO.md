@@ -88,6 +88,13 @@ Modes are entries in `MODES` (`src/game/modes.ts`, DESIGN.md → Modes). Rising 
 2. **Brawl.** Last one standing in an arena, knocked into hazards or the pit; the losers of a round pick and place parts into the arena. Needs spawn points for every player (`Level.spawns`, additive), an arena sculptor, items on spawners, and a fight brain. Decide with the owner first: one-hit lethal items, or knockback into the level only (today's rule: items never kill).
 3. **Gauntlet.** Co-op: everyone must finish, and the crate deals hazards. Scoring flips Race's "everyone finished scores nothing".
 
+## 32. Set kits and level builders
+Owner direction (docs/DECISIONS.md → Levels): a level set is a kit of pieces with declared attributes, and the level builders compose any set's kit, so every set supports every mode. Landmarks, set pieces and decor already declare contracts that conformance enforces; what's left is the shapes, which each set's sculptor writes by hand today. The tall builder over `TallKit` is the pattern: one builder, a few pieces per set. In order, one agent each:
+
+1. **Tower kits for farm, harbor and space**, so Rising Slag loops in every set (`ModeDef.builds` goes to every set, and the Level card's WIP marks with it): a barn and hay loft, a lighthouse or crane, a station shaft at space's gravity.
+2. **The kit contract, written down**: what a set provides (ground and floor profiles, connectors with their rise and reach, walls and shells, gap styles, its landmarks, hazards and decor) and what a builder may ask of them, as data in the registry, with a conformance check that every set provides every kind.
+3. **Builders, one at a time**: the course (ltr, classic and wide), the climb and the descent, each moved off the per-set sculptors onto kits, holding the race's numbers as they go (`pnpm level --stats 50`: no fallbacks, needBridges, parts shares, open routes, precision bands). Then a Brawl arena is one new builder.
+
 ## 30. Native build
 A real game binary that runs the same TypeScript in a native host (owner decision: no Electron). The sim and generators stay as they are, because lockstep crossplay with the web build needs the same code. Steps, one agent each:
 
