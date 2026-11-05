@@ -128,7 +128,7 @@ The strongest reads first. **Keyed** marks the non-humanoids, the riskiest to dr
 | 26 | warrior | Kakosh | humanoid, round | drawn flat side on; the blind read fails (the level roast leg reads as a fist) |
 | 27 | slayer | Gerald | humanoid | drawn flat, redrawn broad with a sword in hand; the blind read not passed (unpaired, but the two hilts read as rabbit ears) |
 | 28 | raider | Laura Craft | humanoid | medium: the braid against the slayer's tail and the elf's cap |
-| 29 | fighter | Chun-Lee | humanoid | low: the buns |
+| 29 | fighter | Chun-Lee | humanoid | drawn flat; the blind read not passed (a nameless fighter, or with the buns clear of the head a bear): the buns are ears on a big round head |
 | 30 | stinger | Hornette | **keyed**, bug | medium: the horns against the king's and the hedgehog's spikes |
 
 **What to check.** No two kinds may rhyme. Watch these pairs:
