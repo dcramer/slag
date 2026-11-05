@@ -63,7 +63,7 @@ export function vehicleCols(m: Vehicle, x: number, off: Vec = [0, 0]): Rect[] {
 }
 
 /** Tractors, carts and boulders patrolling a stretch of ground. Rideable roof; the leading face kills while it moves. */
-export const vehicle = defineModule<'vehicle'>({
+defineModule<'vehicle'>({
   type: 'vehicle',
   resolve: (m, x) => ({ ...m, at: x.P(m.at), cols: m.cols.map((h) => h * x.T), colW: m.colW * x.T, span: m.span * x.T, speed: m.speed * x.T }),
   anchors: (m) => [cellOf([m.at[0] + 0.5, m.at[1] - 0.5])],

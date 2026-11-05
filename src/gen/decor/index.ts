@@ -1,7 +1,7 @@
 import { deriveSeed, Rng } from '../../core/rng';
 import { TILE } from '../../sim/constants';
 import { type Level, T_EMPTY, T_ONEWAY, tileAt, type TileRect } from '../../sim/level';
-import { THEME_IDS, type ThemeId } from '../../themes';
+import type { ThemeId } from '../../themes';
 
 /**
  * Terrain decor: the small scenery that dresses a level (a fence, a lantern, a neon sign). Each kind is a
@@ -339,6 +339,3 @@ export function decorFaults(level: Level, spots: readonly DecorSpot[]): string[]
   }
   return out;
 }
-
-/** Every theme with the kinds registered for it (for the per-theme count). */
-export const decorByTheme = (): Record<ThemeId, DecorKind[]> => Object.fromEntries(THEME_IDS.map((t) => [t, decorFor(t)])) as Record<ThemeId, DecorKind[]>;

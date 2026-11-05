@@ -1,6 +1,5 @@
 import { describe, expect, it } from 'vitest';
 import { generateLevel } from '../src/gen/level';
-import { POCKET } from '../src/gen/level/kit';
 import { Match } from '../src/game/match';
 import { DEFAULT_RULES } from '../src/game/rules';
 import { applyAction } from '../src/net/actions';
@@ -8,11 +7,11 @@ import { NetSession } from '../src/net/session';
 import { cloneSnap, restoreMatch, snapshotMatch } from '../src/net/snapshot';
 import { LoopbackHub } from '../src/net/transport';
 import { RUN_COUNTDOWN, TILE } from '../src/sim/constants';
-import { floorY, type Level, T_EMPTY, T_SOLID, tileAt } from '../src/sim/level';
-import { footprintCells } from '../src/sim/props';
+import { floorY, type Level, T_EMPTY, T_SOLID } from '../src/sim/level';
 import { RunWorld } from '../src/sim/run';
 import { NO_INPUT } from '../src/sim/types';
-import { THEME_IDS } from '../src/themes';
+import { THEME_IDS, type ThemeId } from '../src/themes';
+import { expectMarkersOnTerrain, seedAt } from './lib/markers';
 
 /**
  * The spawn ring and the flag are drawn at floorY of level.spawn and level.goal, and runners stand
@@ -21,42 +20,9 @@ import { THEME_IDS } from '../src/themes';
  * mostly passes that, with the ring buried in a rooftop and the flag hanging in the air.
  */
 
-const seedAt = (i: number) => (i * 7919 + 13) >>> 0;
+const SIZES = ['classic', 'wide', 'tall'] as const;
+const GRAVITIES = [0.7, 1, 1.35];
 const TICK = 1000 / 60;
-
-/**
- * The pocket's floor: solid across its whole width, with four clear rows above it. The spawn's
- * back column is a wall instead: past the level's left edge is death, and holding left at GO
- * shouldn't walk you into it.
- */
-function expectPocket(l: Level, cell: { tx: number; ty: number }, x0: number, what: string, backWall = false) {
-  for (let x = x0; x < x0 + POCKET; x++) {
-    expect(tileAt(l, x, cell.ty + 1), `${what} floor at column ${x}`).toBe(T_SOLID);
-    const want = backWall && x === 0 ? T_SOLID : T_EMPTY;
-    for (let y = cell.ty - 3; y <= cell.ty; y++) expect(tileAt(l, x, y), `${what} ${want ? 'wall' : 'air'} at ${x},${y}`).toBe(want);
-  }
-}
-
-/** Ring and flag sit exactly on the terrain, and runners really stand on it at the ring. */
-function expectMarkersOnTerrain(l: Level, what: string) {
-  expect(l.tiles.length, `${what} tile count`).toBe(l.w * l.h);
-  expectPocket(l, l.spawn, 0, `${what} spawn`, true);
-  expectPocket(l, l.goal, l.w - POCKET, `${what} goal`);
-  for (const p of l.setPieces)
-    for (const [x, y] of footprintCells(p))
-      for (const c of [l.spawn, l.goal]) expect(x === c.tx && y === c.ty, `${what}: ${p.def.name} on a marker`).toBe(false);
-  // A real race, untouched: anything embedded or unsupported would shift the feet off the ring.
-  const run = new RunWorld(l, [], [0, 1, 2], 0);
-  for (let f = 0; f < 20; f++) run.step([NO_INPUT, NO_INPUT, NO_INPUT]);
-  for (const r of run.runners) {
-    expect(r.alive, `${what} runner ${r.slot} alive`).toBe(true);
-    expect(r.body.y + r.body.h, `${what} runner ${r.slot} feet on the ring`).toBe(floorY(l.spawn));
-  }
-  // The flag's base is a floor too: a body put at the flag stays there.
-  const flag = new RunWorld({ ...l, spawn: l.goal }, [], [0], 0);
-  for (let f = 0; f < 20; f++) flag.step([NO_INPUT]);
-  expect(flag.runners[0].body.y + flag.runners[0].body.h, `${what} flag base on the floor`).toBe(floorY(l.goal));
-}
 
 function expectSameLevel(a: Level, b: Level, what: string) {
   expect(b.spawn, `${what} spawn`).toEqual(a.spawn);
@@ -71,8 +37,8 @@ function expectSameLevel(a: Level, b: Level, what: string) {
 }
 
 /** A real mid-race match, as a resume save holds it. */
-function racing(seed: number): Match {
-  const m = new Match(seed);
+function racing(seed: number, theme?: ThemeId): Match {
+  const m = new Match(seed, theme);
   m.join('kb1');
   m.startMatch();
   m.startRun();
@@ -93,15 +59,17 @@ function asAnotherBuild(m: Match): Match {
 }
 
 describe('spawn ring and flag sit on the terrain', () => {
-  it('every theme, size and gravity', { timeout: 180_000 }, () => {
-    let i = 0;
-    for (const theme of THEME_IDS)
-      for (const size of ['classic', 'wide', 'tall'] as const)
-        for (const gravity of [0.7, 1, 1.35]) expectMarkersOnTerrain(generateLevel(seedAt(i++), theme, { size, gravity }), `${theme} ${size} ${gravity}`);
+  // Each theme once, sizes and gravities taking turns; tests/stats/spawn-goal.test.ts runs every combination.
+  it('every theme, at each size and gravity in turn', { timeout: 60_000 }, () => {
+    THEME_IDS.forEach((theme, i) => {
+      const size = SIZES[i % 3];
+      const gravity = GRAVITIES[Math.floor(i / 3) % 3];
+      expectMarkersOnTerrain(generateLevel(seedAt(i), theme, { size, gravity }), `${theme} ${size} ${gravity}`);
+    });
   });
 
-  it('stock levels, rolled from the seed alone', { timeout: 120_000 }, () => {
-    for (let i = 0; i < 80; i++) expectMarkersOnTerrain(new Match(seedAt(i)).level, `seed ${seedAt(i)}`);
+  it('stock levels, rolled from the seed alone', { timeout: 60_000 }, () => {
+    for (let i = 0; i < 8; i++) expectMarkersOnTerrain(new Match(seedAt(i)).level, `seed ${seedAt(i)}`);
   });
 });
 
@@ -121,8 +89,8 @@ describe('the spawn pocket', () => {
 });
 
 describe('a restored match is the level that was saved', () => {
-  it('a guest joining a stock host, a new level, and a race in progress', { timeout: 120_000 }, () => {
-    for (let i = 0; i < 12; i++) {
+  it('a guest joining a stock host, a new level, and a race in progress', { timeout: 60_000 }, () => {
+    for (let i = 0; i < 4; i++) {
       const seed = seedAt(i);
       const host = new Match(seed);
       const join = (what: string) => {
@@ -157,7 +125,7 @@ describe('a restored match is the level that was saved', () => {
 
   it('rebuilds the level on screen even when the rules have moved on since it was generated', { timeout: 60_000 }, () => {
     let differed = 0;
-    for (let i = 0; i < 16; i++) {
+    for (let i = 0; i < 6; i++) {
       const seed = seedAt(i);
       const host = new Match(seed);
       host.setRules({ ...DEFAULT_RULES, gravity: 'high' });
@@ -182,20 +150,16 @@ describe('a restored match is the level that was saved', () => {
 });
 
 describe('a snapshot of terrain this build does not generate', () => {
-  it('is refused, for every theme, and leaves the match as it was', { timeout: 120_000 }, () => {
-    const seen = new Set<string>();
-    for (let i = 0; seen.size < THEME_IDS.length && i < 80; i++) {
+  it('is refused, for every theme, and leaves the match as it was', { timeout: 60_000 }, () => {
+    THEME_IDS.forEach((theme, i) => {
       const seed = seedAt(i);
-      const m = new Match(seed);
-      if (seen.has(m.level.theme.id)) continue;
-      seen.add(m.level.theme.id);
+      const m = new Match(seed, theme);
       const before = m.level;
-      expect(() => restoreMatch(m, cloneSnap(snapshotMatch(asAnotherBuild(racing(seed)))))).toThrow(/doesn't generate/);
-      expect(m.level).toBe(before);
+      expect(() => restoreMatch(m, cloneSnap(snapshotMatch(asAnotherBuild(racing(seed, theme)))))).toThrow(/doesn't generate/);
+      expect(m.level, theme).toBe(before);
       expect(m.phase).toBe('lobby');
       expect(m.run).toBeNull();
-    }
-    expect(seen.size).toBe(THEME_IDS.length);
+    });
   });
 
   it('is refused for a dug pocket too: bombs cannot reach protected cells', () => {

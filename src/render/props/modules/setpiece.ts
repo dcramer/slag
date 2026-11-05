@@ -221,14 +221,3 @@ export function lattice(s: CanvasRenderingContext2D, x: number, y0: number, y1: 
   }
   for (const ox of [-w / 2, w / 2]) barLine(s, x + ox, y0, x + ox, y1, 1.5, shade(c, ox < 0 ? 6 : -10), ox, { press: 0.1 });
 }
-
-/** A metal bar (rods, spars, booms): the metal in a thin rim of its own dark, a lit stripe along the top. */
-export function bar(s: CanvasRenderingContext2D, x1: number, y1: number, x2: number, y2: number, w: number, pal: MetalPalette) {
-  barLine(s, x1, y1, x2, y2, w, pal.base, 1, { press: 0.05 });
-  const d = Math.hypot(x2 - x1, y2 - y1) || 1;
-  const nx = (y2 - y1) / d;
-  const ny = -(x2 - x1) / d;
-  const k = (ny > 0 ? -1 : 1) * w * 0.25;
-  s.fillStyle = css(pal.light, 0, 0.85);
-  line(s, x1 + nx * k, y1 + ny * k, x2 + nx * k, y2 + ny * k, { w: w * 0.25, seed: 3, taper: [0.1, 0.1], press: 0 });
-}

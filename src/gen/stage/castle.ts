@@ -9,8 +9,6 @@ import { BELL_TOWER, BOSS_BRIDGE, GATEHOUSE } from './castle-keep';
 import { defineConcept } from './contract';
 import type { Concept, Landmark } from './types';
 
-export { moatMax, structureOf } from './castle-kit';
-
 /**
  * Castle stage concepts (docs/SETPIECES.md, Castle).
  *

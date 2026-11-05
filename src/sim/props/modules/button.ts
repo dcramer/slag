@@ -31,7 +31,7 @@ const CELL = 1;
  * while it's on and the timer starts over. The blink-block rule holds: a cell
  * never fills in around a runner, it waits until they've left.
  */
-export const button = defineModule<'button'>({
+defineModule<'button'>({
   type: 'button',
   resolve: (m, x) => ({ ...m, at: x.P(m.at), angle: m.angle + x.da, cells: x.C(m.cells) }),
   anchors: (m) => [cellOf(m.at), ...m.cells],

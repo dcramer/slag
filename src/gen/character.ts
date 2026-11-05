@@ -69,6 +69,7 @@ export interface CharacterDef {
  * Sound-alike names for the homages, as data: never the original's real name in code or UI. Plain
  * animals are just what they are.
  */
+/** @public Data for people, not code: AGENTS.md → Character kind. */
 export const KIND_NAMES: Record<Kind, string> = {
   plumber: 'Plumbo',
   hedgehog: 'Sanic',

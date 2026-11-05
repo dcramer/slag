@@ -23,7 +23,6 @@ export const SITE_MARGIN = POCKET + SAFE_TILES;
 /** Rows a passage through a structure is tall: a runner's height and a jump's start. */
 export const DOOR = 3;
 
-export const UP = -Math.PI / 2;
 export const DOWN = Math.PI / 2;
 
 /** The widest one-part moat at this gravity (hardGap's top end): the box always has room for it. */

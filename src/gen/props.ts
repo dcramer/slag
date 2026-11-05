@@ -25,7 +25,7 @@ import type {
 import { ITEM_KINDS } from '../sim/items/types';
 import { AMMO } from '../sim/props/types';
 
-export type { Aim, Ammo, Archetype, Head, LauncherStyle, Material, MetalStyle, Module, Motion, PartSize, PropDef, PropStyle, Role, Trim };
+export type { Aim, Archetype, MetalStyle, Module, PropDef, PropStyle, Role };
 export { AMMO };
 
 import { deriveSeed, Rng } from '../core/rng';
@@ -496,12 +496,9 @@ function fourSquare(rng: Rng): Recipe {
  * A part: rolls its identity (name, material, numbers) from `rng`, then returns its shape, or `sized`
  * for one that comes in sizes. The part contract (tests/conformance/parts): `sized` only scales (same
  * modules, same motion, the name untouched), every module it uses has art and a codex entry, and nothing
- * it draws has a face. Register one with `definePart` in RECIPES, keyed by its archetype.
+ * it draws has a face. Register one in RECIPES, keyed by its archetype.
  */
 export type PartRecipe = (rng: Rng, style: PropStyle) => Recipe;
-
-/** Register a part recipe: the recipe as written, typed. */
-export const definePart = (recipe: PartRecipe): PartRecipe => recipe;
 
 const RECIPES: Record<Archetype, PartRecipe> = {
   spikestrip(rng) {
