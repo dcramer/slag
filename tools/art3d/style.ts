@@ -12,7 +12,7 @@
  *   renderer's job; a line or a shadow painted into the texture would bake into the model as a smudge.
  *
  * A brief describes traits only. It never names the character or the game it pays homage to: each kind
- * is our own design (docs/DESIGN.md → Parody, docs/CHARACTERS.md → Roster). Each brief's comment lists
+ * is our own design (docs/DESIGN.md → Parody, docs/characters/). Each brief's comment lists
  * the nod (what the read needs) and the twist (what's ours, and the joke).
  */
 
@@ -25,7 +25,7 @@ export const STYLE =
   'Plain flat white background, even light, no ground shadows, no text, no labels, no frames.';
 
 /**
- * Proportions for a figure that reads at about 20 world px (docs/CHARACTERS.md → Roster): pushed hard, the
+ * Proportions for a figure that reads at about 20 world px (docs/CHARACTERS.md → Rules for every kind): pushed hard, the
  * way small-sprite characters are, so the head, hands and feet carry the read.
  */
 export const CHUNKY =

@@ -43,7 +43,7 @@ Phone support (follow camera, pinch, scaled HUD, settings sheet) is on `main` bu
 - **Impact words** can hide a hazard for most of a second; `?lettering=0` turns them off. Decide whether they stay. Big plain walls are a taste call. Try a real phone.
 
 ## 31. Three kinds under the blind-read bar
-The rapper, the warrior and the slayer are drawn flat and read in colour, but two fresh readers never named them from the silhouette (each one's rounds and readers' words are in its Rig line in docs/CHARACTERS.md). Each needs a new silhouette idea, not another edit:
+The rapper, the warrior and the slayer are drawn flat and read in colour, but two fresh readers never named them from the silhouette (each one's rounds and readers' words are in its Rig line in docs/characters/<kind>.md). Each needs a new silhouette idea, not another edit:
 - **Rapper:** seven rounds, the closest "unsure, maybe the rapping puppy (beanie)". Re-read him first: those reads had stand-in blobs on the sheet and cells too narrow for the mic, both fixed since.
 - **Warrior:** his helmet and head close into one mound with no neck at play size; readers saw a hooded figure, the mercenary or a wizard. Readers are asked for game characters and he's from a comic. The engineer's knobbed hard hat read as a warrior's helmet in every round.
 - **Slayer:** a slim figure with something over his back is the elf's outline too, and his white hair can't show in a silhouette; readers paired him with the elf.

@@ -2,7 +2,7 @@ import { brows, eye, mouthMark } from '../faces';
 import { band, type D, type KindArt, mark, poly, rivet, spot, STEEL, STEEL_SH, TIN, toned, tonedOval, WOOD, WOOD_SH, Y } from '../kit';
 
 /**
- * The spiky-haired mercenary (docs/CHARACTERS.md → Roster): a slim swordsman under a crown of big blond
+ * The spiky-haired mercenary (docs/characters/merc.md): a slim swordsman under a crown of big blond
  * spikes pointing up, a hubcap on one shoulder, and a giant serrated bread knife always in his hand, never
  * on his back (the plumber's plunger owns the back). A rendered kind draws from its frames
  * (src/render/cast/sprites/); this is what shows before they load, and on the hand-drawn sheets.
