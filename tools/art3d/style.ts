@@ -441,6 +441,27 @@ export const BRIEFS: Record<string, Brief> = {
       'A sleeveless knit top (#4a5ab0), baggy trousers in a much darker shade of the same blue (#283266), two brown belts (#6b4a35) crossed at the hip, heavy brown boots. On one shoulder a single big round shoulder piece: a grey car hubcap (#9aa0a8).',
     worn: 'the tip of every hair spike is singed black; the hubcap has a big dent knocked into it and a crack across it; two teeth are snapped out of the middle of the knife edge, leaving a big notch; one trouser leg is torn off ragged at the shin.',
   },
+  pyramid: {
+    // The nod, each part of the read at race size and each a shape in outline: the head one huge fat wedge, a
+    // right-angled triangle wider than his shoulders, its point sticking out past his front shoulder with background
+    // above and below it (the read: nobody else in the cast has a triangle for a head; the stinger's horns, the king's
+    // crown and the warrior's pot all sit on a head, this is the head); a hulking body with thick bare arms and two
+    // thick legs apart (the brute; with the blade across his legs his base flared into a robe and the wedge read as a
+    // wizard's hat, the mage's read); the giant flat blade dragged behind him, a long diagonal from his fist to the
+    // floor (a smooth paddle with a slot through it, never the merc's serrated knife standing beside him).
+    // Ours, and the joke: the helmet is a rusty roof-vent cowl, rivets and a dent; the blade an enormous cheese
+    // slicer; the smock a butcher's apron with a cartoon pig on it (the wear edit). A toy, slapstick: no blood.
+    // The palette is neutral (Decisions 4): the apron in the player's colour, the pig a light of it; the rust, the
+    // grey skin, the steel and the boots all their own. The slicer leads the brief: the model drops what comes last,
+    // and asked for last it came back small and in front of him. This is the fourth round's brief, the one kept
+    // (art/sprites/pyramid/design.prompt.txt).
+    design:
+      'The character: a big hulking cartoon toy brute, in five colours: a blue apron (#4f7fae), a rusty orange metal helmet (#b8683e), pale grey skin (#bdb8b2), a steel blade (#c4c8ce), dark brown boots (#4a3e38). ' +
+      'He drags a giant flat steel cheese slicer as long as he is tall behind him: his back arm reaches back, and its broad paddle blade, as wide as his head, with a slot across it, slants from his fist down to the ground far behind him on the left. ' +
+      'His head is a huge metal wedge, a right-angled triangle: a tall upright back edge, a long flat level bottom edge on his shoulders sticking far out to the right, half his width again past his front shoulder, and a straight slope between them. No brim. A slot in its front. ' +
+      'Thick bare grey arms, a knee-length apron, two thick legs apart, big boots.',
+    worn: "the helmet is an old rusty roof-vent cowl: a row of big round rivets along its bottom edge and a big dent knocked into its sloping top face; a big cartoon pig face in pink (#e8a0a8), round with a snout and two ears, is printed on the front of the apron; the apron hem is torn into a ragged notch at one side; a big chip is knocked out of the cheese slicer blade edge. The helmet's wedge shape, its point and the slot stay exactly as they are.",
+  },
   ape: {
     // The nod, each part of the read at race size: the hunched gorilla shape with arms longer than its legs
     // and huge shoulders over a small low head (the brute, from across the screen, and the line between him
