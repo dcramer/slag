@@ -64,6 +64,10 @@ export interface LoopbackOptions {
   jitter?: number;
   /** Probability [0, 1] that a message is dropped (presence is never dropped). */
   loss?: number;
+  /** Each drop takes this many messages in a row on that route, as a congested or fading link does (default 1). */
+  burst?: number;
+  /** Only lossy sends are dropped, as over WebRTC, where the reliable channel retransmits. */
+  lossyOnly?: boolean;
   seed?: number;
 }
 
@@ -87,6 +91,8 @@ export class LoopbackHub {
   private peers = new Map<string, { t: LoopbackTransport; order: number }>();
   /** Last scheduled delivery time per receiver: each peer receives everything in one FIFO stream. */
   private lastAt = new Map<string, number>();
+  /** Messages still to drop on each route (`from>to`) in the current burst. */
+  private dropping = new Map<string, number>();
   private rng: Rng;
 
   constructor(public opts: LoopbackOptions = {}) {
@@ -144,17 +150,29 @@ export class LoopbackHub {
   }
 
   /** @internal */
-  route(from: string, data: unknown, to?: string) {
+  route(from: string, data: unknown, to?: string, lossy = false) {
     const text = JSON.stringify(data);
     const targets = to ? [to] : [...this.peers.keys()].filter((id) => id !== from);
     for (const id of targets) {
       if (!this.peers.has(id)) continue;
-      if (this.rng.next() < (this.opts.loss ?? 0)) continue;
+      if (this.drop(`${from}>${id}`, lossy)) continue;
       this.schedule(id, () => {
         const p = this.peers.get(id);
         if (p && this.peers.has(from)) p.t.handlers?.message(from, JSON.parse(text));
       });
     }
+  }
+
+  private drop(route: string, lossy: boolean): boolean {
+    const hit = this.rng.next() < (this.opts.loss ?? 0);
+    if (this.opts.lossyOnly && !lossy) return false;
+    const left = this.dropping.get(route) ?? 0;
+    if (left > 0) {
+      this.dropping.set(route, left - 1);
+      return true;
+    }
+    if (hit) this.dropping.set(route, Math.max(1, this.opts.burst ?? 1) - 1);
+    return hit;
   }
 
   private schedule(to: string, run: () => void, jitter = true) {
@@ -183,8 +201,8 @@ export class LoopbackTransport implements Transport {
     this.hub.connect(this);
   }
 
-  send(data: unknown, to?: string) {
-    if (this.alive) this.hub.route(this.self, data, to);
+  send(data: unknown, to?: string, lossy?: boolean) {
+    if (this.alive) this.hub.route(this.self, data, to, lossy);
   }
 
   reorder() {

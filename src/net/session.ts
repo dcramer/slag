@@ -23,7 +23,8 @@ import {
   SEAT_PHASES,
   type Watcher,
 } from './actions';
-import { CONFIRM_BIT, decode, type Enc, encode, held, heldPeerFrame, mergePeerFrames, type PeerFrame, PRESSED } from './codec';
+import { CONFIRM_BIT, decode, type Enc, encode, held, heldPeerFrame, mergePeerFrames, type PeerFrame, PRESSED, samePeerFrame } from './codec';
+import { type Depth, foldTo, newDepth, paceFor, QUEUE_HARD, type Queued, relieve, sampleSlack } from './pace';
 import { Predictor } from './predict';
 import { MAX_PEERS, type RoomListing } from './signal-protocol';
 import { hashMatch, hashSnap, type MatchSnap, restoreMatch, snapshotMatch } from './snapshot';
@@ -53,11 +54,30 @@ const HELLO_RETRY_MS = 1000;
 const REFUSED_RETRY_MS = 10_000;
 const NEED_AFTER_MS = 150;
 /**
- * Frames a guest may have waiting on the host. Every frame beyond one is 17 ms
- * of lag for everyone watching, and the host only eats one a tick, so a queue
- * left alone never drains. Two absorbs ordinary jitter.
+ * Ticks in a row a guest's frames may be late and still keep their slots (see consume). Longer than any burst of
+ * loss or jitter: past it the guest has stalled, and its frames wait their turn when they come.
  */
-const QUEUE_MAX = 2;
+const SKIP_MAX = 30;
+/** Ms since the host's last tick for this one to count as on time: a worker timer fires every 8 ms, and catching up runs ticks back to back. */
+const ON_TIME_MS = [4, 40];
+/**
+ * Bundles a send to one guest may carry: everything since the frame it last said it needs, newest first, so a lost
+ * datagram costs nothing until a whole burst of them is lost. Within this many characters, so the datagram stays one
+ * packet (a bigger one is split, and losing any piece loses all of it), and a big room's upload stays what it was.
+ * Always at least the new bundles and the one before.
+ */
+const RESEND_BUNDLES = 30;
+const RESEND_CHARS = 1100;
+/** A guest that hasn't heard how deep its queue is for this long ticks at its own pace. */
+const PACE_STALE_MS = 1000;
+/**
+ * A state hash rides the lossy input channel, so it goes out this many times, this many ticks apart: a burst of
+ * loss can't skip a check. The host compares each frame's hash once.
+ */
+const HASH_REPEATS = 4;
+const HASH_SPACING = 12;
+/** Repeated desyncs with one guest resync it after 1, 2, 4… s, never more than this far apart: each is a whole snapshot. */
+const RESYNC_MAX_FRAMES = 30 * 60;
 const MAX_APPLY_PER_TICK = 900;
 const WANT_RETRY_MS = 1000;
 const MAX_PREDICT = 24;
@@ -162,7 +182,8 @@ export interface SessionOptions {
 }
 
 interface RemoteQueue {
-  frames: { seq: number; f: PeerFrame }[];
+  /** Frames not played yet. */
+  frames: Queued[];
   consumed: number;
   /** The last action sequenced from this peer: queued for the next bundle, maybe not applied yet. */
   actN: number;
@@ -173,6 +194,47 @@ interface RemoteQueue {
   dry: number;
   /** Requests sequenced from this peer since the host's last tick (see ACTS_PER_TICK). */
   took: number;
+  /**
+   * Seqs played with held buttons because they hadn't arrived (see consume), with the host time of that tick (NaN on
+   * a tick that wasn't on time), and dry ticks in a row that did that: SKIP_MAX until a frame has come since it was
+   * seated, since a guest whose stream hasn't started isn't late, and counting its frames as played would leave every
+   * one of them a round trip late.
+   */
+  late: { seq: number; at: number }[];
+  skips: number;
+  /** Edges of late frames that came after all, for the next frame played. */
+  carry: PeerFrame | null;
+  /** The frame this guest last said it needs next (its `c`): bundles to it start there. -1: unknown. */
+  have: number;
+  /** Its queue's depth against what its link needs, which the guest paces itself by. */
+  depth: Depth;
+  /** The last frame whose hash was compared, and the frame of the last snapshot sent it (hashes before it are moot). */
+  hashed: number;
+  syncedAt: number;
+  /** Resyncs in a row with no matching hash between, and the frame before which a mismatch doesn't earn another. */
+  desyncs: number;
+  resyncAt: number;
+}
+
+function newQueue(consumed: number, actN: number, last: PeerFrame): RemoteQueue {
+  return {
+    frames: [],
+    consumed,
+    actN,
+    ackN: actN,
+    last,
+    dry: 0,
+    took: 0,
+    late: [],
+    skips: SKIP_MAX,
+    carry: null,
+    have: -1,
+    depth: newDepth(),
+    hashed: -1,
+    syncedAt: -1,
+    desyncs: 0,
+    resyncAt: 0,
+  };
 }
 
 export class NetSession {
@@ -196,8 +258,25 @@ export class NetSession {
   intent: Intent;
   /** The last Join: still with the host, won (seated, or owed a seat at the round boundary), or lost to someone quicker. */
   seatAsk: SeatAsk = 'none';
-  /** Counters for the HUD/debug overlay and tests. */
-  stats = { desyncs: 0, syncs: 0, migrations: 0, bundles: 0, predicted: 0, dryTicks: 0, foldedFrames: 0, queuedFrames: 0, hostTicks: 0, malformed: 0 };
+  /**
+   * Counters for the HUD/debug overlay and tests. `ownFrames` are race frames a guest confirmed while it had a guess
+   * for its own input there, and `ownMisses` those where the host played something else: each one re-simulates its
+   * own runner, which is the correction a player feels.
+   */
+  stats = {
+    desyncs: 0,
+    syncs: 0,
+    migrations: 0,
+    bundles: 0,
+    predicted: 0,
+    dryTicks: 0,
+    foldedFrames: 0,
+    queuedFrames: 0,
+    hostTicks: 0,
+    malformed: 0,
+    ownFrames: 0,
+    ownMisses: 0,
+  };
 
   private now: () => number;
   private sendEvery: number;
@@ -236,8 +315,10 @@ export class NetSession {
   private queues = new Map<string, RemoteQueue>();
   private history: Bundle[] = [];
   private outbox: Bundle[] = [];
-  private resend: Bundle | null = null;
   private hostActions: NetAction[] = [];
+  /** JSON length of each bundle sent, for the resend budget. */
+  private sizes = new WeakMap<Bundle, number>();
+  private lastTickAt = -1e9;
   private hashes = new Map<number, number>();
   private wants = new Set<string>();
   private sentK = new Map<string, string>();
@@ -253,7 +334,13 @@ export class NetSession {
   private gapSince = -1;
   private lastNeed = -1e9;
   private lastHello = -1e9;
-  private pendingHash: [number, number] | undefined;
+  /** This guest's last state hash, its sends so far and the tick of the last (see HASH_REPEATS). */
+  private hash: [number, number] | undefined;
+  private hashSends = 0;
+  private hashSentAt = -1e9;
+  /** The host's last word on our queue's depth (see pace.ts), and when it came. */
+  private paceErr = 0;
+  private paceAt = -1e9;
   private wantSentTo = '';
   private wantAt = 0;
   private stash: { from: string; msg: Msg; at: number }[] = [];
@@ -345,6 +432,12 @@ export class NetSession {
       this.updateView();
     }
     return this.viewMatch;
+  }
+
+  /** How fast this peer's ticks should run, against its own clock (see pacing). The game loop scales its time by it. */
+  get pace(): number {
+    if (this.role !== 'guest' || this.now() - this.paceAt > PACE_STALE_MS) return 1;
+    return paceFor(this.paceErr);
   }
 
   /** Global id for a local device ('kb1' → '<peer>:kb1'). Offline sessions keep raw ids. */
@@ -506,9 +599,9 @@ export class NetSession {
     });
   }
 
-  /** Send any batched bundles now (e.g. before the page hides), repeating the last one in case it was lost. */
+  /** Send any batched bundles now (e.g. before the page hides), with what each peer may have missed. */
   flush() {
-    if (this.role === 'host' && (this.outbox.length || this.resend) && this.remoteCount) this.sendBundles();
+    if (this.role === 'host' && this.history.length && this.remoteCount) this.sendBundles();
     this.outbox = [];
   }
 
@@ -706,7 +799,7 @@ export class NetSession {
       const k = this.acks[m.id] ?? [0, 0];
       const last: PeerFrame = {};
       for (const [dev, e] of Object.entries(this.lastInputs)) if (peerOf(dev) === m.id) last[localOf(dev)] = e;
-      this.queues.set(m.id, { frames: [], consumed: k[0], actN: k[1], ackN: k[1], last: heldPeerFrame(last), dry: 0, took: 0 });
+      this.queues.set(m.id, newQueue(k[0], k[1], heldPeerFrame(last)));
     }
   }
 
@@ -748,7 +841,7 @@ export class NetSession {
     const timeline = { ms, from: this.migratedFrom, to: this.self, peers: this.members.length, frame: this.match.frame, phase: this.match.phase };
     reportLog('host migration', 'info', timeline);
     if (ms > SLOW_MIGRATION_MS) reportEvent('slow-host-migration', 'warning', timeline);
-    for (const m of this.members) if (m.id !== this.self) this.send(this.syncMsg('migrate'), m.id);
+    for (const m of this.members) if (m.id !== this.self) this.sendSync('migrate', m.id);
   }
 
   private onState(from: string, msg: Extract<Msg, { t: 'state' }>) {
@@ -868,6 +961,10 @@ export class NetSession {
     }
     if (msg.t === 'sync') this.onSync(msg);
     else {
+      if (msg.d !== undefined) {
+        this.paceErr = msg.d;
+        this.paceAt = this.now();
+      }
       for (const b of msg.b) if (b.f >= this.match.frame && !this.inbox.has(b.f)) this.inbox.set(b.f, b);
       // Now, not on the next tick: that wait would only add to what everyone sees.
       if (this.synced) {
@@ -889,7 +986,7 @@ export class NetSession {
   private queue(peer: string): RemoteQueue {
     let q = this.queues.get(peer);
     if (!q) {
-      q = { frames: [], consumed: 0, actN: 0, ackN: 0, last: {}, dry: 0, took: 0 };
+      q = newQueue(0, 0, {});
       this.queues.set(peer, q);
     }
     return q;
@@ -898,10 +995,22 @@ export class NetSession {
   private onInput(from: string, msg: Extract<Msg, { t: 'in' }>) {
     if (!this.members.some((m) => m.id === from) || this.banLeft(from, this.clients.get(from)) > 0) return;
     const q = this.queue(from);
+    q.have = Math.max(q.have, Math.min(msg.c, this.match.frame + 1));
     const tail = q.frames.length ? q.frames[q.frames.length - 1].seq : q.consumed;
     // Observers send no input, and anything one sends anyway (a seat just given up) plays no part.
     if (this.match.players.some((p) => peerOf(p.device) === from)) {
-      for (const [j, f] of msg.f.entries()) if (msg.s + j > tail) q.frames.push({ seq: msg.s + j, f });
+      const t = this.now();
+      for (const [j, f] of msg.f.entries()) {
+        const seq = msg.s + j;
+        if (seq > tail) q.frames.push({ seq, f, at: t });
+        const i = seq > tail ? -1 : q.late.findIndex((l) => l.seq === seq);
+        if (i < 0) continue;
+        // Its slot went by with held buttons: what it pressed comes on the next frame instead of never.
+        if (!Number.isNaN(q.late[i].at)) sampleSlack(q.depth, q.late[i].at - t);
+        q.late.splice(i, 1);
+        q.carry = q.carry ? mergePeerFrames(q.carry, f) : f;
+      }
+      this.stats.foldedFrames += foldTo(q.frames, QUEUE_HARD);
     }
     for (const [n, a] of msg.a ?? []) {
       if (n <= q.actN) continue;
@@ -913,15 +1022,29 @@ export class NetSession {
         if (peerOf(a.dev) === from) this.wants.add(a.dev); // seated by reconcile() between rounds
       } else if (guestMay(from, a)) this.hostActions.push(relayAction(this.match, a));
     }
-    if (msg.h) {
-      const mine = this.hashes.get(msg.h[0]);
-      if (mine !== undefined && mine !== msg.h[1]) {
-        this.stats.desyncs++;
-        this.log(`desync with ${from} at frame ${msg.h[0]}: resync`);
-        reportEvent('desync', 'error', { frame: msg.h[0], peer: from, localHash: mine, remoteHash: msg.h[1], phase: this.match.phase });
-        this.send(this.syncMsg('desync'), from);
-      }
+    if (msg.h) this.checkHash(from, q, msg.h);
+  }
+
+  /**
+   * A guest's state hash against ours for that frame, once per frame. A mismatch resyncs it with a snapshot, but one
+   * that keeps coming back (a determinism bug on that browser) only every 1, 2, 4… s: each is a whole snapshot, and a
+   * snapshot every second would crowd out everything else on its link.
+   */
+  private checkHash(from: string, q: RemoteQueue, [frame, theirs]: [number, number]) {
+    const mine = this.hashes.get(frame);
+    if (mine === undefined || frame <= q.hashed || frame <= q.syncedAt) return;
+    q.hashed = frame;
+    if (mine === theirs) {
+      q.desyncs = 0;
+      return;
     }
+    if (this.match.frame < q.resyncAt) return;
+    q.desyncs++;
+    q.resyncAt = this.match.frame + Math.min(RESYNC_MAX_FRAMES, HASH_EVERY * 2 ** (q.desyncs - 1));
+    this.stats.desyncs++;
+    this.log(`desync with ${from} at frame ${frame}: resync`);
+    reportEvent('desync', 'error', { frame, peer: from, localHash: mine, remoteHash: theirs, phase: this.match.phase, streak: q.desyncs });
+    this.sendSync('desync', from);
   }
 
   private onHello(from: string, f: number, client?: string) {
@@ -932,7 +1055,7 @@ export class NetSession {
       return this.send({ t: 'kicked', left }, from);
     }
     if (this.collecting) this.collecting.got.set(from, f);
-    else this.send(this.syncMsg('hello'), from);
+    else this.sendSync('hello', from);
   }
 
   private onNeed(from: string, f: number) {
@@ -941,8 +1064,18 @@ export class NetSession {
       const slice = this.history.slice(f - first);
       for (let i = 0; i < slice.length; i += BUNDLES_PER_MSG) this.send({ t: 'b', b: slice.slice(i, i + BUNDLES_PER_MSG) }, from);
     } else {
-      this.send(this.syncMsg('behind'), from);
+      this.sendSync('behind', from);
     }
+  }
+
+  /** A snapshot to one peer: it hashes and asks for bundles from there. */
+  private sendSync(why: string, to: string) {
+    const q = this.queues.get(to);
+    if (q) {
+      q.syncedAt = this.match.frame;
+      q.have = -1;
+    }
+    this.send(this.syncMsg(why), to);
   }
 
   private syncMsg(why: string): Msg {
@@ -961,43 +1094,30 @@ export class NetSession {
     const inputs: Record<string, Enc> = {};
     if (this.drives) for (const [d, e] of Object.entries(own)) if (this.counts(this.globalDevice(d))) inputs[this.globalDevice(d)] = e;
     const seatedPeers = new Set(this.match.players.map((p) => peerOf(p.device)));
+    // A tick run late (the page catching up after a stall) says nothing about how early a guest's frames come.
+    const t = this.now();
+    const onTime = t - this.lastTickAt >= ON_TIME_MS[0] && t - this.lastTickAt <= ON_TIME_MS[1];
+    this.lastTickAt = t;
     const k: Record<string, [number, number]> = {};
     for (const [peer, q] of this.queues) {
       q.ackN = q.actN; // every action sequenced so far goes out in this bundle
       q.took = 0;
+      if (seatedPeers.has(peer)) this.consume(peer, q, inputs, onTime);
+      else {
+        // An observer: nothing to wait for and nothing to hold down.
+        q.frames = [];
+        q.last = {};
+        q.dry = 0;
+        q.late = [];
+        q.skips = SKIP_MAX;
+        q.carry = null;
+      }
+      // After consuming: this bundle plays that frame, so a guest predicting from it starts at the next one.
       const sig = `${q.consumed},${q.actN}`;
       if (this.sentK.get(peer) !== sig) {
         this.sentK.set(peer, sig);
         k[peer] = [q.consumed, q.actN];
       }
-      if (!seatedPeers.has(peer)) {
-        // An observer: nothing to wait for and nothing to hold down.
-        q.frames = [];
-        q.last = {};
-        q.dry = 0;
-        continue;
-      }
-      // Bound latency: fold the oldest frames together (edges are kept, see codec.merge).
-      while (q.frames.length > QUEUE_MAX) {
-        const [a, b] = q.frames;
-        q.frames.splice(0, 2, { seq: b.seq, f: mergePeerFrames(a.f, b.f) });
-        this.stats.foldedFrames++;
-      }
-      this.stats.hostTicks++;
-      this.stats.queuedFrames += q.frames.length;
-      const next = q.frames.shift();
-      let f: PeerFrame;
-      if (next) {
-        q.consumed = next.seq;
-        q.last = next.f;
-        q.dry = 0;
-        f = next.f;
-      } else {
-        this.stats.dryTicks++;
-        // Never wait: hold its buttons through a hiccup, then let go of them (soft disconnect, see SOFT_TICKS).
-        f = ++q.dry > SOFT_TICKS ? {} : heldPeerFrame(q.last);
-      }
-      for (const [d, e] of Object.entries(f)) if (e !== 0 && this.counts(deviceId(peer, d))) inputs[deviceId(peer, d)] = e;
     }
     // What a bundle can't carry waits a frame: guests refuse a longer one (wire.ts).
     const settled = this.reconcile();
@@ -1024,13 +1144,84 @@ export class NetSession {
     }
   }
 
-  /** Each send repeats the last bundle: on an unreliable channel that turns a lost packet into nothing instead of a stall. */
+  /**
+   * One seated guest's frame for this tick, from its queue (its depth paced by the guest, see pace.ts). The guest
+   * predicts that its next frame plays on the next bundle, so the host keeps to that: a frame that hasn't arrived
+   * in time is played with held buttons and its seq counted as played, so every later frame still lands where it was
+   * predicted; its edges come a frame late, if it comes at all (onInput).
+   */
+  private consume(peer: string, q: RemoteQueue, inputs: Record<string, Enc>, onTime: boolean) {
+    const t = this.now();
+    this.stats.foldedFrames += relieve(q.depth, q.frames, t);
+    this.stats.hostTicks++;
+    this.stats.queuedFrames += q.frames.length;
+    const next = q.frames.shift();
+    let f: PeerFrame;
+    if (next) {
+      if (onTime) sampleSlack(q.depth, t - next.at);
+      q.consumed = next.seq;
+      q.last = next.f;
+      q.dry = 0;
+      q.skips = 0;
+      f = next.f;
+    } else {
+      this.stats.dryTicks++;
+      if (q.skips < SKIP_MAX) {
+        q.skips++;
+        q.late.push({ seq: ++q.consumed, at: onTime ? t : Number.NaN });
+        if (q.late.length > SKIP_MAX) q.late.shift();
+      }
+      // Never wait: hold its buttons through a hiccup, then let go of them (soft disconnect, see SOFT_TICKS).
+      f = ++q.dry > SOFT_TICKS ? {} : heldPeerFrame(q.last);
+    }
+    if (q.carry) {
+      f = mergePeerFrames(q.carry, f);
+      q.carry = null;
+    }
+    for (const [d, e] of Object.entries(f)) if (e !== 0 && this.counts(deviceId(peer, d))) inputs[deviceId(peer, d)] = e;
+  }
+
+  /**
+   * To each peer, the new bundles and every one since the frame it last said it needs, within RESEND_CHARS: on an
+   * unreliable channel that turns a burst of lost datagrams into nothing instead of a `need` and a round trip. A
+   * guest gets how deep its queue is against what its link needs, to pace itself by.
+   */
   private sendBundles() {
     // Others follow our frames now: this timeline is the room's, so a hello after we step aside says how far it got.
     this.onTimeline = true;
-    const b = this.resend ? [this.resend, ...this.outbox] : this.outbox;
-    this.send({ t: 'b', b }, undefined, true);
-    this.resend = this.outbox.at(-1) ?? this.resend;
+    const h = this.history;
+    if (!h.length) return;
+    const first = h[0].f;
+    const newest = h[h.length - 1].f;
+    // At the least the bundle before this batch, as a peer that hasn't said what it holds (a watcher) always gets.
+    const base = (this.outbox[0]?.f ?? newest) - 1;
+    const seated = new Set(this.match.players.map((p) => peerOf(p.device)));
+    for (const m of this.members) {
+      if (m.id === this.self) continue;
+      const q = this.queues.get(m.id);
+      const from = Math.max(first, newest - RESEND_BUNDLES + 1, Math.min(base, q && q.have >= 0 ? q.have : base));
+      // History is one bundle per frame from `first` (onNeed relies on the same); a gap in it sends only the batch.
+      let i = h[from - first]?.f === from ? from - first : Math.max(0, h.length - this.outbox.length);
+      for (let chars = 0, j = h.length - 1; j >= i; j--) {
+        chars += this.sizeOf(h[j]);
+        if (chars > RESEND_CHARS && h[j].f < base) {
+          i = j + 1;
+          break;
+        }
+      }
+      const msg: Extract<Msg, { t: 'b' }> = { t: 'b', b: h.slice(i) };
+      if (q && seated.has(m.id) && Number.isFinite(q.depth.err)) msg.d = Math.round(q.depth.err * 100) / 100;
+      this.send(msg, m.id, true);
+    }
+  }
+
+  private sizeOf(b: Bundle): number {
+    let n = this.sizes.get(b);
+    if (n === undefined) {
+      n = JSON.stringify(b).length;
+      this.sizes.set(b, n);
+    }
+    return n;
   }
 
   /**
@@ -1134,12 +1325,16 @@ export class NetSession {
     this.maybeWant(own, t);
     this.applyInbox(t);
     const pressed = seated && Object.values(own).some((e) => (typeof e === 'number' ? e : e[0]) & PRESSED);
-    if ((seated && this.ticks % this.sendEvery === 0) || pressed || this.pendingActs.length || this.pendingHash) {
+    const hashDue = !!this.hash && this.hashSends < HASH_REPEATS && this.ticks - this.hashSentAt >= HASH_SPACING;
+    if ((seated && this.ticks % this.sendEvery === 0) || pressed || this.pendingActs.length || hashDue) {
       const msg: Msg = { t: 'in', s: this.unacked[0]?.seq ?? this.seq + 1, f: this.unacked.map((u) => u.f), c: this.match.frame };
       // The oldest first, a message's worth at a time: the host acks them and the next message carries on.
       if (this.pendingActs.length) msg.a = this.pendingActs.slice(0, ACTS_PER_MSG);
-      if (this.pendingHash) msg.h = this.pendingHash;
-      this.pendingHash = undefined;
+      if (hashDue) {
+        msg.h = this.hash;
+        this.hashSends++;
+        this.hashSentAt = this.ticks;
+      }
       this.send(msg, this.hostId, true);
     }
   }
@@ -1173,9 +1368,10 @@ export class NetSession {
       const b = this.inbox.get(this.match.frame);
       if (!b) break;
       this.inbox.delete(b.f);
+      if (this.match.phase === 'run') this.checkOwn(b);
       this.apply(b);
       n++;
-      if (this.match.frame % HASH_EVERY === 0) this.pendingHash = [this.match.frame, hashMatch(this.match)];
+      if (this.match.frame % HASH_EVERY === 0) this.newHash([this.match.frame, hashMatch(this.match)]);
     }
     for (const f of this.inbox.keys()) if (f < this.match.frame) this.inbox.delete(f);
     // A hole in the stream (lost packet): ask the host to resend from there.
@@ -1188,6 +1384,22 @@ export class NetSession {
     } else this.gapSince = -1;
   }
 
+  private newHash(h: [number, number] | undefined) {
+    this.hash = h;
+    this.hashSends = 0;
+    this.hashSentAt = -1e9;
+  }
+
+  /** Counts whether the host played, on this frame, the input our prediction stepped there (the oldest unacked). */
+  private checkOwn(b: Bundle) {
+    const guess = this.unacked[0]?.f;
+    if (!guess) return;
+    const played: PeerFrame = {};
+    for (const [dev, e] of Object.entries(b.i ?? {})) if (peerOf(dev) === this.self) played[localOf(dev)] = e;
+    this.stats.ownFrames++;
+    if (!samePeerFrame(guess, played)) this.stats.ownMisses++;
+  }
+
   private onSync(msg: Extract<Msg, { t: 'sync' }>) {
     const m = this.match;
     const fresh = !this.synced;
@@ -1196,6 +1408,7 @@ export class NetSession {
       return;
     }
     this.refused = false;
+    this.newHash(undefined); // of the state this replaced
     this.adoptNet(msg.ns);
     this.acks = msg.k;
     this.lastInputs = msg.last;

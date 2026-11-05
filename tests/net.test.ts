@@ -179,6 +179,43 @@ describe('lockstep', () => {
     expect(r.peers.get('bbbb')!.stats.predicted).toBeGreaterThan(0);
   }, 60_000);
 
+  it('checks a hash whose first message was lost, without waiting for the next one', () => {
+    const r = new Room({ latency: 20 });
+    r.join('aaaa', player);
+    r.run(5);
+    const b = r.join('bbbb', player);
+    r.run(150);
+    b.match.players[0].score = 999;
+    const drifted = b.match.frame;
+    const hub = r.hub as unknown as { route: (from: string, data: unknown, to?: string, lossy?: boolean) => void };
+    const route = hub.route.bind(r.hub);
+    let lost = -1;
+    hub.route = (from, data, to, lossy) => {
+      const m = data as { t: string; h?: [number, number] };
+      if (lost < 0 && from === 'bbbb' && m.t === 'in' && m.h && m.h[0] > drifted) lost = m.h[0];
+      else route(from, data, to, lossy);
+    };
+    r.run(80);
+    hub.route = route;
+    expect(lost).toBeGreaterThan(0);
+    expect(r.logs.some((l) => l.includes(`desync with bbbb at frame ${lost}`))).toBe(true);
+  });
+
+  it('backs off resyncing a guest that keeps drifting, since each is a whole snapshot', () => {
+    const r = new Room({ latency: 20 });
+    const a = r.join('aaaa', player);
+    r.run(5);
+    // A determinism bug on the guest's browser: its state drifts again however often it's fixed.
+    const b = r.join('bbbb', (s, f, rng) => {
+      if (s.synced && s.match.players[0]) s.match.players[0].score = 999;
+      return player(s, f, rng);
+    });
+    r.run(60 * 20);
+    expect(b.stats.syncs).toBeGreaterThan(2);
+    // 1, 2, 4, 8 s apart: five in twenty seconds, not one a second.
+    expect(a.stats.desyncs).toBeLessThanOrEqual(5);
+  });
+
   it('detects a desync by hash and resyncs the guest from the host', () => {
     const r = new Room({ latency: 20 });
     const a = r.join('aaaa', player);

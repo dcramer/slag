@@ -566,7 +566,8 @@ function startGame(container: HTMLElement, room: string, params: URLSearchParams
   }
   /** Run the fixed steps due by `now`. Online, the session sequences inputs (host) or applies bundles (guest). */
   function advance(now: number, maxCatchUp: number) {
-    acc += Math.min(maxCatchUp, (now - last) / 1000);
+    // A guest runs a few percent fast or slow to keep its input queue on the host as deep as its link needs.
+    acc += Math.min(maxCatchUp, (now - last) / 1000) * net.pace;
     last = now;
     if (loop.paused) {
       acc = 0;

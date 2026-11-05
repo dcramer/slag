@@ -96,7 +96,7 @@ class Room {
 }
 
 const seatedPeer = (s: NetSession, peer: string) => s.match.players.some((p) => p.device.startsWith(`${peer}:`));
-const inner = (s: NetSession) => s as unknown as { emittedThrough: number; pendingHash?: [number, number] };
+const inner = (s: NetSession) => s as unknown as { emittedThrough: number; hash?: [number, number]; hashSends: number };
 
 /** The most frames `s` ever went back, from now on. */
 function rewinds(r: Room, s: NetSession) {
@@ -141,10 +141,8 @@ describe('a host change never rewinds anyone', () => {
     let n = 0;
     let pulled = false;
     const orig = r.route((orig) => (from, data, to) => {
-      if ((data as { t: string }).t === 'b' && from === 'aaaa' && !to) {
-        n++;
-        if (n <= 3) orig(from, data, 'cccc');
-        orig(from, data, 'xxxx');
+      if ((data as { t: string }).t === 'b' && from === 'aaaa') {
+        if (to === 'xxxx' || (to === 'cccc' && ++n <= 3)) orig(from, data, to);
         return;
       }
       orig(from, data, to);
@@ -253,20 +251,19 @@ describe('seats never change hands twice', () => {
     r.route((orig) => (from, data, to) => {
       const d = data as { t: string };
       if (d.t === 'sync' && to === 'oooo' && asked) synced = true;
-      if (synced && dropped < 1 && d.t === 'b' && !to) {
+      if (synced && dropped < 1 && d.t === 'b' && to === 'oooo') {
         dropped++; // the bundle after the sync is lost on the unreliable channel
-        orig(from, data, 'bbbb');
         return;
       }
       orig(from, data, to);
     });
     r.before.push(() => {
-      const ph = inner(o).pendingHash;
-      if (asked || !ph) return;
+      const ph = inner(o).hash;
+      if (asked || !ph || inner(o).hashSends) return;
       asked = true;
       // O has drifted: the hash in the same message as its Join mismatches, so the host answers with a sync.
       o.match.players[0].score = 999;
-      inner(o).pendingHash = [ph[0], ph[1] ^ 1];
+      inner(o).hash = [ph[0], ph[1] ^ 1];
       o.play();
     });
     r.until(() => asked && o.seatAsk !== 'asking', 300);
