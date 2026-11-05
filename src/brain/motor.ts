@@ -181,7 +181,22 @@ export class Motor {
         return this.race(m, p, intent.tx, intent.ty);
       case 'leap':
         return this.leap(m, p, intent.tx);
+      case 'hop':
+        return this.hop(m, p);
+      case 'use':
+        // An edge, so never on two frames running; the arrows turn it to face its mark as it lets go.
+        if (this.prev.usePressed || m.phase !== 'run') return NO_INPUT;
+        return { ...NO_INPUT, usePressed: true, left: intent.dir === -1, right: intent.dir === 1, up: !!intent.up };
     }
+  }
+
+  /** Jump straight up where it stands, holding it while rising, and again each time it lands. */
+  private hop(m: Match, p: Player): InputFrame {
+    const r = m.phase === 'run' ? m.run?.runners.find((x) => x.slot === p.slot) : undefined;
+    if (!r || !r.alive || r.finished) return NO_INPUT;
+    const b = r.body;
+    if (b.onGround) return this.prev.jump ? NO_INPUT : { ...NO_INPUT, jump: true, jumpPressed: true };
+    return { ...NO_INPUT, jump: this.prev.jump && b.vy < 0 };
   }
 
   /** Run toward column `tx` and jump at the first edge or wall: what a player tries with no better idea. */

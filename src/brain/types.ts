@@ -1,4 +1,6 @@
 import type { Phase } from '../game/match';
+import type { ModeId } from '../game/modes';
+import type { ItemKind } from '../sim/items/types';
 import type { Role } from '../sim/props';
 import type { Personality } from './personality';
 import type { Temperament } from './temperament';
@@ -12,7 +14,7 @@ import type { Temperament } from './temperament';
  */
 
 /** Bumped when BrainView changes shape. A player's script will declare the version it was written against. */
-export const BRAIN_VIEW_VERSION = 4;
+export const BRAIN_VIEW_VERSION = 5;
 
 /** How fast across the ground, as a player would say it. */
 export type Pace = 'still' | 'walking' | 'running' | 'flying';
@@ -39,15 +41,62 @@ export interface SelfSense {
   togo: number;
   /** Tiles to the flag around the rock, through open air where no move is sure, rounded: how close it is when there's no route. */
   away: number;
+  /** Rows its feet are above the spawn's floor, laps and all, rounded: how far up it has climbed. */
+  up: number;
+  /** Rising Slag: rows from its feet down to the slag, rounded; null with no slag. */
+  slag: number | null;
+  /** Its place in the race, 0 leading: nearest the flag by route, or round a climb, highest. */
+  rank: number;
+  /** The item in its hands and the uses left on it, or null. */
+  held: { kind: ItemKind; uses: number } | null;
+  /** It can use its item now: not cooling down, swinging, winding up or seeing stars. */
+  armed: boolean;
 }
 
 export interface RunnerSense {
   slot: number;
   x: number;
   y: number;
+  /** Rows its feet are above the spawn's floor, laps and all (as `SelfSense.up`): what to compare heights by round a loop. */
+  up: number;
+  grounded: boolean;
   alive: boolean;
   finished: boolean;
 }
+
+/** A mystery box standing in the level: hit it from below and it pops an item. */
+export interface BoxSense {
+  tx: number;
+  ty: number;
+  /** Full: it pops something when hit now. */
+  ready: boolean;
+}
+
+/** An item lying loose (or still flying), in tiles. Touch it to take it. */
+export interface DropSense {
+  x: number;
+  y: number;
+  kind: ItemKind;
+}
+
+/** A cell, in tiles. */
+export interface Cell {
+  tx: number;
+  ty: number;
+}
+
+/**
+ * What the race is for, as its mode says (src/game/modes.ts; view.ts `OBJECTIVES`). `togo` and `away` measure to
+ * `cell` either way.
+ */
+export type Objective =
+  /** Get to the flag at `cell`. */
+  | { kind: 'reach'; cell: Cell }
+  /**
+   * Climb, the slag rising after you, nobody finishing. Round a loop (`loop`, the rows of a lap) `lapLine` is where
+   * climbing carries you on a lap up, so the whole climb is ahead again; with no loop (`loop` 0) it's the top, a place to hold.
+   */
+  | { kind: 'climb'; lapLine: Cell; loop: number };
 
 /** A part standing in the level, by what it does to a route rather than by name. */
 export interface PropSense {
@@ -89,6 +138,8 @@ export interface KillSense {
 export interface BrainView {
   version: typeof BRAIN_VIEW_VERSION;
   phase: Phase;
+  /** The match's playstyle mode: which strategy plays its race (strategies/). */
+  mode: ModeId;
   /** Frames into this phase. */
   phaseFrame: number;
   slot: number;
@@ -102,9 +153,6 @@ export interface BrainView {
     /** Tile per cell (y * w + x): 0 empty, 1 solid, 2 one-way. Read only. */
     tiles: Uint8Array;
     spawn: { tx: number; ty: number };
-    goal: { tx: number; ty: number };
-    /** False when the mode races for no flag (Rising Slag): the goal is the top of the climb, a place to hold, and nobody finishes. */
-    flag: boolean;
     /** Bridges that would finish the level as it stands, left end first (BRIDGE_W wide). Empty when it's open. */
     plan: { tx: number; ty: number }[];
   };
@@ -115,6 +163,17 @@ export interface BrainView {
   claim: number;
   /** Place: done placing. */
   placed: boolean;
+  /** What the race is for. */
+  objective: Objective;
+  /** Race: mystery boxes in the level, set pieces and parts alike. */
+  boxes: BoxSense[];
+  /** Race: loose items. */
+  drops: DropSense[];
+  /**
+   * Race: tiles of route a stop at stand cell (tx, ty) adds on the way to the objective, rounded as `togo` is;
+   * Infinity when no route leads through it.
+   */
+  detour(tx: number, ty: number): number;
   /** Race: this seat's runner; null outside a race. */
   self: SelfSense | null;
   /** Race: the other runners. */
@@ -158,6 +217,10 @@ export type Intent =
   | { do: 'goTo'; tx: number; ty: number }
   /** Race: no proven way on, so run and jump for (tx, ty) anyway, off whatever edge is in the way. */
   | { do: 'leap'; tx: number; ty: number }
+  /** Race: jump straight up where it stands, again whenever it lands: to knock a box overhead. */
+  | { do: 'hop' }
+  /** Race: press use with the held item, facing `dir` if given, holding up if `up` (a throw aimed high). */
+  | { do: 'use'; dir?: -1 | 1; up?: boolean }
   /** Race: hold self-destruct. */
   | { do: 'giveUp' };
 
