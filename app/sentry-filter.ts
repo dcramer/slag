@@ -98,11 +98,38 @@ export function metricAttributes(tags: TelemetryScope['tags'], own?: Record<stri
   return { ...out, ...own };
 }
 
-/** Browser family, its major version and the OS, as metric attributes. */
+/** Browser family, its major version, the OS and the power source, as metric attributes. */
 export interface Client {
   'browser.name'?: string;
   'browser.version'?: string;
   'os.name'?: string;
+  'device.power'?: Power;
+}
+
+export type Power = 'battery' | 'plugged' | 'unknown';
+
+/** What the Battery Status API gives (Chromium only). The level is never read: only whether it is charging. */
+export interface BatteryLike {
+  charging: boolean;
+  addEventListener(type: 'chargingchange', listener: () => void): void;
+}
+
+/**
+ * Keep `set` told whether the device runs on battery. Browsers cap the frame
+ * rate on battery (Chrome's Energy Saver holds 30 fps), and nothing exposes the
+ * cap itself, so without this every laptop unplugged reads as a slow device.
+ * Browsers without the API stay `unknown`.
+ */
+export async function watchPower(nav: { getBattery?: () => Promise<BatteryLike> }, set: (p: Power) => void): Promise<void> {
+  try {
+    const b = await nav.getBattery?.();
+    if (!b) return;
+    const read = () => set(b.charging ? 'plugged' : 'battery');
+    read();
+    b.addEventListener('chargingchange', read);
+  } catch {
+    // Refused (a permissions policy) or gone: stays unknown.
+  }
 }
 
 /** Most specific first: Edge, Opera and Samsung say Chrome too, and Chrome says Safari. */

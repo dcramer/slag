@@ -36,8 +36,9 @@ describe('frame window', () => {
     expect(windowOf(Array<number>(10).fill(400)).summary()?.p95).toBe(400);
   });
 
-  it('says nothing about a window too short to mean anything, however many frames it drew', () => {
-    expect(windowOf(Array<number>(Math.floor(MIN_MS / 8.3)).fill(8.3)).summary()).toBeNull();
+  it('counts a short window but gives it no percentiles, however many frames it drew', () => {
+    expect(windowOf(Array<number>(Math.floor(MIN_MS / 8.3)).fill(8.3)).summary()).toMatchObject({ frames: 240, slow: 0, p95: null, workP95: null });
+    expect(new FrameWindow().summary()).toBeNull();
     // A device at 6 fps fills its windows with few frames, and those are the ones that matter most.
     expect(windowOf(Array<number>(12).fill(170)).summary()).toMatchObject({ frames: 12, slow: 12, hitch: 12, p95: 170 });
   });
@@ -64,6 +65,7 @@ describe('frame pacing', () => {
     expect(sent.map(([phase, s]) => [phase, s.frames, s.slow])).toEqual([
       ['pick', 199, 0],
       ['run', 300, 300],
+      ['pick', 10, 0],
     ]);
   });
 
@@ -98,6 +100,9 @@ describe('frame metrics', () => {
       ['distribution', 'frame.p95', 18, { unit: 'millisecond', attributes }],
       ['distribution', 'frame.work.p95', 6, { unit: 'millisecond', attributes }],
     ]);
+    r.metric.mockClear();
+    reportFrames('pick', { frames: 40, slow: 40, hitch: 0, p95: null, workP95: null });
+    expect(r.metric.mock.calls.map((c) => c[1])).toEqual(['frame.total', 'frame.slow']);
   });
 
   it('caps each metric per page and drops values that are not numbers', () => {

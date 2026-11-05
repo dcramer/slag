@@ -23,7 +23,11 @@ export const SLOW_MS = 20;
 export const HITCH_MS = 50;
 /** Longer gaps are the page not drawing (hidden tab, debugger, OS suspend), not a slow frame. */
 export const GAP_MS = 1000;
-/** A window with less drawn time than this says nothing on its own. Time, not frames: a frame count would leave out exactly the slow devices. */
+/**
+ * A window with less drawn time than this is too short for a percentile, so it
+ * sends only its counts, which add up whatever their length. Time, not frames:
+ * a frame count would leave out exactly the slow devices.
+ */
 export const MIN_MS = 2000;
 /** Histogram buckets are 1 ms up to this; slower intervals share the last one. */
 const HIST_MS = 100;
@@ -37,10 +41,10 @@ export interface FrameSummary {
   slow: number;
   /** Intervals over `HITCH_MS`. */
   hitch: number;
-  /** 95th percentile interval, ms, rounded up to the bucket. */
-  p95: number;
-  /** 95th percentile of the game's own main-thread time per frame (input, sim steps, render), ms. */
-  workP95: number;
+  /** 95th percentile interval, ms, rounded up to the bucket. Null in a window under `MIN_MS`. */
+  p95: number | null;
+  /** 95th percentile of the game's own main-thread time per frame (input, sim steps, render), ms. Null like `p95`. */
+  workP95: number | null;
 }
 
 /** Millisecond values in 1 ms buckets, for percentiles without keeping the values. */
@@ -91,10 +95,17 @@ export class FrameWindow {
     this.work.add(workMs > 0 ? workMs : 0);
   }
 
-  /** The window's numbers, or null if it was too short to mean anything. */
+  /** The window's numbers, with percentiles only if it was long enough for them; null if it counted no frames. */
   summary(): FrameSummary | null {
-    if (this.ms < MIN_MS) return null;
-    return { frames: this.frames, slow: this.slow, hitch: this.hitch, p95: this.intervals.percentile(0.95), workP95: this.work.percentile(0.95) };
+    if (!this.frames) return null;
+    const long = this.ms >= MIN_MS;
+    return {
+      frames: this.frames,
+      slow: this.slow,
+      hitch: this.hitch,
+      p95: long ? this.intervals.percentile(0.95) : null,
+      workP95: long ? this.work.percentile(0.95) : null,
+    };
   }
 
   reset(): void {
@@ -145,6 +156,6 @@ export function reportFrames(phase: string, s: FrameSummary): void {
     ['frame.hitch', s.hitch],
   ] as const)
     if (n > 0) reportMetric('count', name, n, { attributes });
-  reportMetric('distribution', 'frame.p95', s.p95, { unit: 'millisecond', attributes });
-  reportMetric('distribution', 'frame.work.p95', s.workP95, { unit: 'millisecond', attributes });
+  if (s.p95 !== null) reportMetric('distribution', 'frame.p95', s.p95, { unit: 'millisecond', attributes });
+  if (s.workP95 !== null) reportMetric('distribution', 'frame.work.p95', s.workP95, { unit: 'millisecond', attributes });
 }
