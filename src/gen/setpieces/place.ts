@@ -32,7 +32,7 @@ import {
 import '../../sim/props/modules';
 import { ReachCache } from '../../sim/reach';
 import { noFreeRide } from '../level/winnable';
-import { tellFaults } from './contract';
+import { hazardBox, tellFaults, windowFaults } from './contract';
 
 /**
  * Shared machinery for set-piece placers: a terrain scan (`Site`) that
@@ -236,14 +236,6 @@ function rectCells(r: Rect): Cell[] {
   return out;
 }
 
-function hazardRect(h: Hazard): Rect {
-  if (h.kind === 'rect') return h.r;
-  if (h.kind === 'circle') return { x: h.x - h.r, y: h.y - h.r, w: h.r * 2, h: h.r * 2 };
-  const x = Math.min(h.x1, h.x2) - h.r;
-  const y = Math.min(h.y1, h.y2) - h.r;
-  return { x, y, w: Math.abs(h.x2 - h.x1) + h.r * 2, h: Math.abs(h.y2 - h.y1) + h.r * 2 };
-}
-
 function hazardHits(h: Hazard, z: Rect): boolean {
   if (h.kind === 'circle') return rectCircle(z, h.x, h.y, h.r);
   if (h.kind === 'rect') return overlaps(h.r, z);
@@ -375,7 +367,7 @@ export function finalize(s: Site, piece: Piece, uid: number, key: string): Place
     }
     for (const hz of out.hazards) {
       if (s.zones.some((z) => hazardHits(hz, z))) return null;
-      claim(hazardRect(hz), false);
+      claim(hazardBox(hz), false);
     }
   }
 
@@ -504,7 +496,7 @@ export function makePlacer(themeKey: string, recipes: readonly Recipe[], uidBase
         if (++tries > tryCap) break;
         if (tellFaults(cand.modules).length) continue;
         const pp = finalize(s, cand, uidBase + first + out.length, `setpiece:${themeKey}:${recipe.name}`);
-        if (pp && (!opts.keep || opts.keep([...out, pp])) && noFreeRide(level, pp, [...standing, ...out], s.cache)) {
+        if (pp && !windowFaults(level, pp).length && (!opts.keep || opts.keep([...out, pp])) && noFreeRide(level, pp, [...standing, ...out], s.cache)) {
           out.push(pp);
           commit(s, pp);
           break;

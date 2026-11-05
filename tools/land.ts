@@ -12,7 +12,12 @@
  * Steps: a clean tree; catch up with origin/main; merge the branches in order (a conflict stops
  * here with the merge in progress); `pnpm install` if the lockfile changed; one SNAP_VERSION bump
  * when the batch changed code in src/net/snapshot.ts or the field lists in tests/snapshot.test.ts;
- * `pnpm check`, plus `pnpm build` when the host changed; push HEAD to origin main.
+ * `pnpm check`, plus `pnpm build` when the host changed, plus whatever failed in main's last finished
+ * CI run (`pnpm test:stats`, `pnpm build`); push HEAD to origin main.
+ *
+ * Why the CI part: `pnpm check` leaves out the stats suite, so a batch could break it, push green and
+ * leave main red for days while every later batch kept landing. While main is red, each batch also runs
+ * what's red, so the batch that fixes it proves it and the others see it fail before they push.
  */
 
 import { spawnSync } from 'node:child_process';
@@ -42,6 +47,35 @@ function git(...args: string[]): string | null {
 function run(cmd: string, ...args: string[]): boolean {
   console.log(`land: ${cmd} ${args.join(' ')}`);
   return spawnSync(cmd, args, { stdio: 'inherit' }).status === 0;
+}
+
+/** A step of the CI workflow (.github/workflows/ci.yml) by name, and the local command that runs the same check. `pnpm check` covers the rest. */
+const CI_STEPS: Record<string, string[]> = {
+  'Test stats': ['pnpm', 'test:stats'],
+  Build: ['pnpm', 'build'],
+};
+
+/**
+ * The failed steps of main's last CI run that finished (a run cancelled by a newer push says nothing), or
+ * null when it passed. Without `gh` (not installed, not logged in) it warns and returns null: the gate still runs.
+ */
+function redOnMain(): { url: string; steps: string[] } | null {
+  const gh = (...args: string[]) => {
+    const r = spawnSync('gh', args, { encoding: 'utf8' });
+    return r.status === 0 ? r.stdout : null;
+  };
+  const list = gh('run', 'list', '--branch', 'main', '--workflow', 'ci.yml', '-L', '30', '--json', 'databaseId,conclusion,url');
+  if (list === null) {
+    console.warn("land: couldn't read main's CI status (gh missing or not logged in); gating on pnpm check alone.");
+    return null;
+  }
+  const last = (JSON.parse(list) as { databaseId: number; conclusion: string; url: string }[]).find(
+    (r) => r.conclusion === 'success' || r.conclusion === 'failure',
+  );
+  if (!last || last.conclusion === 'success') return null;
+  const view = gh('run', 'view', String(last.databaseId), '--json', 'jobs');
+  const jobs = view ? (JSON.parse(view) as { jobs: { name: string; steps: { name: string; conclusion: string }[] }[] }).jobs : [];
+  return { url: last.url, steps: jobs.flatMap((j) => j.steps.filter((st) => st.conclusion === 'failure').map((st) => `${j.name}: ${st.name}`)) };
 }
 
 const conflicts = () => git('diff', '--name-only', '--diff-filter=U')?.split('\n').filter(Boolean) ?? [];
@@ -102,9 +136,24 @@ if ((flags.has('--snap') || wireAt('origin/main') !== wireAt('HEAD')) && snapAt(
   console.log(`land: SNAP_VERSION → ${next}`);
 }
 
+const red = redOnMain();
+const extra = new Set<string>();
+if (red) {
+  console.warn(`land: main's last CI run failed (${red.url}): ${red.steps.join(', ') || 'see the run'}.`);
+  for (const step of red.steps) {
+    const cmd = CI_STEPS[step.slice(step.indexOf(': ') + 2)];
+    if (cmd) extra.add(cmd.join(' '));
+    else if (!/: (Typecheck|Lint|Format|Test)/.test(step)) console.warn(`land: no local command for "${step}"; check it in CI after the push.`);
+  }
+}
+if (flags.has('--build') || changed.some((f) => HOST.test(f))) extra.add('pnpm build');
+
 if (!run('pnpm', 'check')) fail('the gate failed. Fix it with a commit here, then run `pnpm land` again.');
-if ((flags.has('--build') || changed.some((f) => HOST.test(f))) && !run('pnpm', 'build'))
-  fail('pnpm build failed. Fix it with a commit here, then run `pnpm land` again.');
+for (const cmd of extra) {
+  const [bin, ...args] = cmd.split(' ');
+  if (!run(bin, ...args))
+    fail(`${cmd} failed${red && cmd !== 'pnpm build' ? ', as it does on main' : ''}. Fix it with a commit here, then run \`pnpm land\` again.`);
+}
 
 if (flags.has('--no-push')) {
   console.log('land: gated, not pushed (--no-push)');

@@ -6,6 +6,7 @@ import { jumpProfile } from '../level/probe';
 import { hardGap, undercut } from '../level/sculptors/common';
 import { BRIDGE_W } from '../level/types';
 import { noFreeRide, planHolds } from '../level/winnable';
+import { windowFaults } from '../setpieces/contract';
 import { finalize, type Piece, type Site } from '../setpieces/place';
 
 /** Uids a trial piece takes: any will do, it's thrown away. */
@@ -88,14 +89,14 @@ export function footing(g: Grid, a: number, b: number, top: number): void {
 }
 
 /**
- * A piece that's only worth having if it goes in: try it the way the pipeline will (finalize, the solution
+ * A piece that's only worth having if it goes in: try it the way the pipeline will (finalize, a safe window, the solution
  * still holding with everything before it, and no free ride), and yield nothing when it wouldn't. A landmark's
  * pieces are all required, so its optional hazards go through here first and a bad roll costs the hazard, not
  * the attempt. `prior` collects what went in so far (the landmark's earlier pieces, as the pipeline places them).
  */
 export function trial(s: Site, prior: PlacedProp[], piece: Piece): boolean {
   const pp = finalize(s, piece, TRIAL_UID + prior.length, 'trial');
-  if (!pp) return false;
+  if (!pp || windowFaults(s.level, pp).length) return false;
   const plan = s.level.solution ?? [];
   if (!planHolds(s.level, [...prior, pp], plan, s.cache) || !noFreeRide(s.level, pp, prior, s.cache)) return false;
   prior.push(pp);

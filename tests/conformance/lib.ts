@@ -6,8 +6,7 @@ import '../../src/render/props/modules';
 import { RUN_COUNTDOWN } from '../../src/sim/constants';
 import type { Level } from '../../src/sim/level';
 import { type Contrib, moduleSim, newPropState, type PlacedProp, resolveProp, traceRays, type Module } from '../../src/sim/props';
-import { TELLS, tellFaults } from '../../src/gen/setpieces';
-import { safeWindowFaults } from '../lib/set-piece-checks';
+import { TELLS, tellFaults, windowFaults } from '../../src/gen/setpieces';
 
 /**
  * The conformance suite's shared machinery (tests/conformance/*.test.ts): every registered entry of every
@@ -94,6 +93,6 @@ export function hazardFaults(level: Level, pp: PlacedProp): string[] {
   for (const t of beams)
     if (!artSources().some((src) => src.includes(`type: '${t}'`) && src.includes('beamOf(')))
       out.push(`${pp.def.name}: ${t} reaches through space but its art doesn't draw from beamOf`);
-  out.push(...safeWindowFaults(level, pp));
+  out.push(...windowFaults(level, pp));
   return out;
 }

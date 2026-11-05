@@ -29,13 +29,13 @@ export const TWO_PARTS = 0.25;
  */
 export const TWO_PART_ASK: Partial<Record<ThemeId, number>> = {
   farm: 0.1,
-  factory: 0.41,
-  castle: 0.5,
+  factory: 0.27,
+  castle: 0.4,
   jungle: 0.33,
   volcano: 0.13,
-  harbor: 0.6,
+  harbor: 0.22,
   mine: 0.02,
-  rooftops: 0.38,
+  rooftops: 0.1,
   // Only a wide space level has room for two crossings (sculptors/space.ts), so its ask is the theme's share over the wide ones.
   space: 0.72,
 };
