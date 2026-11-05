@@ -1,5 +1,5 @@
 /**
- * A flat kind's frames (docs/CHARACTERS.md → Rendered kinds → Flat kinds), from its game-size design and a
+ * A flat kind's frames (docs/CHARACTERS.md → Rendered kinds), from its game-size design and a
  * drawing of it in each pose: `pnpm exec tsx tools/art3d/flat/build.ts zapmouse`. Each drawing becomes a
  * role map (`rolemap.py`, at one body size for every pose), traced by the real tracer into the drawing's
  * own shapes, with its long interior lines. The cast's face kit takes over from the drawing's eyes and

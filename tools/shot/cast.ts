@@ -1,5 +1,5 @@
 /**
- * The toy cast's sheet for docs/CHARACTERS.md: `pnpm shot cast [--seed S] [--only catalog|faces|colors]`. The
+ * The cast's sheet for docs/CHARACTERS.md: `pnpm shot cast [--seed S] [--only catalog|faces|colors]`. The
  * eight-runner lineup at play scale on a light theme and a dark one, a 3× close-up, the race start,
  * toys coming apart, the lobby cards and the catalog of every kind, composed into `cast.png`.
  */

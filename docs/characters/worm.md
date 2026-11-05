@@ -1,28 +1,17 @@
 # The worm in the super suit
 
-A kind of the cast: [CHARACTERS.md](../CHARACTERS.md) has the rules every kind follows.
-
 - **Kind:** `worm` · **Name:** Earthworm Gym
 - **A stranger should say:** "the earthworm in the space suit."
 - **Silhouette:** side on, a super suit with a hero's build: two big round shoulder pads over a broad chest, a narrow belted waist, slim legs and big boots. Out of its collar rises a thin bare pink worm neck, arcing forward once at the top, and on its end a head clearly wider than the neck, with two huge eyes standing up out of it and a wide grin. A small chunky pistol is held out at arm's length in one hand, angled a little down, clear of the body. It's a gun in the hand, never a cannon worn on the forearm and never level from the shoulder, which is the hunter's and the robot boy's outline.
 - **Traits:** a suit with big round shoulder pads, a narrow belted waist and big boots; a thin pink worm neck out of the collar; a head wider than the neck, huge bulging eyes and a wide toothy grin; a raygun held out in one hand; dark gloves.
-- **Palette:** the suit in the player's colour (`#5f8fb5` on the sheets); the gloves, boots and belt a dark of it (−22); the shin patch a light (+16). The worm is a neutral pink `#f19aa6` (a face), its eye whites `#fbfaf6`. The dryer is grey `#9a9aa0`.
-- **Color slot:** costume: the suit.
-- **Palette alts:** the dryer in grey `#9a9aa0`, cream plastic `#d6ccb4` or charcoal `#6e6a66`.
-- **Idles and cheers:** the idle from the design; a fist on his hip, the head cocked. A fist punched up, the dryer held out; laughing with the head tipped back, eyes shut.
-- **Gait range:** a bounce of 0.2–0.8 px on each step, a lean of up to 0.03.
-- **Wear:** scuffed is a pale scuff on the suit's chest, scorched a soot mark low on it (tones of the suit).
+- **Palette:** costume (the player's, `#5f8fb5` on the sheets): the suit; the gloves, boots and belt a dark of it (−22), the shin patch a light (+16). The worm a neutral pink `#f19aa6` (a face), its eye whites `#fbfaf6`; the dryer grey `#9a9aa0`.
 - **Gait:** a hero's stride, the neck swaying over it.
 - **The nod:** the worm's head on a thin neck out of the collar, wider than the neck, huge eyes standing up out of it (the read: nobody else in the cast is a head on a stalk); the super suit's hero build with round shoulder pads (the hero the worm is wearing); the raygun held out (what he does).
 - **Our twist:** a knock-off hero. The raygun is an old hair dryer, dented, its cord dangling. One small patch on a shin, and a boot sole coming away.
 - **Swaps:** a plaster on the worm's cheek.
-- **Rig:** drawn flat (2026-11-04) in seven design rounds (art/sprites/worm/design.prompt.txt).
-  - **Shared steps.** `art/sprites/worm/prep.py` takes the trailing cord out of every drawing: traced, it was a dark loop on the floor that read as a tail. It also repaints the whites inside the head, so `holes` cuts only the background. The eyes are found by those whites (`eyes.role: 'eye'`): one eye, with the far one set from it, because the drawn eyes touch. The whites and the teeth stay as the bulging eyes and the grin.
-  - **Rounds one to six** were a stuffed, patched boiler suit, a shapeless sack, with the dryer held across the belly. The neck was tried four ways:
-    - in an S curl: read as "a big curled head or snout, maybe a dragon";
-    - thin and straight: "worm in a super suit - low-medium";
-    - thin, with the eyes on top of the head: "two knobs on top like ears";
-    - as a thick pole: "Earthworm Jim, low", and to the owner a thumb.
-  - **Round 7 (the redraw)** puts the suit back to the hero's build and the head wider than the neck, and holds the dryer out in the hand. Two fresh readers then named him, both at medium: "Earthworm Jim. Medium. A skinny worm-like head on a thin neck coming out of a suit, holding a blaster, with a loose, whippy pose" and "Earthworm Jim, medium. Thin stalk head rising out of a suit, holding a blaster forward, wiry springy poses". Neither paired him with anyone, and both read the hunter as the hunter.
-  - **Sizes:** the kind stands 25 world px. The jump is drawn at 0.88, the wall slide at 0.9 and the knockout at 0.7, inside the shared box.
+- **Palette alts:** the dryer in grey `#9a9aa0`, cream plastic `#d6ccb4` or charcoal `#6e6a66`.
+- **Idles and cheers:** the idle from the design; a fist on his hip, the head cocked. A fist punched up, the dryer held out; laughing with the head tipped back, eyes shut.
+- **Gait range:** a bounce of 0.2–0.8 px on each step, a lean of up to 0.03.
+- **Wear:** scuffed is a pale scuff on the suit's chest, scorched a soot mark low on it (tones of the suit).
+- **Rig:** drawn flat in seven design rounds (`art/sprites/worm/design.prompt.txt`). `art/sprites/worm/prep.py` takes the trailing cord out of every drawing (traced, it was a dark loop on the floor that read as a tail) and repaints the whites inside the head, so `holes` cuts only the background. The eyes are found by those whites (`eyes.role: 'eye'`): one eye, the far one set from it, because the drawn eyes touch; the whites and the teeth stay as the bulging eyes and the grin. Rounds one to six were a stuffed, patched boiler suit, a shapeless sack, the dryer held across the belly, with the neck four ways: in an S curl, "a big curled head or snout, maybe a dragon"; thin and straight, "worm in a super suit - low-medium"; thin with the eyes on top of the head, "two knobs on top like ears"; a thick pole, "Earthworm Jim, low", and to the owner a thumb. Round 7 put back the hero's build, the head wider than the neck and the dryer held out in the hand; two fresh readers: "Earthworm Jim. Medium. A skinny worm-like head on a thin neck coming out of a suit, holding a blaster, with a loose, whippy pose" and "Earthworm Jim, medium. Thin stalk head rising out of a suit, holding a blaster forward, wiry springy poses". Neither paired him with anyone, and both read the hunter as the hunter. He stands 25 world px; the jump is drawn at 0.88, the wall slide at 0.9 and the knockout at 0.7, inside the shared box.
 - **Concept prompt:** A cartoon earthworm in a superhero space suit, seen from the side: big round ball shoulder pads, a broad chest, a narrow waist with a dark belt, slim legs and big chunky dark boots, big dark gloves. Out of the collar a thin bare pink worm neck rises and curves forward in one gentle arc, its head wider than the neck, with two huge bulging white eyes standing up out of the top and a wide open toothy grin. His front arm is out in front of him, angled down a little, holding a small chunky grey hair dryer like a raygun pistol at arm's length, clear of his body, its short cord dangling.
