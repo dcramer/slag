@@ -2,6 +2,8 @@ import type { Rng } from '../../../core/rng';
 import { finish, Grid, hintGap, noise2D, POCKET, smoothCA, T_EMPTY, T_ONEWAY, T_SOLID } from '../kit';
 import { jumpProfile } from '../probe';
 import type { SculptCtx, Shape } from '../types';
+import type { Difficulty } from '../../../sim/level';
+import { difficultyKnobs, stretchAt, stretchesOf, withDifficulty } from '../difficulty';
 import { jumpGap, easyRise, hardGap, type Knobs, knobs, rollChallenges, undercut } from './common';
 
 /** Columns a storey's second connector occupies. */
@@ -90,6 +92,9 @@ function sculptTall(ctx: SculptCtx, kit: TallKit): Shape {
 
   // --- storey rows, bottom first.
   const bottom = H - rng.int(4, 6);
+  // A Rising Slag tower's stretches (gen/level/difficulty.ts): each storey is built to the tier of the rows it sits at.
+  const stretches = stretchesOf(ctx.profile);
+  const tierAt = (row: number): Difficulty => stretchAt(stretches, bottom - row).tier;
   const top = rng.int(5, 7);
   // Storeys sit more than a (wall-assisted) climb apart, so connectors matter; dense = tighter.
   const sMin = j.rise + 1;
@@ -171,9 +176,13 @@ function sculptTall(ctx: SculptCtx, kit: TallKit): Shape {
     const dir: 1 | -1 = onward >= mid ? 1 : -1;
     const l: Link = { lower, upper, x: linkX[i], w: linkW[i], dir };
     links.push(l);
+    // A tower's medium and hard stretches climb by perches, both ways up, so the forgiving way asks for them too.
+    const tier = tierAt(upper.row);
+    const perched = !!ctx.profile.tide && tier !== 'gentle';
     if (descent) dropHole(g, l);
+    else if (perched) withDifficulty(tier, () => perchFlight(g, l));
     else if (linkW[i] < lw) rungShaft(g, l, rise);
-    else kit.link(g, rng, l, k);
+    else withDifficulty(tier, () => kit.link(g, rng, l, k));
     // Mostly open: a second way between every pair of storeys, as far from the first as the storey
     // allows. A ladder or a drop hole, whatever the kit's main connector is. The pockets only limit
     // the storeys they stand on.
@@ -183,10 +192,16 @@ function sculptTall(ctx: SculptCtx, kit: TallKit): Shape {
     const right = b0 - ALT_W + 1 - rng.int(0, 1);
     const fits = (x: number) => x >= a0 && x + ALT_W - 1 <= b0 && (x + ALT_W + 1 < l.x || x > l.x + l.w);
     const x = (mid > W / 2 ? [left, right] : [right, left]).find(fits);
-    if (x !== undefined) {
-      const alt: Link = { ...l, x, w: ALT_W };
+    const altW = perched ? withDifficulty(tier, perchW) : ALT_W;
+    const room = (x: number) => x >= a0 && x + altW - 1 <= b0 && (x + altW + 1 < l.x || x > l.x + l.w);
+    const ax = perched
+      ? (mid > W / 2 ? [a0 + rng.int(0, 1), b0 - altW + 1 - rng.int(0, 1)] : [b0 - altW + 1 - rng.int(0, 1), a0 + rng.int(0, 1)]).find(room)
+      : x;
+    if (ax !== undefined) {
+      const alt: Link = { ...l, x: ax, w: altW };
       links.push(alt);
       if (descent) dropHole(g, alt);
+      else if (perched) withDifficulty(tier, () => perchFlight(g, alt));
       else rungShaft(g, alt, rise);
     }
   }
@@ -315,6 +330,48 @@ function rungShaft(g: Grid, l: Link, rise: number, rungW = 2): void {
     g.plank(a, a + rungW - 1, y);
     left = !left;
   }
+}
+
+/**
+ * The hop between a perch flight's perches: a walking jump near its limit (a one-tile perch gives no run-up), as
+ * far as the climb's rise still lets it reach, one shorter where the tier leaves slack.
+ */
+function perchHop(): number {
+  const j = jumpProfile();
+  const rise = easyRise();
+  const reach = Math.min(j.walkGap, Math.max(1, j.gapAt(rise)));
+  return Math.max(1, reach - (difficultyKnobs().riseSlack >= 1 ? 1 : 0));
+}
+
+/** Columns a perch flight takes: a perch, its hop, a perch. */
+function perchW(): number {
+  return perchHop() + 2;
+}
+
+/** Rows under a storey's stand row a perch flight's well cuts: through the thickest floor a kit lays. */
+const WELL_FLOOR = 3;
+
+/**
+ * A Rising Slag tower's precision climb between storeys: one-tile perches alternating across an open well, each a
+ * near-full jump (`easyRise`, the tier's slack) above the last and a walking hop across. The well goes down
+ * through the lower storey's floor too, so nothing stands under a perch: a slipped jump drops you to the storey
+ * below, the climb lost to the slag (precision.ts counts it). Built inside the link's columns, starting on the
+ * side the route comes from.
+ */
+function perchFlight(g: Grid, l: Link): void {
+  const rise = easyRise();
+  const w = Math.min(l.w, perchW());
+  const x0 = l.dir > 0 ? l.x : l.x + l.w - w;
+  const x1 = x0 + w - 1;
+  g.clear(x0, l.upper.row - 3, x1, l.lower.row + WELL_FLOOR);
+  let near = l.dir > 0;
+  for (let y = l.lower.row + 1 - rise; y > l.upper.row + 1; y -= rise) {
+    g.set(near ? x0 : x1, y, T_SOLID, true);
+    near = !near;
+  }
+  hintGap(g, x0, x1, l.lower.row + 1);
+  // The upper storey's floor, rebuilt over the far side of the well, so the climb lands on it from the last perch.
+  for (let x = x0; x <= x1; x++) g.set(x, l.upper.row + 1, T_ONEWAY, true);
 }
 
 // ---------------------------------------------------------------------------

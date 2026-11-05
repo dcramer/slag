@@ -79,6 +79,11 @@ Every game design decision, preference and direction the owner has given, groupe
 - **Rising Slag is an endless climb, and the slag has to chase you.** "rising slag.. isnt an infinitely climbable thing and the thing doesnt rise very fast...."
   2026-11-04 · `done` · DESIGN.md → Modes; 200-row towers of the tower themes (`TIDE_TOWER_H`), the slag at 1.5 tiles/s gaining 0.1 a second (`SLAG_TIDE`)
   Changed: the first cut climbed a 40–60-row tower (or a classic climb) with a flag-less top to hold, under slag at 0.8 tiles/s gaining 0.035 after 4 s.
+- **Rising Slag towers get a difficulty curve, and difficulty expectations are standardized across modes as bot pass rates, the way the race's finish rates were set.** "these levels will also need a difficultly curve, which might mean we have to clea up the way we analyze things? we should standardize the expectations around difficulty (% win etc)" / "Yes, build it"
+  2026-11-04 · `done` · DESIGN.md → Difficulty, Modes; `src/game/expectations.ts`, `TOWER_CURVE`, `tests/stats/slag-climb.test.ts`
+  Changed: the race's targets lived only in its stats suite; the slag rose at 1.5 tiles/s gaining 0.1 after 2 s, now 2.6 gaining 0.12 after 3 s, fitted to Normal bots.
+- **A looping tower (its top wrapping to its bottom) is a nice hack for an endless climb, but complicated: not now.** "the level could loopp maybe but thats a little complicated? thats a nice hack tho"
+  2026-11-04 · `open` · TODO.md → 31
 - **A rule the level is built from (gravity, weather) rebuilds the lobby's level for everyone at once.**
   2026-11-02 · git `e64c3e5` · `done` · DESIGN.md → Rules
 

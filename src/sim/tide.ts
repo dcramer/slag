@@ -26,11 +26,13 @@ export interface Tide {
 }
 
 /**
- * The one tide a Rising Slag level carries (gen/level/index.ts). It presses from the start (20 rows in its first
- * 10 s) and gains fast: past 5 tiles/s by 35 s, more than a climb of switchback storeys keeps up, and over a whole
- * 200-row tower (`TIDE_TOWER_H`) by about 52 s, so every round ends inside a minute.
+ * The one tide a Rising Slag level carries (gen/level/index.ts), fitted to a Normal bot's climb against the
+ * difficulty standard (src/game/expectations.ts, tests/stats/slag-climb.test.ts). It boils 3 s, then rises at
+ * 2.6 tiles/s gaining 0.12 a second: gentle through the tower's gentle stretch, close behind a Normal climber
+ * through the medium one (row 70 by about 23 s), and catching up in the hard one (row 150 by about 37 s), so a
+ * fumble costs the climb. It covers a 200-row tower (`TIDE_TOWER_H`) by about 43 s.
  */
-export const SLAG_TIDE: Tide = { wait: 2, speed: 1.5, gain: 0.1 };
+export const SLAG_TIDE: Tide = { wait: 3, speed: 2.6, gain: 0.12 };
 
 /** Px the slag has risen from where it starts on run frame `f`. 0 until it moves. */
 export function tideRise(tide: Tide, f: number): number {

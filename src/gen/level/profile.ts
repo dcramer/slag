@@ -98,7 +98,9 @@ export const TIDE_TOWER_H = 200;
 const WIDE_SIZES = { w: [64, 96], h: [24, 30] } as const;
 
 /** Debug/tools: force some knobs (the rest still roll from the seed). A size the theme can't do falls back to its widest. */
-export type ProfileOverride = Partial<Pick<LevelProfile, 'size' | 'route' | 'density' | 'hazards' | 'danger' | 'gravity' | 'difficulty' | 'draw' | 'tide'>> & {
+export type ProfileOverride = Partial<
+  Pick<LevelProfile, 'size' | 'route' | 'density' | 'hazards' | 'danger' | 'gravity' | 'difficulty' | 'draw' | 'tide' | 'curve'>
+> & {
   weather?: WeatherKind;
   /** A stage concept id of the theme's (gen/stage), or 'plain'; with no size or route forced, the level takes one the concept fits. */
   concept?: string;
@@ -192,6 +194,8 @@ export function rollProfile(seed: number, themeId: ThemeId, o: ProfileOverride =
       ],
     difficulty,
     ...(o.tide ? { tide: true } : {}),
+    // A tower climbs through the difficulty curve unless the host fixed one difficulty for every level.
+    ...(o.tide && size === 'tall' && (o.curve ?? !o.difficulty) ? { curve: true } : {}),
   };
 }
 

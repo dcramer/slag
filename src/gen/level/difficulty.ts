@@ -122,6 +122,53 @@ export function levelDifficulty(): Difficulty {
   return current;
 }
 
+/** Run `f` building to difficulty `d`, then back to the level's own: a tower's storeys follow its curve (TOWER_CURVE). */
+export function withDifficulty<T>(d: Difficulty, f: () => T): T {
+  const was = current;
+  current = d;
+  try {
+    return f();
+  } finally {
+    current = was;
+  }
+}
+
 export function difficultyKnobs(d: Difficulty = current): DifficultyKnobs {
   return DIFFICULTY[d];
+}
+
+/**
+ * A stretch of route measured on its own (docs/DESIGN.md → Difficulty): a race level is one stretch, a Rising Slag
+ * tower a stack of them. Each has a tier, and the same expectation holds in every mode: how often a bot of each
+ * level gets through a stretch of that tier (`PASS_TARGETS`, src/game/expectations.ts).
+ */
+export interface Stretch {
+  /** Rows climbed above the spawn's floor where the stretch starts and ends (end exclusive; Infinity: the rest). */
+  from: number;
+  to: number;
+  tier: Difficulty;
+}
+
+/**
+ * A Rising Slag tower's curve, from the spawn up: a gentle start, a medium middle, a hard stretch, and a run-out
+ * past it that stays hard and that the slag always wins. With the slag's pace (sim/tide.ts) the gentle stretch
+ * takes about the first 15 s.
+ */
+export const TOWER_CURVE: readonly Stretch[] = [
+  { from: 0, to: 40, tier: 'gentle' },
+  { from: 40, to: 100, tier: 'medium' },
+  { from: 100, to: 160, tier: 'hard' },
+  { from: 160, to: Infinity, tier: 'hard' },
+];
+
+/** The stretches a level is measured in: a tower's curve, or the whole level as one stretch of its own tier. */
+export function stretchesOf(p: { tide?: boolean; curve?: boolean; difficulty: Difficulty }): readonly Stretch[] {
+  if (p.tide && p.curve) return TOWER_CURVE;
+  if (p.tide) return TOWER_CURVE.map((s) => ({ ...s, tier: p.difficulty }));
+  return [{ from: 0, to: Infinity, tier: p.difficulty }];
+}
+
+/** The stretch `climbed` rows above the spawn's floor falls in. */
+export function stretchAt(stretches: readonly Stretch[], climbed: number): Stretch {
+  return stretches.find((s) => climbed < s.to) ?? stretches[stretches.length - 1];
 }

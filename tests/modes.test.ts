@@ -3,6 +3,7 @@ import { Match } from '../src/game/match';
 import { climbed, MODES } from '../src/game/modes';
 import { DEFAULT_RULES } from '../src/game/rules';
 import { POINTS, scoreSurvival } from '../src/game/scoring';
+import { lastGenInfo, TOWER_CURVE } from '../src/gen/level';
 import { buildsTowers, rollProfile, TIDE_TOWER_H } from '../src/gen/level/profile';
 import { generateTheme } from '../src/gen/theme';
 import { hashMatch, restoreMatch, snapshotMatch } from '../src/net/snapshot';
@@ -70,6 +71,10 @@ describe('Rising Slag levels', () => {
     expect(m.level.h).toBe(TIDE_TOWER_H);
     expect(m.level.goal.ty).toBeLessThan(m.level.spawn.ty);
     expect(tideLine(m.level, RUN_COUNTDOWN + 60 * FPS)!).toBeLessThan(0);
+    // Its curve: the perch flights of the medium and hard stretches ask for more than the gentle start's stairs.
+    const tight = lastGenInfo.stretches!;
+    expect(tight).toHaveLength(TOWER_CURVE.length);
+    expect(tight[1] + tight[2]).toBeGreaterThan(tight[0]);
     // One part asked, at the top: the climb from the spawn needs none.
     expect(m.level.solution!.length).toBe(1);
     expect(m.level.solution![0].y).toBeLessThan(m.level.h / 4);

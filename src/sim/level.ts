@@ -52,6 +52,8 @@ export interface LevelProfile {
   draw?: number;
   /** Built for Rising Slag (game/modes.ts): a climb with slag rising under it (Level.tide). */
   tide?: boolean;
+  /** A tower whose stretches follow the difficulty curve (gen/level/difficulty.ts `TOWER_CURVE`), gentle at the bottom to hard; absent, every stretch is `difficulty`. */
+  curve?: boolean;
 }
 
 export interface Level {

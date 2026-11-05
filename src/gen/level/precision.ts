@@ -5,6 +5,7 @@ import { movesOn } from '../../sim/reach';
 import { groundSurfaceAt } from '../../sim/ground';
 import { footing } from '../../sim/weather';
 import type { Routes } from './routes';
+import { type Stretch, stretchAt } from './difficulty';
 import { BRIDGE_W, type BridgeHint } from './types';
 
 /**
@@ -84,7 +85,16 @@ function worldOf(level: Level, tiles: Uint8Array): CollisionWorld {
   };
 }
 
-/** True if `controls` from `body`, then letting go, ends with the body out of the bottom of the level. */
+/**
+ * Rows below its take-off a slipped jump landing in a tower counts as a fall: back down a perch or more is a climb
+ * the slag gains on, where a stair's slack still lands you on the step you were going for.
+ */
+export const LOST_ROWS = 2;
+
+/**
+ * True if `controls` from `body`, then letting go, costs the climb: the body ends out of the bottom of the level,
+ * or, in a Rising Slag tower (`Level.tide`), lands `LOST_ROWS` or more below where it took off.
+ */
 function falls(level: Level, world: CollisionWorld, body: Body, controls: readonly Controls[]): boolean {
   const b = { ...body };
   const out = level.h * TILE;
@@ -96,7 +106,7 @@ function falls(level: Level, world: CollisionWorld, body: Body, controls: readon
     stepBody(b, NONE, world);
     if (b.y > out) return true;
   }
-  return false;
+  return !!level.tide && b.y - body.y >= LOST_ROWS * TILE;
 }
 
 /** A body standing still in stand cell `cell`, as a route's moves start. */
@@ -136,13 +146,18 @@ export function fatalSlips(level: Level, body: Body, controls: readonly Controls
   });
 }
 
-/** How many of the jumps along `route` (stand cells, spawn first) some slip turns into a fall. */
-export function routePrecision(level: Level, route: readonly number[], bridges: readonly BridgeHint[] = []): RoutePrecision {
+/** One jump on a route: the stand row it takes off from, and whether some slip turns it into a fall. */
+export interface RouteJump {
+  row: number;
+  tight: boolean;
+}
+
+/** Every jump along `route` (stand cells, spawn first), in order: the moves a slip can cost, where they are. */
+export function routeJumps(level: Level, route: readonly number[], bridges: readonly BridgeHint[] = []): RouteJump[] {
   const tiles = withBridges(level, bridges);
   const world = worldOf(level, tiles);
   const moves = movesOn({ ...level, tiles });
-  let jumps = 0;
-  let tight = 0;
+  const out: RouteJump[] = [];
   for (let i = 1; i < route.length; i++) {
     const from = route[i - 1];
     const to = route[i];
@@ -150,16 +165,37 @@ export function routePrecision(level: Level, route: readonly number[], bridges: 
     let move: Controls[] | null = null;
     for (const m of moves(body)) if (m.to === to && m.air && (!move || m.controls.length < move.length)) move = m.controls;
     if (!move) continue;
-    jumps++;
-    for (const kind of SLIPS) {
+    const tight = SLIPS.some((kind) => {
       const c = slip(move, kind);
-      if (c && falls(level, world, body, c)) {
-        tight++;
-        break;
-      }
-    }
+      return !!c && falls(level, world, body, c);
+    });
+    out.push({ row: Math.floor(from / level.w), tight });
   }
-  return { jumps, tight };
+  return out;
+}
+
+/** How many of the jumps along `route` (stand cells, spawn first) some slip turns into a fall. */
+export function routePrecision(level: Level, route: readonly number[], bridges: readonly BridgeHint[] = []): RoutePrecision {
+  const jumps = routeJumps(level, route, bridges);
+  return { jumps: jumps.length, tight: jumps.filter((j) => j.tight).length };
+}
+
+/**
+ * Tight jumps per stretch (./difficulty.ts `Stretch`) on the level's more forgiving route, stretch by stretch: a
+ * player takes the forgiving way through each. A race level is one stretch, so this is `levelPrecision` in a list.
+ * Rows climbed count from the spawn's floor.
+ */
+export function stretchPrecision(level: Level, routes: Routes, stretches: readonly Stretch[], bridges: readonly BridgeHint[] = []): number[] {
+  const floor = level.spawn.ty;
+  const count = (route: readonly number[]) => {
+    const n = stretches.map(() => 0);
+    for (const j of routeJumps(level, route, bridges)) if (j.tight) n[stretches.indexOf(stretchAt(stretches, floor - j.row))]++;
+    return n;
+  };
+  const fast = count(routes.fastest);
+  if (!routes.alternative.length) return fast;
+  const alt = count(routes.alternative);
+  return fast.map((x, i) => Math.min(x, alt[i]));
 }
 
 /** Tight jumps on the level's more forgiving route: what a player who picks the safe way still has to land. */
