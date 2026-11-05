@@ -1,12 +1,12 @@
 import { describe, expect, it } from 'vitest';
 import { castEntries } from '../src/codex/cast';
-import { CAST, KIND_NAMES } from '../src/gen/character';
+import { CAST_ORDER, KIND_NAMES } from '../src/gen/character';
 
 /** The codex's cast is the whole cast: every kind once, by its sound-alike name, with a line of its own. */
 describe('codex cast', () => {
   it('shows every kind', () => {
     const entries = castEntries();
-    expect(entries.map((e) => e.kind)).toEqual([...CAST]);
+    expect(entries.map((e) => e.kind)).toEqual([...CAST_ORDER]);
     for (const e of entries) {
       expect(e.title).toBe(KIND_NAMES[e.kind]);
       expect(e.def.kind).toBe(e.kind);
