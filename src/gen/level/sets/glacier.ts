@@ -1,10 +1,11 @@
 import type { Rng } from '../../../core/rng';
 import { GROUND_ICE } from '../../../sim/ground';
 import { T_EMPTY, T_SOLID } from '../../../sim/level';
-import { glacierOwns, rectsOf } from '../../stage/glacier';
+import { glacierOwns } from '../../stage/glacier';
+import { rectsOf } from '../../stage/kit';
 import { type Grid, noise1D } from '../kit';
-import type { SculptCtx, Shape } from '../types';
-import { type Claim, claimSite, easyRise, flatten, hopGap, type Knobs, type Slots, stepRows } from '../sculptors/common';
+import type { Shape } from '../types';
+import { claimFlatSite, easyRise, hopGap, stepRows } from '../sculptors/common';
 import type { CourseKit } from './types';
 
 interface GlacierState {
@@ -67,7 +68,7 @@ export const GLACIER_COURSE: CourseKit<GlacierState> = {
     margin: 2,
     level: 'max',
   },
-  site: (c) => claimGlacierSite(c.ctx, c.k, c.slots, c.surf, c.locked),
+  site: (c) => claimFlatSite(c.ctx, c.k, c.slots, c.surf, c.locked),
   owns: glacierOwns,
   dress({ g, style, surf, state: { ice } }) {
     if (style === 'icefall') frozenFalls(g, ice, surf);
@@ -92,22 +93,6 @@ const SERAC = {
   w: (rng: Rng) => rng.int(2, 4),
   stamp: (g: Grid, rng: Rng, x: number, w: number, f: number, c: { state: GlacierState }) => serac(g, c.state.ice, rng, x, w, f),
 };
-
-/**
- * The landmark's site (claimSite), on ground levelled a couple of columns past it either side and never so
- * low that its crevasse has no bank under it. Nothing else lands within a running jump of its far side, where
- * a crevasse could be cleared bare off its top.
- */
-function claimGlacierSite(ctx: SculptCtx, k: Knobs, slots: Slots, surf: number[], locked: Uint8Array): Claim | null {
-  const claim = claimSite(ctx, k, slots, surf, locked);
-  if (!claim) return null;
-  const { x, w } = claim.at;
-  const ground = Math.min(claim.ground, k.H - 5);
-  slots.mark(x - 3, x + w + 8);
-  flatten(surf, k.H, x - 2, x + w + 1, ground);
-  for (let i = Math.max(0, x - 3); i <= Math.min(k.W - 1, x + w + 2); i++) locked[i] = 1;
-  return { ...claim, ground, at: { ...claim.at, y: ground - claim.at.h } };
-}
 
 /**
  * A melt pond: a hollow a hop wide and two rows deep in a flat stretch of the field, off the landmark and off

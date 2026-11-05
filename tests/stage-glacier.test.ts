@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { generateLevel, lastGenInfo, withBridges } from '../src/gen/level';
 import { rollProfile } from '../src/gen/level/profile';
 import { rollConcept } from '../src/gen/stage';
-import { rectsOf } from '../src/gen/stage/glacier';
+import { rectsOf } from '../src/gen/stage/kit';
 import { TILE } from '../src/sim/constants';
 import { GROUND_ICE, groundAt } from '../src/sim/ground';
 import { type Level, T_EMPTY, T_SOLID, tileAt } from '../src/sim/level';

@@ -271,7 +271,14 @@ export class RunWorld {
   }
 
   private tickCtx(r: Resolved, mi: number, f: number): TickCtx {
-    const runners: RunnerView[] = this.runners.map((x) => ({ x: x.body.x, y: x.body.y, w: x.body.w, h: x.body.h, active: x.alive && !x.finished }));
+    const runners: RunnerView[] = this.runners.map((x) => ({
+      x: x.body.x,
+      y: x.body.y,
+      w: x.body.w,
+      h: x.body.h,
+      active: x.alive && !x.finished,
+      up: feetUp(this.level, x),
+    }));
     return {
       ...this.ctx(r, mi, f),
       runners,

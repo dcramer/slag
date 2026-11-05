@@ -2,7 +2,7 @@ import { brows, eye, mouthMark } from '../faces';
 import { band, type D, type KindArt, poly, toned, tonedOval, Y } from '../kit';
 
 /**
- * The worm in the super suit (docs/CHARACTERS.md → Roster): a super suit with a hero's build, two big round
+ * The worm in the super suit (docs/characters/worm.md): a super suit with a hero's build, two big round
  * shoulder pads over a broad chest, a narrow belted waist, slim legs in big boots; out of its collar a thin bare pink
  * worm neck arcing forward once at the top, its head wider than the neck with two huge eyes standing up out of it
  * and a wide grin; and a small hair dryer held out in one hand like a raygun, clear of the body. A gun in the hand,

@@ -2,6 +2,7 @@ import { css, type HSL, hsl3, shift } from '../core/color';
 import type { DecorDef } from './decor';
 import { inkFor, line, type P, stroke } from './ink';
 import { ball, bar, boxPts, dot, glint, ovalPts, part, path, pen, poly, tick, tone } from './ink-props';
+import { bits01, low16 } from './decor-kit';
 
 /**
  * The harbor's own decor, inked like the quays it stands on: a lobster pot, an anchor, a ship's wheel, a
@@ -15,8 +16,6 @@ const IRON: HSL = hsl3(215, 8, 40);
 const ROPE: HSL = hsl3(38, 40, 58);
 const RED: HSL = hsl3(4, 70, 46);
 const WHITE: HSL = hsl3(40, 20, 88);
-const sd = (seed: number) => seed & 0xffff;
-const k01 = (seed: number, n: number) => ((seed >>> n) % 1000) / 1000;
 
 /** A rope, a spoke, a shank: a bar in a thin rim of its own dark. */
 function rod(s: CanvasRenderingContext2D, pts: readonly P[], w: number, c: HSL, seed: number) {
@@ -51,11 +50,11 @@ export const HARBOR_DECOR = {
       s.restore();
       for (let i = 0; i <= 4; i++) {
         const a = (i / 4) * Math.PI;
-        rod(s, poly(x + w / 2 - Math.cos(a) * w * 0.5, d.y, x + w / 2 - Math.cos(a) * w * 0.48, d.y - Math.sin(a) * h), 0.9, d.color, sd(d.seed) + i);
+        rod(s, poly(x + w / 2 - Math.cos(a) * w * 0.5, d.y, x + w / 2 - Math.cos(a) * w * 0.48, d.y - Math.sin(a) * h), 0.9, d.color, low16(d.seed) + i);
       }
-      pen(s, arch, sd(d.seed), 0.4, 1, 3, inkFor(d.color));
-      rod(s, poly(x, d.y - 0.6, x + w, d.y - 0.6), 1.2, shift(d.color, -8), sd(d.seed) + 9);
-      ball(s, x + w * 0.7, y - 1.4, 1.6 * k, k01(d.seed, 3) < 0.5 ? hsl3(30, 90, 52) : hsl3(196, 70, 48), sd(d.seed) + 4);
+      pen(s, arch, low16(d.seed), 0.4, 1, 3, inkFor(d.color));
+      rod(s, poly(x, d.y - 0.6, x + w, d.y - 0.6), 1.2, shift(d.color, -8), low16(d.seed) + 9);
+      ball(s, x + w * 0.7, y - 1.4, 1.6 * k, bits01(d.seed, 3) < 0.5 ? hsl3(30, 90, 52) : hsl3(196, 70, 48), low16(d.seed) + 4);
     },
   },
   anchor: {
@@ -68,17 +67,17 @@ export const HARBOR_DECOR = {
       const foot = { x: d.x, y: d.y - 2 };
       const c = shift(d.color, 8);
       // Shank, the ring at its head, the stock across it, the arms and their flukes.
-      rod(s, [foot, top], 1.6 * k, c, sd(d.seed));
-      hoop(s, ovalPts(top.x, top.y - 1.4 * k, 1.6 * k, 1.6 * k, sd(d.seed), 0.02, 12), 0.8, c, 3);
-      rod(s, poly(top.x - 3.4 * k, top.y + 2.4 * k, top.x + 3.4 * k, top.y + 1.6 * k), 1.1 * k, shift(WOOD, 4), sd(d.seed) + 1);
+      rod(s, [foot, top], 1.6 * k, c, low16(d.seed));
+      hoop(s, ovalPts(top.x, top.y - 1.4 * k, 1.6 * k, 1.6 * k, low16(d.seed), 0.02, 12), 0.8, c, 3);
+      rod(s, poly(top.x - 3.4 * k, top.y + 2.4 * k, top.x + 3.4 * k, top.y + 1.6 * k), 1.1 * k, shift(WOOD, 4), low16(d.seed) + 1);
       const arm: P[] = [];
       for (let i = 0; i <= 8; i++) {
         const a = Math.PI * (0.15 + 0.7 * (i / 8));
         arm.push({ x: foot.x - Math.cos(a) * 5 * k, y: foot.y - 4.4 * k + Math.sin(a) * 4 * k });
       }
-      rod(s, arm, 1.4 * k, c, sd(d.seed) + 2);
+      rod(s, arm, 1.4 * k, c, low16(d.seed) + 2);
       for (const p of [arm[0], arm[arm.length - 1]])
-        part(s, poly(p.x - 1.4, p.y + 0.6, p.x, p.y - 2.2, p.x + 1.4, p.y + 0.6), d.color, sd(d.seed) + 5, { depth: 0.3, thin: 0.3, thick: 0.7 });
+        part(s, poly(p.x - 1.4, p.y + 0.6, p.x, p.y - 2.2, p.x + 1.4, p.y + 0.6), d.color, low16(d.seed) + 5, { depth: 0.3, thin: 0.3, thick: 0.7 });
       // A coil of chain at its foot.
       for (let i = 0; i < 4; i++) dot(s, d.x + dir * (2.4 + i * 1.6) * k, d.y - 0.9, 0.9 * k, i, css(IRON, 20), inkFor(IRON));
     },
@@ -93,10 +92,10 @@ export const HARBOR_DECOR = {
       // Eight spokes with turned handles past the rim, the rim, the brass hub: stood on its edge against the wall.
       for (let i = 0; i < 8; i++) {
         const a = (i / 8) * Math.PI * 2 + 0.2;
-        rod(s, poly(cx, cy, cx + Math.cos(a) * (r + 2 * k), cy + Math.sin(a) * (r + 2 * k)), 0.8 * k, shift(d.color, 6), sd(d.seed) + i);
+        rod(s, poly(cx, cy, cx + Math.cos(a) * (r + 2 * k), cy + Math.sin(a) * (r + 2 * k)), 0.8 * k, shift(d.color, 6), low16(d.seed) + i);
       }
-      hoop(s, ovalPts(cx, cy, r, r, sd(d.seed), 0.02, 20), 1.5 * k, shift(d.color, 4), 4);
-      ball(s, cx, cy, 1.5 * k, hsl3(44, 60, 52), sd(d.seed) + 9);
+      hoop(s, ovalPts(cx, cy, r, r, low16(d.seed), 0.02, 20), 1.5 * k, shift(d.color, 4), 4);
+      ball(s, cx, cy, 1.5 * k, hsl3(44, 60, 52), low16(d.seed) + 9);
     },
   },
   buoy: {
@@ -113,10 +112,10 @@ export const HARBOR_DECOR = {
       s.fillStyle = css(WHITE, -6);
       s.fillRect(d.x - w, d.y - h * 0.62, w * 2, h * 0.26);
       s.restore();
-      pen(s, body, sd(d.seed), 0.45, 1.1, 3, inkFor(d.color));
+      pen(s, body, low16(d.seed), 0.45, 1.1, 3, inkFor(d.color));
       // The light cage on top, unlit: it's ashore.
-      for (const dx of [-1.6, 1.6]) rod(s, poly(d.x + dx * k, d.y - h, d.x + dx * 0.4 * k, d.y - h - 4 * k), 0.5, shift(IRON, 18), sd(d.seed) + dx);
-      ball(s, d.x, d.y - h - 4.4 * k, 1.1 * k, hsl3(48, 30, 70), sd(d.seed) + 3);
+      for (const dx of [-1.6, 1.6]) rod(s, poly(d.x + dx * k, d.y - h, d.x + dx * 0.4 * k, d.y - h - 4 * k), 0.5, shift(IRON, 18), low16(d.seed) + dx);
+      ball(s, d.x, d.y - h - 4.4 * k, 1.1 * k, hsl3(48, 30, 70), low16(d.seed) + 3);
       glint(s, poly(d.x - w * 0.28, d.y - 1.6, d.x - w * 0.2, d.y - h + 1.4), css(d.color, 24), 0.5);
     },
   },
@@ -131,7 +130,7 @@ export const HARBOR_DECOR = {
       for (let i = 0; i < 5; i++) {
         const fx = x + 1.6 + (i * (w - 3)) / 4;
         const fy = d.y - h - 1 - (i % 2) * 0.8;
-        const a = (k01(d.seed, i * 2) - 0.5) * 0.9;
+        const a = (bits01(d.seed, i * 2) - 0.5) * 0.9;
         s.save();
         s.translate(fx, fy);
         s.rotate(a);
@@ -139,10 +138,10 @@ export const HARBOR_DECOR = {
         part(s, poly(2.4, 0, 3.8, -1.3, 3.8, 1.3), hsl3(205, 14, 58), i + 7, { depth: 0.2, thin: 0.3, thick: 0.6 });
         s.restore();
       }
-      const box = boxPts(x, d.y - h, w, h, 0.6, sd(d.seed), 0.1);
+      const box = boxPts(x, d.y - h, w, h, 0.6, low16(d.seed), 0.1);
       tone(s, box, d.color, { depth: 0.8 });
       for (let i = 1; i < 3; i++) tick(s, x + 0.6, d.y - h + (i * h) / 3, x + w - 0.6, d.y - h + (i * h) / 3, 0.35, i, css(d.color, -22));
-      pen(s, box, sd(d.seed) + 1, 0.45, 1.1, 3, inkFor(d.color));
+      pen(s, box, low16(d.seed) + 1, 0.45, 1.1, 3, inkFor(d.color));
     },
   },
   piling: {
@@ -156,13 +155,13 @@ export const HARBOR_DECOR = {
         const ph = (8 + ((d.seed >> (i * 3)) % 5)) * k;
         const lean = (i - (n - 1) / 2) * 0.6;
         const post = poly(px - 1.6 * k, d.y, px + 1.6 * k, d.y, px + 1.5 * k + lean, d.y - ph, px - 1.5 * k + lean, d.y - ph);
-        part(s, post, shift(d.color, i * 3), sd(d.seed) + i, { depth: 0.8, thin: 0.4, thick: 1 });
+        part(s, post, shift(d.color, i * 3), low16(d.seed) + i, { depth: 0.8, thin: 0.4, thick: 1 });
         s.fillStyle = css(WOOD, 18);
         path(s, ovalPts(px + lean, d.y - ph, 1.5 * k, 0.6 * k, i, 0.02, 10));
         s.fill();
       }
       const ry = d.y - 5 * k;
-      rod(s, poly(d.x - (n * 1.7 + 0.8) * k, ry, d.x + (n * 1.7 + 0.8) * k, ry - 0.6), 1, ROPE, sd(d.seed) + 9);
+      rod(s, poly(d.x - (n * 1.7 + 0.8) * k, ry, d.x + (n * 1.7 + 0.8) * k, ry - 0.6), 1, ROPE, low16(d.seed) + 9);
     },
   },
   rowboat: {
@@ -190,9 +189,9 @@ export const HARBOR_DECOR = {
       s.fillStyle = css(WHITE, -8);
       s.fillRect(d.x - w, d.y - 2.6, w * 2, 1.4);
       s.restore();
-      pen(s, hull, sd(d.seed), 0.45, 1.1, 3, inkFor(d.color));
-      part(s, boxPts(d.x + (dir * w) / 2 - 2, d.y - 2.4, 3, 2.4, 0.3, sd(d.seed) + 2), WOOD, sd(d.seed) + 3, { depth: 0.4, thin: 0.3, thick: 0.8 });
-      rod(s, poly(d.x - dir * 2, d.y - 0.6, d.x + dir * 6 * k, d.y - 1.4), 0.8, shift(WOOD, 10), sd(d.seed) + 4);
+      pen(s, hull, low16(d.seed), 0.45, 1.1, 3, inkFor(d.color));
+      part(s, boxPts(d.x + (dir * w) / 2 - 2, d.y - 2.4, 3, 2.4, 0.3, low16(d.seed) + 2), WOOD, low16(d.seed) + 3, { depth: 0.4, thin: 0.3, thick: 0.8 });
+      rod(s, poly(d.x - dir * 2, d.y - 0.6, d.x + dir * 6 * k, d.y - 1.4), 0.8, shift(WOOD, 10), low16(d.seed) + 4);
     },
   },
   lifering: {
@@ -200,7 +199,7 @@ export const HARBOR_DECOR = {
     bake(s, d) {
       const k = d.size;
       const ph = 11 * k;
-      rod(s, poly(d.x, d.y, d.x, d.y - ph), 1.3 * k, shift(WOOD, 6), sd(d.seed));
+      rod(s, poly(d.x, d.y, d.x, d.y - ph), 1.3 * k, shift(WOOD, 6), low16(d.seed));
       const cy = d.y - ph + 4.4 * k;
       const r = 3.6 * k;
       // The ring in four quarters, red and white, on its hook, and a line coiled under it.
@@ -213,7 +212,7 @@ export const HARBOR_DECOR = {
         bar(s, arc, 1.6 * k, q % 2 ? WHITE : d.color, q, { taper: [0, 0], press: 0, ink: inkFor(d.color) });
       }
       tick(s, d.x - 0.6, d.y - ph + 0.4, d.x + 0.8, d.y - ph + 1.4, 0.6, 2, inkFor(WOOD));
-      hoop(s, ovalPts(d.x + 1.2 * k, d.y - 1.2, 2.8 * k, 0.9 * k, sd(d.seed), 0.05, 12), 0.6, ROPE, sd(d.seed) + 1);
+      hoop(s, ovalPts(d.x + 1.2 * k, d.y - 1.2, 2.8 * k, 0.9 * k, low16(d.seed), 0.05, 12), 0.6, ROPE, low16(d.seed) + 1);
     },
   },
 } satisfies Record<'lobsterpot' | 'anchor' | 'helm' | 'buoy' | 'fishbox' | 'piling' | 'rowboat' | 'lifering', DecorDef>;

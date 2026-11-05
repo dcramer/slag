@@ -2,7 +2,7 @@ import { brows, eye, mouthMark } from '../faces';
 import { type D, type KindArt, mark, poly, spot, toned, Y } from '../kit';
 
 /**
- * The little purple dragon (docs/CHARACTERS.md → Roster): small and low on four stubby legs, side on, a big round
+ * The little purple dragon (docs/characters/dragon.md): small and low on four stubby legs, side on, a big round
  * head with two long horns swept straight back off it, stubby wings of umbrella cloth on bent spokes standing up
  * off the shoulders, a pale belly, a ridge of small spines, and a tail out behind ending in an arrowhead, a firefly
  * in a jam jar tied to it. A rendered kind draws from its frames (src/render/cast/sprites/); this is what shows

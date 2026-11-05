@@ -1,17 +1,17 @@
 import { dsin } from '../../core/dmath';
 import type { Vec } from '../../core/geom';
 import type { Rng } from '../../core/rng';
-import { type LevelProfile, T_ONEWAY, type TileRect } from '../../sim/level';
+import { T_ONEWAY, type TileRect } from '../../sim/level';
 import type { Module, PropStyle } from '../../sim/props';
-import { type Grid, hintGap, POCKET } from '../level/kit';
-import { jumpProfile, probeGravity } from '../level/probe';
+import { type Grid, hintGap } from '../level/kit';
+import { probeGravity } from '../level/probe';
 import { jumpMetrics } from '../../sim/physics';
 import { easyRise, hardGap, hopGap, type Knobs, pit, TWO_PART_TRIES, undercut } from '../level/sculptors/common';
-import { BRIDGE_W } from '../level/types';
-import { makeStyle, type Piece, SAFE_TILES, type Site } from '../setpieces/place';
+import { makeStyle, type Piece, type Site } from '../setpieces/place';
 import { capFlood } from './flood';
 import { defineConcept } from './contract';
 import type { Concept, Landmark } from './types';
+import { bankCrossing, bankKit, col, ledges, listSig, oneGap, SITE_MARGIN, stepWidths, twoGap, ways } from './kit';
 
 /**
  * Volcano stage concepts (docs/SETPIECES.md, Volcano): five places, each one landmark that owns the
@@ -44,73 +44,12 @@ import type { Concept, Landmark } from './types';
  * `sig{i}` are the structural numbers the seed rolled.
  */
 
-/** Columns a landmark keeps from either end (sculptors/common.ts claimSite). */
-const SITE_MARGIN = POCKET + SAFE_TILES;
 /** Flat bank between a moat and the structure: the bridge's landing and a run-up. */
 const BANK = 3;
+
+const { crossFor, roomFor, crossCols } = bankKit({ bank: BANK, two: 0.3 });
 /** Rows a tube under the ground is tall. */
 const TUBE = 3;
-
-/** The widest one-part crossing at this gravity (hardGap's top end). */
-function oneGap(gravity?: number): number {
-  const j = jumpProfile(gravity);
-  return Math.max(j.gap + 2, BRIDGE_W + 2 * j.walkGap);
-}
-
-/**
- * The one-part crossing a classic level's box makes room for: a column short of hardGap's widest, so a
- * large landmark fits beside it in a classic level's middle (the build caps its roll at the box).
- */
-function snugGap(gravity?: number): number {
-  return Math.min(oneGap(gravity), jumpProfile(gravity).gap + 3);
-}
-
-/** The widest two-part crossing at this gravity. */
-function twoGap(gravity?: number): number {
-  const j = jumpProfile(gravity);
-  return Math.max(j.gapAt(-6) + j.rise + 1, j.gap + 2 * BRIDGE_W + j.walkGap + 1);
-}
-
-/**
- * Columns for the crossing a landmark owns: a two-part one on a level that asks for two parts and has
- * room for it beside `struct` columns of structure, else a one-part one. Decided without rolling, so the
- * sculptor reads the same answer back (`volcanoOwns`).
- */
-function crossFor(k: Knobs, struct: number): number {
-  if (asksTwo(k) && twoGap() + struct <= k.W - 2 * SITE_MARGIN) return twoGap();
-  return k.W > 56 ? oneGap() : snugGap();
-}
-
-/**
- * Share of levels whose landmark's own crossing takes two parts, where its box has room for a two-part one
- * (wide levels; a classic level's middle has none beside a landmark). A level built round a landmark has no
- * lava lakes or spare pits to need a second part by chance, the way a plain volcano level often does, so the
- * wide ones ask more often to keep the theme near TWO_PARTS (measured with `pnpm level --stats 200`).
- */
-const LANDMARK_TWO = 0.3;
-const asksTwo = (k: Knobs) => k.challenge < Math.max(k.twoParts, LANDMARK_TWO);
-
-/** Does a landmark of `struct` columns fit beside a one-part crossing on this level? */
-function roomFor(p: Partial<LevelProfile>, struct: number): boolean {
-  return snugGap(p.gravity) + struct <= (p.w ?? 48) - 2 * SITE_MARGIN;
-}
-
-/** The crossing the build digs: as wide as `parts` take, or as the box allows. */
-const crossCols = (parts: number) => (parts >= 2 ? twoGap() : oneGap());
-
-/**
- * The lava moat in front of a landmark: a `hardGap` pit dug to the bottom at the right end of its
- * `cols` columns, its bridge hinted and its far bank undercut. Columns it doesn't need stay courtyard.
- */
-function moat(g: Grid, rng: Rng, x0: number, cols: number, G: number, parts: number): void {
-  if (parts <= 0) return;
-  const gw = Math.min(cols, hardGap(rng, parts));
-  const b = x0 + cols - 1;
-  const a = b - gw + 1;
-  pit(g, a, b, G, false);
-  hintGap(g, a, b, G);
-  undercut(g, b + 1, 2, G);
-}
 
 /**
  * A 2-wide shaft at column x from surface row `top` down to the floor row `bottom` (exclusive), with
@@ -126,52 +65,6 @@ function shaft(g: Grid, x: number, top: number, bottom: number, o: { rungs?: boo
 /** A tube under the ground surface row G, from column a to b (inclusive): TUBE rows tall, floored below. */
 function tube(g: Grid, a: number, b: number, G: number): void {
   g.clear(Math.min(a, b), G, Math.max(a, b), G + TUBE - 1);
-}
-
-/** One-way ledges two wide at columns x, x+1, a comfortable hop apart from the ground row G up to the surface row `top`. */
-function ledges(g: Grid, x: number, top: number, G: number): void {
-  const R = easyRise();
-  for (let y = G - R; y > top; y -= R) for (const c of [x, x + 1]) g.set(c, y, T_ONEWAY, true);
-}
-
-/** Solid column x from row G - h to G - 1. */
-function col(g: Grid, x: number, h: number, G: number): void {
-  if (h > 0) g.fill(x, G - h, x, G - 1, 1, true);
-}
-
-/** The anchors of the ways through: each a rect that, filled, shuts that way. */
-function ways(rects: readonly TileRect[]): Record<string, Vec> {
-  const out: Record<string, Vec> = {};
-  rects.forEach((r, i) => {
-    out[`way${i}`] = [r.x, r.y];
-    out[`way${i}s`] = [r.w, r.h];
-  });
-  return out;
-}
-
-/** A landmark's ways through, read back from its anchors (tests, tools). */
-export function waysOf(l: Landmark): TileRect[] {
-  const out: TileRect[] = [];
-  for (let i = 0; l.anchors[`way${i}`]; i++) {
-    const [x, y] = l.anchors[`way${i}`];
-    const [w, h] = l.anchors[`way${i}s`];
-    out.push({ x, y, w, h });
-  }
-  return out;
-}
-
-/** A list of layout numbers as one signature pair: how many, and a sum weighted by place, so a reorder shows. */
-const listSig = (xs: readonly number[]): Vec => [xs.length, xs.reduce((t, v, i) => t + v * (i + 1), 0)];
-
-/** Steps `n` columns wide in all, `count` of them, each at least one column, the spare spread at random. */
-function stepWidths(rng: Rng, count: number, n: number): number[] {
-  const out = Array.from({ length: count }, () => 1);
-  for (let spare = n - count; spare > 0; spare--) {
-    const open = out.map((w, i) => (w < 3 ? i : -1)).filter((i) => i >= 0);
-    if (!open.length) break;
-    out[rng.pick(open)]++;
-  }
-  return out;
 }
 
 const OBSIDIAN = (rng: Rng): PropStyle => makeStyle(rng, ['obsidian', 'rust'], [12, 18, 24], { glowHue: rng.range(14, 30) });
@@ -438,7 +331,7 @@ function buildTide(g: Grid, rng: Rng, at: TileRect, parts: number): Landmark {
   const G = at.y + at.h;
   const cross = Math.min(at.w - BANK - 2 * TIDE_ABUT - TIDE_BASIN, crossCols(parts));
   g.clear(at.x, 0, at.x + at.w - 1, G - 1);
-  moat(g, rng, at.x, cross, G, parts);
+  bankCrossing(g, rng, at.x, cross, G, parts);
   const D = tideDeck();
   const deck = G - D;
   const n = Math.ceil(D / R);
@@ -596,7 +489,7 @@ function buildOrgan(g: Grid, rng: Rng, at: TileRect, parts: number): Landmark {
   const H = g.h;
   const cross = Math.min(at.w - ORGAN_MIN, crossCols(parts));
   g.clear(at.x, 0, at.x + at.w - 1, G - 1);
-  moat(g, rng, at.x, cross, G, parts);
+  bankCrossing(g, rng, at.x, cross, G, parts);
   const tubeOK = G + TUBE + 1 <= H - 1;
   // The entry hole, the ledges up the face, the face.
   const hole = at.x + cross + BANK;
@@ -739,7 +632,7 @@ function buildRibs(g: Grid, rng: Rng, at: TileRect, parts: number): Landmark {
   const G = at.y + at.h;
   const cross = Math.min(at.w - RIBS_MIN - BANK, crossCols(parts));
   g.clear(at.x, 0, at.x + at.w - 1, G - 1);
-  moat(g, rng, at.x, cross, G, parts);
+  bankCrossing(g, rng, at.x, cross, G, parts);
   const s0 = at.x + cross + BANK;
   const s1 = at.x + at.w - 1;
   const skullFirst = rng.chance(0.5);
@@ -897,7 +790,7 @@ function buildLavaTube(g: Grid, rng: Rng, at: TileRect, parts: number): Landmark
   const G = at.y + at.h;
   const cross = Math.min(at.w - TUBE_MIN - BANK, crossCols(parts));
   g.clear(at.x, 0, at.x + at.w - 1, G - 1);
-  moat(g, rng, at.x, cross, G, parts);
+  bankCrossing(g, rng, at.x, cross, G, parts);
   const m0 = at.x + cross + BANK;
   const m1 = at.x + at.w - 1;
   const hi = rng.int(4, 5);
