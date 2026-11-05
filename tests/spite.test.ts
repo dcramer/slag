@@ -16,15 +16,20 @@ function view(over: Partial<BrainView>): BrainView {
   return {
     version: BRAIN_VIEW_VERSION,
     phase: 'lobby',
+    mode: 'race',
     phaseFrame: 0,
     slot: 0,
     ready: false,
     score: 0,
-    level: { w: 24, h: 12, tiles: new Uint8Array(24 * 12), spawn: { tx: 1, ty: 9 }, goal: { tx: 22, ty: 9 }, flag: true, plan: [] },
+    level: { w: 24, h: 12, tiles: new Uint8Array(24 * 12), spawn: { tx: 1, ty: 9 }, plan: [] },
     props: [],
     crate: [],
     claim: -1,
     placed: false,
+    objective: { kind: 'reach', cell: { tx: 22, ty: 9 } },
+    boxes: [],
+    drops: [],
+    detour: () => Infinity,
     self: null,
     runners: [],
     rivals: [],
@@ -67,6 +72,11 @@ function round(mood: TemperamentId, { killer = 1, scores = [0, 0] }: { killer?: 
     finished: false,
     togo: 20,
     away: 20,
+    up: 0,
+    slag: null,
+    rank: 0,
+    held: null,
+    armed: false,
   } as const;
   for (let f = 0; f < 60; f++) {
     const x = 3 + f / 5;
@@ -78,8 +88,8 @@ function round(mood: TemperamentId, { killer = 1, scores = [0, 0] }: { killer?: 
         live: true,
         self: { ...self, alive: f < 50 },
         runners: [
-          { slot: 1, x: dead ? DEATH + 0.5 : x, y: 10, alive: !dead, finished: false },
-          { slot: 2, x: 3, y: 10, alive: true, finished: false },
+          { slot: 1, x: dead ? DEATH + 0.5 : x, y: 10, up: 0, grounded: true, alive: !dead, finished: false },
+          { slot: 2, x: 3, y: 10, up: 0, grounded: true, alive: true, finished: false },
         ],
         kills: f < 50 ? [] : [{ victim: 0, killer }],
       }),
@@ -214,6 +224,11 @@ function blockRound({ nobody = false } = {}) {
     finished: false,
     togo: 20,
     away: 20,
+    up: 0,
+    slag: null,
+    rank: 0,
+    held: null,
+    armed: false,
   } as const;
   for (let f = 0; f < 20; f++)
     brain.think(
@@ -222,7 +237,7 @@ function blockRound({ nobody = false } = {}) {
         phaseFrame: f,
         live: true,
         self: { ...self, alive: f < 10 },
-        runners: [{ slot: 1, x: 5, y: 10, alive: true, finished: !nobody && f > 15 }],
+        runners: [{ slot: 1, x: 5, y: 10, up: 0, grounded: true, alive: true, finished: !nobody && f > 15 }],
       }),
     );
   brain.think(view({ phase: 'score' }));
