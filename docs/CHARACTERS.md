@@ -68,7 +68,7 @@ Each kind's entry is its own file in [characters/](characters/): what a stranger
 | [mage](characters/mage.md) | the black mage with the glowing eyes | a huge straw hat with a brim wider than his shoulders and a bent point, no face under it but two glowing eyes in the dark, a long robe with flared cuffs, a broom-handle staff with a bulb | costume: the robe; the belt and face a neutral dark |
 | [creeper](characters/creeper.md) | the green block creeper | a tall block body with a square head the same width, four stubby block legs, no arms, a frowning face of square holes cut through him, a birthday candle burnt to a stub for a fuse | costume: the body; its painted squares a light and a dark of it |
 | [tophat](characters/tophat.md) | the little girl in the tall top hat | a tin-can top hat as tall as the rest of her, a short cape with a high collar, a ponytail out the back, a huge cocktail umbrella | costume: the hat and cape; the hair tie and the lining a light of it |
-| [pyramid](characters/pyramid.md) | the triangle-helmeted executioner | a huge pyramid helmet pointing out past his shoulder, a long butcher's apron, thick bare arms, a giant cheese slicer dragged behind | costume: the apron |
+| [pyramid](characters/pyramid.md) | the triangle-helmeted executioner | a huge rusty wedge of a helmet, its point out past his shoulder, no face, a butcher's apron with a pig on it, thick bare arms, a giant cheese slicer dragged behind | costume: the apron, the pig a light of it |
 
 **Reserves**, if a kind won't read: the spinning bandicoot (its tuft and grin rhyme with the speedster), the shovel-wielding knight, the red-haired mountain climber, the falling-block party bean (rhymes with the crewmate). The space marine in green armour reads as a generic soldier at 20 px; the plumber's tall brother, the ape's red-capped nephew and the king's turtle foot soldiers rhyme with kinds already in.
 
@@ -137,7 +137,7 @@ The strongest reads first. **Keyed** marks the non-humanoids, the riskiest to dr
 | 31 | mage | Vivvy | humanoid, robed | drawn flat; the blind read passes (both readers named him at medium, unpaired) |
 | 32 | creeper | Creepah | **keyed**, four legs, no arms | drawn flat; the blind read passes (named at medium by both once the face was cut through him and the candle burnt to a stub) |
 | 33 | tophat | Hat Kidd | humanoid, small | drawn flat; the blind read passes (the hat, a clean tin cylinder on a wide brim, with the umbrella held out low, clear of it) |
-| 34 | pyramid | Pyramid Ted | humanoid, big + blade | medium: the helmet against the stinger's horns and the merc's blade |
+| 34 | pyramid | Pyramid Ted | humanoid, big + blade | drawn flat, no face; the blind read not passed (one reader of two names him, the other reads the mage's pointed hat: the cowl overhanging his shoulders is a brim at play size) |
 
 **What to check.** No two kinds may rhyme. Watch these pairs:
 
