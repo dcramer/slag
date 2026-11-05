@@ -119,7 +119,9 @@ export const kind: FlatKind = {
     stance: {
       pose: `standing in a wide stance, legs well apart, both arms stretched straight out level, one forward and one back, each aiming a water pistol, a determined look, her eyes open, her braid streaming straight out behind her head, level with her head, its tuft and bow far out behind it, nothing behind her back or hips.`,
     },
-    idle2: { pose: `standing with her weight on one hip, one water pistol held up beside her shoulder pointing at the sky, the other fist on her hip, a cocky grin, her eyes open; ${LEVEL}.` },
+    idle2: {
+      pose: `standing with her weight on one hip, one water pistol held up beside her shoulder pointing at the sky, the other fist on her hip, a cocky grin, her eyes open; ${LEVEL}.`,
+    },
     'walk-1': {
       pose: `walking briskly to the right, mid-step, the near boot forward and the far boot back, the pistols held low at her thighs, her eyes open; ${KEEP}.`,
     },

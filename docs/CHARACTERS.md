@@ -127,7 +127,7 @@ The strongest reads first. **Keyed** marks the non-humanoids, the riskiest to dr
 | 25 | hopper | Kewbert | **keyed**, legs only | drawn flat |
 | 26 | warrior | Kakosh | humanoid, round | drawn flat side on; the blind read fails (the level roast leg reads as a fist) |
 | 27 | slayer | Gerald | humanoid | drawn flat, redrawn broad with a sword in hand; the blind read not passed (unpaired, but the two hilts read as rabbit ears) |
-| 28 | raider | Laura Craft | humanoid | drawn flat; named by both blind readers at medium, each pairing her weakly with a slim long-haired kind (the slayer, the puppy) |
+| 28 | raider | Laura Craft | humanoid | drawn flat; named by both blind readers at medium, one still pairing her with the puppy (long hair behind a slim figure) |
 | 29 | fighter | Chun-Lee | humanoid | drawn flat; the blind read not passed (a nameless fighter, or with the buns clear of the head a bear): the buns are ears on a big round head |
 | 30 | stinger | Hornette | humanoid, cloaked | drawn flat; the blind read passes (straight horns read as rabbit ears until they curved into crescents) |
 
