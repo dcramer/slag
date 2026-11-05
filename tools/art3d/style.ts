@@ -517,6 +517,24 @@ export const BRIEFS: Record<string, Brief> = {
       'The head, neck, body and legs are all one colour.',
     worn: 'it is a cheap horse costume: a thick knitted red scarf (#c9473f) is wound round the top of its neck just under the head, one short end hanging down its chest; a big silver zip runs straight down the front of its chest from under the scarf to between its front legs, stuck open at the bottom, its two sides parted in a V; a big square patch of grey cloth is sewn on the knee of one front leg with big stitches.',
   },
+  hopper: {
+    // The nod, each part of the read at race size and each a shape in outline: the long tube snout sticking
+    // straight out front, wider at its open end (the read: nobody else in the cast has a horn for a nose, and it
+    // parts him from the puffball's plain ball); the round ball with no arms on two short legs with big feet
+    // (the arcade hopper, not a creature with hands); the big eyes on top (the face, looking down the snout);
+    // the hop, both feet together (the clips, never a walk).
+    // Ours, and the joke: the snout is a paper party blower, striped and creased, that unrolls when he cheers,
+    // and he hops in a pair of worn-out old trainers.
+    // The palette is neutral (Decisions 4): the ball in the player's colour, the snout a light tone of it; the
+    // trainers a worn canvas grey.
+    design:
+      'The character: a round orange ball (#e8742a) with no arms at all, seen from its side facing right. ' +
+      'Out of the front of the ball, from its middle, a long straight tube snout sticks straight out level to the right, as long as the ball is wide, a narrow cylinder that flares wider at its round open end like a trumpet, the open end dark inside (#3a2418); the snout is a paler orange (#f4a868). ' +
+      'Two big round white eyes with black pupils sit high on top of the ball, looking forward. ' +
+      'Under the ball two short thick orange legs, close together, end in two big chunky old canvas trainers (#d4d0c6) with thick grey soles (#8e8a84), the feet much bigger than the legs. ' +
+      'The snout is a paper party blower: two pale bands are wrapped round it.',
+    worn: 'the toe of the front trainer is split open and its sole flaps loose; the snout has a big crease kinked into it halfway along, so it bends a little but still points straight out; a round tuft of fur sticks up out of the back of the ball. The eyes stay as they are.',
+  },
 };
 
 function brief(kind: string): Brief {

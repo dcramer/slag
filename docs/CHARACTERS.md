@@ -57,7 +57,7 @@ So each kind has: a clear head-to-body ratio, a readable expression, a line of a
 | limbless | the limbless hero | no arms or legs: white gloves and big shoes floating clear of a small round body, a big nose, a spiky hair tuft standing up, a neckerchief | costume: the top, the shoes a tone of it |
 | worm | the worm in the super suit | a bulky suit with huge shoulders, a worm's head on a long bendy neck rising out of the collar with bulging eyes, a big chunky pistol in one hand | costume: the suit, the boots and gloves a dark of it |
 | dragon | the little purple dragon | small, on four legs: horns swept back, stubby wings, a pale belly, a tail ending in an arrowhead | costume: the scales, the wings a light of it |
-| hopper | the snouted cube hopper | a round ball on two big feet, no arms, big eyes, a long tube snout sticking straight out front; hops | costume: the ball, the snout a tone of it |
+| hopper | the snouted cube hopper | a round ball with no arms on two short legs in worn trainers, two big eyes standing up out of its crown, a long tube snout sticking straight out front and flared at its open end, a party blower; hops both feet together | costume: the ball and legs; the snout and the blower's streamer lights of it |
 
 **Is it the homage?** `cast-recognise.png` puts each kind close up beside "This is ___", in its roster colour. Every sheet waits for the rendered kinds' frames (`slagDebug.sprites.ready()`), so it shows what ships; before 2026-11-02 the catalog, recognise and silhouette sheets drew those kinds hand-drawn, so the reads below were judged on the old bodies. As of this round, every homage reads as its caption to us: the plumber, speedster, elf, mouse, impostor, puffball, jelly and goose at once; the bounty hunter and the engineer a beat slower, because their reads lean on props (the shoulder pads and cannon, the hat and wrench) more than on a silhouette nobody else shares. The silhouette test still separates every kind, though the plumber and the hunter are the closest pair of stout shapes.
 
@@ -481,16 +481,20 @@ What came out of it:
 ### The snouted cube hopper (new)
 - **Kind:** `hopper` · **Name:** Kewbert
 - **A stranger should say:** "the orange ball with the long nose that hops."
-- **Silhouette:** a round ball on two big feet, no arms, and a long tube snout sticking straight out front, wider at its open end; big eyes on top. The snout is what parts it from the puffball.
-- **Traits:** a round furry ball body; a long tube snout with an open end; big eyes; two short legs with big feet; no arms.
-- **Palette:** the ball in the player's colour, the snout a tone of it; the feet neutral.
-- **Color slot:** costume.
-- **Gait:** hops, both feet together, never walks.
-- **The nod:** the tube snout (the read); the ball on two feet with no arms; the hop.
-- **Our twist:** the snout is a party blower that unrolls when he cheers, and the feet are in worn old trainers. When it swears it shows a scribble cloud, never letters.
-- **Swaps:** a plaster on the ball; a party hat; a sticker.
-- **Rig:** to draw flat (2026-11-04).
-- **Concept prompt:** A round furry cartoon ball with no arms, standing on two short legs with big feet in worn old trainers, big eyes on top, and a long tube snout sticking straight out front, wider at its open end, like a party blower.
+- **Silhouette:** a round ball with no arms on two short legs close together, two big eyes standing up out of its crown as two bumps, and a long tube snout sticking straight out level from the middle of its front, as long as the ball is wide, flared like a trumpet at its open end. The snout is what parts it from the puffball.
+- **Traits:** a round ball body; the long tube snout with its dark open end; big round eyes with whites; two short legs with big trainers; no arms.
+- **Palette:** the ball and legs in the player's colour (`#e8742a` on the sheets); the snout a light tone of it (+18) and the blower's streamer a lighter one (+32); the rest neutral: eye whites `#f8f4ec`, canvas `#d4d0c6`, soles `#8e8a84`, the snout's open end in the ink.
+- **Color slot:** costume: the ball and its legs.
+- **Gait:** hops, both feet together, never walks: the walk a crouch and a little hop, the run a crouch to spring and a landing.
+- **The nod:** the tube snout straight out front (the read: nobody else in the cast has a horn for a nose); the ball on two legs with no arms (the arcade hopper, not a creature with hands, and not the puffball); the big eyes on top (the face, looking down the snout); the hop.
+- **Our twist:** the snout is a paper party blower, banded and creased, and on the cheer a striped streamer unrolls out of its end; he hops in a pair of worn-out trainers. The scribble-cloud swear isn't drawn: it doesn't fit a cheer.
+- **Swaps:** a plaster on the cheek.
+- **Palette alts:** the soles in grey `#8e8a84`, charcoal `#6f6a64` or gum tan `#a89c86`.
+- **Idles and cheers:** the idle from the design; leaning back, the snout tipped up, looking up. The blower's streamer unrolled, eyes squeezed shut; a big tucked hop with the snout tipped up to the sky.
+- **Gait range:** a bounce of 0.2–0.9 px on each step, a lean of up to 0.03.
+- **Wear:** in the drawing, a dent pushed into the back of the ball (a notch in its outline), a crease kinked into the snout, the near trainer's sole flapping open at the toe and the far one's laces undone; scuffed is a faded patch on the ball, scorched a soot mark there.
+- **Rig:** drawn flat (2026-11-04, art/sprites/hopper/design.prompt.txt): one game-size design side on, worn in one edit, and eleven poses three to a 16:9 image, cut apart. Asked for a stretched leap, the image model drew a stride with a third trainer three times, so the run is a crouch to spring and a landing, both feet together. The eye whites are tinted a step off white in every drawing (whites.py) so `holes` cuts the gap between the legs and never the eyes. His own wall drawing tilts the head back and puts the two eyes too far off level for the face kit, so he slides down a wall in his fall. The cheer is one drawing, centred: the streamer reaches past the box from the feet. Two fresh readers named him from the silhouette alone, both at medium ("Q*bert parody, medium. A tubular snout sticking out sideways from a round head on short legs, hopping in the jump"; "Q*bert, medium. Round head-body with a tube-like snout sticking forward, on short legs, tall in the hop"), and neither paired him with another kind when asked whether any two figures could be the same character.
+- **Concept prompt:** A round orange cartoon ball with no arms, seen from its side, standing on two short orange legs close together in big worn old canvas trainers, two big round white eyes with black pupils high on top, and a long straight paler orange tube snout sticking straight out level from its front, as long as the ball is wide, flared like a trumpet at its dark open end, two pale paper bands round it like a party blower.
 
 ### The jellyfish parasite
 - **Kind:** `jelly` · **Name:** Meltroid
