@@ -19,6 +19,9 @@ import { artFaults, hazardFaults, once, rule } from './lib';
  * Each recipe is placed on its own, on plain levels of its theme, until two of it stand: on two levels, or
  * on one at two rolls. Levels are what this costs (a placement is a fraction of a millisecond, a level tens
  * of them), so levels are only made until every recipe has stood once.
+ *
+ * `unique` needs what hurts in every other theme, so those rules run last, once every theme's placements are
+ * made, and no single test pays for all of them plus every landmark.
  */
 
 const TERRAIN_SEEDS = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12];
@@ -92,21 +95,52 @@ const placedOf = (theme: ThemeId): Map<string, Placed[]> => {
 const placedBy = new Map(THEME_IDS.map((t) => [t, once(() => placedOf(t))]));
 const placed = (theme: ThemeId) => placedBy.get(theme)!();
 
-/** What hurts in every theme other than `theme`: its recipes' hazards and its landmarks' pieces. */
-const elsewhere = once(() => {
-  const out = new Map<ThemeId, Map<string, string>>();
-  for (const theme of THEME_IDS) {
-    const seen = new Map<string, string>();
-    for (const [name, list] of placed(theme)) for (const { pp } of list) for (const s of hazardSignature(pp.def.modules)) seen.set(s, `${theme}/${name}`);
-    for (const c of CONCEPTS[theme]) {
-      const l = generateLevel(1, theme, { concept: c.id });
-      if (lastGenInfo.concept === c.id)
-        for (const pp of ownPieces(l)) for (const s of hazardSignature(pp.def.modules)) seen.set(s, `${theme}/${c.id} (landmark)`);
-    }
-    out.set(theme, seen);
+/**
+ * A landmark of the theme raised for what hurts in it, one level per concept: its first draw, without the
+ * search for a draw whose precision fits the difficulty. A later draw only lays the same concept out again,
+ * so draw 0 is as much that landmark as the one the search keeps, and the search was over half the cost.
+ */
+const landmarkHurts = (theme: ThemeId, seen: Map<string, string>): void => {
+  for (const c of CONCEPTS[theme]) {
+    const l = generateLevel(1, theme, { concept: c.id, draw: 0 });
+    if (lastGenInfo.concept === c.id)
+      for (const pp of ownPieces(l)) for (const s of hazardSignature(pp.def.modules)) seen.set(s, `${theme}/${c.id} (landmark)`);
   }
-  return out;
-});
+};
+
+/** What hurts in a theme, by mechanism: its recipes' hazards and its landmarks' pieces. Per theme, made once. */
+const hurtsBy = new Map(
+  THEME_IDS.map((theme) => [
+    theme,
+    once(() => {
+      const seen = new Map<string, string>();
+      for (const [name, list] of placed(theme)) for (const { pp } of list) for (const s of hazardSignature(pp.def.modules)) seen.set(s, `${theme}/${name}`);
+      landmarkHurts(theme, seen);
+      return seen;
+    }),
+  ]),
+);
+
+/** A recipe flagged `unique`: nothing it hurts with hurts in any other theme. */
+function uniqueSuite(theme: ThemeId, r: Recipe) {
+  describe(`${theme}/${r.name}`, () => {
+    rule(`hazard/${theme}/${r.name}/unique`, 'is unique to its theme', () => {
+      const sig = new Set(
+        placed(theme)
+          .get(r.name)!
+          .flatMap(({ pp }) => hazardSignature(pp.def.modules)),
+      );
+      if (!sig.size) return ['flagged unique, but nothing in it hurts'];
+      const out: string[] = [];
+      for (const other of THEME_IDS) {
+        if (other === theme) continue;
+        const seen = hurtsBy.get(other)!();
+        for (const s of sig) if (seen.has(s)) out.push(`${s} also hurts in ${seen.get(s)}`);
+      }
+      return out;
+    });
+  });
+}
 
 function recipeSuite(theme: ThemeId, r: Recipe) {
   const key = (rule: string) => `hazard/${theme}/${r.name}/${rule}`;
@@ -129,14 +163,6 @@ function recipeSuite(theme: ThemeId, r: Recipe) {
       'gives a bare run no free ride',
       each(({ level, pp }) => (noFreeRide(level, pp, []) ? [] : [`${pp.def.name} carries a bare run to the flag`])),
     );
-    if (r.unique)
-      rule(key('unique'), 'is unique to its theme', () => {
-        const sig = new Set(mine().flatMap(({ pp }) => hazardSignature(pp.def.modules)));
-        if (!sig.size) return ['flagged unique, but nothing in it hurts'];
-        const out: string[] = [];
-        for (const [other, seen] of elsewhere()) if (other !== theme) for (const s of sig) if (seen.has(s)) out.push(`${s} also hurts in ${seen.get(s)}`);
-        return out;
-      });
   });
 }
 
@@ -145,4 +171,5 @@ describe('set pieces', () => {
     if (!SET_PIECE_RECIPES[theme].length) it.todo(`${theme}: no set pieces registered yet`);
     for (const r of SET_PIECE_RECIPES[theme]) recipeSuite(theme, r);
   }
+  for (const theme of THEME_IDS) for (const r of SET_PIECE_RECIPES[theme]) if (r.unique) uniqueSuite(theme, r);
 });

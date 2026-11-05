@@ -11,11 +11,25 @@ import { stretchesOf } from './difficulty';
 /** The floor pace: boils 3 s, then 1.2 tiles/s gaining 0.05 a second. A slow lobby climbs ahead of it. */
 export const SLAG_FLOOR = { wait: 3, speed: 1.2, gain: 0.05 } as const;
 
-/** Rows the slag may lag the leader in a lap of each tier: most of a screen on the first, half of one on the hard laps. */
-export const TIER_LEASH: Record<Difficulty, number> = { gentle: 18, medium: 15, hard: 8 };
+/**
+ * How far behind the leader you can fall before the slag has you, in seconds of climbing, a lap of each tier: the
+ * way a racer's camera that follows the leader is set (about a screen behind at a run is 3–4 s). Read in rows at
+ * the pace a Normal bot climbs (`CLIMB_PACE`, measured by tests/stats/slag-climb.test.ts's splits).
+ */
+export const TIER_LEASH_SECONDS: Record<Difficulty, number> = { gentle: 4.5, medium: 3.75, hard: 3 };
+
+/** Rows a second a Normal bot climbs a shaft: what a second behind the leader is, in rows. */
+export const CLIMB_PACE = 4;
+
+/** Rows the slag may lag the leader in a lap of each tier. */
+export const TIER_LEASH: Record<Difficulty, number> = {
+  gentle: TIER_LEASH_SECONDS.gentle * CLIMB_PACE,
+  medium: TIER_LEASH_SECONDS.medium * CLIMB_PACE,
+  hard: TIER_LEASH_SECONDS.hard * CLIMB_PACE,
+};
 
 /** Sudden death: 35 s after GO the leash shortens 0.4 rows a second, down to 2, so a round always ends. */
-export const SQUEEZE = { after: 45, rate: 0.4, min: 2 } as const;
+export const SQUEEZE = { after: 30, rate: 0.4, min: 2 } as const;
 
 /** Rows under a loop's spawn floor the slag starts at: a storey's depth, a few seconds of the floor pace. */
 export const LOOP_HEAD_START = 8;
