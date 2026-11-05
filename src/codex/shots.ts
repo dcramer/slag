@@ -54,8 +54,19 @@ const MAX_ZOOM = 2;
 /** Shots further than this from the piece (tiles) don't stretch its picture. */
 const SHOT_REACH = 12;
 
-const plain = (seed: number, theme: ThemeId, size: SizeClass = 'classic', difficulty?: Difficulty): Level =>
-  generateLevel(seed, theme, { ...CLEAR, concept: 'plain', size, ...(difficulty ? { difficulty } : {}) });
+/**
+ * Plain levels made so far, by seed, theme, size and difficulty. Every hazard of a theme searches the same
+ * terrains, and a level is what a picture costs, so each is generated once per page (or worker). A picture
+ * gets its own copy: the race it is caught in, and the page that draws it, may change it.
+ */
+const plains = new Map<string, Level>();
+
+const plain = (seed: number, theme: ThemeId, size: SizeClass = 'classic', difficulty?: Difficulty): Level => {
+  const key = `${seed}|${theme}|${size}|${difficulty ?? ''}`;
+  let level = plains.get(key);
+  if (!level) plains.set(key, (level = generateLevel(seed, theme, { ...CLEAR, concept: 'plain', size, ...(difficulty ? { difficulty } : {}) })));
+  return structuredClone(level);
+};
 
 /** The picture for a job, or null if its landmark never stands up or its hazard never places on the seeds tried. */
 export function planShot(job: MapJob): MapShot | null {

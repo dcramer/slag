@@ -2,7 +2,7 @@ import type { ErrorEvent } from '@sentry/browser';
 import { describe, expect, it } from 'vitest';
 import { REPORT_EVERY_MS, StoreFailureThrottle, storeStatus } from '../app/api/net/_server/report';
 import { StoreError } from '../app/api/net/_server/store';
-import { EventBudget, eventFingerprint, keepBreadcrumb, MAX_EVENTS_PER_PAGE, noiseReason, stampScope } from '../app/sentry-filter';
+import { EventBudget, eventFingerprint, keepBreadcrumb, MAX_EVENTS_PER_PAGE, metricAttributes, noiseReason, stampScope } from '../app/sentry-filter';
 import { serverTraceRate } from '../app/sentry-options';
 
 const ORIGIN = 'https://slag.example';
@@ -55,6 +55,11 @@ describe('sentry event shaping', () => {
     stampScope(ev, { tags: { screen: 'lobby', 'match.phase': 'run', players: undefined }, contexts: { rules: { pickSeconds: 15 } } });
     expect(ev.tags).toEqual({ screen: 'codex', 'match.phase': 'run', boundary: 'screen' });
     expect(ev.contexts).toEqual({ rules: { pickSeconds: 15 }, details: { where: 'boot' } });
+  });
+
+  it('slices metrics by the game’s tags, never per room, and lets the metric’s own phase win', () => {
+    const tags = { room: 'ABCD', 'level.seed': 42, 'match.round': 3, 'match.phase': 'score', 'device.class': 'phone' as const, players: undefined };
+    expect(metricAttributes(tags, { 'match.phase': 'run' })).toEqual({ 'match.phase': 'run', 'device.class': 'phone' });
   });
 
   it('caps a page’s events', () => {

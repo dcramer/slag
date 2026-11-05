@@ -22,10 +22,11 @@ import type { InputFrame } from './sim/types';
 import { Renderer } from './render/renderer';
 import type { Level } from './sim/level';
 import { DT, MAX_PLAYERS, POP_HOLD } from './sim/constants';
-import { addBreadcrumb, reportEvent, setContext, setTelemetryContext, type TelemetryContext, type TelemetryData } from './telemetry';
+import { addBreadcrumb, flushTelemetry, reportEvent, setContext, setTelemetryContext, type TelemetryContext, type TelemetryData } from './telemetry';
 import { THEME_IDS } from './themes';
 import { InputModeTracker } from './ui/input-mode';
 import { LevelAhead, reportGenFallback } from './level-ahead';
+import { FramePacing } from './frame-pacing';
 import { LevelMenu, loadHaptics, NamePrompt, RulesMenu, SettingsMenu } from './ui/menus';
 import { FloatingLogo } from './ui/screens/logo';
 import { detectQuality, isTouchFirst, savedQuality, saveQuality } from './ui/touch/device';
@@ -581,6 +582,7 @@ function startGame(container: HTMLElement, room: string, params: URLSearchParams
     advance(now, 0.25);
     buildAhead();
     if (loop.paused) {
+      pacing.pause();
       requestAnimationFrame(frame);
       return;
     }
@@ -621,8 +623,17 @@ function startGame(container: HTMLElement, room: string, params: URLSearchParams
     audio.handle(events, view);
     audio.update(view, now);
     renderer.render(view, now, events);
+    pacing.frame(now, match.phase);
     requestAnimationFrame(frame);
   }
+  const pacing = new FramePacing();
+  // The window ends with the tab hidden, and may be the page's last: send it now rather than on the backend's timer.
+  const hidden = () => {
+    if (!document.hidden) return;
+    pacing.pause();
+    flushTelemetry();
+  };
+  document.addEventListener('visibilitychange', hidden, { signal: life.signal });
   requestAnimationFrame(frame);
   // Animation frames stop in a background tab and crawl on a busy page, and a peer's ticks are what
   // everyone else is waiting on. A worker's timer is free of both.
@@ -630,6 +641,7 @@ function startGame(container: HTMLElement, room: string, params: URLSearchParams
 
   return () => {
     life.abort();
+    pacing.pause();
     for (const m of menus) if (m.isOpen) m.close();
     conn.close();
     levels.want([]);

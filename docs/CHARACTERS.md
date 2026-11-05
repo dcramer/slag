@@ -54,7 +54,7 @@ So each kind has: a clear head-to-body ratio, a readable expression, a line of a
 | cuptoon | the cup-headed toon | a white enamel mug for a head, its handle out the back and a straw bent over out of the tea, black rubber-hose limbs, white gloves, high-waisted shorts, big round shoes | costume: the shorts |
 | horse | the barnyard party game's horse | on all four legs, side on: a long neck with the mane standing up along it as a crest, a long blunt head with a pale nose and buck teeth, a long straight tail hanging to the heels, flat hooves; a scarf and a zip (a costume) | costume: the coat, the far legs and the scarf darks of it |
 | rapper | the rapping paper puppy | paper-thin, a flat cut-out with an edge: a tall knit beanie, long floppy ears under it, a round nose, a baggy tee and shorts, big trainers, a microphone | costume: the beanie and tee, the shorts a dark of it |
-| limbless | the limbless hero | no arms or legs: white gloves and big shoes floating clear of a small round body, a big nose, a spiky hair tuft standing up, a neckerchief | costume: the top, the shoes a tone of it |
+| limbless | the limbless hero | no arms or legs: white gloves and big shoes floating clear of a small round body with background all round each, a huge nose, a spiky hair tuft standing up, a neckerchief | costume: the top, the shoes a light tone of it |
 | worm | the worm in the super suit | a bulky suit with huge shoulders, a worm's head on a long bendy neck rising out of the collar with bulging eyes, a big chunky pistol in one hand | costume: the suit, the boots and gloves a dark of it |
 | dragon | the little purple dragon | small and low on four stubby legs, side on: a big round head with two long horns swept straight back, stubby umbrella-cloth wings on bent spokes, a pale belly, a ridge of small spines, a tail ending in a taped arrowhead with a firefly jar hanging from it | costume: the scales; the wing cloth a light of it, the far legs a dark |
 | hopper | the snouted cube hopper | a round ball with no arms on two short legs in worn trainers, two big eyes standing up out of its crown, a long tube snout sticking straight out front and flared at its open end, a party blower; hops both feet together | costume: the ball and legs; the snout and the blower's streamer lights of it |
@@ -441,13 +441,17 @@ What came out of it:
 - **A stranger should say:** "the hero with no arms or legs."
 - **Silhouette:** a small round body and a big-nosed head with a spiky hair tuft standing up, and nothing joining it to its white gloves and big shoes: each floats clear of the body with background all round it.
 - **Traits:** no arms or legs; big white gloves; big shoes; a big nose; a spiky hair tuft he can spin; a hooded top with a round mark of ours on the chest (never the original's); a neckerchief.
-- **Palette:** the top in the player's colour, the shoes a tone of it; gloves white, skin and hair neutral, the neckerchief a neutral.
+- **Palette:** the top in the player's colour (`#7b3fa6` on the sheets), the shoes a light tone of it (+24); gloves white `#f2efe6`, the chest ring cream `#efe7cf`, skin `#f2c9a0` (the nose with it), hair `#8a5a34`, the neckerchief a linen `#e4ddd0`, eyes `#2a1f1a`.
 - **Color slot:** costume.
+- **Palette alts:** the hair in brown `#8a5a34`, straw `#c99a4a` or charcoal `#4a3c36`.
+- **Idles and cheers:** standing; chin up and smug, the toe tapping. Both gloves flung up high in a grin; a thumbs up.
+- **Gait range:** 0.1–0.7 px of extra bounce on each step, a lean of up to 0.04.
+- **Wear:** scuffed is a faded patch on the top and a pale scuff on a shoe; scorched is soot low on the top and a mark on a shoe. A plaster across the cheek is the swap.
 - **Gait:** the shoes step on their own under him, the gloves swing ahead and behind; in the air the hair tuft spins.
 - **The nod:** the gaps where the limbs should be (the read: nobody else has them); the floating gloves and shoes; the hair tuft standing up; the big nose.
-- **Our twist:** a knock-off: the gloves are yellow washing-up gloves bleached white, one shoe is a size bigger than the other, and a safety pin holds the neckerchief.
+- **Our twist:** a knock-off: the gloves are washing-up gloves with their cuffs rolled, bleached white, one shoe is a size bigger than the other with its toe curled up, and a safety pin holds the neckerchief.
 - **Swaps:** a plaster on the nose; a price tag on one glove; a sticker on the top.
-- **Rig:** to draw flat (2026-11-04). Its hands and feet are separate pieces from the body in every drawing: cut sheets so the floating parts stay with their figure.
+- **Rig:** drawn flat (2026-11-04): a game-size design (its first drawing a bare body with a belt and no nose, edited for the purple hooded top, the ring, the neckerchief and the huge nose), worn with rolled glove cuffs, a bigger curled shoe, the safety pin and a bent hair spike; eleven poses drawn three to a 16:9 sheet (`art/sprites/limbless/design.prompt.txt`). The gaps are the read, and the image model draws them about a world px wide, which the cast's pen closes at play size: in the first build the gloves and shoes read as attached. So every drawing goes through `art/sprites/limbless/spread.py`, which slides each floating piece straight out (the shoes down together, a glove sideways) until about 2 world px of background part it from the body; three poses that laid a glove over the head or body were redrawn from the spread design, which drew its gaps as wide. Gloves are `loose` (they wave about from pose to pose), so `body` sizes him by the rest; he stands on his shoes. The nose is the skin's role: its underside and the jaw's shade are one tan, and in a role of its own the jaw traced as a crescent of nose. The hair's shade has its own family, or it traced as a streak of the player's colour (the shoes' tone) through the tuft. The neck hole's ink under the face is folded away (`min.dark`), so nothing dark reads as a mouth. Blind read (2026-11-04, two fresh readers): "Rayman (limbless hero), medium-high. Head, hands and feet float apart with no limbs between them, clearest in the run and jump" and "limbless hero (medium-high): hands, feet and head float as separate pieces with gaps between them, clearest in the jump"; asked whether any two figures could be the same character, neither paired him with anyone.
 - **Concept prompt:** A cartoon hero with no arms and no legs: a small round body in a hooded top with a round badge, a big-nosed head with a spiky tuft of hair standing up, a neckerchief held with a safety pin, and big white rubber gloves and two big mismatched shoes floating clear of the body with space all round them.
 
 ### The worm in the super suit (new)
@@ -542,7 +546,7 @@ The strongest reads first. **Keyed** marks the non-humanoids, the riskiest: thei
 | 19 | horse | Hoarse | **keyed**, quadruped | done (on four legs) |
 | 20 | jelly | Meltroid | **keyed**, no limbs | high: translucency |
 | 21 | rapper | Parapper | humanoid, flat card | low |
-| 22 | limbless | Raymond | **keyed**, floating hands and feet | medium: parts apart from the body |
+| 22 | limbless | Raymond | **keyed**, floating hands and feet | done (drawn flat, the pieces spread apart) |
 | 23 | worm | Earthworm Gym | humanoid + head stalk | medium: the neck |
 | 24 | dragon | Spiro | **keyed**, quadruped | medium: wings and tail |
 | 25 | hopper | Kewbert | **keyed**, legs only | low |

@@ -43,6 +43,7 @@ import { Surround } from './surround';
 import { TerrainPainter } from './terrain';
 import { skyGust, WeatherLayer } from './weather';
 // Mobile: quality tiers / adaptive resolution / safe-area insets (owned by the touch module).
+import { addBreadcrumb, reportEvent, reportMetric } from '../telemetry';
 import { detectQuality, FrameBudget, isTouchFirst, QUALITY, type QualityTier, safeInsets, TIERS } from '../ui/touch/device';
 
 /** Terrain bake budget (px per baked canvas): a classic level at 1920 px wide is ~4.3 M. */
@@ -178,6 +179,20 @@ export class Renderer {
     return `${this.comp.webgl ? 'webgl2' : 'canvas2d'}:${this.quality}`;
   }
 
+  /** Frames ran slow for a while: one tier down, or, already at the bottom, tell us this device can't keep up. */
+  private stepDown() {
+    const from = this.quality;
+    const to = TIERS[TIERS.indexOf(from) + 1];
+    if (to) {
+      addBreadcrumb('render', `quality ${from} → ${to}`);
+      reportMetric('count', 'render.downgrade', 1, { attributes: { from, to } });
+      this.setQuality(to);
+    } else {
+      this.adaptive = false;
+      reportEvent('slow-frames', 'warning', { tier: from });
+    }
+  }
+
   /** Change the render quality tier (e.g. from settings) and re-allocate buffers. */
   setQuality(q: QualityTier) {
     this.quality = q;
@@ -246,11 +261,7 @@ export class Renderer {
   render(m: Match, now: number, events: readonly GameEvent[] = []) {
     const t = now / 1000;
     // Mobile: adaptive resolution. Sustained slow frames drop one quality tier (never back up).
-    if (this.adaptive && this.last && this.budget.push((t - this.last) * 1000)) {
-      const i = TIERS.indexOf(this.quality);
-      if (i < TIERS.length - 1) this.setQuality(TIERS[i + 1]);
-      else this.adaptive = false;
-    }
+    if (this.adaptive && this.last && this.budget.push((t - this.last) * 1000)) this.stepDown();
     const dt = Math.min(0.05, this.last ? t - this.last : 1 / 60);
     this.last = t;
     const level = m.level;

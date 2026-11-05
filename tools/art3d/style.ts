@@ -536,6 +536,27 @@ export const BRIEFS: Record<string, Brief> = {
       'The head, neck, body and legs are all one colour.',
     worn: 'it is a cheap horse costume: a thick knitted red scarf (#c9473f) is wound round the top of its neck just under the head, one short end hanging down its chest; a big silver zip runs straight down the front of its chest from under the scarf to between its front legs, stuck open at the bottom, its two sides parted in a V; a big square patch of grey cloth is sewn on the knee of one front leg with big stitches.',
   },
+  limbless: {
+    // The nod, each part of the read at race size: the gaps where the arms and legs should be (the read in
+    // silhouette, so it leads the brief: nobody else in the cast is in pieces), the big white gloves and big shoes
+    // floating clear of the body with background all round them (what makes the gaps a hero and not a ball), the
+    // spiky tuft of hair standing straight up off the crown (the one bump on the head's outline, and the
+    // puffball has none), and the big nose out front (it parts the head from the dot-eater's and the puffball's
+    // plain rounds).
+    // Ours, and the joke: a knock-off. The gloves are yellow washing-up gloves bleached white with their cuffs
+    // rolled, one shoe is a size bigger than the other, and a big safety pin holds the neckerchief.
+    // The palette is neutral (Decisions 4): the top in the player's colour and the shoes a tone of it; the gloves,
+    // skin, hair and neckerchief neutrals. The shoes and neckerchief are drawn in hues of their own (gold, red) so
+    // the role map tells them from the top; the game paints them in the kind's roles.
+    design:
+      'The character: a cartoon hero with no arms and no legs at all, made of separate floating pieces with wide empty white space between every piece. ' +
+      'In the middle a big round head and under it a small round body, the two joined: nothing else is attached to him. ' +
+      'Two huge white rubber gloves (#eeeae2) float in the air on either side of his body at chest height, well away from it, each glove with a wide gap of white background all round it, no arm, no wrist, nothing joining it to the body. ' +
+      'Two huge chunky golden shoes (#e9b52f) float under him, well below the body, each with a gap of white background all round it, no legs, no ankles, nothing joining them to the body. ' +
+      'On the very top of his head a tall spiky tuft of brown hair (#8a5a34) stands straight up in three big spikes. A huge round nose (#f0c8a0) sticks far out of the front of his face, two big oval eyes above it, peach skin (#f0c8a0). ' +
+      'The body is a small round purple hooded top (#7b3fa6) with a big round pale ring on the chest, and a red neckerchief (#c9473f) tied round where his neck would be, between head and body.',
+    worn: 'the gloves are washing-up gloves, each with its long cuff rolled down in a thick ring at the wrist; the far shoe is much bigger than the near one, a size too big, its toe curled up; a big silver safety pin is stuck through the front of the neckerchief; one spike of the hair tuft is bent over at its tip. Every glove and shoe still floats free of the body with white space all round it.',
+  },
   hopper: {
     // The nod, each part of the read at race size and each a shape in outline: the long tube snout sticking
     // straight out front, wider at its open end (the read: nobody else in the cast has a horn for a nose, and it
