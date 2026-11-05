@@ -175,6 +175,8 @@ export class Motor {
         if (Math.abs(p.cursor.x - cx) <= tol && Math.abs(p.cursor.y - cy) <= tol) return this.click(m, m.phaseFrame > 10 && m.canPlaceFor(p));
         return this.steer(p, cx, cy, tol);
       }
+      case 'aim':
+        return m.phase === 'place' && !p.placed ? this.steer(p, intent.x * TILE, intent.y * TILE, TILE / 2 - 2) : NO_INPUT;
       case 'goTo':
         return this.race(m, p, intent.tx, intent.ty);
       case 'leap':

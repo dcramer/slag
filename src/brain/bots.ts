@@ -4,6 +4,7 @@ import type { InputFrame } from '../sim/types';
 import { botDevice, isBotDevice } from './device';
 import { Motor } from './motor';
 import { type Personality, rollPersonality } from './personality';
+import { rollTemperament, type Temperament, temper } from './temperament';
 import { BRAINS, type BrainId } from './registry';
 import type { Brain } from './types';
 import { senseView } from './view';
@@ -13,6 +14,8 @@ interface Bot {
   seed: number;
   /** The level its personality was rolled at: its seat's (Player.bot) changing rolls it again. */
   level: BotLevel;
+  /** What it wants, the same at every level. */
+  mood: Temperament;
   brain: Brain;
   motor: Motor;
   /** It has had a seat: losing it now (a watch, a kick, the lobby emptied) lets the bot go. */
@@ -28,11 +31,17 @@ interface Bot {
 export class BotSeats {
   private bots = new Map<string, Bot>();
 
-  /** `tune` adjusts every personality it rolls: a headless trial measuring the motor may take the lapses out (personality.ts `steady`). */
-  constructor(private readonly tune: (p: Personality) => Personality = (p) => p) {}
+  /**
+   * `tune` adjusts every personality it rolls: a headless trial measuring the motor may take the lapses out (personality.ts
+   * `steady`). `moods` picks a bot's temperament instead of its seed: a test pitting one against another.
+   */
+  constructor(
+    private readonly tune: (p: Personality) => Personality = (p) => p,
+    private readonly moods: (seed: number) => Temperament = rollTemperament,
+  ) {}
 
-  private roll(seed: number, level: BotLevel): Personality {
-    return this.tune(rollPersonality(seed, level));
+  private roll(seed: number, level: BotLevel, mood: Temperament): Personality {
+    return this.tune(temper(rollPersonality(seed, level), mood));
   }
 
   /** A new bot's local device; seat it with a join action. `global` names a local device the way the match does. */
@@ -47,12 +56,14 @@ export class BotSeats {
 
   private start(match: Match, dev: string, kind: BrainId) {
     const seed = deriveSeed(match.seed, `bot:${dev}:${match.frame}`);
-    const traits = this.roll(seed, 'normal');
+    const mood = this.moods(seed);
+    const traits = this.roll(seed, 'normal', mood);
     this.bots.set(dev, {
       kind,
       seed,
       level: 'normal',
-      brain: BRAINS[kind].make(seed, traits),
+      mood,
+      brain: BRAINS[kind].make(seed, traits, mood),
       motor: new Motor(traits, deriveSeed(seed, 'hands')),
       seated: false,
     });
@@ -83,9 +94,9 @@ export class BotSeats {
         bot.seated = true;
         const level = p.bot ?? 'normal';
         if (level !== bot.level) {
-          const traits = this.roll(bot.seed, level);
+          const traits = this.roll(bot.seed, level, bot.mood);
           bot.level = level;
-          bot.brain = BRAINS[bot.kind].make(bot.seed, traits);
+          bot.brain = BRAINS[bot.kind].make(bot.seed, traits, bot.mood);
           bot.motor.traits = traits;
         }
         out[dev] = bot.motor.drive(match, p, bot.brain.think(senseView(match, p)));
