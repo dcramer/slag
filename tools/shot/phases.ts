@@ -1,5 +1,5 @@
 /** The match phases as players see them: lobby, pick, place, race and the round score. */
-import { addParts, argv, frames, open, opt, page, players, secret, secretRule, seed, snap, step, type Scenarios } from './ctx';
+import { addParts, frames, open, opt, page, players, secret, secretRule, seed, snap, step, type Scenarios, flag } from './ctx';
 
 export const shots: Scenarios = {
   async lobby() {
@@ -112,7 +112,7 @@ export const shots: Scenarios = {
       // Boot time decides how far the race got before the pause, so step to the frame rather than by a count.
       const now = await page.evaluate(() => (window as any).slagDebug.match.run?.frame ?? 0);
       await step(Number(exact) - now - 4);
-      if (argv.includes('--spread')) {
+      if (flag('spread')) {
         await page.evaluate(() => {
           const d = (window as any).slagDebug;
           const lv = d.match.level;
@@ -148,7 +148,7 @@ export const shots: Scenarios = {
     const pop = Number(opt('pop', '0'));
     if (pop) {
       // `--pop N`: after `--frames`, the first runner (`--popall`: every runner) presses self-destruct and holds it N frames.
-      const all = argv.includes('--popall');
+      const all = flag('popall');
       await step(frames);
       await page.evaluate(
         ([n, every]) => {
@@ -193,7 +193,7 @@ export const shots: Scenarios = {
         if (slots.length > 2) m.run.kills.push({ victim: slots.at(-1), killer: slots[1] }, { victim: slots.at(-1), killer: slots[1] });
       }
       m.finishRound();
-    }, argv.includes('--nobody'));
+    }, flag('nobody'));
     // Blocks mid-fall, mid-slide, and settled.
     for (const at of [27, 60, 120]) {
       await step(at - (await page.evaluate(() => (window as any).slagDebug.match.phaseFrame)));

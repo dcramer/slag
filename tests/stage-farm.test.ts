@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { Rng } from '../src/core/rng';
 import { generateLevel, lastGenInfo } from '../src/gen/level';
 import { MIN_TELL, SET_PIECES } from '../src/gen/setpieces';
-import { cycleFrames } from '../src/gen/setpieces/place';
+import { cycleFrames } from '../src/sim/props';
 import { ownPieces } from '../src/gen/stage';
 import type { Landmark } from '../src/gen/stage/types';
 import { TILE } from '../src/sim/constants';

@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import type { Vec } from '../src/core/geom';
 import { carrierReach, MIN_DWELL, rideProof, rideSpans } from '../src/gen/level/ride';
 import { setProbeGravity } from '../src/gen/level/probe';
-import { cycleFrames } from '../src/gen/setpieces/place';
+import { cycleFrames } from '../src/sim/props';
 import { generateTheme } from '../src/gen/theme';
 import { LEVEL_H, LEVEL_W, RUN_COUNTDOWN, TILE } from '../src/sim/constants';
 import { isStandable } from '../src/sim/reach';

@@ -7,7 +7,6 @@ import { installDebug } from './debug';
 import { type GenInfo, lastGenInfo } from './gen/level';
 import { BOT_LEVELS, botLevelLabel, Match, planMisses, rulesProfile } from './game/match';
 import { roomSeed } from './game/room';
-import { loadRules, saveRules } from './game/rules';
 import { InputManager } from './input/input';
 import { TOUCH_DEVICE, touchModeFor } from './input/touch';
 import { connectRoom, type RoomConnection } from './net/client';
@@ -32,6 +31,7 @@ import { FloatingLogo } from './ui/screens/logo';
 import { detectQuality, isTouchFirst, savedQuality, saveQuality } from './ui/touch/device';
 import { TouchOverlay } from './ui/touch/overlay';
 import { loadProfile, saveProfile } from './ui/profile';
+import { loadRules, saveRules } from './ui/rule-prefs';
 
 /** About the gap between a pinch's two fingers landing, in sim frames. */
 const PINCH_WAIT_FRAMES = 6;

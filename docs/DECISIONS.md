@@ -100,6 +100,8 @@ Every game design decision, preference and direction the owner has given, groupe
   Changed: 18, 15 and 8 rows (the hard laps about 2 s), squeezing from 45 s.
 - **Catch-up for the trailing pack: rethink which items exist, and maybe give loops mystery boxes of their own rather than only placed ones.** "im not sure on (2) we might wanna rethink which items exist, and/or add mystery boxes by default maybe? not just placed ones?" / "Boxes first"
   2026-11-04 · `done` for the boxes (every loop places its own, dealing by rank: `src/gen/level/loop-boxes.ts`, `CATCH_UP`); which items exist is `open` (a grapple, a shot that hits whoever is above you) · DESIGN.md → Modes, TODO.md → 31
+- **Each mode's targets come from the game it imitates, and every mode, the planned ones too, gets a list of its key mechanics, attributes and measurements against that game's.** "for the target it really should be similar to speedrunners i imagine? like each game mode we're using another game as inspo which helps us with mechanics" / "its probably worth evaluating that for both modes, plus the future modes, and making a list of the key mechanics and attributes and measurements and where they should be based on the games we're imitating" / "might be our level design? idk how ours looks vs speedrunners"
+  2026-11-04 · `done` · DESIGN.md → Modes, MODES.md; catch-up's fixes are `planned` · TODO.md → 31
 - **A rule the level is built from (gravity, weather) rebuilds the lobby's level for everyone at once.**
   2026-11-02 · git `e64c3e5` · `done` · DESIGN.md → Rules
 
@@ -700,6 +702,8 @@ Every game design decision, preference and direction the owner has given, groupe
   2026-11-04 · `done` · AGENTS.md → Definition of done
 - **Keep what an audit or a fix teaches, in short docs: a line in the owning AGENTS.md for a rule, a TODO item for open work, no long write-ups.** "we dont need crazy docs but i wanna make sure we keep learnings"
   2026-11-04 · `done` · AGENTS.md, TODO.md → 33
+- **Tighten lint where the audit found gaps: one generated config, the determinism rules over all deterministic code, exhaustive switches, no import cycles, no focused tests or bare numeric sorts, and tools that fail on an option nothing read.** "Yes, start them"
+  2026-11-05 · `done` · AGENTS.md → Commands (Lint), `tools/lint/config.ts`
 - **Make the GitHub Actions check required (an owner step).**
   2026-11-02 · `open` · TODO.md → 10
 - **Apply the quick wins from the transcript review: guard-safe commands for worktree agents, one `pnpm land` per batch instead of a merge and a gate per branch, and `SNAP_VERSION` bumped once at landing, never in a branch.** "Apply quick wins"

@@ -1,6 +1,6 @@
 /** Stepped frames of play, where motion and contact can only be judged frame by frame. */
 import { ITEM_KINDS } from '../../src/sim/items/types';
-import { argv, open, opt, out, page, players, seed, sheet, snap, step, tq, type Scenarios } from './ctx';
+import { open, opt, out, page, players, seed, sheet, snap, step, tq, type Scenarios, flag } from './ctx';
 
 export const shots: Scenarios = {
   async grabs() {
@@ -359,7 +359,7 @@ export const shots: Scenarios = {
     // `--give bat,tax` picks the items (default all, cycled over the runners); one of each lies loose too.
     // `--close` stages one item up close instead: its user, one rival beside them, and crops around the action.
     const give = opt('give', 'all')!;
-    const close = argv.includes('--close');
+    const close = flag('close');
     const n = close ? 2 : 6;
     await open(`seed=${seed}&players=${n}&race=mystery,mystery,mystery&give=${give}&propseed=${opt('propseed', '1')}`);
     await step(190);

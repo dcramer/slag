@@ -1,13 +1,13 @@
 import { readdirSync, readFileSync, statSync } from 'node:fs';
-import { join } from 'node:path';
+import { join, matchesGlob } from 'node:path';
 import { describe, expect, it } from 'vitest';
+import { DETERMINISTIC } from '../tools/lint/deterministic';
 
 /**
  * `**` is Math.pow in operator form, so it differs across browsers like the
- * functions .oxlintrc.json bans by name, and a property rule can't see it.
+ * functions lint bans by name in the same files (DETERMINISTIC), and a property rule can't see it.
  * A line may opt out with a trailing `// det-ok: <why>` comment.
  */
-const ROOTS = ['src/sim', 'src/gen', 'src/game', 'src/core/geom.ts', 'src/themes.ts'];
 
 function files(p: string): string[] {
   if (statSync(p).isFile()) return [p];
@@ -26,9 +26,9 @@ function code(src: string): string[] {
 describe('determinism ban', () => {
   it('no ** in deterministic code', () => {
     const hits: string[] = [];
-    for (const root of ROOTS) {
+    for (const root of ['src']) {
       for (const f of files(root)) {
-        if (!f.endsWith('.ts')) continue;
+        if (!DETERMINISTIC.some((g) => matchesGlob(f, g))) continue;
         code(readFileSync(f, 'utf8')).forEach((line, i) => {
           if (/\*\*/.test(line)) hits.push(`${f}:${i + 1}: ${line.trim()}`);
         });

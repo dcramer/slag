@@ -174,6 +174,9 @@ export function summarize(def: PropDef): string[] {
       case 'fuse':
         out.push(`${secs(m.count)} fuse · blast r${fmt(m.radius, 1)} · back in ${secs(m.regrow)}`);
         break;
+      default:
+        // The rest are set-piece modules: a set piece's codex card has its own words (`codex` on its recipe).
+        break;
     }
   }
   const mo = def.motion;

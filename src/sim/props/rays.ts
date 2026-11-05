@@ -3,7 +3,7 @@ import { TILE } from '../constants';
 import { type Level, T_SOLID, tileAt } from '../level';
 import type { Solid } from '../physics';
 import { type Beam, type Contrib, moduleSim, type PropCtx } from './registry';
-import { motionOffset, newPropState } from './transform';
+import { motionOffset, newPropState } from './motion';
 import type { Resolved } from './types';
 
 /**

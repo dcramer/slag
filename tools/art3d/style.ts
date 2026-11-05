@@ -627,20 +627,23 @@ export const BRIEFS: Record<string, Brief> = {
     // round head (the comic's, where the plumber has a billed cap and the king horns); the big round nose over a
     // short bushy dark moustache (the face; the big drooping red one is the castellan's, not his); the short
     // belted tunic and thick bare arms (the warrior); the sword at his belt.
-    // Ours, and the joke: the helmet is an iron cooking pot turned upside down and hammered to a knobbed point, its
-    // long handle sticking out behind his head, and he carries a half-eaten roast leg out in front like a club:
-    // always hungry. Asked side on, the image model drew him three-quarter, and dropped the prompt's tail (the tunic,
-    // the belt, the moustache): they went on in an edit (art/sprites/warrior/design.prompt.txt, with the two rounds
-    // after it that didn't read better blind).
+    // Ours, and the joke: the helmet is an iron cooking pot turned upside down, its knob on top and two little loop
+    // handles on its rim, and he carries a half-eaten roast leg out in front like a club: always hungry.
+    // Redrawn side on (round 4, owner): in three-quarter the head and the pot closed into one peak on the shoulders and
+    // read as a hood, spiky hair, a wizard's cone and the penguin king. Side on, the head is a shape of its own: the
+    // nose and moustache stick out past the body's line, the chin stands clear of the chest, and the pot is a low dome
+    // narrower than the head with a step at its rim, never a cone. The head leads the brief: the image model drops a
+    // prompt's tail (round 1 lost the tunic and the moustache there).
     // The palette is neutral (Decisions 4): the tunic in the player's colour; the skin, the moustache, the iron, the
     // leather, the meat and the bone neutrals.
     design:
-      'The character: a short, hugely fat cartoon warrior seen side on in profile, facing right. His huge round belly is the biggest shape, bulging far out in front of him, so he is wider than he is tall below the shoulders. ' +
-      "His signature: in his front fist he holds a big half-eaten roast leg of meat (#b8692f) straight out in front of him at arm's length like a club, its round pale bone end (#ecdcb8) sticking out of his fist, clear of his body. " +
-      "On his bald round head sits a small upside-down iron cooking pot (#8e949a) for a helmet, too small for him, perched high on his crown and hammered up into a short point with a round knob on top, the pot's long straight handle sticking straight out behind his head. " +
-      'A big round nose, a short thick bushy dark-brown moustache (#3a2a20) under it, two big eyes, peach skin (#efc9a4), thick bare arms. ' +
-      'A short red tunic (#c9473f) with short sleeves stretched over the belly, a wide brown leather belt (#6e4a2e) under the belly with a short sword in a scabbard hanging at his hip, short stocky legs in brown trousers and big brown boots (#6e4a2e).',
-    worn: "the pot helmet has a big dent knocked into its side and the end of its handle is bent down; a big square patch of paler cloth is sewn on the tunic over the belly; the hem of the tunic is torn into a ragged notch at the back; the sole of the front boot flaps loose at the toe. The face, the moustache and the knob on the pot don't change.",
+      'The character: a short, hugely fat cartoon warrior seen exactly side on in profile, facing right, his short legs apart. ' +
+      'His head is a shape of its own: a big round bald head (#efc9a4) on a short thick neck, the chin clear of the chest, a big round nose and a thick bushy dark-brown moustache (#5a4030) sticking far out in front of his face, one eye. ' +
+      'On top of the head sits a small upside-down iron cooking pot (#8e949a) for a helmet: a low dome much narrower than the head, a round knob on top, its rim a clear step where it sits on the bald head, two tiny loop handles. ' +
+      'A huge round belly in a short red tunic (#c9473f) bulges far out in front, a wide brown belt (#6e4a2e) under it. ' +
+      "His front fist holds a big roast leg of meat (#b8692f) straight out level at arm's length, its pale bone end in his fist. " +
+      'Thick bare arms, short legs in brown trousers, big brown boots.',
+    worn: "the pot helmet has a big dent knocked into its side; a big square patch of darker red cloth (#8e2f2a) is sewn on the tunic over the belly with big stitches; the hem of the tunic is torn into a ragged notch at the back; the sole of the front boot flaps loose at the toe. The face, the moustache and the knob on the pot don't change.",
   },
   slayer: {
     // The nod, each part of the read at race size and each a shape in outline: a long straight sword in his hand,
@@ -666,6 +669,53 @@ export const BRIEFS: Record<string, Brief> = {
       'A short green leather coat (#5a6250) only to mid-thigh, open and split at the front, a belt at the waist; below it two clear legs in dark grey trousers (#4a4a50) and tall brown boots (#54382a). Brown gloves. ' +
       'On his chest a big round silver bottle cap (#c8ccd0) with a crimped edge on a brown shoelace.',
     worn: "one broken spoke pokes out sideways from the umbrella's furled cloth by his shoulder, its crook still a clean J; the hem of the coat is torn into a big ragged notch on one side; there is a big notch chipped out of the edge of the sword in his hand; one boot's sole is flapping loose at the toe. The face, the hair and the bottle cap stay as they are.",
+  },
+  fighter: {
+    // The nod, each part of the read at race size and each a shape in outline: the two round hair buns standing out
+    // either side of the head like ox horns (the read: nobody else in the cast has them, so the head is turned
+    // toward us, or side on would hide the far one); the puffed shoulders and the spiked bracelets (the fighter's
+    // costume, the spikes standing proud of the wrists); thick strong legs under a short dress, always in a
+    // fighting stance or a kick (the slayer's slim figure in a long garment read as a princess's gown).
+    // Ours, and the joke: the bun covers are two rolled-up socks, the spiked bracelets are dog collars, and the
+    // sash is a fluffy dressing-gown cord.
+    // The palette is neutral (Decisions 4): the dress in the player's colour, its trim a light of it; the skin,
+    // hair, socks, boots, collars and cord neutrals.
+    // What ships came from two more edits of the worn design (art/sprites/fighter/design.prompt.txt): big buns on top
+    // of the big head read as a bear's ears and at the temples they sank into the head, so they are smaller, at the
+    // head's top corners, the socks' toes flopping under them. Not yet read blind as her (a nameless fighter, or, with
+    // the buns clear of the head, a bear): the next design wants a smaller head and the buns straight out sideways.
+    design:
+      'The character: a strong, stocky cartoon martial-artist woman in a wide fighting stance, body facing right, her head turned toward us so both hair buns show. ' +
+      'Colours: a blue dress (#3f6fb5) with pale blue trim (#a8c4e8), peach skin (#efc9a4), dark brown hair (#3a2a20), white socks and boots (#f2f0ea), black collars (#2e2a2a) with steel spikes (#b8bcc4). ' +
+      'Her signature: two big round hair buns, one on each side of the top of her head like ox horns, each half the size of her head and sticking out clear of it, each covered by a rolled-up white sock. ' +
+      'A short high-collared dress with big round puffed shoulders, ending above the knee, tied at the waist with a fluffy dressing-gown cord. ' +
+      'Thick muscular legs, knees bent wide apart, white boots. Fists up in guard, a black dog collar with big steel spikes round each wrist.',
+    // The design drew the spiked collar round her neck, a dark band under the face (it reads as a mouth at play
+    // size), and none on the wrists, so the edit moves it there with the wear.
+    worn: "the spiked collar is gone from her neck, the dress's high collar shows there; instead a thick black dog collar (#2e2a2a) with big steel spikes sticking out all round goes round each wrist; the toe end of each rolled-up sock has come loose and flops down from under its bun like a short ribbon; the dress's hem is torn into a big ragged notch at the side; the front boot's sole is flapping loose at the toe. Both buns stay big and round, one each side of her head.",
+  },
+  stinger: {
+    // The nod, each part of the read at race size and each a shape in outline: the white mask with two long horns
+    // off its top, sharp crescents hooking back (the read: nobody else in the cast has a horned mask; the king's horns
+    // sit on a big jawed head side on, the hedgehog's spikes sweep back off a ball, the hopper's eyes are round knobs on
+    // stalks; drawn straighter, the horns read as a rabbit's ears in the first blind read); the red cloak hanging from
+    // the shoulders in a short bell to the knees, thin dark legs clearly under it (a long garment on a slim figure read
+    // as a princess's gown on the slayer); the needle, thick, held level and sticking out past her on both sides (her
+    // weapon; drawn thin, it was gone at play size).
+    // Ours, and the joke: the needle is a knitting needle with a knob on its end, trailing yarn, and the cloak is a
+    // patched dishcloth with a frayed hem (the wear edit).
+    // The palette is neutral (Decisions 4): the cloak in the player's colour; the mask white, the limbs dark, the
+    // needle steel and the yarn cream, all their own. The colours lead the brief: the image model drops what comes last.
+    // What ships came from a second edit of the worn design (art/sprites/stinger/design.prompt.txt): the crescent horns
+    // and the thick needle. This is it as one brief, for a redraw.
+    design:
+      'The character: a small, slim cartoon bug warrior girl in three-quarter view facing right, in four colours: a red cloak (#b8343c), a white mask (#f2eee6), thin black limbs (#2a2630) and a steel needle (#b4bac2). ' +
+      'Her head is a big smooth white mask, round on top and narrowing to a blunt point at the chin, with two big black eye holes. Two long white horns rise from the top of the mask, each a sharp crescent that sweeps up and hooks back at its tip, as tall as the mask, with white background between them. ' +
+      'The red cloak hangs from her shoulders in a short wide bell to her knees. Under it two thin black legs with pointed feet. ' +
+      'One thin black fist holds a chunky steel knitting needle, as thick as her leg and longer than she is tall, level, sticking far out past her body on both sides, a big round knob on its end and a short strand of cream yarn (#e6dcc4) hanging from it.',
+    // The design came back as the original redrawn, so the edit carries the twist with the wear: the dishcloth's
+    // stripes and patch, its frayed hem, and the yarn off the needle's knob.
+    worn: 'the cloak is an old striped dishcloth: two wide pale pink stripes (#e8a6a6) run across it near the hem, a big square patch of grey cloth (#a8a29a) is sewn on one side with big stitches, and the hem is frayed into a ragged fringe of loose threads; a strand of cream yarn (#e6dcc4) hangs from the round knob of the knitting needle in one short loose loop. The mask, its eye holes and the two horns stay exactly as they are.',
   },
 };
 

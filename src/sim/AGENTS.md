@@ -2,7 +2,7 @@
 
 Everything here must be a pure function of `(seed, per-frame InputFrame)` and run headless (tests and `tools/` import it under Node).
 
-- Randomness only from `Rng` (`../core/rng.ts`). No `Math.random`, `Date.now`, `performance`, timers, DOM, or imports from `render/`, `input/`, `audio/`, `ui/`. `.oxlintrc.json` enforces this; don't disable it.
+- Randomness only from `Rng` (`../core/rng.ts`). No `Math.random`, `Date.now`, `performance`, timers, DOM, or imports from `render/`, `input/`, `audio/`, `ui/`. Lint enforces this for every file in `DETERMINISTIC` (`tools/lint/deterministic.ts`); don't disable it.
 - Transcendental math comes from `core/dmath.ts` (`dsin`, `dcos`, `datan2`, `dhypot`, `dexp`, `dlog`, `dpow`, `sq`): `Math.sin` and friends aren't bit-identical across browsers, and lint bans them here. So is `**`, because it's `Math.pow`; a test catches that one.
 - State is plain snapshot-friendly data: no closures or class instances holding hidden state, no order-dependent `Map` iteration.
 - Events go out through the run's event queue for render/audio; the sim never reads them back.

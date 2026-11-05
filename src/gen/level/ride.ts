@@ -4,7 +4,7 @@ import { type Level, type Ride, T_EMPTY, tileAt } from '../../sim/level';
 import { isStandable } from '../../sim/reach';
 import { buildSolids, type Contrib, motionOffset, newPropState, type PlacedProp, type PropCtx, type Resolved, resolveProp, traceRays } from '../../sim/props';
 import '../../sim/props/modules';
-import { cycleFrames } from '../setpieces/place';
+import { cycleFrames } from '../../sim/props';
 import { jumpProfile } from './probe';
 import { BRIDGE_W } from './types';
 import { MAX_BRIDGES } from './validate';
