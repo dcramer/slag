@@ -57,7 +57,7 @@ Each is grouped by its fingerprint, `['slag-event', name]` plus the group if any
 
 | Name | Level | From | When |
 | --- | --- | --- | --- |
-| `desync` | error | `src/net/session.ts`, host | A guest's state hash differs from the host's. `data`: frame, peer, both hashes, phase. The guest is resynced. |
+| `desync` | error | `src/net/session.ts`, host | A guest's state hash differs from the host's. `data`: frame, peer, both hashes, phase, streak (resyncs in a row with no matching hash between). The guest is resynced; one that keeps drifting only 1, 2, 4… s apart (at most 30 s), and only those are reported. |
 | `slow-host-migration` | warning | session, new host | A migration took over 20 s from noticing the host gone to playing again (`SLOW_MIGRATION_MS`; they normally take 4–8 s). |
 | `net-unavailable` | warning | session | Online play gave up on this page. Grouped by why: `Cannot Reach Host` (no TURN), `WebRTC Unsupported`, `Signaling Unreachable`, an unconfigured store. |
 | `snapshot-refused` | warning | session, guest | The host's snapshot is from another build. Once a page. |

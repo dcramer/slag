@@ -28,7 +28,8 @@ export interface Bundle {
 
 export type Msg =
   | { t: 'in'; s: number; f: PeerFrame[]; a?: [number, NetAction][]; c: number; h?: [number, number] }
-  | { t: 'b'; b: Bundle[] }
+  /** `d`, to one guest: its input queue's depth on the host against what its link needs, in frames (see pace.ts). */
+  | { t: 'b'; b: Bundle[]; d?: number }
   | { t: 'sync'; s: MatchSnap; k: Record<string, [number, number]>; ns: NetState; last: Record<string, Enc>; why: string }
   /** `f`: the furthest frame this peer holds, -1 if it never joined this room's timeline. */
   | { t: 'hello'; f: number; c?: string }
@@ -264,7 +265,8 @@ const MSG_PARSERS: { [K in Msg['t']]: (m: Record<string, unknown>) => Extract<Ms
   },
   b: (m) => {
     const b = list(m.b, BUNDLES_PER_MSG, parseBundle);
-    return b && { t: 'b', b };
+    if (!b || !opt(m.d, num)) return null;
+    return m.d === undefined ? { t: 'b', b } : { t: 'b', b, d: m.d };
   },
   sync: (m) => {
     const st = parseState(m);
