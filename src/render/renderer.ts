@@ -13,6 +13,7 @@ import { leashRows } from '../sim/tide';
 import type { GameEvent } from '../sim/types';
 import { Backdrop } from './background';
 import { drawBlood } from './blood';
+import { StepBlend, drawnMatch } from './blend';
 import { Camera } from './camera';
 import { PhoneCam, phoneView } from './camera-follow';
 import type { CharacterDef } from '../gen/character';
@@ -143,6 +144,8 @@ export class Renderer {
   private last = 0;
   private flash = 0;
   private lobbyDrift = 0;
+  /** The last two step poses of every runner, to draw between steps (blend.ts). */
+  private blend = new StepBlend();
   /** Render quality tier: caps internal resolution (MAX_W) and DPR. See src/ui/touch/device.ts. */
   quality: QualityTier;
   private adaptive: boolean;
@@ -260,13 +263,20 @@ export class Renderer {
     return phase === 'place' ? this.phone.toBoard(p) : p;
   }
 
-  /** Paint one frame. `events` are this frame's drained sim events (shared with audio). */
-  render(m: Match, now: number, events: readonly GameEvent[] = []) {
+  /**
+   * Paint one frame. `events` are this frame's drained sim events (shared with audio). `alpha` is how much of
+   * the next step the loop has banked (acc / DT): runners and moving parts are drawn that far between the last
+   * two steps. Leave it out for a picture of exactly this step (stepped screenshots, the codex).
+   */
+  render(match: Match, now: number, events: readonly GameEvent[] = [], alpha?: number) {
     const t = now / 1000;
     // Mobile: adaptive resolution. Sustained slow frames drop one quality tier (never back up).
     if (this.adaptive && this.last && this.budget.push((t - this.last) * 1000)) this.stepDown();
     const dt = Math.min(0.05, this.last ? t - this.last : 1 / 60);
     this.last = t;
+    const race = match.phase === 'run' ? match.run : null;
+    this.blend.observe(race ? race.frame : match.frame, race ? race.runners : [], alpha, dt);
+    const m = drawnMatch(match, this.blend);
     const level = m.level;
     const ww = level.w * TILE;
     const wh = level.h * TILE;
@@ -308,7 +318,8 @@ export class Renderer {
     const lights: Light[] = [];
     const frame = m.run && m.phase === 'run' ? m.run.frame : m.frame;
     const figures: Figure[] = [];
-    const rc: RC = { s, bg: s, g, lights, t, frame, gust: skyGust(m), figures };
+    // Moving parts stand where they are at the moment the runners are drawn (blend.ts), between the last two steps.
+    const rc: RC = { s, bg: s, g, lights, t, frame, at: this.blend.at, gust: skyGust(m), figures };
 
     // --- background (screen space, parallax from camera)
     const ox = -frameBox.x0 * sk;

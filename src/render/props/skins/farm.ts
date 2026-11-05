@@ -5,7 +5,7 @@ import { type Level, T_ONEWAY, T_SOLID, tileAt } from '../../../sim/level';
 import { driveAt, geyserColumn, geyserCycle, type Module, type ModuleOf, rotorAngles, type RotorArm, swingHeads, teslaCycle } from '../../../sim/props';
 import { inkFor, line, type P } from '../../ink';
 import { ball, bar, barLine, boxPts, dot, glint, ovalPts, part, path, poly, sprite, stamp, tick, tone } from '../../ink-props';
-import { bulb, circle, glowDot, light, type RC, zap } from '../../kit';
+import { bulb, circle, glowDot, light, poseFrame, type RC, zap } from '../../kit';
 import { BACKDROP, beamOf, type DrawCtx } from '../common';
 import {
   type CannonPose,
@@ -414,7 +414,7 @@ const waterwheel: RotorSkin = {
     const g = rc.s;
     const hx = m.hub[0] + d.off[0];
     const hy = m.hub[1] + d.off[1];
-    const a0 = rotorAngles(m, rc.frame, d.r.phase)[0];
+    const a0 = rotorAngles(m, poseFrame(rc), d.r.phase)[0];
     const t = hazer(d, SHELL);
     for (const r of [m.arm + 3, m.arm - 7]) {
       const ring = ovalPts(hx, hy, r, r, 3, 0, 40);
@@ -445,7 +445,7 @@ const waterwheel: RotorSkin = {
     const hx = m.hub[0] + d.off[0];
     const hy = m.hub[1] + d.off[1];
     ball(rc.s, hx, hy, 6, IRON, 41);
-    const a0 = rotorAngles(m, rc.frame, d.r.phase)[0];
+    const a0 = rotorAngles(m, poseFrame(rc), d.r.phase)[0];
     for (let i = 0; i < 4; i++)
       dot(rc.s, hx + Math.cos(a0 + (i * Math.PI) / 2) * 3.6, hy + Math.sin(a0 + (i * Math.PI) / 2) * 3.6, 0.8, 42 + i, css(STEEL, 10), inkFor(IRON));
   },
@@ -544,7 +544,7 @@ function hayHook(rc: RC, m: Swinger, d: DrawCtx) {
   const top = hungFromBeam(m, d);
   if (top !== null) pole(s, hx, top, hx, hy, 1.2, IRON, 1);
   ball(s, hx, hy, 2.2, IRON, 2);
-  for (const h of swingHeads(m, rc.frame, d.r.phase, d.off)) {
+  for (const h of swingHeads(m, poseFrame(rc), d.r.phase, d.off)) {
     const n = Math.max(3, Math.round(m.arm / 4));
     for (let i = 0; i < n; i++) {
       const u0 = i / n;
@@ -688,7 +688,7 @@ function combineReel(rc: RC, m: Swinger, d: DrawCtx) {
   const s = rc.s;
   const hx = m.hub[0] + d.off[0];
   const hy = m.hub[1] + d.off[1];
-  const heads = swingHeads(m, rc.frame, d.r.phase, d.off);
+  const heads = swingHeads(m, poseFrame(rc), d.r.phase, d.off);
   for (const h of heads) pole(s, hx, hy, h.x, h.y, 1.2, HUBCAP, 3);
   for (const h of heads) {
     const tx = -Math.sin(h.a);
