@@ -7,7 +7,7 @@ import { applyAction } from '../src/net/actions';
 import { NetSession } from '../src/net/session';
 import { cloneSnap, restoreMatch, snapshotMatch } from '../src/net/snapshot';
 import { LoopbackHub } from '../src/net/transport';
-import { TILE } from '../src/sim/constants';
+import { RUN_COUNTDOWN, TILE } from '../src/sim/constants';
 import { floorY, type Level, T_EMPTY, T_SOLID, tileAt } from '../src/sim/level';
 import { footprintCells } from '../src/sim/props';
 import { RunWorld } from '../src/sim/run';
@@ -24,18 +24,23 @@ import { THEME_IDS } from '../src/themes';
 const seedAt = (i: number) => (i * 7919 + 13) >>> 0;
 const TICK = 1000 / 60;
 
-/** The pocket's floor: solid across its whole width, with four clear rows above it. */
-function expectPocket(l: Level, cell: { tx: number; ty: number }, x0: number, what: string) {
+/**
+ * The pocket's floor: solid across its whole width, with four clear rows above it. The spawn's
+ * back column is a wall instead: past the level's left edge is death, and holding left at GO
+ * shouldn't walk you into it.
+ */
+function expectPocket(l: Level, cell: { tx: number; ty: number }, x0: number, what: string, backWall = false) {
   for (let x = x0; x < x0 + POCKET; x++) {
     expect(tileAt(l, x, cell.ty + 1), `${what} floor at column ${x}`).toBe(T_SOLID);
-    for (let y = cell.ty - 3; y <= cell.ty; y++) expect(tileAt(l, x, y), `${what} air at ${x},${y}`).toBe(T_EMPTY);
+    const want = backWall && x === 0 ? T_SOLID : T_EMPTY;
+    for (let y = cell.ty - 3; y <= cell.ty; y++) expect(tileAt(l, x, y), `${what} ${want ? 'wall' : 'air'} at ${x},${y}`).toBe(want);
   }
 }
 
 /** Ring and flag sit exactly on the terrain, and runners really stand on it at the ring. */
 function expectMarkersOnTerrain(l: Level, what: string) {
   expect(l.tiles.length, `${what} tile count`).toBe(l.w * l.h);
-  expectPocket(l, l.spawn, 0, `${what} spawn`);
+  expectPocket(l, l.spawn, 0, `${what} spawn`, true);
   expectPocket(l, l.goal, l.w - POCKET, `${what} goal`);
   for (const p of l.setPieces)
     for (const [x, y] of footprintCells(p))
@@ -97,6 +102,21 @@ describe('spawn ring and flag sit on the terrain', () => {
 
   it('stock levels, rolled from the seed alone', { timeout: 120_000 }, () => {
     for (let i = 0; i < 80; i++) expectMarkersOnTerrain(new Match(seedAt(i)).level, `seed ${seedAt(i)}`);
+  });
+});
+
+describe('the spawn pocket', () => {
+  it('running left at GO, with or without a jump, hits the back wall and stays in the level', () => {
+    for (const theme of ['farm', 'castle', 'space'] as const) {
+      const run = new RunWorld(generateLevel(seedAt(1), theme), [], [0, 1]);
+      const left = { ...NO_INPUT, left: true, run: true };
+      const go = RUN_COUNTDOWN + 4;
+      for (let f = 0; f < RUN_COUNTDOWN + 180; f++) run.step([left, { ...left, jump: f >= go && f < go + 20, jumpPressed: f === go }]);
+      expect(
+        run.runners.map((r) => r.alive),
+        theme,
+      ).toEqual([true, true]);
+    }
   });
 });
 
