@@ -12,7 +12,8 @@ import { botRace } from '../lib/bot-race';
  *
  * Seeds 1–40, (gentle, medium, hard level). Before bots made mistakes at every
  * level: Easy 85 70 72, Normal 98 88 88, Hard 98 93 88. Since: Easy 70 58 60,
- * Normal 90 68 63, Hard 95 78 88. The owner's targets are Easy 75 50 30,
+ * Normal 90 68 63, Hard 95 78 88; with temperaments tilting the hands, Easy
+ * 73 58 58, Normal 93 65 60, Hard 93 78 88. The owner's targets are Easy 75 50 30,
  * Normal 90 70 50, Hard 95 85 70: gentle and medium are there, but a hard
  * level plays little harder than a medium one, because only about half of
  * them land in their band (docs/TODO.md → Level follow-ups); as they do, the
