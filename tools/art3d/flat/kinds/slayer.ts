@@ -97,9 +97,9 @@ export const kind: FlatKind = {
     { name: 'plaster', vary: 1, options: 2 },
     { name: 'wear', vary: 11, options: 3 },
   ],
-  // The near eye by its yellow; the far one, turned three-quarter, is close to the cheek's outline, so it's set from
-  // the near one at the design's spacing.
-  eyes: { role: 'eye', from: 'map', area: [0.08, 1.4], gap: [0.8, 2.6], band: [0.08, 0.34], count: 1, pair: [1.4, 0.1], specks: { eye: 1.6, dark: 1 } },
+  // Both eyes by their yellow: three-quarter, every pose draws the far one beside the near, a little narrower, about
+  // 1.3 world px apart. Taken as one eye with a sliver tucked behind it, his face showed one big cat's eye, a monocle.
+  eyes: { role: 'eye', from: 'map', area: [0.08, 1.4], gap: [0.8, 2.6], band: [0.08, 0.34], edge: 0.2, specks: { eye: 1.6, dark: 1 } },
   wear: {
     on: ['coat'],
     chin: 3,
@@ -116,9 +116,10 @@ export const kind: FlatKind = {
   },
   // The plaster goes over the scar on his cheek.
   accessories: [{ slot: 'plaster', role: 'plaster', at: 'cheek', size: [1.8, 0.75] }],
-  // Cat's eyes: yellow almonds round a slit (`cat` in the face kit's EYES). Three-quarter, the far eye is the kit's
-  // sliver behind the near one.
-  face: { r: 0.75, iris: '#e0b830', mark: 0.55, eye: 'cat' },
+  // Cat's eyes: yellow almonds round a slit (`cat` in the face kit's EYES), about as small as the drawing's, and the
+  // far one foreshortened where it's drawn (`turned`), so the two stay apart on his narrow face: as big as the
+  // near one they touched, and read as a pair of goggles.
+  face: { r: 0.55, iris: '#e0b830', mark: 0.5, eye: 'cat', far: 'turned' },
   gait: { bounce: [0.1, 0.5], lean: [0, 0.03] },
   clips: {
     idle: { frames: ['idle'], loop: true, fps: 1 },

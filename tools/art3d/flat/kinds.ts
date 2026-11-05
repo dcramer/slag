@@ -111,6 +111,16 @@ export interface FlatKind {
     count?: 1;
     /** Where on the figure an eye can be, as fractions of its height from the top (default 0 to 0.5). */
     band?: readonly [number, number];
+    /**
+     * The least distance (world px) from an eye's middle to the outline (default 0.45), where a speck is a scrap of
+     * ink. A three-quarter face's far eye sits hard by its cheek's line (the slayer's).
+     */
+    edge?: number;
+    /**
+     * With `from: 'map'`, the role an eye's pupil sits in: only a speck with a third of its rim on it is an eye. A pale white
+     * round the pupil (the dragon's) tells it from the darks between a wing's panels, which can be as big.
+     */
+    in?: string;
     /** With `count: 1`, a far eye set this far (world px) from the near one, for a face turned nearly side on. */
     pair?: readonly [number, number];
     /**
@@ -130,6 +140,11 @@ export interface FlatKind {
      * `map.ink` stays one speck too. Keep it well under an eye white's size.
      */
     glint?: number;
+    /**
+     * A drawing whose eyes are hidden (the puppy's design, under his beanie) and the near eye's place on it, by
+     * pose: fractions of the figure's box from its left and top. Nothing is painted over there.
+     */
+    at?: Readonly<Record<string, readonly [number, number]>>;
   };
   /**
    * A colour drawn in another role by its place: `below` the eyes (world px), or a lying pose's by size and x

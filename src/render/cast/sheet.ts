@@ -491,6 +491,9 @@ export function castFaces(t = 0.4): HTMLCanvasElement {
     const seed = c.seed & 0xffff;
     const period = (Math.PI * 2) / 1.3;
     const blinkT = ((((Math.PI / 2 - seed * 7) / 1.3) % period) + period) % period;
+    // The open eyes: `t` stepped off a blink that falls on it (a blink lasts about a quarter of a second), or the
+    // idle column showed some kinds' shut eyes, as if their open ones were missing.
+    const open = Math.sin(t * 1.3 + seed * 7) > 0.97 ? t + 0.4 : t;
     // Centred on the eyes, or on the head's height where the pose shows none.
     const centre = (p: Partial<RunnerPose>, tt: number, stride = 0) => {
       const eyes = pick(set, { facing: 1, vx: 0, vy: 0, grounded: true, t: tt, ...p }, stride, varietyFor(set, c))?.frame.eyes;
@@ -498,7 +501,7 @@ export function castFaces(t = 0.4): HTMLCanvasElement {
     };
     FACE_POSES.forEach(([name, p], j) => {
       const x0 = 110 + j * cw;
-      const tt = name === 'blink' ? blinkT : t;
+      const tt = name === 'blink' ? blinkT : open;
       const [ex, ey] = centre(p, tt);
       s.save();
       s.beginPath();
@@ -512,8 +515,8 @@ export function castFaces(t = 0.4): HTMLCanvasElement {
     ([{ grounded: true }, { grounded: true, vx: 260 }] as Partial<RunnerPose>[]).forEach((p, j) => {
       g.fillStyle = '#d9cbb2';
       g.fillRect(0, 0, scratch.width, scratch.height);
-      const [ex, ey] = centre(p, t, p.vx ? MID_RUN : 0);
-      runner(g, c, scratch.width / 2 - ex * 2.5, scratch.height / 2 - ey * 2.5, p, 2.5, 1, t, p.vx ? MID_RUN : 0);
+      const [ex, ey] = centre(p, open, p.vx ? MID_RUN : 0);
+      runner(g, c, scratch.width / 2 - ex * 2.5, scratch.height / 2 - ey * 2.5, p, 2.5, 1, open, p.vx ? MID_RUN : 0);
       s.imageSmoothingEnabled = false;
       s.drawImage(scratch, 110 + (FACE_POSES.length + j) * cw, y0, scratch.width * play, scratch.height * play);
       s.imageSmoothingEnabled = true;

@@ -79,15 +79,28 @@ export const kind: FlatKind = {
     { name: 'wear', vary: 11, options: 3 },
   ],
   // Side on, one big eye shows: a pale white round a dark pupil with a glint. The pupil is the biggest speck in
-  // the head's band, and the far eye is set along the snout from it.
-  eyes: { role: 'dark', from: 'map', glint: 0.25, area: [0.12, 1.5], gap: [1, 4], band: [0, 0.78], count: 1, pair: [1.5, -0.1], specks: { dark: 0.5 } },
+  // the head's band that sits in its white (`in`): the darks between the wing's panels are as big, and in the air
+  // the eye landed on the wing. The white goes with it (`bone` in `specks`), or its rim showed round the kit's eye
+  // and under its blink; the kit's eye is as big as it. The far eye is set along the snout from it.
+  eyes: {
+    role: 'dark',
+    from: 'map',
+    glint: 0.25,
+    area: [0.12, 1.5],
+    gap: [1, 4],
+    band: [0, 0.78],
+    count: 1,
+    pair: [1.5, -0.1],
+    in: 'bone',
+    specks: { dark: 0.5, bone: 6 },
+  },
   wear: {
     on: ['scales'],
     chin: 1,
     marks: [[['scuff', 0.45, 0.6, 0.4]], [['scorch', 0.45, 0.6, 0.4]]],
   },
   accessories: [{ slot: 'plaster', role: 'plaster', at: 'cheek', size: [1.8, 0.8] }],
-  face: { r: 1, iris: '#3a2a5a', eye: 'profile', far: 'none' },
+  face: { r: 1.15, iris: '#3a2a5a', eye: 'profile', far: 'none' },
   gait: { bounce: [0.2, 0.8], lean: [0, 0.03] },
   clips: {
     idle: { frames: ['idle'], loop: true, fps: 1 },

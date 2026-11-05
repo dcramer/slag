@@ -26,6 +26,8 @@ const RIM_THICK = 0.34;
 const IRIS_MIN = 0.45;
 /** A side-on head's far eye: this narrow beside the near one, most of it behind it. */
 const SLIVER = 0.5;
+/** A three-quarter face's far eye (`far: 'turned'`): this narrow, where it was drawn. */
+const TURNED = 0.7;
 
 /** One style of eye (`EyeStyle`), drawn about the origin, already turned with the head. */
 interface EyeArt {
@@ -369,7 +371,7 @@ export interface EyeAt {
  * The eyes a frame shows, near first: its `eyes` (x, y, radius triples in eighths of a world px) as the face
  * draws them. A side-on head's far eye (`far`) is a sliver tucked behind the near one, toward where the
  * traced far eye sits but never further, or isn't drawn: never a second full eye beside it, which read as
- * goggles stuck on the side of the head.
+ * goggles stuck on the side of the head. A three-quarter face's (`turned`) keeps its place, foreshortened.
  */
 export function eyesOf(face: FaceKit, eyes: readonly number[]): EyeAt[] {
   const n = Math.floor(eyes.length / 3);
@@ -377,6 +379,10 @@ export function eyesOf(face: FaceKit, eyes: readonly number[]): EyeAt[] {
   for (let k = 0; k < n; k++) out.push({ x: eyes[k * 3] / 8, y: eyes[k * 3 + 1] / 8, r: eyes[k * 3 + 2] / 8, w: 1 });
   if (n < 2 || !face.far) return out;
   if (face.far === 'none') return out.slice(0, 1);
+  if (face.far === 'turned') {
+    out[1].w = TURNED;
+    return out;
+  }
   const [near, far] = out;
   const ex = EYES[face.eye ?? 'round'].extent[0];
   const dx = far.x - near.x;
