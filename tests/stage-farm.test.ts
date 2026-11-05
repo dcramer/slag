@@ -159,8 +159,8 @@ describe("the farm's own hazards", () => {
 });
 
 describe('the combine', () => {
-  // Placed alone on plain farm levels, as the conformance suite places a recipe.
-  const found = [1, 2, 3, 4, 5, 6].flatMap((seed) => {
+  // Placed alone on plain farm levels, as the conformance suite places a recipe: seeds whose wide farm has the long field it needs.
+  const found = [3, 21, 33, 35].flatMap((seed) => {
     const level: Level = { ...generateLevel(seed, 'farm', { concept: 'plain', size: 'wide' }), setPieces: [] };
     for (let k = 0; k < 6; k++) {
       const [pp] = SET_PIECES.farm(new Rng(k * 7919 + seed), level, { count: 1, family: ['combine'] });

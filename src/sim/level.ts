@@ -158,6 +158,15 @@ export function floorY(cell: { ty: number }): number {
   return (cell.ty + 1) * TILE;
 }
 
+/**
+ * A body all the way past the left or right edge has left the level and dies.
+ * Past the edge is open air (`CollisionWorld.cols`), so a runner can lean out
+ * over it and come back; only going right off counts.
+ */
+export function offMap(b: { x: number; w: number }, cols: number): boolean {
+  return b.x + b.w <= 0 || b.x >= cols * TILE;
+}
+
 /** Bodies below this y have sunk into the pit at the bottom of the level. */
 export function killY(level: Level): number {
   return level.h * TILE - 2;

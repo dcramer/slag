@@ -249,13 +249,15 @@ describe('the land around a level', () => {
     }
   });
 
-  it('carries solid terrain that reaches the edge on past it, so nothing ends in a cut', () => {
+  it('draws no ground past either side: leaving the level there is a drop', () => {
     for (const l of levels) {
-      const a = surroundLevel(l, 6, 0);
-      for (let y = 0; y < l.h; y++) {
-        if (l.tiles[y * l.w] === T_SOLID) expect(a.tiles[y * a.w + 5], `${l.theme.id} left row ${y}`).toBe(T_SOLID);
-        if (l.tiles[y * l.w + l.w - 1] === T_SOLID) expect(a.tiles[y * a.w + 6 + l.w], `${l.theme.id} right row ${y}`).toBe(T_SOLID);
-      }
+      const [mx, top, bottom] = [6, 4, 10];
+      const a = surroundLevel(l, mx, top, bottom);
+      for (let y = 0; y < a.h; y++)
+        for (let d = 0; d < mx; d++) {
+          expect(a.tiles[y * a.w + d], `${l.theme.id} left column ${d - mx} row ${y - top}`).toBe(0);
+          expect(a.tiles[y * a.w + mx + l.w + d], `${l.theme.id} right column ${l.w + d} row ${y - top}`).toBe(0);
+        }
     }
   });
 
@@ -314,21 +316,6 @@ describe('the land around a level', () => {
             }
           }
         }
-      }
-    });
-
-    it('has bodies adrift past both sides, clear of the edge', () => {
-      for (const l of spaces) {
-        const [mx, top, bottom] = [24, 12, 12];
-        const a = surroundLevel(l, mx, top, bottom);
-        const count = (x0: number, x1: number) => {
-          let n = 0;
-          for (let y = 0; y < a.h; y++) for (let x = x0; x < x1; x++) n += a.tiles[y * a.w + x] === T_SOLID ? 1 : 0;
-          return n;
-        };
-        // Beyond where the level's edge carries on (at most 4 columns), there's still something out there.
-        expect(count(0, mx - 4), `seed ${l.seed} left`).toBeGreaterThan(0);
-        expect(count(mx + l.w + 4, a.w), `seed ${l.seed} right`).toBeGreaterThan(0);
       }
     });
   });

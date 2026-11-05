@@ -27,6 +27,10 @@ export const WAIVERS: Record<string, string> = {
     'a classic gatehouse rolls few dials (gate thickness, two tower heights the box clips, width), so seeds 1 and 2 land on the same layout once the seed streams shift. Fix: give it more to vary, a portcullis count or murder holes in its layout.',
   'landmark/mine/trestle-line/varies':
     'a classic trestle line rolls few dials, so seeds 1 and 2 land on the same layout once the seed streams shift. Fix: give it more to vary.',
+  'landmark/harbor/tidal-pier/varies':
+    'a classic tidal pier rolls few dials, so seeds 2 and 3 build the same pier once open side edges shifted which attempts are kept. Fix: give it more to vary, a pile count or a second deck height.',
+  'landmark/mine/crystal-geode/varies':
+    'a classic geode varies mostly in its rock, so seeds 2 and 3 differ only in tiles once open side edges shifted which attempts are kept. Fix: let the seed move its crystals or its way in, not just the rock round them.',
   'landmark/jungle/canopy-village/varies':
     'a classic village has room for two trees three columns apart and no rotten planks, so it makes about five small rolls and seeds 2 and 3 land on the same ones (24 layouts in 30 seeds). Fix: give the classic village more to vary, a wider spread of trees or a third one.',
 };

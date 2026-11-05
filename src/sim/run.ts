@@ -19,7 +19,7 @@ import {
   spawnItem,
   stepItems,
 } from './items';
-import { goalRect, killY, type Level, spawnZone, tileAt } from './level';
+import { goalRect, killY, type Level, offMap, spawnZone, tileAt } from './level';
 import { stepTide, tideStart } from './tide';
 import { type Body, bodyAtCell, type CollisionWorld, firstOverlap, type Solid, stepBody } from './physics';
 import {
@@ -69,7 +69,8 @@ import { NO_INPUT } from './types';
 
 export type { Projectile, PropState } from './props';
 
-export type DeathCause = 'hazard' | 'fall' | 'crush' | 'pop' | 'timeout';
+/** `out`: left the level off its left or right edge. */
+export type DeathCause = 'hazard' | 'fall' | 'crush' | 'pop' | 'timeout' | 'out';
 
 export interface Runner {
   slot: number;
@@ -211,6 +212,7 @@ export class RunWorld {
     }
     this.world = {
       tileAt: (x, y) => tileAt(level, x, y),
+      cols: level.w,
       solids: this.solids,
       gravity: level.gravity ?? 1,
       tileSurface: footing(level),
@@ -363,6 +365,7 @@ export class RunWorld {
         }
       }
       if (b.y > this.killY) return this.kill(r, -1, 'fall');
+      if (offMap(b, this.level.w)) return this.kill(r, -1, 'out');
       // Slag burns wherever it is, the spawn zone included, as the pit takes you anywhere.
       if (this.slag !== null && hb.y + hb.h > this.slag) return this.kill(r, -1, 'hazard');
       if (this.rules.flag && overlaps(b, this.goal)) {
@@ -408,7 +411,7 @@ export class RunWorld {
     r.cause = cause;
     if (killer >= 0) this.kills.push({ victim: r.slot, killer });
     this.events.push({ type: 'death', slot: r.slot, x: r.body.x + r.body.w / 2, y: r.body.y + r.body.h / 2, cause, vx: r.body.vx, vy: r.body.vy });
-    if (this.bleeds)
+    if (this.bleeds && cause !== 'out')
       spillBlood(this.blood, groundOf(this.level, this.placed), r.body, r.slot, this.frame, new Rng(deriveSeed(this.itemSeed, `blood:${r.slot}`)));
   }
 

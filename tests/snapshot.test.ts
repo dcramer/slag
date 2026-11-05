@@ -59,7 +59,7 @@ function raceWithItems(): Match {
 
 function raceInputs(f: number): Record<string, InputFrame> {
   const held = { right: true, run: true, jump: f % 30 < 14, jumpPressed: f % 30 === 0, usePressed: f % 47 === 0 };
-  return { 'a:kb1': press(held), 'b:kb1': press(held), 'b:pad0': press({ ...held, right: false, left: true }) };
+  return { 'a:kb1': press(held), 'b:kb1': press(held), 'b:pad0': press({ ...held, run: false, right: f % 40 >= 10, left: f % 40 < 10 }) };
 }
 
 describe('snapshot coverage', () => {

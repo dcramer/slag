@@ -77,6 +77,19 @@ export interface TelemetryReporter {
   breadcrumb(category: string, message: string, data?: TelemetryData): void;
   /** A structured log line, searchable on its own without an error around it. Optional: a backend without logs drops them. */
   log?(level: TelemetryLevel, message: string, data?: TelemetryData): void;
+  /** A metric datapoint. Optional: a backend without metrics drops them. */
+  metric?(type: MetricType, name: string, value: number, opts?: MetricOptions): void;
+  /** Send what is buffered now: the page may be about to go. Optional. */
+  flush?(): void;
+}
+
+/** `count` adds up across reports, `gauge` keeps the latest, `distribution` keeps every value for percentiles. */
+export type MetricType = 'count' | 'gauge' | 'distribution';
+
+export interface MetricOptions {
+  unit?: 'millisecond' | 'second' | 'none';
+  /** Low-cardinality facts to slice by, on top of the tags. A key here wins over a tag of the same name. */
+  attributes?: TelemetryData;
 }
 
 /**
@@ -86,6 +99,8 @@ export interface TelemetryReporter {
 export const MAX_EVENTS_PER_NAME = 5;
 /** Per-message cap on `reportLog` for one page load. */
 export const MAX_LOGS_PER_MESSAGE = 30;
+/** Per-name cap on `reportMetric` for one page load: a datapoint per phase for a few hours of play, never one per frame. */
+export const MAX_METRICS_PER_NAME = 500;
 
 let reporter: TelemetryReporter | null = null;
 let readContext: (() => TelemetryContext) | null = null;
@@ -93,12 +108,14 @@ const tags = new Map<string, string | number | boolean>();
 const contexts = new Map<string, ContextSource>();
 const eventCounts = new Map<string, number>();
 const logCounts = new Map<string, number>();
+const metricCounts = new Map<string, number>();
 
 /** Called by the host once at startup; `null` removes the reporter. */
 export function installTelemetry(next: TelemetryReporter | null): void {
   reporter = next;
   eventCounts.clear();
   logCounts.clear();
+  metricCounts.clear();
 }
 
 /**
@@ -190,4 +207,19 @@ export function addBreadcrumb(category: string, message: string, data?: Telemetr
 export function reportLog(message: string, level: TelemetryLevel = 'info', data?: TelemetryData): void {
   if (!reporter?.log || !underCap(logCounts, message, MAX_LOGS_PER_MESSAGE)) return;
   guarded((r) => r.log?.(level, message, data));
+}
+
+/**
+ * A metric datapoint, aggregated by the backend across every player: how the
+ * game runs in the field (frame times per phase). Already summarised by the
+ * caller, never one per frame. Fixed `name`; slice by `opts.attributes`.
+ */
+export function reportMetric(type: MetricType, name: string, value: number, opts?: MetricOptions): void {
+  if (!reporter?.metric || !Number.isFinite(value) || !underCap(metricCounts, name, MAX_METRICS_PER_NAME)) return;
+  guarded((r) => r.metric?.(type, name, value, opts));
+}
+
+/** Send buffered logs and metrics now, for when the page may be going (tab hidden): a backend's timer may never fire. */
+export function flushTelemetry(): void {
+  guarded((r) => r.flush?.());
 }

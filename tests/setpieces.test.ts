@@ -31,8 +31,9 @@ describe('set pieces', () => {
       };
       reroll(terrains);
       // Two levels are a small sample: a recipe that needs a long flat run (the farm's combine) or a rare spot (its hay hook)
-      // may find none on them. Then a plain wide level, generated only when needed.
-      if (seen.size < SET_PIECE_RECIPES[theme].length) reroll([{ ...generateLevel(1, theme, { concept: 'plain', size: 'wide' }), setPieces: [] }]);
+      // may find none on them. Then plain wide levels, generated only when needed.
+      for (const seed of [1, 2, 3])
+        if (seen.size < SET_PIECE_RECIPES[theme].length) reroll([{ ...generateLevel(seed, theme, { concept: 'plain', size: 'wide' }), setPieces: [] }]);
       for (const r of SET_PIECE_RECIPES[theme]) expect(seen.has(r.name), `${theme}/${r.name}`).toBe(true);
     }
   });
