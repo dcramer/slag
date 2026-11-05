@@ -1,7 +1,7 @@
 import { footprintCells } from '../../sim/props';
 import { isProtected, type Level, T_EMPTY, T_SOLID } from '../../sim/level';
 import { ReachCache } from '../../sim/reach';
-import { analyzeRoutes, MAX_SHARED } from './routes';
+import { analyzeRoutes, MAX_SHARED, sameBytes } from './routes';
 import { BRIDGE_W, type BridgeHint } from './types';
 
 export { BRIDGE_W };
@@ -78,12 +78,17 @@ export function judge(level: Level, hints: readonly Bridge[] = [], crossings: re
     return { ok: true, bridges, evals, shared, open: shared <= MAX_SHARED, ...(landmark !== undefined ? { landmark } : {}) };
   };
   if (cache.analyze(level).goalReached) return scored([], 0);
-  const s = new BridgeSearch(level, cache);
+  const s = searchOf(level, cache);
   const sol = s.solve(hints);
   if (!sol) return { ok: false, bridges: [], evals: s.evals, shared: 1, open: false };
   // The search's candidates are rough: on a level with one crossing, two bridges may be one it didn't try.
   // A level's count sets what the crate must offer, so it has to be the real one.
-  const verify = (bs: Bridge[]) => bs.every((b) => canPlaceBridge(level, b)) && cache.analyze(withBridges(level, bs)).goalReached;
+  const verify = (bs: Bridge[]) => {
+    if (!bs.every((b) => canPlaceBridge(level, b))) return false;
+    if (cache.analyze(withBridges(level, bs)).goalReached) return true;
+    if (bs.length === 1) s.missed(bs[0]);
+    return false;
+  };
   const lone = sol.length === 2 && crossings.length === 1 ? loneBridge(crossings[0], hints, verify) : null;
   return scored(lone ? [lone] : sol, s.evals);
 }
@@ -91,10 +96,39 @@ export function judge(level: Level, hints: readonly Bridge[] = [], crossings: re
 /**
  * One bridge that does what `level`'s two do, if a full look finds one: everywhere
  * a run falls past. The count sets what the crate offers, so it's worth asking
- * again of the final terrain, where lanes may have opened a shorter way.
+ * again of the final terrain, where lanes may have opened a shorter way. On the
+ * terrain `judge` searched, with the same cache, it skips every spot judge already
+ * proved falls short.
  */
 export function oneBridgeEnough(level: Level, hints: readonly Bridge[] = [], cache = new ReachCache(level)): Bridge | null {
-  return new BridgeSearch(level, cache).lone(hints);
+  return searchOf(level, cache).lone(hints);
+}
+
+/** The last search over each level, with everything it was built from: a later one over the same terrain reuses its answers. */
+const searches = new WeakMap<Level, { cache: ReachCache; tiles: Uint8Array; level: Level; search: BridgeSearch }>();
+
+/**
+ * A search over `level` through `cache`. While the level's tiles, pockets, set pieces, footing, ground and rides are
+ * the ones the last search here saw, it's that search, so a spot it already traced isn't traced again.
+ */
+function searchOf(level: Level, cache: ReachCache): BridgeSearch {
+  const kept = searches.get(level);
+  if (
+    kept &&
+    kept.cache === cache &&
+    kept.level.protectedRects === level.protectedRects &&
+    kept.level.setPieces === level.setPieces &&
+    kept.level.weather === level.weather &&
+    kept.level.ground === level.ground &&
+    kept.level.rides === level.rides &&
+    kept.level.spawn === level.spawn &&
+    kept.level.goal === level.goal &&
+    sameBytes(kept.tiles, level.tiles)
+  )
+    return kept.search;
+  const search = new BridgeSearch(level, cache);
+  searches.set(level, { cache, tiles: level.tiles.slice(), level: { ...level }, search });
+  return search;
 }
 
 /** Try one bridge along a crossing, on and just above the ledges, with the real controller. */
@@ -158,18 +192,28 @@ class BridgeSearch {
   private readonly gx: number;
   private readonly gy: number;
 
+  /** What the level offers with no bridges, once traced. */
+  private root: Reached | null = null;
+  /** Bridge keys proven not to finish the level alone. */
+  private readonly misses = new Set<number>();
+
   constructor(
     private readonly level: Level,
     private readonly cache: ReachCache,
   ) {
     this.W = level.w;
     this.H = level.h;
-    this.base = level.tiles;
+    this.base = level.tiles.slice();
     this.closed = new Uint8Array(this.W * this.H);
     for (let y = 0; y < this.H; y++) for (let x = 0; x < this.W; x++) if (isProtected(level, x, y)) this.closed[y * this.W + x] = 1;
     for (const k of setPieceCells(level)) this.closed[k] = 1;
     this.gx = level.goal.tx;
     this.gy = level.goal.ty;
+  }
+
+  /** A bridge that `judge` proved doesn't finish the level alone. */
+  missed(b: Bridge): void {
+    this.misses.add(b.y * this.W + b.x);
   }
 
   solve(hints: readonly Bridge[]): Bridge[] | null {
@@ -182,6 +226,7 @@ class BridgeSearch {
       const r = this.grow(root, k);
       tried.add(String(k));
       if (r.goal) return [this.bridge(k)];
+      this.misses.add(k);
       level1.push(r);
     }
     level1.sort((a, b) => a.natural + 0.3 * a.any - (b.natural + 0.3 * b.any));
@@ -211,7 +256,9 @@ class BridgeSearch {
       const block = Math.floor((k - x) / this.W / 2) * this.W + Math.floor(x / 2);
       if (!hintKeys.includes(k) && blocks.has(block)) continue;
       blocks.add(block);
+      if (this.misses.has(k)) continue;
       if (this.grow(root, k).goal) return this.bridge(k);
+      this.misses.add(k);
     }
     return null;
   }
@@ -220,14 +267,16 @@ class BridgeSearch {
     return hints.map((h) => h.y * this.W + h.x).filter((k) => this.placeable(this.base, k));
   }
 
-  /** What the level offers with no bridges. */
+  /** What the level offers with no bridges. Kept: `grow` never changes what it's given. */
   private explore(): Reached {
+    if (this.root) return this.root;
     this.evals++;
     const cands = new Uint8Array(this.W * this.H);
     const { goalReached, cells } = this.cache.analyze(this.level, true, { cands });
     const known = new Uint8Array(this.W * this.H);
     const r: Reached = { keys: [], goal: goalReached, known, cands, natural: Infinity, any: Infinity };
     this.absorb(r, cells);
+    this.root = r;
     return r;
   }
 
