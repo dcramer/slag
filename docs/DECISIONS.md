@@ -676,6 +676,8 @@ Every game design decision, preference and direction the owner has given, groupe
   2026-11-02 03:28Z · `done`; the owner's env vars and GitHub integration are `open` · AGENTS.md → Hosting, TODO.md → 17
 - **Sentry should be useful for this game: logs, errors and context that fit how it fails.** "make sure sentry is configured from a useful point of view for logs/errors/etc in a way that makes sense for our game"
   2026-11-02 · `done` · docs/TELEMETRY.md, AGENTS.md → Hosting
+- **Production reports how the game runs, not only how it fails: frame pacing per phase as Sentry metrics, sliced by device and tier, compared release to release.** "do we have the right level of monitoring to know if our game continues to perform at desired fps in prod?", "lets go ahead and do it"
+  2026-11-05 02:29Z · `done` · docs/TELEMETRY.md → Metrics
 - **pnpm is the package manager and Node 24 the runtime; pnpm settings live in `pnpm-workspace.yaml`.** "get this fixed up"
   2026-11-02 02:46Z · `done` · AGENTS.md → Commands
   Changed: npm, then Node 22 (`6ebfbd4`).

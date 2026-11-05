@@ -3,6 +3,7 @@ import {
   breadcrumbsIntegration,
   captureException,
   captureMessage,
+  flush,
   dedupeIntegration,
   eventFiltersIntegration,
   globalHandlersIntegration,
@@ -10,10 +11,11 @@ import {
   init,
   linkedErrorsIntegration,
   logger,
+  metrics,
   withScope,
 } from '@sentry/browser';
-import { telemetryScope, type TelemetryData, type TelemetryLevel, type TelemetryReporter } from '../src/telemetry';
-import { EventBudget, eventFingerprint, keepBreadcrumb, noiseReason, type PageState, stampScope } from './sentry-filter';
+import { type MetricType, telemetryScope, type TelemetryData, type TelemetryLevel, type TelemetryReporter } from '../src/telemetry';
+import { EventBudget, eventFingerprint, keepBreadcrumb, metricAttributes, noiseReason, type PageState, stampScope } from './sentry-filter';
 import { sentryOptions } from './sentry-options';
 
 /**
@@ -25,7 +27,8 @@ import { sentryOptions } from './sentry-options';
  *
  * No tracing and no replay here, on purpose (docs/TELEMETRY.md → Sampling):
  * the game is one long-lived canvas page, so a replay records an empty canvas
- * and a page-load trace says less than `pnpm perf`.
+ * and a page-load trace says less than `pnpm perf`. How it runs in the field
+ * comes as metrics instead (`src/frame-pacing.ts`).
  */
 
 /** Details passed with `reportError` that are worth filtering issues by. */
@@ -35,6 +38,12 @@ const LOG: Record<TelemetryLevel, (message: string, attributes?: Record<string, 
   info: (m, a) => logger.info(m, a),
   warning: (m, a) => logger.warn(m, a),
   error: (m, a) => logger.error(m, a),
+};
+
+const METRIC: Record<MetricType, typeof metrics.count> = {
+  count: (n, v, o) => metrics.count(n, v, o),
+  gauge: (n, v, o) => metrics.gauge(n, v ?? 0, o),
+  distribution: (n, v, o) => metrics.distribution(n, v ?? 0, o),
 };
 
 /** Start the SDK and return the reporter that feeds it. */
@@ -51,6 +60,8 @@ export function startSentry(): TelemetryReporter {
     beforeBreadcrumb: (b) => (keepBreadcrumb(b) ? b : null),
     // Logs carry the game's tags too, so one can be filtered like an issue.
     beforeSendLog: (log) => ({ ...log, attributes: { ...telemetryScope().tags, ...log.attributes } }),
+    // So do metrics, minus the tags that would split a series per room.
+    beforeSendMetric: (metric) => ({ ...metric, attributes: metricAttributes(telemetryScope().tags, metric.attributes) }),
     // Spelled out to leave out BrowserApiErrors, which would wrap the game loop's
     // requestAnimationFrame for nothing (uncaught errors reach globalHandlers
     // anyway), and sessions. `dom: false`: keystrokes and clicks are game input.
@@ -85,6 +96,12 @@ export function startSentry(): TelemetryReporter {
     },
     log(level, message, data) {
       LOG[level](message, details(data));
+    },
+    metric(type, name, value, opts) {
+      METRIC[type](name, value, { unit: opts?.unit, attributes: details(opts?.attributes) });
+    },
+    flush() {
+      void flush();
     },
   };
 }

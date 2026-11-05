@@ -82,6 +82,22 @@ export function stampScope(event: ErrorEvent, scope: TelemetryScope): ErrorEvent
 }
 
 /**
+ * Tags that name one room, level or round. Fine on an issue, where they find the
+ * reports to read; on a metric they split every series into one per room.
+ */
+const PER_ROOM_TAGS: ReadonlySet<string> = new Set(['room', 'level.seed', 'match.round']);
+
+/**
+ * A metric's attributes: the game's tags minus the per-room ones, under what the
+ * metric was given (a window's `match.phase` beats the phase the match moved on to).
+ */
+export function metricAttributes(tags: TelemetryScope['tags'], own?: Record<string, unknown>): Record<string, unknown> {
+  const out: Record<string, unknown> = {};
+  for (const [k, v] of Object.entries(tags)) if (v !== undefined && !PER_ROOM_TAGS.has(k)) out[k] = v;
+  return { ...out, ...own };
+}
+
+/**
  * Fetch breadcrumbs from the signaling API are a poll every few seconds: left
  * in, they push everything else out of the trail. Failed ones stay, and so
  * does every other request. Console lines from the net session (`[net] …`)

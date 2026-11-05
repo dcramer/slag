@@ -62,7 +62,7 @@
               { "group": ["next/*"], "message": "src/ is framework-free so the game stays portable. Put Next.js code in app/ and have it call plain functions exported from src/." },
               {
                 "group": ["@sentry/*"],
-                "message": "src/ must run under any host, so the game can't depend on Sentry. Call reportError, reportEvent, reportLog, addBreadcrumb, setTag or setContext from src/telemetry.ts (docs/TELEMETRY.md); the SDK is imported only by the host (instrumentation*.ts, app/sentry-*.ts)."
+                "message": "src/ must run under any host, so the game can't depend on Sentry. Call reportError, reportEvent, reportLog, reportMetric, addBreadcrumb, setTag or setContext from src/telemetry.ts (docs/TELEMETRY.md); the SDK is imported only by the host (instrumentation*.ts, app/sentry-*.ts)."
               }
             ]
           }
@@ -158,7 +158,7 @@
               { "group": ["**/app", "**/app/**"], "message": "src/net can't depend on the Next app: it has to work against a hosted API from any build. Shared wire types belong in src/net/signal-protocol.ts." },
               {
                 "group": ["@sentry/*"],
-                "message": "src/ must run under any host, so the game can't depend on Sentry. Call reportError, reportEvent, reportLog, addBreadcrumb, setTag or setContext from src/telemetry.ts (docs/TELEMETRY.md); the SDK is imported only by the host (instrumentation*.ts, app/sentry-*.ts)."
+                "message": "src/ must run under any host, so the game can't depend on Sentry. Call reportError, reportEvent, reportLog, reportMetric, addBreadcrumb, setTag or setContext from src/telemetry.ts (docs/TELEMETRY.md); the SDK is imported only by the host (instrumentation*.ts, app/sentry-*.ts)."
               }
             ]
           }
@@ -208,7 +208,7 @@
               },
               {
                 "group": ["@sentry/*"],
-                "message": "src/ must run under any host, so the game can't depend on Sentry. Call reportError, reportEvent, reportLog, addBreadcrumb, setTag or setContext from src/telemetry.ts (docs/TELEMETRY.md); the SDK is imported only by the host (instrumentation*.ts, app/sentry-*.ts)."
+                "message": "src/ must run under any host, so the game can't depend on Sentry. Call reportError, reportEvent, reportLog, reportMetric, addBreadcrumb, setTag or setContext from src/telemetry.ts (docs/TELEMETRY.md); the SDK is imported only by the host (instrumentation*.ts, app/sentry-*.ts)."
               }
             ]
           }
@@ -230,7 +230,7 @@
               { "group": ["next/*"], "message": "src/ is framework-free so the game stays portable. Put Next.js code in app/ and have it call plain functions exported from src/." },
               {
                 "group": ["@sentry/*"],
-                "message": "src/ must run under any host, so the game can't depend on Sentry. Call reportError, reportEvent, reportLog, addBreadcrumb, setTag or setContext from src/telemetry.ts (docs/TELEMETRY.md); the SDK is imported only by the host (instrumentation*.ts, app/sentry-*.ts)."
+                "message": "src/ must run under any host, so the game can't depend on Sentry. Call reportError, reportEvent, reportLog, reportMetric, addBreadcrumb, setTag or setContext from src/telemetry.ts (docs/TELEMETRY.md); the SDK is imported only by the host (instrumentation*.ts, app/sentry-*.ts)."
               },
               {
                 "group": ["**/render", "**/render/*", "**/input", "**/input/*", "**/audio", "**/audio/*", "**/ui/*", "**/debug", "**/game-client", "**/net", "**/net/*"],
