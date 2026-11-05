@@ -783,6 +783,27 @@ export const BRIEFS: Record<string, Brief> = {
     // antenna, a fuse and a mage's pointed hat (art/sprites/creeper/design.prompt.txt).
     worn: 'he is an old painted cardboard box: a wide strip of brown packing tape (#c49a5a) is stuck across a big split in the front of his body; the top back corner of his head is dented in, a big notch in its outline; the bottom front corner of his body is torn open, the brown corrugated cardboard (#b8925e) showing; the birthday candle is stuck in crooked, leaning back, wax dripping down it, its flame big. The four square face holes stay exactly as they are.',
   },
+  tophat: {
+    // The nod, each part of the read at race size and each a shape in outline: the top hat as tall as the rest of
+    // her, a clean cylinder standing straight up off a small girl's head with a brim (the read: nobody else in the
+    // cast wears one; the plumber's cap and the elf's are low and soft, the robot's helmet a round dome); the short
+    // cape flaring off her shoulders with its high collar (the time-travelling girl's other shape); the small size,
+    // a little girl's big head on short legs. The ponytail stays short, so the hat is the outline, not the hair
+    // (long hair behind a slim girl paired the raider with the puppy).
+    // Ours, and the joke: the hat is a stovepipe made from a tin can, its band a fat hair tie, and the umbrella is a
+    // paper cocktail umbrella grown huge.
+    // The palette is neutral (Decisions 4): the hat and cape in the player's colour, the band and the cape's lining a
+    // light of it; the skin, hair, shorts, socks, boots and umbrella neutrals. The colours lead the brief: the image
+    // model drops what comes last.
+    design:
+      'The character: a tiny cheeky cartoon girl, three-quarter view facing right. Colours: a plum (#963c8f) hat and cape, a pale lilac (#e0b0dc) hat band and cape lining, peach skin (#f2cba8), brown hair (#7a4a2a), dark grey shorts (#4a4650), a cream paper umbrella (#f2e8cc). ' +
+      'Her signature: a huge stovepipe top hat as tall as the rest of her, standing straight up off her head, a tall plain plum tin can with ridged rims on a flat brim, a fat lilac hair tie round its base for a band. ' +
+      'A short plum cape with a high stiff collar flares out off her shoulders. A short brown ponytail out the back under the brim. Big round eyes, a wide cheeky grin. ' +
+      'Shorts, grey-and-white striped socks, little dark boots. Her front hand holds out a huge open paper cocktail umbrella on a wooden toothpick stick, low and clear of her body.',
+    // The design came back close to the original redrawn (a plain top hat with a band), so the edit carries the
+    // twist with the wear: the tin can's ridges and dent, the hair tie, the umbrella grown huge.
+    worn: "the top hat is now clearly an old tin can: two raised ridged rings run round it near its top and its bottom, and a big dent is knocked into its side, its brim still wide and flat and the hat still straight up; its band is a fat lilac hair tie (#e0b0dc) knotted at the side; the umbrella grows huge: an open paper cocktail umbrella as wide as she is, on a long wooden toothpick stick, held out at arm's length in front of her, with white background all round it; the hem of the cape is torn into a big ragged notch; one striped sock has slipped down round her boot. Her face and the ponytail stay as they are.",
+  },
 };
 
 function brief(kind: string): Brief {

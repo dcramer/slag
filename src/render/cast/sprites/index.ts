@@ -45,6 +45,7 @@ export const LOADERS: Partial<Record<Kind, () => Promise<{ sprites: SpriteSet }>
   stinger: () => import('./stinger/frames'),
   mage: () => import('./mage/frames'),
   creeper: () => import('./creeper/frames'),
+  tophat: () => import('./tophat/frames'),
 };
 
 const loaded: Partial<Record<Kind, SpriteSet>> = {};

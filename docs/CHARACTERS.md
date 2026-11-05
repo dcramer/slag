@@ -67,7 +67,7 @@ Each kind's entry is its own file in [characters/](characters/): what a stranger
 | [stinger](characters/stinger.md) | the horned bug with the needle | a small bug with a white mask face and two long crescent horns hooking back, a red dishcloth cloak hanging from the shoulders in a short bell, thin dark legs under it, a thick knitting needle held level with yarn off its knob | costume: the cloak; the stripes a light of it |
 | [mage](characters/mage.md) | the black mage with the glowing eyes | a huge straw hat with a brim wider than his shoulders and a bent point, no face under it but two glowing eyes in the dark, a long robe with flared cuffs, a broom-handle staff with a bulb | costume: the robe; the belt and face a neutral dark |
 | [creeper](characters/creeper.md) | the green block creeper | a tall block body with a square head the same width, four stubby block legs, no arms, a frowning face of square holes cut through him, a birthday candle burnt to a stub for a fuse | costume: the body; its painted squares a light and a dark of it |
-| [tophat](characters/tophat.md) | the little girl in the tall top hat | a tin-can top hat as tall as the rest of her, a short cape with a high collar, a ponytail out the back, a huge cocktail umbrella | costume: the hat and cape |
+| [tophat](characters/tophat.md) | the little girl in the tall top hat | a tin-can top hat as tall as the rest of her, a short cape with a high collar, a ponytail out the back, a huge cocktail umbrella | costume: the hat and cape; the hair tie and the lining a light of it |
 | [pyramid](characters/pyramid.md) | the triangle-helmeted executioner | a huge pyramid helmet pointing out past his shoulder, a long butcher's apron, thick bare arms, a giant cheese slicer dragged behind | costume: the apron |
 
 **Reserves**, if a kind won't read: the spinning bandicoot (its tuft and grin rhyme with the speedster), the shovel-wielding knight, the red-haired mountain climber, the falling-block party bean (rhymes with the crewmate). The space marine in green armour reads as a generic soldier at 20 px; the plumber's tall brother, the ape's red-capped nephew and the king's turtle foot soldiers rhyme with kinds already in.
@@ -136,7 +136,7 @@ The strongest reads first. **Keyed** marks the non-humanoids, the riskiest to dr
 | 30 | stinger | Hornette | humanoid, cloaked | drawn flat; the blind read passes (straight horns read as rabbit ears until they curved into crescents) |
 | 31 | mage | Vivvy | humanoid, robed | drawn flat; the blind read passes (both readers named him at medium, unpaired) |
 | 32 | creeper | Creepah | **keyed**, four legs, no arms | drawn flat; the blind read passes (named at medium by both once the face was cut through him and the candle burnt to a stub) |
-| 33 | tophat | Hat Kidd | humanoid, small | medium: the hat; the plumber's cap and the robot's helmet to watch |
+| 33 | tophat | Hat Kidd | humanoid, small | drawn flat; the blind read passes (the hat, a clean tin cylinder on a wide brim, with the umbrella held out low, clear of it) |
 | 34 | pyramid | Pyramid Ted | humanoid, big + blade | medium: the helmet against the stinger's horns and the merc's blade |
 
 **What to check.** No two kinds may rhyme. Watch these pairs:
