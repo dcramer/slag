@@ -39,6 +39,9 @@ export const CAST_NOTES: Record<Kind, string> = {
   hopper: '@!#?@!',
   warrior: 'Crumbles under pressure.',
   slayer: 'Hmm.',
+  raider: 'Returns nothing to museums.',
+  fighter: 'Kicks first, small talk never.',
+  stinger: 'Sews her own way out.',
 };
 
 export interface CastEntry {

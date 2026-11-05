@@ -38,6 +38,9 @@ export const CAST = [
   'hopper',
   'warrior',
   'slayer',
+  'raider',
+  'fighter',
+  'stinger',
 ] as const;
 export type Kind = (typeof CAST)[number];
 
@@ -100,6 +103,9 @@ export const KIND_NAMES: Record<Kind, string> = {
   hopper: 'Kewbert',
   warrior: 'Kakosh',
   slayer: 'Gerald',
+  raider: 'Laura Craft',
+  fighter: 'Chun-Lee',
+  stinger: 'Hornette',
 };
 
 /**
@@ -134,6 +140,9 @@ const PAINTS: Record<Kind, readonly HSL[]> = {
   hopper: [hsl3(22, 85, 52)],
   warrior: [hsl3(8, 55, 45)],
   slayer: [hsl3(28, 30, 40)],
+  raider: [hsl3(185, 45, 45)],
+  fighter: [hsl3(215, 60, 45)],
+  stinger: [hsl3(355, 65, 45)],
 };
 
 /** How many `vary` rolls a character has, and how many of them come from the look's main stream. */
