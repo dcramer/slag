@@ -96,7 +96,7 @@ const TALL_SIZES = { w: [32, 40], h: [40, 60] } as const;
 const WIDE_SIZES = { w: [64, 96], h: [24, 30] } as const;
 
 /** Debug/tools: force some knobs (the rest still roll from the seed). A size the theme can't do falls back to its widest. */
-export type ProfileOverride = Partial<Pick<LevelProfile, 'size' | 'route' | 'density' | 'hazards' | 'danger' | 'gravity' | 'difficulty' | 'draw'>> & {
+export type ProfileOverride = Partial<Pick<LevelProfile, 'size' | 'route' | 'density' | 'hazards' | 'danger' | 'gravity' | 'difficulty' | 'draw' | 'tide'>> & {
   weather?: WeatherKind;
   /** A stage concept id of the theme's (gen/stage), or 'plain'; with no size or route forced, the level takes one the concept fits. */
   concept?: string;
@@ -133,7 +133,7 @@ export function gravityClass(g: number): GravityClass {
 export function rollProfile(seed: number, themeId: ThemeId, o: ProfileOverride = {}, salt = ''): LevelProfile {
   const rng = new Rng(deriveSeed(seed, `profile:${themeId}${salt}`));
   const rolled = rng.weighted(SIZE_WEIGHTS[themeId]);
-  const size = o.size && SIZE_WEIGHTS[themeId].some(([s]) => s === o.size) ? o.size : o.size === 'tall' ? 'wide' : rolled;
+  const size = o.size && SIZE_WEIGHTS[themeId].some(([s]) => s === o.size) ? o.size : o.size === 'tall' ? 'wide' : o.tide ? climbSize(themeId) : rolled;
   let w: number = LEVEL_W;
   let h: number = LEVEL_H;
   if (size === 'wide') {
@@ -145,7 +145,8 @@ export function rollProfile(seed: number, themeId: ThemeId, o: ProfileOverride =
     h = rng.int(Math.max(TALL_SIZES.h[0], w + 6), TALL_SIZES.h[1]);
   }
   const rolledRoute = rng.weighted(ROUTE_WEIGHTS[size]);
-  const route = o.route && ROUTE_WEIGHTS[size].some(([r]) => r === o.route) ? o.route : rolledRoute;
+  const routes = o.tide ? ROUTE_WEIGHTS[size].filter(([r]) => CLIMBS.has(r)) : ROUTE_WEIGHTS[size];
+  const route = o.route && routes.some(([r]) => r === o.route) ? o.route : o.tide ? climbRoute(routes, rolledRoute) : rolledRoute;
   // Density: three moods (sparse / normal / dense) with jitter, so extremes are common enough to notice.
   const mood = rng.weighted<number>([
     [0.15, 3],
@@ -186,7 +187,25 @@ export function rollProfile(seed: number, themeId: ThemeId, o: ProfileOverride =
         ])
       ],
     difficulty,
+    ...(o.tide ? { tide: true } : {}),
   };
+}
+
+/** Routes that go up: a level the slag rises through has to climb (game/modes.ts, Rising Slag). */
+const CLIMBS: ReadonlySet<RouteShape> = new Set(['climb', 'zigzag']);
+
+/**
+ * A Rising Slag level's size: a tower where the theme builds towers, else a classic level that climbs. Every theme
+ * climbs at classic size, so any theme can host the mode in its own shape language (farms and harbors never go tall).
+ */
+function climbSize(themeId: ThemeId): SizeClass {
+  return SIZE_WEIGHTS[themeId].some(([s]) => s === 'tall') ? 'tall' : 'classic';
+}
+
+/** The rolled route if it climbs; otherwise the climbing route it maps to, so the rest of the roll stays the seed's. */
+function climbRoute(routes: Weights<RouteShape>, rolled: RouteShape): RouteShape {
+  if (routes.some(([r]) => r === rolled)) return rolled;
+  return routes[0][0];
 }
 
 const clamp01 = (v: number) => Math.max(0, Math.min(1, v));

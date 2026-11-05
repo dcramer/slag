@@ -1,4 +1,5 @@
 import type { Match, Player } from '../game/match';
+import { MODES } from '../game/modes';
 import { isBridgePart, type PropDef } from '../gen/props';
 import { type Bridge, fieldOf, planHolds, prove, settled } from '../gen/level';
 import { levelPrecision } from '../gen/level/precision';
@@ -132,6 +133,7 @@ export function senseView(m: Match, p: Player): BrainView {
       tiles: m.level.tiles,
       spawn: { ...m.level.spawn },
       goal: { ...m.level.goal },
+      flag: MODES[m.rules.mode].run.flag,
       plan: m.plan.map((b) => ({ tx: b.x, ty: b.y })),
     },
     props: m.phase === 'lobby' ? [] : propsOf(m),

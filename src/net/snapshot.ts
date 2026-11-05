@@ -1,6 +1,7 @@
 import type { ProfileOverride } from '../gen/level';
 import { buildLevel } from '../gen/level/pregen';
 import type { CrateItem, Match, Phase, Player } from '../game/match';
+import { MODES } from '../game/modes';
 import type { MatchRules } from '../game/rules';
 import type { RoundResult } from '../game/scoring';
 import type { BloodCell } from '../sim/blood';
@@ -316,7 +317,14 @@ export function restoreMatch(m: Match, s: MatchSnap): void {
     prev.level === m.level &&
     prev.placed === m.placed.map((p) => p.uid).join() &&
     sameSlots(prev.run, s.run.slots);
-  m.run = s.run ? restoreRun(sameRace ? prev.run! : new RunWorld(m.level, m.placed, s.run.slots, s.run.timeLimit, s.run.itemSeed), s.run) : null;
+  m.run = s.run
+    ? restoreRun(
+        sameRace
+          ? prev.run!
+          : new RunWorld(m.level, m.placed, s.run.slots, s.run.timeLimit, s.run.itemSeed, m.blood, m.rules.bloodRounds > 0, MODES[m.rules.mode].run),
+        s.run,
+      )
+    : null;
   if (m.run) {
     m.run.blood = m.blood;
     m.run.bleeds = m.rules.bloodRounds > 0;

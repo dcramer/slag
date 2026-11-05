@@ -42,6 +42,15 @@ What it explains: themes are melted-down levels (game-like places, slightly off)
 - At the end of a match the top score wins and ties are joint winners. If the round limit hits with nobody on the board, there is no winner.
 - Anything that lists scores shows the most points first, with ties in slot order. This is display only: player order in the sim never changes. On the score screen every row is a lane racing to one finish line at the target score: this round's awards drop in as blocks, one reason at a time, and the rows slide to their new rank as they land.
 
+## Modes
+- **A mode is another way to play the same match**: the same pick and place, parts, items, characters and art, played for something else. The host picks it in Rules (**Mode**, default Race). Each mode is an entry in `MODES` (`src/game/modes.ts`): the level it asks worldgen for, what a race is played for (`RunRules`: a flag or not, last one standing or not) and how a round scores. A level is built for its mode, so changing the mode in the lobby rebuilds the level.
+- **Race** is the game as it was built: run for the flag.
+- **Rising Slag**: the Foundry pours. Every level climbs, in its own theme: a tower where the theme builds towers, a classic level whose route climbs where it never does (farms, harbors, space). There is no flag; the top is only the last place the slag reaches. Slag pools in the level's lowest open row from GO, boils for 4 s, then rises, slowly at first and faster every second, until it covers everything. It burns anyone it touches, the spawn zone included, as the pit takes you anywhere: a bonk into it credits the bonker, a shove gives nothing. It isn't a part: nothing places on it, bombs don't touch it, and the proof never sees it.
+  - **The last one standing wins the round** (+10). Runners caught on the same last frame share it, unless that's everyone: then nobody scores. Every kill pays its killer +2, standing or not, and a trailing survivor can earn the underdog bonus. The race ends the moment one runner is left.
+  - **Alone**, nobody can outlast you, so you score for how far up the slag had to come to catch you, out of 10; holding out to the top is a full 10.
+  - Parts still go in every round, so a climb gets harder, or shorter, as the match goes on. The crate still deals what the climb to the top needs.
+  - Bots climb to the top and hold it; they never self-destruct into the slag.
+
 ## Players
 - Characters are generated per player (kind, colors, face and name) and are **cosmetic only**: every player has the same hitbox and the same physics.
 - **The cast is mostly homages**: ten famous game characters in our own designs (a mustached plumber, the blue speedster, a green-tunic elf, an armored bounty hunter, a yellow electric mouse, an impostor crewmate, a pink puffball, a jellyfish parasite, a goose up to no good, a hard-hat engineer) and four plain animals (fox, frog, penguin, chicken). The roster it's heading to is **twenty homages, the greatest game characters to parody**, every one with a clear twist of its own (CHARACTERS.md → Roster). **Recognisability comes first**: each homage keeps the iconic palette and the three or four traits people know it by, so a stranger names it at a glance. **The player's color** is the body for a plain animal or a homage that comes in every color anyway (the crewmate, the puffball); on a homage in its own palette it's a flat ring at its feet. Either way it matches the HUD. Each kind is its own design with its own outline, props and gait. A lobby never seats two of the same kind. New Look rolls everything, the kind included; there's no picker. Drawn clean and light: a thin, varied pen in a dark of the body's own color. Details: [CHARACTERS.md](CHARACTERS.md).
@@ -180,6 +189,7 @@ A level is a place with one landmark you'd name it after: the Great Wheel, the H
 - **Updrafts are steady**: inside a fan column you rise or are pushed at a constant speed, standing in a column never stops you from jumping, and the visuals match exactly when it pushes.
 
 ## Rules ("level settings", set by the host)
+- Mode: Race or Rising Slag, default Race. See Modes.
 - Match Length: default Normal. See Scoring.
 - Pick timer: default 15 s. When it runs out, stragglers get a random leftover prop.
 - Place timer: default 15 s. When it runs out, an unplaced prop is forfeited.
@@ -190,7 +200,7 @@ A level is a place with one landmark you'd name it after: the Great Wheel, the H
 - Parts: Few, Some, Many or All, default Many: how many different parts the match's crates deal from. See Props.
 - Secret Parts: default off. See Props.
 - Lobby: Public or Private, default Public, online only. Private keeps the lobby off the lobby list. Never carried over to the host's next lobby.
-- A rule the level is built from (gravity, weather, difficulty) rebuilds the lobby's level on the spot, for everyone.
+- A rule the level is built from (mode, gravity, weather, difficulty) rebuilds the lobby's level on the spot, for everyone.
 - **The Level card** opens from the level's plate in the lobby's top bar (New Level beside it still rolls a new one). It shows the level as it plays, with arrows either side that turn through the themes and **Any** (the seed's own theme); the theme and the level's name sit under the picture with a dice for a random theme. Below that are the **seed**, which you can type (a number or a word, read as a link's `?seed=`) or roll with a dice, and the **difficulty**: Grab Bag (the default: each level rolls its own, see Levels), Sunday Stroll, Fair Fight or Pain Train, the match's rule for every level. Every change rebuilds the level on the spot. A chosen theme stays for the levels after it. Online it's the host's, like the rules.
 - The Rules card is one screen with no scrolling at 720p: a label and a row of choices per rule, no explanations.
 

@@ -9,6 +9,7 @@ import {
   type TimerRule,
   varietyLabel,
 } from '../../game/rules';
+import { MODE_IDS, MODES } from '../../game/modes';
 import type { InputManager } from '../../input/input';
 import { CanvasMenu } from '../kit/menu';
 import type { Ui } from '../kit/ui';
@@ -94,11 +95,22 @@ export class RulesMenu extends CanvasMenu {
         RULE_CHOICES[k].map((v) => ({ label: v === 0 ? 'Off' : `${v}s`, on: d[k] === v, apply: () => (d[k] = v) })),
       ),
     );
+    const mode = group(
+      'mode',
+      'Mode',
+      MODE_IDS.map((v) => ({ label: MODES[v].label, on: d.mode === v, apply: () => (d.mode = v) })),
+    );
+    const blood = group(
+      'blood',
+      'Blood Rounds',
+      BLOOD_CHOICES.map((v) => ({ label: v === 0 ? 'Off' : `${v}`, on: d.bloodRounds === v, apply: () => (d.bloodRounds = v) })),
+    );
     return [
+      [mode],
       lobby ? [length, lobby] : [length],
-      // Pick and place share a row, so Parts fits on the card with no scrolling at 720p.
+      // Pick and place share a row, and the race timer shares Blood Rounds', so the card stays one row taller for Mode.
       [timers[0], timers[1]],
-      ...timers.slice(2).map((t) => [t]),
+      [timers[2], blood],
       [
         group(
           'gravity',
@@ -121,13 +133,6 @@ export class RulesMenu extends CanvasMenu {
           'secret',
           'Secret Parts',
           [false, true].map((v) => ({ label: v ? 'On' : 'Off', on: d.secretParts === v, apply: () => (d.secretParts = v) })),
-        ),
-      ],
-      [
-        group(
-          'blood',
-          'Blood Rounds',
-          BLOOD_CHOICES.map((v) => ({ label: v === 0 ? 'Off' : `${v}`, on: d.bloodRounds === v, apply: () => (d.bloodRounds = v) })),
         ),
       ],
     ];

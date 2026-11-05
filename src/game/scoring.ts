@@ -1,5 +1,7 @@
 export const POINTS = {
   finish: 10,
+  /** Rising Slag: the last one standing, or a lone runner who outlasted the slag to the top. */
+  survive: 10,
   first: 4,
   trap: 2,
   underdog: 3,
@@ -20,12 +22,13 @@ export type Verdict = 'normal' | 'too-easy' | 'too-hard';
 export interface Award {
   slot: number;
   points: number;
-  reason: 'finish' | 'first' | 'trap' | 'underdog';
+  reason: 'finish' | 'first' | 'trap' | 'underdog' | 'survive';
 }
 
 export interface RoundResult {
   verdict: Verdict;
   awards: Award[];
+  /** Who made it: the flag's finishers in order, or Rising Slag's last ones standing. The score board celebrates them. */
   finishers: number[];
 }
 
@@ -61,4 +64,53 @@ export function scoreRound(
     }
   }
   return { verdict: 'normal', awards, finishers: [...finishers] };
+}
+
+/** How a runner's race ended, for modes that score by who outlasted whom. */
+export interface Fate {
+  slot: number;
+  alive: boolean;
+  /** Run frame it died on (-1 alive). */
+  deathFrame: number;
+}
+
+/** A trailing scorer who hasn't scored in a while: the underdog bonus (see scoreRound). */
+function underdogs(slots: readonly number[], scorers: readonly number[], standings: Readonly<Record<number, Standing>>): Award[] {
+  const leader = Math.max(0, ...slots.map((s) => standings[s]?.score ?? 0));
+  return scorers.flatMap((slot) => {
+    const s = standings[slot];
+    return s && s.score < leader && s.scoreless >= UNDERDOG_ROUNDS ? [{ slot, points: POINTS.underdog, reason: 'underdog' as const }] : [];
+  });
+}
+
+/**
+ * Rising Slag scoring (game/modes.ts):
+ * - The last one standing scores. Runners caught on the same last frame share it, unless that's everyone:
+ *   a slag that takes the whole field at once scores nothing, as a race nobody finishes doesn't.
+ * - Every kill pays its killer, standing or not: shoving is free, but a bonk into the slag or a part's
+ *   kill is credited the usual way. A trailing survivor gets the underdog bonus.
+ * - Alone, nobody can outlast you, so you score for how far the slag had to climb to catch you:
+ *   `progress` is that share of the climb to the top (0…1), and reaching the top pays a full win.
+ */
+export function scoreSurvival(
+  fates: readonly Fate[],
+  kills: readonly { victim: number; killer: number }[],
+  standings: Readonly<Record<number, Standing>> = {},
+  progress: (deathFrame: number) => number = () => 0,
+): RoundResult {
+  const slots = fates.map((f) => f.slot);
+  if (fates.length === 1) {
+    const f = fates[0];
+    const points = f.alive ? POINTS.survive : Math.round(POINTS.survive * Math.max(0, Math.min(1, progress(f.deathFrame))));
+    if (points <= 0) return { verdict: 'too-hard', awards: [], finishers: [] };
+    return { verdict: 'normal', awards: [{ slot: f.slot, points, reason: 'survive' }], finishers: points === POINTS.survive ? [f.slot] : [] };
+  }
+  const standing = fates.filter((f) => f.alive);
+  const last = Math.max(...fates.map((f) => f.deathFrame));
+  const winners = (standing.length ? standing : fates.filter((f) => f.deathFrame === last)).map((f) => f.slot);
+  if (winners.length === fates.length) return { verdict: 'too-hard', awards: [], finishers: [] };
+  const awards: Award[] = winners.map((slot) => ({ slot, points: POINTS.survive, reason: 'survive' }));
+  for (const k of kills) if (k.killer !== k.victim && slots.includes(k.killer)) awards.push({ slot: k.killer, points: POINTS.trap, reason: 'trap' });
+  awards.push(...underdogs(slots, winners, standings));
+  return { verdict: 'normal', awards, finishers: winners };
 }

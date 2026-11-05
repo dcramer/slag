@@ -81,6 +81,13 @@ Some steps need the owner. Run after setting the Vercel env vars.
 ## 22. Glacier and space follow-ups
 Both themes are on `main`. Space has no weather. Ice skids and 0.55 space gravity are measured, not played by hand.
 
+## 31. Playstyle modes
+Modes are entries in `MODES` (`src/game/modes.ts`, DESIGN.md → Modes). Rising Slag is in. Next, one agent each:
+
+1. **Rising Slag: playtest and tune.** The tide (`SLAG_TIDE` in `src/sim/tide.ts`: 4 s wait, 0.8 tiles/s gaining 0.035 a second) is a first guess, not played by hand. Farm, harbor and space build no towers, so their climbs are 10–15 rows (space 7–8) against 33–54 elsewhere: give them climbing shapes of their own (a silo or hay loft, a lighthouse or crane, a station shaft) or a slower tide. The theme's own pool still shows under the world's bottom edge beneath the slag. No sound yet: a pour and a rising boil.
+2. **Brawl.** Last one standing in an arena, knocked into hazards or the pit; the losers of a round pick and place parts into the arena. Needs spawn points for every player (`Level.spawns`, additive), an arena sculptor, items on spawners, and a fight brain. Decide with the owner first: one-hit lethal items, or knockback into the level only (today's rule: items never kill).
+3. **Gauntlet.** Co-op: everyone must finish, and the crate deals hazards. Scoring flips Race's "everyone finished scores nothing".
+
 ## 30. Native build
 A real game binary that runs the same TypeScript in a native host (owner decision: no Electron). The sim and generators stay as they are, because lockstep crossplay with the web build needs the same code. Steps, one agent each:
 

@@ -20,6 +20,7 @@ import {
   stepItems,
 } from './items';
 import { goalRect, killY, type Level, spawnZone, tileAt } from './level';
+import { tideLine } from './tide';
 import { type Body, bodyAtCell, type CollisionWorld, firstOverlap, type Solid, stepBody } from './physics';
 import {
   type Beam,
@@ -114,6 +115,20 @@ export function popCountdown(pop: number): { secs: number; since: number } {
 }
 
 /**
+ * What a race is played for, as the match's mode sets it (game/modes.ts). Plain data the run reads, so the
+ * run knows nothing of modes: a new mode picks its numbers here instead of branching in the step.
+ */
+export interface RunRules {
+  /** Reaching the flag finishes you. Off, the goal is only the top of the level, and nobody finishes. */
+  flag: boolean;
+  /** With more than one runner, the race ends when one is left standing. */
+  lastStanding: boolean;
+}
+
+/** The race the game was built on: run for the flag. */
+export const RACE_RUN: RunRules = { flag: true, lastStanding: false };
+
+/**
  * One race through the level. Pure function of (level, set pieces, placed
  * props, inputs); all time is measured in sim frames since the round
  * started. Prop behavior is delegated to module plugins (src/sim/props).
@@ -163,6 +178,8 @@ export class RunWorld {
     public blood: BloodCell[] = [],
     /** False under the blood rule's Off: deaths spill nothing. */
     public bleeds = true,
+    /** What the race is played for (the match's mode). */
+    readonly rules: RunRules = RACE_RUN,
   ) {
     const n = slots.length;
     this.runners = slots.map((slot, i) => ({
@@ -342,7 +359,10 @@ export class RunWorld {
         }
       }
       if (b.y > this.killY) return this.kill(r, -1, 'fall');
-      if (overlaps(b, this.goal)) {
+      // Slag burns wherever it is, the spawn zone included, as the pit takes you anywhere.
+      const slag = tideLine(this.level, f);
+      if (slag !== null && hb.y + hb.h > slag) return this.kill(r, -1, 'hazard');
+      if (this.rules.flag && overlaps(b, this.goal)) {
         letGo(r);
         r.finished = true;
         r.finishFrame = f;
@@ -362,7 +382,7 @@ export class RunWorld {
 
     if (this.endFrame < 0) {
       if (live && this.timeLeft === 0) for (const r of this.active) this.kill(r, -1, 'timeout');
-      if (this.active.length === 0) this.endFrame = f;
+      if (this.active.length <= (this.rules.lastStanding && this.runners.length > 1 ? 1 : 0)) this.endFrame = f;
     }
     this.frame++;
   }

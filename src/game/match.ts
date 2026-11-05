@@ -38,7 +38,8 @@ import { type GameEvent, type InputFrame, NO_INPUT } from '../sim/types';
 import type { ThemeId } from '../themes';
 import { DEFAULT_RULES, type MatchRules } from './rules';
 import { overview, viewToWorld, worldToView } from './view';
-import { type RoundResult, scoreRound } from './scoring';
+import { MODES } from './modes';
+import type { RoundResult } from './scoring';
 
 export type Phase = 'lobby' | 'pick' | 'place' | 'run' | 'score' | 'victory';
 
@@ -139,6 +140,7 @@ const REROLLS_AHEAD = 3;
 /** Level-profile knobs the rules force (gravity class, weather off, difficulty). */
 export function rulesProfile(rules: MatchRules): ProfileOverride {
   return {
+    ...MODES[rules.mode].profile,
     ...(rules.gravity === 'auto' ? {} : { gravity: GRAVITY[rules.gravity] }),
     ...(!rules.weather ? { weather: 'clear' as const } : {}),
     ...(rules.difficulty === 'varies' ? {} : { difficulty: rules.difficulty }),
@@ -747,6 +749,7 @@ export class Match {
       deriveSeed(this.seed ^ this.salt, `items:${this.round}`),
       this.blood,
       this.rules.bloodRounds > 0,
+      MODES[this.rules.mode].run,
     );
     this.setPhase('run');
   }
@@ -781,13 +784,13 @@ export class Match {
   private finishRound() {
     const run = this.run!;
     ageBlood(this.blood, this.rules.bloodRounds);
-    this.dryRounds = run.finishOrder.length ? 0 : this.dryRounds + 1;
-    const result = scoreRound(
-      this.players.map((p) => p.slot),
-      run.finishOrder,
-      run.kills,
-      Object.fromEntries(this.players.map((p) => [p.slot, { score: p.score, scoreless: p.scoreless }])),
-    );
+    const result = MODES[this.rules.mode].score({
+      slots: this.players.map((p) => p.slot),
+      run,
+      standings: Object.fromEntries(this.players.map((p) => [p.slot, { score: p.score, scoreless: p.scoreless }])),
+    });
+    // A round nobody made it through leans the next crate toward building parts.
+    this.dryRounds = result.finishers.length ? 0 : this.dryRounds + 1;
     this.prevScores = new Map(this.players.map((p) => [p.slot, p.score]));
     for (const a of result.awards) {
       const p = this.player(a.slot);

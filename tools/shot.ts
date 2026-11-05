@@ -65,6 +65,8 @@
  *          --theme farm (force a theme; `levels --themes all` renders one level per theme)
  *          --weather rain (force the weather: clear|wind|mist|rain|snow)
  *          --concept id (force a stage concept of the theme's, or plain; src/gen/stage)
+ *          --game slag (the match's playstyle mode, src/game/modes.ts: race|slag)
+ *          --bots N (lobby: bots after the players; race: seated first, so `race --players 0 --bots 3` races bots alone)
  *          --noui (hide the HUD, e.g. to review level shapes)
  *          --q high (pin the quality tier: slow software GL otherwise reads as a slow device and drops it)
  *          --runframe N (race: stop on exact sim frame N)  --campin x,y,zoom (race: pin the view, for before/after sheets)

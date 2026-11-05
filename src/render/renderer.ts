@@ -1,6 +1,7 @@
 import { css, type HSL, shift, toRgb } from '../core/color';
 import { clamp } from '../core/geom';
 import type { Match, Player } from '../game/match';
+import { MODES } from '../game/modes';
 import { overview, raceFloor, type ViewXform } from '../game/view';
 import { PLAYER_H, TILE, VIEW_H, VIEW_W } from '../sim/constants';
 import { floorY, type Level, tileAt } from '../sim/level';
@@ -25,6 +26,7 @@ import { Hud } from './hud';
 import { drawClouds, drawDrops, drawRunnerItems, itemFx } from './items';
 import { drawPocketBlocks, drawShells, drawShellShadows } from './items-extra';
 import { circle, flutter, type Light, light, type RC } from './kit';
+import { drawTideBody, drawTideSurface } from './tide';
 import { type Compositor, createCompositor } from './post';
 import {
   drawBackdrop,
@@ -322,6 +324,8 @@ export class Renderer {
     const resolved = run ? run.resolved : [...level.setPieces, ...m.placed].map(resolveProp);
     // Scenery goes down first so the terrain stands in front of it and shadows it.
     for (const r of resolved) drawBackdrop(rc, r, { level });
+    // Rising Slag: the slag is only there in a race, so every other phase shows the level dry.
+    if (run) drawTideBody(rc, level, run.frame, this.surround.margin);
     // The rest of the world goes on its own transparent layer (see ForegroundLayer); `s` stays the background.
     rc.s = this.foreground.begin(this.scene, s, g, level.theme.ambientLight);
     this.cam.apply(rc.s, this.pw);
@@ -338,7 +342,7 @@ export class Renderer {
     g.restore();
     const pushers = m.run ? m.run.runners.filter((r) => r.alive).map((r) => ({ x: r.body.x + r.body.w / 2, y: r.body.y + r.body.h, vy: r.body.vy })) : [];
     this.terrain.drawLive(rc, level, pushers);
-    this.drawMarkers(rc, level);
+    this.drawMarkers(rc, level, MODES[m.rules.mode].run.flag);
     drawBlood(rc, m, frame);
 
     const grips = run?.runners.flatMap((r) => r.attach.grip ?? []);
@@ -363,6 +367,7 @@ export class Renderer {
       });
     }
 
+    if (run) drawTideSurface(rc, level, run.frame);
     if (m.phase === 'place') this.drawGhosts(rc, m, beams, still?.solids ?? []);
     if (m.phase === 'lobby' || m.phase === 'pick' || m.phase === 'place') this.drawIdlers(rc, m, dt);
 
@@ -559,7 +564,8 @@ export class Renderer {
     l.setTransform(1, 0, 0, 1, 0, 0);
   }
 
-  private drawMarkers(rc: RC, level: Level) {
+  /** The spawn portal, and the goal's flag where the mode races for one. */
+  private drawMarkers(rc: RC, level: Level, flag: boolean) {
     const s = rc.s;
     const g = rc.g;
     const t = rc.t;
@@ -581,6 +587,7 @@ export class Renderer {
     g.fillStyle = css(pc, 10, 0.07);
     g.fillRect(sx - 12, sy - 14, 24, 14);
 
+    if (!flag) return;
     // Goal beacon: flag + light column.
     const gx = level.goal.tx * TILE + TILE / 2;
     const gy = floorY(level.goal);

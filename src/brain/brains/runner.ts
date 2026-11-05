@@ -257,6 +257,12 @@ export function runnerBrain(seed: number, traits: Personality, mood: Temperament
     } else since++;
     const wait = me.grounded && !Number.isFinite(me.togo) ? LOST_FRAMES : STUCK_FRAMES;
     const { tx, ty } = v.level.goal;
+    // With no flag the top is somewhere to hold: stand on it, and never give up into the slag. A stuck bot leaps and tries again.
+    if (!v.level.flag && me.togo === 0) {
+      since = 0;
+      return { do: 'wait' };
+    }
+    if (!v.level.flag && since > wait + LEAP_FRAMES) since = 0;
     if (since > wait + LEAP_FRAMES + LAST_FRAMES) return { do: 'giveUp' };
     if (since > wait && since <= wait + LEAP_FRAMES) return { do: 'leap', tx, ty };
     return { do: 'goTo', tx, ty };

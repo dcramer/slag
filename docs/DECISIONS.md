@@ -72,6 +72,10 @@ Every game design decision, preference and direction the owner has given, groupe
   2026-11-02 06:57Z · `done` · DESIGN.md → Rules (Blood rounds)
 - **Secret Parts mode: you pick a role (build, hazard, utility, demolish) without knowing the part, and get one at random from the match's parts.** "a mode thats like secret blocks, where you dont know what it is, but you choose hazard/utility/block"
   2026-11-02 04:56Z · `done` · DESIGN.md → Props (Secret Parts), Rules
+- **Add alternative playstyle modes that keep the game's graphics and reuse its parts where they make sense; Rising Slag first, with Brawl (a Duck Game-like knock-them-off mode) and a co-op Gauntlet to follow.** "what would it look like to add alternative playstyle modes? id want graphics to be the same, sometimes we'd reuse props when they made sense" / "Rising Slag first" / "gauntlet and brawl are also great"
+  2026-11-04 · `done` for the mode registry and Rising Slag; Brawl and Gauntlet are `planned` · DESIGN.md → Modes, `src/game/modes.ts`, TODO.md → 31
+- **Rising Slag levels keep their theme: a mode asks for the level it needs, and each theme builds it in its own shape.** "keep in mind rising slag still needs the thematic level stuff. they might just have to support additional annotations for it?"
+  2026-11-04 · `done` (a climbing profile in every theme, the slag carried on the level as `Level.tide`); themes that never build towers climb only 7–15 rows, `planned` · DESIGN.md → Modes, TODO.md → 31
 - **A rule the level is built from (gravity, weather) rebuilds the lobby's level for everyone at once.**
   2026-11-02 · git `e64c3e5` · `done` · DESIGN.md → Rules
 

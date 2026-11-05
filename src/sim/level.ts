@@ -2,6 +2,7 @@ import type { Rect } from '../core/geom';
 import type { TerrainKind, Theme } from '../gen/theme';
 import { TILE } from './constants';
 import type { PlacedProp } from './props/types';
+import type { Tide } from './tide';
 import type { Weather } from './weather';
 
 export interface TileRect {
@@ -49,6 +50,8 @@ export interface LevelProfile {
   difficulty: Difficulty;
   /** Which draw of its layout the level is (gen/level/index.ts): with the rest of the profile, what rebuilds it. */
   draw?: number;
+  /** Built for Rising Slag (game/modes.ts): a climb with slag rising under it (Level.tide). */
+  tide?: boolean;
 }
 
 export interface Level {
@@ -81,6 +84,8 @@ export interface Level {
   ground?: Uint8Array;
   /** This level's weather (sim/weather.ts). Absent means clear, as on hand-built test levels. */
   weather?: Weather;
+  /** Slag rising from the bottom (sim/tide.ts), on a level built for Rising Slag. Absent means none. */
+  tide?: Tide;
   /** Bumped whenever tiles change so renderers can invalidate caches. */
   version: number;
   /** The stage concept's landmark (gen/stage), for the renderer: its box and how its tiles are drawn. The sim ignores it. */

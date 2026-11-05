@@ -7,6 +7,7 @@ import { commit, finalize, SET_PIECE_UID, SET_PIECES, Site, tellFaults } from '.
 import { type Concept, conceptName, fits, type Landmark, landmarkFaults, rollConcept } from '../stage';
 import { generateTheme, type Theme } from '../theme';
 import { ReachCache } from '../../sim/reach';
+import { lowestOpen, SLAG_TIDE } from '../../sim/tide';
 import { footing } from '../../sim/weather';
 import { openUp } from './lanes';
 import { setProbeGravity } from './probe';
@@ -111,7 +112,7 @@ export function generateLevel(seed: number, themeOverride?: ThemeId, profileOver
     let profile = rollProfile(seed, themeId, o, salt);
     const concept = rollConcept(seed, themeId, profile, profileOverride?.concept, salt);
     // A forced concept gets a size and route it fits, unless those were forced too.
-    if (concept && !fits(concept, profile) && !profileOverride?.size && !profileOverride?.route) {
+    if (concept && !fits(concept, profile) && !profileOverride?.size && !profileOverride?.route && !profileOverride?.tide) {
       const size = concept.sizes.includes(profile.size) ? profile.size : concept.sizes[0];
       const route = concept.routes && !concept.routes.includes(profile.route) ? concept.routes[0] : undefined;
       profile = rollProfile(seed, themeId, { ...o, size, ...(route ? { route } : {}) }, salt);
@@ -350,6 +351,7 @@ function toLevel(seed: number, s: Shape, theme: Theme, profile: LevelProfile): L
     style: s.style,
     version: 0,
     setPieces: [],
+    ...(profile.tide ? { tide: { ...SLAG_TIDE, from: lowestOpen(s.tiles, s.w, s.h) } } : {}),
   };
 }
 

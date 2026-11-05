@@ -10,6 +10,7 @@ import { levelKey } from '../src/sim/level';
 
 /** A legal value other than the default for every rule. Add a rule and this test fails until it says so. */
 const CHANGED: MatchRules = {
+  mode: 'slag',
   targetScore: 80,
   maxRounds: 25,
   pickSeconds: 20,
@@ -112,7 +113,7 @@ describe('level-shaping rules in the lobby', () => {
         expect(m.rules[k], k).toBe(CHANGED[k]);
         return m.level !== before;
       });
-    expect(rebuilt.sort()).toEqual(['difficulty', 'gravity', 'weather']);
+    expect(rebuilt.sort()).toEqual(['difficulty', 'gravity', 'mode', 'weather']);
   });
 
   it('a difficulty rebuilds the level at it, and Varies gives the seed its own back', () => {

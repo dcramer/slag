@@ -3,6 +3,7 @@ import { tidyName } from '../core/name';
 import { nameBlocked } from '../core/name-filter';
 import { type CharacterDef, generateCharacter } from '../gen/character';
 import { BOT_LEVELS, type BotLevel, type Match } from '../game/match';
+import { MODE_IDS } from '../game/modes';
 import { BLOOD_CHOICES, DEFAULT_RULES, DIFFICULTY_CHOICES, GRAVITY_CHOICES, type MatchRules, nearestLength, PART_VARIETIES, RULE_CHOICES } from '../game/rules';
 import { MAX_PLAYERS } from '../sim/constants';
 import { THEME_IDS, type ThemeId } from '../themes';
@@ -322,6 +323,7 @@ const choice =
  * Points and rounds travel as a pair, so a packet can't invent a match that never ends.
  */
 const RULE_CHECKS: { [K in keyof MatchRules]: (v: unknown, r: Partial<MatchRules>) => MatchRules[K] | undefined } = {
+  mode: choice(MODE_IDS),
   targetScore: (v) => (typeof v === 'number' ? nearestLength(v).targetScore : undefined),
   maxRounds: (_v, r) => (typeof r.targetScore === 'number' ? nearestLength(r.targetScore).maxRounds : undefined),
   pickSeconds: choice(RULE_CHOICES.pickSeconds),
