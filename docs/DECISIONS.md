@@ -225,13 +225,15 @@ Every game design decision, preference and direction the owner has given, groupe
 - **The rest of the roster is drawn flat too, one agent a kind: first the five in the cast (the impostor, the hunter, the engineer, the goose and the jelly), then the nine not yet in it, in one change.** "conintue" (after the six flat kinds landed)
   2026-11-03 · `in progress` · TODO.md → 29, CHARACTERS.md → Rendered kinds → the second batch
 - **Every kind's own palette is neutral, and nearly every colour on it is the player's: the costume in the player's colour, every other coloured part in a lighter or darker tone of it (the engineer's hat too); skin, eyes, hair, metal, wood, cloth greys and ink stay neutral. The swatches stay as they are: no kind skips one.** "The colors have been fine and things like eng hat can be color coded.. mostly the palette of the characters should be neutral and then pretty much all colors should be the player color"
-  2026-11-04 · `in progress` · CHARACTERS.md → Decisions 4, Rules for every kind → Player's color and Variety; replaces each homage's own hues on its secondary parts (the plumber's blue overalls, the speedster's red shoes, the engineer's yellow hat) and the coloured palette alts
+  2026-11-04 · `done` · CHARACTERS.md → Decisions 4, Rules for every kind → Player's color and Variety; replaces each homage's own hues on its secondary parts (the plumber's blue overalls, the speedster's red shoes, the engineer's yellow hat) and the coloured palette alts
 - **The art's open items all get done: the marks left at 4.4×, the three kinds that don't read (the engineer, the hunter against the robot boy, the jelly's hooks), and the nine kinds not yet in the cast, which replace the four plain animals.** "Its worth addressing these. and getting it done"
-  2026-11-04 · `in progress` · TODO.md → 29, CHARACTERS.md → Roster
+  2026-11-04 · `done` · TODO.md → 29, CHARACTERS.md → Roster
 - **Spend Tripo Studio credits to finish the cast's images once the free allowance runs out.** "Spend the credits" (asked: about 1,500–3,500 credits; images turned out to cost 2 each)
   2026-11-04 · `done` · `tools/art3d/README.md`
 - **Agents may run Tripo image calls without a prompt: allowed in the owner's user settings, since each worktree reads its own project settings.** "Add the rule" · "Add to user settings"
   2026-11-04 · `done` · `~/.claude/settings.json` (`tripo.ts image`, `balance`)
+- **The cast grows past twenty with retro picks: the rapping paper puppy (the owner's example), the limbless hero, the worm in a super suit, the little purple dragon and the snouted cube hopper. The weak reads and audit leftovers get fixed in the same push.** "Ok lets continue working through. Something akin to some old timey characters would be good to add to our list too. Parapa the Rapper for example" (asked which to add beside him: all four offered)
+  2026-11-04 · `in progress` · CHARACTERS.md → The cast, Roster; `LOOK_CAST` 9
 - **Set-piece machines that look solid are made solid: guns on ledges, wheel and swing hubs, ladles, carts, signs, posts.** "Make them solid" (asked: make them solid, or draw them as not-ground)
   2026-11-02 · `open` · TODO.md → 21, `pnpm shot fairplay` (`PENDING`)
 - **Tripo output is licensed for the game: the owner pays for Tripo.** "our license here is fine as we pay for tripo"

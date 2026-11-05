@@ -24,7 +24,7 @@ export interface Profile {
  * next one is saved from the new cast. 2: the foundry toys. 3: slimmer toys, the lantern in for the
  * crucible. 4: twelve hand-designed toys. 5: animals and critters. 6: mostly homages (docs/CHARACTERS.md).
  */
-export const LOOK_CAST = 8;
+export const LOOK_CAST = 9;
 
 const KEY = 'slag.profile.v1';
 
