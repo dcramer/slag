@@ -128,6 +128,19 @@ export const EYES: Record<EyeStyle, EyeArt> = {
       poly(s, oval(f * r * 0.28, -r * tall * (m === 'up' ? 0.45 : 0.32), r * 0.42, r * 0.42, 7), GLINT);
     },
   },
+  // A mask's eye hole: a big black oval, taller than wide, with a small glint and no white and no blush (the tall
+  // eye's blush read as cheeks painted on the mask): the horned bug's. Black, it acts in its shape: narrowed into
+  // the run, wide on a fall.
+  hole: {
+    extent: [0.9, 1.3],
+    brow: false,
+    open(s, r, m, f) {
+      const rx = r * 0.85 * (m === 'fall' ? 1.12 : 1);
+      const ry = r * 1.25 * (m === 'run' ? 0.8 : m === 'fall' ? 1.12 : 1);
+      poly(s, oval(0, 0, rx, ry, 12), INK);
+      poly(s, oval(f * r * 0.26, -ry * (m === 'up' ? 0.5 : 0.36), r * 0.24, r * 0.3, 7), GLINT);
+    },
+  },
   // A tall white with a tall pupil toward the front: the plumber's, the saddled dino's.
   pill: {
     extent: [0.78, 1.5],
