@@ -29,9 +29,10 @@ const AWARD: Record<Reason, Look> = {
   first: award('FIRST', PAL.amber),
   trap: award('TRAP', PAL.danger),
   underdog: award('UNDERDOG', '#4fa9e3'),
+  survive: award('SURVIVED', PAL.molten),
 };
 /** The order blocks drop in, every lane together, a beat per reason anyone earned. */
-const ORDER: readonly Reason[] = ['finish', 'first', 'trap', 'underdog'];
+const ORDER: readonly Reason[] = ['finish', 'survive', 'first', 'trap', 'underdog'];
 /** Frames into the screen the first blocks drop, between one reason's blocks and the next, and a fall. */
 const FILL_AT = 22;
 const BEAT = 16;

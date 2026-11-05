@@ -1,6 +1,7 @@
 import type { ProfileOverride } from '../gen/level';
 import { buildLevel } from '../gen/level/pregen';
 import type { CrateItem, Match, Phase, Player } from '../game/match';
+import { MODES } from '../game/modes';
 import type { MatchRules } from '../game/rules';
 import type { RoundResult } from '../game/scoring';
 import type { BloodCell } from '../sim/blood';
@@ -31,7 +32,7 @@ import { cleanCharacter } from './actions';
  * Worktree branches never bump it, since two bumps always conflict: `pnpm land` bumps it once
  * for a batch that changed this file's code or that test's field lists (`--snap` for a change in what a field means).
  */
-export const SNAP_VERSION = 54;
+export const SNAP_VERSION = 55;
 
 export interface RunSnap {
   slots: number[];
@@ -46,6 +47,7 @@ export interface RunSnap {
   seq: number;
   items: unknown;
   itemSeed: number;
+  slag: number | null;
 }
 
 export interface MatchSnap {
@@ -186,12 +188,6 @@ function isPlayedCopy(base: Level, tiles: Uint8Array): boolean {
   return true;
 }
 
-/** Remember a level as pristine (call right after generating it) so restores can skip regeneration. */
-export function rememberPristine(seed: number, theme: ThemeId | undefined, level: Level, profile: ProfileOverride = {}) {
-  const key = pristineKey(seed, theme, profile);
-  if (!pristine.has(key)) pristine.set(key, { ...level, tiles: level.tiles.slice(), setPieces: [...level.setPieces] });
-}
-
 // ---------------------------------------------------------------- snapshot / restore
 
 /**
@@ -246,6 +242,7 @@ export function snapshotMatch(m: Match): MatchSnap {
           seq: (run as unknown as RunPrivate).seq,
           items: toWire(run.items),
           itemSeed: run.itemSeed,
+          slag: run.slag,
         }
       : null,
   };
@@ -316,7 +313,14 @@ export function restoreMatch(m: Match, s: MatchSnap): void {
     prev.level === m.level &&
     prev.placed === m.placed.map((p) => p.uid).join() &&
     sameSlots(prev.run, s.run.slots);
-  m.run = s.run ? restoreRun(sameRace ? prev.run! : new RunWorld(m.level, m.placed, s.run.slots, s.run.timeLimit, s.run.itemSeed), s.run) : null;
+  m.run = s.run
+    ? restoreRun(
+        sameRace
+          ? prev.run!
+          : new RunWorld(m.level, m.placed, s.run.slots, s.run.timeLimit, s.run.itemSeed, m.blood, m.rules.bloodRounds > 0, MODES[m.rules.mode].run),
+        s.run,
+      )
+    : null;
   if (m.run) {
     m.run.blood = m.blood;
     m.run.bleeds = m.rules.bloodRounds > 0;
@@ -328,6 +332,7 @@ function restoreRun(run: RunWorld, s: RunSnap): RunWorld {
   run.runners = fromWire(s.runners) as RunWorld['runners'];
   run.projectiles = fromWire(s.projectiles) as RunWorld['projectiles'];
   run.finishOrder = [...s.finishOrder];
+  run.slag = s.slag ?? null;
   run.kills = s.kills.map((k) => ({ ...k }));
   run.endFrame = s.endFrame;
   run.propState = fromWire(s.propState) as RunWorld['propState'];

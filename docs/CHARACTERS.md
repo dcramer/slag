@@ -55,7 +55,7 @@ So each kind has: a clear head-to-body ratio, a readable expression, a line of a
 | horse | the barnyard party game's horse | on all four legs, side on: a long neck with the mane standing up along it as a crest, a long blunt head with a pale nose and buck teeth, a long straight tail hanging to the heels, flat hooves; a scarf and a zip (a costume) | costume: the coat, the far legs and the scarf darks of it |
 | rapper | the rapping paper puppy | side on, a chubby flat card cut-out with its edge down his back: a tall thumb of a knit beanie standing straight up, a long floppy ear hanging behind, a round nose on a snout low on his face, a baggy tee and shorts, big trainers, a cordless mic held out in front | costume: the beanie and tee, the shorts a dark of it |
 | limbless | the limbless hero | no arms or legs: white gloves and big shoes floating clear of a small round body with background all round each, a huge nose, a spiky hair tuft standing up, a neckerchief | costume: the top, the shoes a light tone of it |
-| worm | the worm in the super suit | a bulky suit with huge shoulders, a worm's head on a long bendy neck rising out of the collar with bulging eyes, a big chunky pistol in one hand | costume: the suit, the boots and gloves a dark of it |
+| worm | the worm in the super suit | a bulky suit with huge round shoulders on stocky legs, a thick bare worm rising dead straight up out of the collar as tall as the suit, a blunt head with bulging eyes and a wide grin, a big hair dryer held at the hip like a pistol, barrel forward and down | costume: the suit, the gloves and boots a dark of it, the patches a light |
 | dragon | the little purple dragon | small and low on four stubby legs, side on: a big round head with two long horns swept straight back, stubby umbrella-cloth wings on bent spokes, a pale belly, a ridge of small spines, a tail ending in a taped arrowhead with a firefly jar hanging from it | costume: the scales; the wing cloth a light of it, the far legs a dark |
 | hopper | the snouted cube hopper | a round ball with no arms on two short legs in worn trainers, two big eyes standing up out of its crown, a long tube snout sticking straight out front and flared at its open end, a party blower; hops both feet together | costume: the ball and legs; the snout and the blower's streamer lights of it |
 | warrior | the round Slavic warrior | a huge round belly on short legs, a big round bald head, a small iron pot of a helmet with a knob on top and its handle out behind, a big round nose over a short bushy moustache, a short belted tunic, thick bare arms, a sword at his belt, a half-eaten roast leg held out like a club | costume: the tunic |
@@ -463,16 +463,27 @@ What came out of it:
 ### The worm in the super suit (new)
 - **Kind:** `worm` · **Name:** Earthworm Gym
 - **A stranger should say:** "the earthworm in the space suit."
-- **Silhouette:** a bulky suit with huge shoulders on stocky legs, and out of its collar a worm's head on a long bendy neck, rising and leaning, with two bulging eyes; a big chunky pistol held out in one hand, at the hip, never level at the shoulder like the hunter's cannon.
-- **Traits:** a bulky suit with huge round shoulders; a worm's pink head on a long thin neck out of the collar; bulging eyes and a wide grin; a big chunky pistol in one hand; heavy boots and gloves.
-- **Palette:** the suit in the player's colour, the boots and gloves a dark of it; the worm a neutral pink (a face), the pistol grey metal.
-- **Color slot:** costume.
-- **Gait:** a heavy suit stomp, the worm's neck whipping about over it.
-- **The nod:** the worm on a stalk out of the collar (the read); the huge-shouldered suit; the pistol.
-- **Our twist:** the suit is a second-hand boiler suit stuffed with pillows at the shoulders, and the pistol is a hair dryer with its cord trailing.
-- **Swaps:** a plaster on the worm; a patch on the suit; a pencil behind where an ear would be.
-- **Rig:** to draw flat (2026-11-04).
-- **Concept prompt:** A cartoon earthworm wearing a bulky boiler suit stuffed out into huge round shoulders, its pink worm head on a long thin bendy neck rising out of the collar, with two bulging eyes and a wide grin, heavy boots and gloves, holding a big chunky hair dryer like a pistol at its hip, its cord trailing.
+- **Silhouette:** a bulky suit with two huge round shoulders on stocky legs, and out of its collar the worm itself, a thick bare pink worm body rising dead straight up like a pole, as tall as the suit, its blunt round head pointing forward; a big chunky pistol held at the hip, its barrel forward and down, never level from the shoulder like the hunter's cannon. 25 world px, the hunter's height, but stocky where he is long-legged, and a bare stalk where he has a helmet.
+- **Traits:** a bulky suit with huge round pillow shoulders; a worm's pink body for a neck, ringed, straight up out of the collar; a blunt head with two bulging eyes on its front and a wide toothy grin; a big chunky pistol at the hip; heavy boots and gloves.
+- **Palette:** the suit in the player's colour (`#5f8fb5` on the sheets), the gloves and boots a dark of it (−22), the stitched patches a light (+16); the worm a neutral pink `#f19aa6` (a face), its eye whites `#fbfaf6`; the dryer grey `#9a9aa0`.
+- **Color slot:** costume: the suit.
+- **Palette alts:** the dryer in grey `#9a9aa0`, cream plastic `#d6ccb4` or charcoal `#6e6a66`.
+- **Idles and cheers:** the idle from the design; standing pleased, the head cocked. A fist punched up, the dryer still at the hip; laughing with the head tipped back, eyes shut.
+- **Gait range:** a bounce of 0.2–0.8 px on each step, a lean of up to 0.03.
+- **Wear:** scuffed is a pale scuff on the suit's chest, scorched a soot mark low on it (tones of the suit).
+- **Gait:** a heavy suit stomp, the stalk swaying over it.
+- **The nod:** the worm on a stalk out of the collar (the read: nobody else in the cast is a head on a stalk); the huge-shouldered suit (the super suit the stalk rises out of); the pistol (what he does).
+- **Our twist:** the suit is a second-hand boiler suit stuffed with pillows at the shoulders, patched at the shoulder and the knee, and the pistol is a dented old hair dryer with its cord trailing.
+- **Swaps:** a plaster on the worm's cheek.
+- **Rig:** drawn flat (2026-11-04) in six rounds of design, each a different idea after a failed blind read (art/sprites/worm/design.prompt.txt). The cord trailing along the floor is taken out of every drawing (`art/sprites/worm/prep.py`): traced, it was a dark loop on the floor that read as a tail. The eye whites and teeth are repainted so `holes` cuts only the background, and are what the eyes are found by (`eyes.role: 'eye'`). Only one eye is found, the far one set from it, because the drawn eyes touch and trace as one patch. What each round read as:
+  - **An S-curled neck:** "a big curled head or snout tilted up, maybe a dragon" (unsure and low). Both readers that round took the hunter for this homage ("thin head on a stalk above a suited body, arm out holding a gun").
+  - **The neck straight up and thin:** "worm in a super suit - low-medium… thin wiggly head rising out of a bulky suit body", and "maybe Earthworm Jim, low".
+  - **A big head with the eyes standing on top:** "two knobs on top like ears or antennae" (unsure twice).
+  - **Shipped:** a thick straight stalk, a blunt head with the eyes on its front, the dryer pointed forward and down at the hip. 25 world px; the run at 0.95, the jump at 0.76, the wall slide at 0.86 and the knockout at 0.6, inside the shared box. Four fresh readers named it, all below the bar: "Earthworm Jim-style worm in a suit, low. A tall, thin, wavy neck or head rising from a bulky body"; "Earthworm Jim, medium-low. A suited body with a long thin neck or stalk sticking up, clearest in the run and jump"; and, at 25 px, "Earthworm Jim, low. Bulky suited body with a thin stalk rising from the top" and "Worm in a super suit (Earthworm Jim parody), low". None paired him with another kind.
+  - **The dryer tilted up from the hip, a bigger head:** both readers took him for "Wario, low: chunky and broad, with a cap", and both took the hunter for this homage, so it was dropped.
+
+  In colour at play size he reads at once. In silhouette the pistol never registers, and the stalk carries the read.
+- **Concept prompt:** A cartoon earthworm wearing a bulky patched boiler suit stuffed out into huge round shoulders, a thick pink worm body rising dead straight up out of the collar like a pole, as tall as the suit, its blunt round head pointing forward with two bulging eyes on its front and a wide toothy grin, heavy boots and gloves, holding a big chunky hair dryer like a pistol at its hip, its barrel pointing forward and down, its cord trailing.
 
 ### The little purple dragon (new)
 - **Kind:** `dragon` · **Name:** Spiro

@@ -105,7 +105,8 @@ export const shots: Scenarios = {
   async race() {
     // `?race=,` races the level as it stands (no parts but its set pieces); `?race=` alone would sit in pick.
     const race = opt('race') || ',';
-    await open(`seed=${seed}&players=${players}&race=${race}&propseed=${opt('propseed', '1')}`);
+    // `--bots N` seats bots first, and with `--players 0` they race alone.
+    await open(`seed=${seed}&players=${players}&race=${race}&propseed=${opt('propseed', '1')}${opt('bots') ? `&bots=${opt('bots')}` : ''}`);
     const exact = opt('runframe');
     if (exact) {
       // Boot time decides how far the race got before the pause, so step to the frame rather than by a count.

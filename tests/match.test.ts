@@ -244,6 +244,7 @@ describe('match rules', () => {
   ])('maps an old %i point save to %s and keeps its timers', (targetScore, label) => {
     const { targetScore: score, maxRounds } = MATCH_LENGTHS.find((l) => l.label === label)!;
     expect(load({ targetScore, ...timers })).toEqual({
+      mode: 'race',
       targetScore: score,
       maxRounds,
       gravity: 'auto',
@@ -257,12 +258,17 @@ describe('match rules', () => {
     });
   });
 
+  it('plays a mode this build has never heard of as a race', () => {
+    expect(load({ mode: 'hopscotch', ...timers }).mode).toBe('race');
+  });
+
   it('ignores an old round limit, which was usually just the default of 40', () => {
     expect(load({ targetScore: 50, maxRounds: 40, ...timers })).toMatchObject({ targetScore: 50, maxRounds: 15 });
   });
 
   it.each(MATCH_LENGTHS)('round-trips a saved $label', ({ targetScore, maxRounds }) => {
     expect(load({ targetScore, maxRounds, ...timers })).toEqual({
+      mode: 'race',
       targetScore,
       maxRounds,
       gravity: 'auto',

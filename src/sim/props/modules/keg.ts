@@ -164,7 +164,7 @@ export function kegAim(m: Keg, f: number, phase: number): KegAim {
  * fuse burns down and it goes off the wrong way, out of the back, and leaves
  * you sooty.
  */
-export const keg = defineModule<'keg'>({
+defineModule<'keg'>({
   type: 'keg',
   resolve(m, x) {
     const turns = Math.round(x.da / (Math.PI / 4));

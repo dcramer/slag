@@ -1,16 +1,17 @@
 import { footprintCells, type PlacedProp } from '../../sim/props';
 import { BRIDGE_W } from './validate';
 import { deriveSeed, Rng } from '../../core/rng';
-import type { Level, LevelProfile } from '../../sim/level';
-import { pickThemeId, type ThemeId } from '../../themes';
+import { type Level, type LevelProfile, LOOP_BAND } from '../../sim/level';
+import { pickThemeId, THEME_IDS, type ThemeId } from '../../themes';
 import { commit, finalize, SET_PIECE_UID, SET_PIECES, Site, tellFaults, windowFaults } from '../setpieces';
 import { type Concept, conceptName, fits, type Landmark, landmarkFaults, rollConcept } from '../stage';
 import { generateTheme, type Theme } from '../theme';
 import { ReachCache } from '../../sim/reach';
+import { slagTide } from './tide';
 import { footing } from '../../sim/weather';
 import { openUp } from './lanes';
 import { setProbeGravity } from './probe';
-import { type ProfileOverride, rollProfile } from './profile';
+import { buildsTowers, type ProfileOverride, rollProfile } from './profile';
 import { DIFFICULTY, setLevelDifficulty } from './difficulty';
 import { levelPrecision } from './precision';
 import { analyzeRoutes, MAX_SHARED } from './routes';
@@ -22,13 +23,10 @@ import { rideProof, rideSpans } from './ride';
 import { rollWeather } from './weather';
 import { noFreeRide, planHolds } from './winnable';
 
-export type { BridgeHint, SculptCtx, Sculptor, Shape } from './types';
-export { DIFFICULTIES, DIFFICULTY, levelDifficulty, setLevelDifficulty } from './difficulty';
+export { DIFFICULTIES, DIFFICULTY, setLevelDifficulty, stretchesOf } from './difficulty';
 export { describeProfile, GRAVITY, type GravityClass, gravityClass, type ProfileOverride, rollProfile } from './profile';
 export { BRIDGE_W, type Bridge, canPlaceBridge, isAcceptable, judge, MAX_BRIDGES, withBridges } from './validate';
 export { fieldOf, partsNeeded, planHolds, prove, settled } from './winnable';
-export { WEATHER_WEIGHTS } from './weather';
-export { carrierReach, MIN_DWELL, rideProof, rideSpans } from './ride';
 
 const MAX_ATTEMPTS = 30;
 const LEGACY_ATTEMPTS = 20;
@@ -98,7 +96,7 @@ let lastGenAttempts = 0;
  * the level goes plain.
  */
 export function generateLevel(seed: number, themeOverride?: ThemeId, profileOverride?: ProfileOverride): Level {
-  const themeId = themeOverride ?? pickThemeId(seed);
+  const themeId = themeOverride ?? (profileOverride?.tide ? towerTheme(seed) : pickThemeId(seed));
   const theme = generateTheme(seed, themeId);
   /**
    * The layout draw `n` builds: its profile (size, route, density, set pieces) and stage concept. Draw 0's are
@@ -107,11 +105,11 @@ export function generateLevel(seed: number, themeOverride?: ThemeId, profileOver
    */
   const layout = (n: number, keep?: LevelProfile): { profile: LevelProfile; concept: Concept | null } => {
     const salt = n ? `:draw${n}` : '';
-    const o: ProfileOverride = { ...profileOverride, ...(keep ? { gravity: keep.gravity, difficulty: keep.difficulty } : {}) };
+    const o: ProfileOverride = { ...profileOverride, ...(keep ? { gravity: keep.gravity, difficulty: keep.difficulty, curve: !!keep.curve } : {}) };
     let profile = rollProfile(seed, themeId, o, salt);
     const concept = rollConcept(seed, themeId, profile, profileOverride?.concept, salt);
     // A forced concept gets a size and route it fits, unless those were forced too.
-    if (concept && !fits(concept, profile) && !profileOverride?.size && !profileOverride?.route) {
+    if (concept && !fits(concept, profile) && !profileOverride?.size && !profileOverride?.route && !profileOverride?.tide) {
       const size = concept.sizes.includes(profile.size) ? profile.size : concept.sizes[0];
       const route = concept.routes && !concept.routes.includes(profile.route) ? concept.routes[0] : undefined;
       profile = rollProfile(seed, themeId, { ...o, size, ...(route ? { route } : {}) }, salt);
@@ -187,13 +185,15 @@ export function generateLevel(seed: number, themeOverride?: ThemeId, profileOver
         level.rides = rides;
       }
       // Passable bare: not a level. Only the very last attempts accept it, to keep generation total.
-      const insist = attempt < LAST_RESORT;
+      // A Rising Slag loop is meant to climb bare (sculptors/tall.ts closeLoop): only race levels must ask for parts.
+      const insist = attempt < LAST_RESORT && !level.loop;
       if (insist && cache.analyze(level).goalReached) {
         rejects.tooEasy++;
         continue;
       }
       const v = judge(level, shape.bridgeHints, shape.crossings, cache);
-      if (!v.ok) {
+      // A loop that takes a part to climb would stop every lap there.
+      if (!v.ok || (level.loop && v.bridges.length)) {
         rejects.unsolvable++;
         continue;
       }
@@ -273,7 +273,8 @@ export function generateLevel(seed: number, themeOverride?: ThemeId, profileOver
       };
       const budget = live ? (live.budget ?? fixed.length) : 0;
       const pieces = SET_PIECES[themeId](new Rng(deriveSeed(seed, lab(`setpieces:${attempt}`))), level, {
-        count: Math.max(0, profile.hazards - budget),
+        // A Rising Slag tower is several levels tall: its hazards come at the same rate per storey.
+        count: Math.max(0, profile.hazards * (profile.tide ? Math.max(1, Math.round(profile.h / 50)) : 1) - budget),
         danger: profile.danger,
         cache,
         keep: fixed.length ? (ps) => keep([...fixed, ...ps]) : keep,
@@ -350,7 +351,18 @@ function toLevel(seed: number, s: Shape, theme: Theme, profile: LevelProfile): L
     style: s.style,
     version: 0,
     setPieces: [],
+    ...(profile.tide ? { tide: slagTide(profile, s.tiles, s.w, s.h) } : {}),
+    ...(profile.tide && profile.size === 'tall' ? { loop: profile.h - LOOP_BAND } : {}),
   };
+}
+
+/**
+ * The seed's theme for a Rising Slag level: its own where that theme builds towers, otherwise one of those that do,
+ * from a stream of its own. A farm, a harbor and space never go tall, and the slag needs a tower to climb.
+ */
+function towerTheme(seed: number): ThemeId {
+  const own = pickThemeId(seed);
+  return buildsTowers(own) ? own : new Rng(deriveSeed(seed, 'theme-tower')).pick(THEME_IDS.filter(buildsTowers));
 }
 
 /** Flat floor, always solvable. Only used if every candidate fails. */

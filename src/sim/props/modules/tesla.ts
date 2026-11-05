@@ -8,7 +8,7 @@ import type { ModuleOf } from '../types';
 export const teslaCycle = (m: ModuleOf<'tesla'>, f: number, phase: number) => cycle(f, phase, [m.off, m.warn, m.on]);
 
 /** An arc needs a clear line between its coils: anything in the way shorts the whole gate. */
-export const tesla = defineModule<'tesla'>({
+defineModule<'tesla'>({
   type: 'tesla',
   resolve: (m, x) => ({ ...m, a: x.P(m.a), b: x.P(m.b) }),
   anchors: (m) => [cellOf(m.a), cellOf(m.b)],

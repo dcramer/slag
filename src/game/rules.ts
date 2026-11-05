@@ -7,9 +7,12 @@
  */
 import { DEFAULT_VARIETY, type PartVariety } from '../gen/props';
 import type { Difficulty } from '../sim/level';
+import { MODE_IDS, type ModeId } from './modes';
 
 export { PART_VARIETIES, type PartVariety } from '../gen/props';
 export interface MatchRules {
+  /** The playstyle (game/modes.ts): what a round is played for. Changing it in the lobby regenerates the level. */
+  mode: ModeId;
   targetScore: number;
   /**
    * Last round of the match. Scoreless rounds don't move anyone toward
@@ -75,6 +78,7 @@ export const MATCH_LENGTHS: readonly MatchLength[] = [
 const NORMAL = MATCH_LENGTHS[1];
 
 export const DEFAULT_RULES: MatchRules = {
+  mode: 'race',
   targetScore: NORMAL.targetScore,
   maxRounds: NORMAL.maxRounds,
   pickSeconds: 15,
@@ -136,7 +140,9 @@ export function loadRules(): MatchRules {
     if (raw) {
       const saved = JSON.parse(raw) as Partial<MatchRules>;
       const { targetScore, maxRounds } = nearestLength(saved.targetScore ?? NORMAL.targetScore);
-      return { ...DEFAULT_RULES, ...saved, targetScore, maxRounds, private: false };
+      // A mode from another build plays as a race here.
+      const mode = saved.mode && MODE_IDS.includes(saved.mode) ? saved.mode : DEFAULT_RULES.mode;
+      return { ...DEFAULT_RULES, ...saved, mode, targetScore, maxRounds, private: false };
     }
   } catch {
     // ignore

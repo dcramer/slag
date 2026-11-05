@@ -45,6 +45,7 @@ export const ROOM_EMPTY_MS = 60_000;
  * The public lobby list. A host's beat writes its room there (unless the room is Private), so a room is listed for as
  * long as its host's liveness would last: one that stops beating falls out on its own, inside ROOM_EMPTY_MS.
  */
+/** @alias */
 export const LIST_TTL_S = PEER_TTL_S;
 /** Rooms a list read returns at most, most recently beaten first. */
 export const MAX_LISTED = 50;
@@ -67,6 +68,8 @@ export interface RoomListing {
   phase: ListedPhase;
   /** The hosting player's name, whoever hosts now. Absent when it has none, or the API refused it. */
   host?: string;
+  /** The match's playstyle mode id (game/modes.ts). Absent for a race, as every older host lists it. */
+  mode?: string;
 }
 
 export interface ListedRoom extends RoomListing {
@@ -95,6 +98,7 @@ export function cleanListing(v: unknown): RoomListing | null {
   // Text from a stranger, shown to strangers: a bad or blocked name loses the name, not the room.
   const host = tidyName(l.host);
   if (host && !nameBlocked(host)) out.host = host;
+  if (typeof l.mode === 'string' && /^[a-z]{1,16}$/.test(l.mode) && l.mode !== 'race') out.mode = l.mode;
   return out;
 }
 

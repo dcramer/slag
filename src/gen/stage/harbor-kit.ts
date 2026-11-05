@@ -102,9 +102,3 @@ export function trial(s: Site, prior: PlacedProp[], piece: Piece): boolean {
   prior.push(pp);
   return true;
 }
-
-/** The first candidate that passes `trial`, or null. */
-export function firstFit(s: Site, prior: PlacedProp[], cands: Iterable<Piece>): Piece | null {
-  for (const c of cands) if (trial(s, prior, c)) return c;
-  return null;
-}

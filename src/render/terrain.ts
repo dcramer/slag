@@ -27,8 +27,6 @@ import {
 } from './ink-terrain';
 import { cutOutside, type RC } from './kit';
 
-export { flame } from './kit';
-
 /**
  * Terrain, baked once and redrawn only where it changes: an ink drawing of the level (`ink-terrain.ts`),
  * with static decor, and the emissive veins that go with it. Animated bits (tufts, live decor) are

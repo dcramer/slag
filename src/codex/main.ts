@@ -11,6 +11,7 @@ import { drawHostCells, drawProjectile, drawResolved } from '../render/props';
 import type { ItemKind } from '../sim/items';
 import { TILE } from '../sim/constants';
 import { AMMO, type Ammo, footprint, makeProjectile, type PropDef, resolveProp } from '../sim/props';
+import { castDrawer, castEntries } from './cast';
 import { CODEX_CSS } from './css';
 import { PART_INFO, summarize } from './describe';
 import type { MapPainter } from './map-view';
@@ -24,7 +25,8 @@ import type { MapJob } from './shots';
  * live with the same art as the game. These are global, not per-seed; the
  * crate assembles them into props with procedurally rolled numbers. After
  * the parts, the maps (./maps.ts): every theme, its landmarks and its own
- * hazards, pictured by the game's renderer as cards scroll into view.
+ * hazards, pictured by the game's renderer as cards scroll into view. Between
+ * them, the cast (./cast.ts): every kind of runner, by its sound-alike name.
  *
  * It's a game screen like the main menu: the same backdrop and logo, one
  * selected card at a time (arrows, d-pad or stick; mouse hover), Enter or Ⓐ
@@ -32,7 +34,8 @@ import type { MapJob } from './shots';
  * Labels and one-line jokes only (docs/DESIGN.md → Discovery).
  */
 
-type Draw = (rc: RC, w: number, h: number, rot: number) => void;
+/** `close` is the close-up's stage rather than a card's. */
+type Draw = (rc: RC, w: number, h: number, rot: number, close: boolean) => void;
 
 interface Entry {
   title: string;
@@ -50,8 +53,8 @@ interface Entry {
   map?: MapJob;
 }
 
-/** The two halves of the codex, each a heading in the index. */
-type Part = 'Parts' | 'Maps';
+/** The codex's parts, each a heading in the index. */
+type Part = 'Parts' | 'Cast' | 'Maps';
 
 interface Section {
   id: string;
@@ -132,7 +135,7 @@ function drawShot(rc: RC, ammo: Ammo, w: number, h: number) {
   rc.g.restore();
 }
 
-/** Every section of the catalog: parts first, projectiles after them, then a map per theme. */
+/** The parts' sections: every part group, then the projectiles. */
 function catalog(): Section[] {
   const sections: Section[] = partGroups().map((g) => ({
     id: g.id,
@@ -174,6 +177,22 @@ function catalog(): Section[] {
     }),
   });
   return sections;
+}
+
+/** The cast: every kind, standing on its card, running through its moves up close. */
+function castCatalog(): Section[] {
+  return [
+    {
+      id: 'cast',
+      part: 'Cast',
+      title: 'Runners',
+      blurb: 'Same hitbox. Different hats.',
+      entries: castEntries().map((e): Entry => {
+        const draw = castDrawer(e);
+        return { title: e.title, note: e.note, group: 'Runners', draw: (rc, w, h, _rot, close) => draw(rc, w, h, close), spec: [], quip: null, turns: false };
+      }),
+    },
+  ];
 }
 
 /** The maps' sections (./maps.ts), as the catalog shows them: pictures instead of live parts, nothing turns. */
@@ -341,7 +360,7 @@ export function mountCodex(root: HTMLElement, nav: Nav): Unmount {
   const closeUp = stage($('.cx-stage .cx-well'), (rc, w, h) => {
     if (open < 0) return;
     const job = entries[open].map;
-    if (!job) entries[open].draw(rc, w, h, rot);
+    if (!job) entries[open].draw(rc, w, h, rot, true);
     else if (maps) maps.frame(job, rc.s, w, h);
     else void painter();
   });
@@ -480,7 +499,7 @@ export function mountCodex(root: HTMLElement, nav: Nav): Unmount {
       c.addEventListener('click', () => openPart(i), on);
       const well = c.querySelector<HTMLElement>('.cx-well')!;
       if (!entries[i].map) {
-        stage(well, (rc, w, h) => entries[i].draw(rc, w, h, 0));
+        stage(well, (rc, w, h) => entries[i].draw(rc, w, h, 0, false));
         continue;
       }
       well.append(document.createElement('canvas'));
@@ -492,6 +511,7 @@ export function mountCodex(root: HTMLElement, nav: Nav): Unmount {
     spy();
   };
   add('Parts', catalog());
+  add('Cast', castCatalog());
   setActive(0);
   // The maps read the level generator's registries: they load after the parts are up, so opening the codex stays quick.
   void import('./maps').then((m) => !life.signal.aborted && add('Maps', mapCatalog(m.mapSections())));

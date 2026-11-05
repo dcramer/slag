@@ -23,6 +23,7 @@ import type {
  */
 let signalBase = '';
 
+/** @public For a host that serves the signaling API elsewhere (AGENTS.md → Hosting). */
 export function setSignalBase(url: string) {
   signalBase = url.replace(/\/+$/, '');
 }

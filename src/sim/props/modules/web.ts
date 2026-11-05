@@ -12,7 +12,7 @@ const WEB_SLOW = 14;
  * slowly), runs become a crawl, and you can hop upward through it a little
  * at a time: a net to climb, or a snare in front of something nasty.
  */
-export const web = defineModule<'web'>({
+defineModule<'web'>({
   type: 'web',
   resolve: (m, x) => ({ ...m, cells: x.C(m.cells) }),
   anchors: (m) => m.cells.slice(),

@@ -25,7 +25,7 @@ import type {
 import { ITEM_KINDS } from '../sim/items/types';
 import { AMMO } from '../sim/props/types';
 
-export type { Aim, Ammo, Archetype, Head, LauncherStyle, Material, MetalStyle, Module, Motion, PartSize, PropDef, PropStyle, Role, Trim };
+export type { Aim, Archetype, MetalStyle, Module, PropDef, PropStyle, Role };
 export { AMMO };
 
 import { deriveSeed, Rng } from '../core/rng';
@@ -496,12 +496,9 @@ function fourSquare(rng: Rng): Recipe {
  * A part: rolls its identity (name, material, numbers) from `rng`, then returns its shape, or `sized`
  * for one that comes in sizes. The part contract (tests/conformance/parts): `sized` only scales (same
  * modules, same motion, the name untouched), every module it uses has art and a codex entry, and nothing
- * it draws has a face. Register one with `definePart` in RECIPES, keyed by its archetype.
+ * it draws has a face. Register one in RECIPES, keyed by its archetype.
  */
 export type PartRecipe = (rng: Rng, style: PropStyle) => Recipe;
-
-/** Register a part recipe: the recipe as written, typed. */
-export const definePart = (recipe: PartRecipe): PartRecipe => recipe;
 
 const RECIPES: Record<Archetype, PartRecipe> = {
   spikestrip(rng) {
@@ -1613,6 +1610,18 @@ export function clearsParts(def: PropDef): boolean {
 }
 
 /**
+ * How a playstyle mode wants its crates dealt (game/modes.ts): whether every crate holds the bridge a level still
+ * needs, and how much more or less often each role turns up than the roster alone would have it.
+ */
+export interface CrateMix {
+  bridges: boolean;
+  roles: Readonly<Record<Role, number>>;
+}
+
+/** A race's crate: the bridges the level needs, every role as the roster has it. */
+export const RACE_CRATE: CrateMix = { bridges: true, roles: { build: 1, hazard: 1, utility: 1, demolish: 1 } };
+
+/**
  * A round's crate, drawn from the match's roster. It always holds a hazard
  * and at least `bridges` medium bridge cards (capped so the hazard keeps its
  * place): what the level still needs, so a fresh level can always be finished.
@@ -1622,7 +1631,8 @@ export function clearsParts(def: PropDef): boolean {
  * but a part can show up again at another size. `dry`, rounds in a row nobody
  * finished, tilts the rest toward parts that unstick a match (dryLean), and
  * `lone`, a pipe in the level still waiting for its partner, toward the pipe
- * (crateLean); nothing says so on screen. `variety` is the Parts rule (rosterSize).
+ * (crateLean); nothing says so on screen. `variety` is the Parts rule (rosterSize). `mix` is the mode's say
+ * (`CrateMix`): a level that needs no bridge, as a Rising Slag loop never does, can be dealt none.
  */
 export function generateCrate(
   seed: number,
@@ -1633,10 +1643,11 @@ export function generateCrate(
   lone = false,
   sealed = false,
   variety: PartVariety = DEFAULT_VARIETY,
+  mix: CrateMix = RACE_CRATE,
 ): PropDef[] {
   const rng = new Rng(deriveSeed(seed, `crate:${round}`));
   const roster = generateRoster(seed, rosterSize(count, variety));
-  const need = sealed ? 1 : Math.max(1, Math.min(bridges, count - 1));
+  const need = !mix.bridges ? Math.min(bridges, sealed ? 1 : count - 1) : sealed ? 1 : Math.max(1, Math.min(bridges, count - 1));
   const cards: PropDef[] = Array.from({ length: need }, () => medium(roster[0]));
   const left = (p: Part) => p.variants.filter((v) => !cards.includes(v));
   const draw = (p: Part) => cards.push(rng.pick(left(p)));
@@ -1644,7 +1655,11 @@ export function generateCrate(
   if (sealed) draw(rng.pick(roster.filter((p) => p.variants.every(clearsParts))));
   while (cards.length < count) {
     const open = roster.filter((p) => left(p).length);
-    draw(rng.weighted(open.map((p) => [p, crateLean(p.archetype, dry, lone) * (cards.some((c) => c.part === p.id) ? REPEAT_WEIGHT : 1)] as const)));
+    draw(
+      rng.weighted(
+        open.map((p) => [p, crateLean(p.archetype, dry, lone) * mix.roles[p.role] * (cards.some((c) => c.part === p.id) ? REPEAT_WEIGHT : 1)] as const),
+      ),
+    );
   }
   return rng.shuffle(cards.map((c, i) => ({ ...c, key: `${round}-${i}` })));
 }

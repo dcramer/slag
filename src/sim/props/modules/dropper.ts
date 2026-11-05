@@ -113,7 +113,7 @@ function dropperLane(m: Dropper, ctx: SenseCtx, p: DropperPose, travel: number):
  * its leading face is deadly while slamming, it squashes anyone it pins,
  * and its back is a slow elevator on the way home.
  */
-export const dropper = defineModule<'dropper'>({
+defineModule<'dropper'>({
   type: 'dropper',
   resolve: (m, x) => ({ ...m, cells: x.C(m.cells), angle: m.angle + x.da }),
   anchors: (m) => m.cells.slice(),

@@ -143,7 +143,7 @@ if (red) {
   for (const step of red.steps) {
     const cmd = CI_STEPS[step.slice(step.indexOf(': ') + 2)];
     if (cmd) extra.add(cmd.join(' '));
-    else if (!/: (Typecheck|Lint|Format|Test)/.test(step)) console.warn(`land: no local command for "${step}"; check it in CI after the push.`);
+    else if (!/: (Typecheck|Lint|Format|Unused code|Test)/.test(step)) console.warn(`land: no local command for "${step}"; check it in CI after the push.`);
   }
 }
 if (flags.has('--build') || changed.some((f) => HOST.test(f))) extra.add('pnpm build');

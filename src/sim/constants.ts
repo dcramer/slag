@@ -134,6 +134,7 @@ export const PHYS = {
 export const KILL_Y = LEVEL_H * TILE - 2;
 
 export const MAX_PLAYERS = 8;
+/** @alias */
 export const RUN_COUNTDOWN = FPS; // frozen frames before GO
 /**
  * Frames alt must stay held in a race, from a fresh press and with no other action, before the runner self-destructs

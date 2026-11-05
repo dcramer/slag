@@ -33,7 +33,7 @@ export function fanZone(level: Level, m: ModuleOf<'fan'>, off: Vec = [0, 0]): Wi
   return fanColumn(m, fanReach(level, [], m, off, -1), off);
 }
 
-export const fan = defineModule<'fan'>({
+defineModule<'fan'>({
   type: 'fan',
   resolve: (m, x) => ({ ...m, at: x.P(m.at), angle: m.angle + x.da }),
   anchors: (m) => [cellOf(m.at)],

@@ -147,7 +147,7 @@ function boxCells(m: Shards): Cell[] {
   return out;
 }
 
-export const shards = defineModule<'shards'>({
+defineModule<'shards'>({
   type: 'shards',
   resolve: (m, x) => ({ ...m, at: x.P(m.at) }),
   anchors: boxCells,

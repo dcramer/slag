@@ -11,11 +11,12 @@ Package manager is **pnpm** (`packageManager` in package.json). Never use npm or
 | Command | Use |
 | --- | --- |
 | `pnpm install` | First thing in a fresh checkout or worktree (`node_modules` is not shared). |
-| `pnpm check` | The gate: typecheck + lint + format check + tests (~30 s). Must pass before every commit. |
+| `pnpm check` | The gate: typecheck + lint + format check + knip + tests. Must pass before every commit. |
 | `pnpm check:fast` | Typecheck + lint + format check (~2 s). Use while iterating. |
+| `pnpm knip` | Unused files, exports, types and dependencies (`knip.json`, ~5 s). Delete what it finds rather than ignoring it; a tool run by hand or a file loaded by a computed path goes in `entry`, an export kept for people or another host gets a `/** @public */` doc tag saying why. |
 | `pnpm test` | Behavior and invariants at fixed small seed counts, in `tests/`. The test half of `pnpm check`. |
 | `pnpm vitest run tests/foo.test.ts` | One test file. Add `-t "name"` for one test. |
-| `pnpm test:stats` | Distribution and balance over many seeds, in `tests/stats/` (`pnpm test:stats level-styles` for one file). CI runs it. Run it yourself only when deliberately tuning the generator or balance. |
+| `pnpm test:stats` | Distribution and balance over many seeds, and the full sweeps behind a few `pnpm test` cases (every theme × size × gravity, seeded fuzz), in `tests/stats/` (`pnpm test:stats level-styles` for one file). CI runs it, and `pnpm land` runs it while it's red on main. Run it yourself when deliberately tuning the generator or balance. |
 | `pnpm format` | `oxlint --fix` then `oxfmt`: fixes formatting and safe lint issues. |
 | `pnpm build` | Production build into `.next/`, exactly what Vercel runs. |
 | `pnpm shot <scenario> [opts]` | Headless screenshots into `shots/` (gitignored). See "Verify visually". |
@@ -39,7 +40,7 @@ Lint: `oxlint` (type-aware, `.oxlintrc.json`). Warnings are real findings, not n
 2. `pnpm build` passes if you touched `app/`, `next.config.ts`, `package.json`, or what `app/` imports from `src/`.
 3. Visual change: you took a screenshot and looked at it (see below). Typechecking says nothing about pixels.
 4. Generator change: `pnpm level --stats 50` shows `fallbacks: 0` and no unexplained jump in ms/level or `needBridges`; compare against a run on the parent commit.
-5. Behavior change: a test covers it (generator invariants, prop module runtime behavior, physics feel regressions). Test behavior and invariants, not every tunable or weight. Keep tests cheap, because every second is paid on every iteration by every agent; give each test one fixed seed count, a few seeds rather than hundreds. An assertion that needs many seeds to mean anything (a share, a variety count) goes in a file under `tests/stats/` named for what it measures. No skips, and no seed counts that depend on the environment.
+5. Behavior change: a test covers it (generator invariants, prop module runtime behavior, physics feel regressions). Test behavior and invariants, not every tunable or weight. Keep tests cheap, because every second is paid on every iteration by every agent; give each test one fixed seed count, a few seeds rather than hundreds. A sweep (every theme × size × gravity, dozens of seeds, seeded fuzz) runs a rotation in `tests/` (each case once, the axes taking turns) and the full product in `tests/stats/`, through one helper in `tests/lib/`. An assertion that needs many seeds to mean anything (a share, a variety count) goes in a file under `tests/stats/` named for what it measures. No skips, and no seed counts that depend on the environment.
 6. In your final message, show evidence: the commands you ran with their result, and screenshot paths.
 
 ### Verify visually
@@ -93,7 +94,7 @@ Dev URL params (`src/debug.ts`, `src/game-client.ts`): `?seed=abc`, `?theme=farm
 Every generated kind (landmark, set piece, decor, part, level shape) is a registry entry with its contract declared as data; the pipeline enforces it while generating and `tests/conformance/` checks every registered entry, so a new one needs no new test. The step-by-step guide, with the contract fields, is in `src/gen/AGENTS.md` → Generators, contracts and the conformance suite.
 
 - **Prop module type**: add the variant to `Module` in `src/sim/props/types.ts`; implement `ModuleSim` in `src/sim/props/modules/<type>.ts` and export it from `modules/index.ts`; add art in `src/render/props/modules/<type>.ts` and import it from that `index.ts`; add tests.
-- **Player prop archetype**: a recipe in `src/gen/props.ts` (`RECIPES` via `definePart`, `ARCHETYPE_WEIGHTS`). Names come from rolled params; what scales goes in the recipe's `sized`.
+- **Player prop archetype**: a recipe in `src/gen/props.ts` (`RECIPES`, typed by archetype, and `ARCHETYPE_WEIGHTS`). Names come from rolled params; what scales goes in the recipe's `sized`.
 - **Projectile**: add to `Ammo` and `AMMO` (`src/sim/props/types.ts`); behavior goes in `AMMO_SIM` (`src/sim/props/ammo.ts`), art in `AMMO_ART` (`src/render/props/projectiles.ts`). A launcher style goes in the `launcher` recipe, with art in `src/render/props/modules/launcher.ts`; a style whose object is long or tall gets a frame in `LAUNCHER_FRAMES` (`src/sim/props/launcher-frames.ts`) and its art in `launcher-framed.ts`.
 - **Blast shape**: add to `BlastShape` and `BLAST_SHAPES` (`src/sim/props/transform.ts`).
 - **Theme**: add the id to `THEME_IDS` and `THEME_LABELS` in `src/themes.ts`, then `tsc` lists every `Record<ThemeId, …>` to fill: `SCULPTORS`, `SET_PIECE_RECIPES`, the look `RECIPES` in `src/gen/theme/presets.ts`, music `STYLES` (with a second arrangement in `arrangements`, balanced with `pnpm music --solo`), `GROUND_TONE`, its codex line in `THEME_NOTES`. The codex's maps pick it up from there. A farm must read as a farm at a glance. Add it to `LATE_THEMES` too, so every existing seed keeps its theme.

@@ -9,18 +9,6 @@
 export const BINDABLE = ['left', 'right', 'up', 'down', 'jump', 'run', 'use', 'confirm', 'alt'] as const;
 export type Action = (typeof BINDABLE)[number];
 
-export const ACTION_LABELS: Record<Action, string> = {
-  left: 'Move left',
-  right: 'Move right',
-  up: 'Up / aim',
-  down: 'Down / drop',
-  jump: 'Jump',
-  run: 'Run (hold)',
-  use: 'Use item',
-  confirm: 'Confirm / pick',
-  alt: 'Rotate / alt',
-};
-
 /** Up to two KeyboardEvent.code values per action. */
 export type KeyProfile = Record<Action, string[]>;
 

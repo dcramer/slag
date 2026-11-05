@@ -51,14 +51,3 @@ export function place(pts: readonly P[], x: number, y: number, a: number, sy = 1
   const s = Math.sin(a);
   return pts.map((p) => ({ x: x + p.x * c - p.y * sy * s, y: y + p.x * s + p.y * sy * c }));
 }
-
-/** A regular star or gear outline: `n` points alternating between radii `ro` and `ri`, starting at angle `a0`. */
-export function starPts(cx: number, cy: number, n: number, ro: number, ri: number, a0 = 0): P[] {
-  const pts: P[] = [];
-  for (let i = 0; i < n * 2; i++) {
-    const a = a0 + (i / (n * 2)) * Math.PI * 2;
-    const r = i % 2 ? ri : ro;
-    pts.push({ x: cx + Math.cos(a) * r, y: cy + Math.sin(a) * r });
-  }
-  return pts;
-}
