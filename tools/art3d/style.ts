@@ -668,6 +668,24 @@ export const BRIEFS: Record<string, Brief> = {
     // The design drew no medallion, so the edit adds the bottle cap (the twist) with the wear.
     worn: "a big round silver bottle cap (#c8ccd0) with a crimped edge now hangs in the middle of his chest on a brown shoelace, as wide as his eye-to-eye span, a little wolf's head pressed into it; one broken spoke pokes out sideways from the umbrella's furled cloth by his shoulder, its crook handle still a clean J; the hem of the coat is torn into a big ragged notch on one side; one boot's sole is flapping loose at the toe. The face, the hair and the sword stay as they are.",
   },
+  raider: {
+    // The nod, each part of the read at race size and each a shape in outline: the one long thick braid swinging out
+    // behind her head, clear of her back (the read: nobody else in the cast has a rope of hair; one tight rope, never
+    // loose hair, which with a slim figure read as a princess's gown on the slayer); the pistol on each thigh, its
+    // grip standing out of the holster (the tomb raider's twin guns, held out one in each hand in the air); athletic,
+    // in a tank top and shorts with her two legs apart (never a skirt or a coat); boots.
+    // Ours, and the joke: the pistols are chunky toy water pistols with a round tank on top, the pack a school satchel
+    // with a torn strap, and the braid tied off with a shoelace.
+    // The palette is neutral (Decisions 4): the tank top in the player's colour and the water pistols a light of it
+    // (bright plastic); the skin, hair, shorts, leather and satchel neutrals. Side on: her read is a profile.
+    design:
+      'The character: an athletic cartoon adventurer woman seen side on in profile, facing right, standing in a wide confident stance, her two legs well apart. ' +
+      'Colours: a fitted sleeveless tank top (#3f9ea6), short brown shorts (#7a5a3e), tan skin (#e2a87e), dark brown hair (#4a3020), dark brown boots and fingerless gloves (#4a3a30). ' +
+      'Her signature: one long thick braid, a single tight rope as thick as her arm, swinging out behind her head in a big curve, clear of her back with white background between, a white shoelace bow at its end. ' +
+      'On each thigh a holster holds a chunky orange toy water pistol (#e8823a) with a round tank on top, its grip sticking out. ' +
+      'A small tan school satchel (#b8925e) at her back hip on a strap across her chest. Bare arms and legs, big chunky boots.',
+    worn: "the satchel's strap is torn and tied back together in a big knot, its flap hanging open; a strip of grey tape (#9a9c98) is wrapped round the near water pistol's cracked tank; one knee of her shorts' hem is torn into a ragged notch; one boot's sole is flapping loose at the toe. Her face, the braid and its shoelace bow stay as they are.",
+  },
 };
 
 function brief(kind: string): Brief {
