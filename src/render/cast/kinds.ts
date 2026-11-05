@@ -20,6 +20,10 @@ import { art as slayer } from './art/slayer';
 import { art as raider } from './art/raider';
 import { art as fighter } from './art/fighter';
 import { art as stinger } from './art/stinger';
+import { art as mage } from './art/mage';
+import { art as creeper } from './art/creeper';
+import { art as tophat } from './art/tophat';
+import { art as pyramid } from './art/pyramid';
 import { type D, type KindArt, line, mark, ORANGE, ORANGE_SH, oval, poly, spot, STEEL, STEEL_SH, toned, tonedOval, Y } from './kit';
 
 /**
@@ -933,4 +937,8 @@ export const KINDS: Record<Kind, KindArt> = {
   raider,
   fighter,
   stinger,
+  mage,
+  creeper,
+  tophat,
+  pyramid,
 };

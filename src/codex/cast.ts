@@ -42,6 +42,10 @@ export const CAST_NOTES: Record<Kind, string> = {
   raider: 'Returns nothing to museums.',
   fighter: 'Kicks first, small talk never.',
   stinger: 'Sews her own way out.',
+  mage: 'Two eyes. No questions.',
+  creeper: 'Means well. Hugs once.',
+  tophat: 'Collects anything not nailed down.',
+  pyramid: 'Never hurries. Never late.',
 };
 
 export interface CastEntry {

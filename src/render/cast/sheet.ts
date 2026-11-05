@@ -255,6 +255,10 @@ const READS_AS: Record<Kind, string> = {
   raider: 'the braided tomb raider',
   fighter: 'the bun-haired street fighter',
   stinger: 'the horned bug with the needle',
+  mage: 'the black mage with the glowing eyes',
+  creeper: 'the green block creeper',
+  tophat: 'the little girl in the tall top hat',
+  pyramid: 'the triangle-helmeted executioner',
 };
 
 /**
