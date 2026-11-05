@@ -44,6 +44,8 @@ export class Camera {
   private held: readonly { x: number; y: number }[] = [];
   /** A looping shaft's race (Level.loop): the world repeats up and down, so nothing stops the view vertically. */
   wrapY = false;
+  /** World px a loop repeats every, while `wrapY` (0 otherwise): what `nearest` folds a position by. */
+  lapPx = 0;
 
   setBounds(ww: number, wh: number, minZoom: number) {
     if (ww !== this.ww || wh !== this.wh) {
@@ -179,6 +181,12 @@ export class Camera {
     const px = pw / f.w;
     const k = px * this.zoom;
     ctx.setTransform(k, 0, 0, k, (VIEW_W / 2 - f.x0) * px - (this.x + this.sx) * k, (VIEW_H / 2 - f.y0) * px - (this.y + this.sy) * k);
+  }
+
+  /** The copy of world y `y` round a loop (`lapPx`) closest to the view's middle: where an overlay for it belongs. */
+  nearest(y: number): number {
+    if (!this.lapPx) return y;
+    return y + Math.round((this.y - y) / this.lapPx) * this.lapPx;
   }
 
   /** Move the view and where it's heading by `dy` world px at once: a loop's lap line, crossed without a jump on screen. */
