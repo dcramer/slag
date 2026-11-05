@@ -497,6 +497,25 @@ export const BRIEFS: Record<string, Brief> = {
     // player's colour in the game); the wear stays off the head and the dome's outline but for one bent spike.
     worn: "a big square grey riveted patch plate (#9aa0a8) is bolted flat onto the middle of the green shell; a big chunk is broken out of the shell's cream rim near the bottom; the pale-blue paper crown sits crooked, one of its points torn and folded down; one of the shell's spikes is bent over sideways.",
   },
+  dragon: {
+    // The nod, each part of the read at race size: small and low on four short legs, side on (the horse is tall
+    // with a long neck, the dino upright); the horns swept straight back off the head (the head's outline, and
+    // back, never up like the king's); stubby wings standing up off the back (a dragon, not a lizard); the pale
+    // belly and the ridge of small spines (the purple dragon's markings, in neutral bone); the tail's arrowhead
+    // tip (the tip everyone draws him with).
+    // Ours, and the joke: the wings are umbrella cloth on bent spokes, and he carries his own light, a firefly
+    // in a jam jar tied to his tail.
+    // The palette is neutral (Decisions 4): the scales in the player's colour, the wing cloth a light of it; the
+    // belly, horns, spines and tip bone; the jar glass.
+    design:
+      'The character: a small cute cartoon baby dragon standing low on all four short stubby legs, seen from its side, facing right, its whole outline unmistakably a little dragon, long and low with no neck. ' +
+      'Its big round head has a short blunt snout and one big eye, and two long pale bone horns (#ecdcb8) sweep straight back off the top of its head, flat and backward, longer than the head. ' +
+      'Two small stubby wings stand up off its shoulders, each made of umbrella cloth (#c4a2ea) stretched over three bent thin black metal spokes, the cloth scalloped between the spoke tips. ' +
+      'A row of small pale bone triangle spines runs along the top of its back. A pale bone belly (#ecdcb8). ' +
+      'A long thin tail curves out behind and ends in a big flat pale bone arrowhead tip; a small glass jam jar with a firefly glowing pale inside hangs from the tail on a string. ' +
+      'The head, body, legs and tail are all one purple (#8a5cc0).',
+    worn: "one wing's cloth is torn, a big flap of it hanging loose, and one of its spokes is bent and poking out past the cloth; a big square patch of grey cloth (#9a9c98) is sewn on the other wing with big stitches; the arrowhead tail tip is bent sideways and wrapped with a strip of grey tape.",
+  },
   horse: {
     // The nod, each part of the read at race size, and each a shape only a horse has in outline: four long legs
     // under a long barrel body (upright on two legs, ten blind readers took it for a fox or the bandicoot); a long
