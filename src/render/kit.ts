@@ -25,12 +25,22 @@ export interface RC {
   lights: Light[] | null;
   /** Seconds. */
   t: number;
-  /** Sim frame driving prop poses. */
+  /** Sim frame: counters, blinks and anything that ticks once a step. */
   frame: number;
+  /**
+   * The moment between steps the picture shows (fractional frames, `frame` when absent): where moving parts
+   * stand, so a runner riding one is drawn on it (blend.ts). Read it through `poseFrame`.
+   */
+  at?: number;
   /** How hard the wind shows right now (`gustShown`, -1..1): 0 in still air. */
   gust?: number;
   /** The rendered figures drawn this frame (`InkTarget.figures`). */
   figures?: Figure[];
+}
+
+/** The frame moving parts are drawn at: between steps when the picture is (RC.at). Poses only, never counters. */
+export function poseFrame(rc: RC): number {
+  return rc.at ?? rc.frame;
 }
 
 /**

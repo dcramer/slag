@@ -4,7 +4,7 @@ import { TILE } from '../../../sim/constants';
 import { type ModuleOf, pistonHead, pistonState, type RotorArm, rotorAngles, swingHeads } from '../../../sim/props';
 import { blob, inkFor, line, type P, stroke } from '../../ink';
 import { ball, bar, barLine, boxPts, dot, glint, ovalPts, part, pen, poly, sprite, stamp, tick, tone } from '../../ink-props';
-import { light, type RC } from '../../kit';
+import { light, type RC, poseFrame } from '../../kit';
 import { beamOf, type DrawCtx } from '../common';
 import { SHELLS } from '../modules/deco-shells';
 import { groundBelowPx } from '../modules/setpiece';
@@ -233,7 +233,7 @@ const greatWheelShell = (rc: RC, m: Deco, d: DrawCtx) => {
   const spread = Math.floor((R / TILE) * 0.78) * TILE;
   const lv = d.o.level ?? null;
   const drop = Math.max(groundBelowPx(lv, hx - spread, hy + R * 0.4), groundBelowPx(lv, hx + spread, hy + R * 0.4)) - hy;
-  const a = rotorAngles(w, rc.frame, d.r.phase)[0];
+  const a = rotorAngles(w, poseFrame(rc), d.r.phase)[0];
   rc.s.save();
   rc.s.translate(hx, hy);
   rc.s.rotate(a);
@@ -333,13 +333,13 @@ const greatWheel = {
     const hy = m.hub[1] + d.off[1];
     const saws = sawsOf(d);
     if (saws) {
-      const heads = swingHeads(saws, rc.frame, d.r.phase, d.off);
+      const heads = swingHeads(saws, poseFrame(rc), d.r.phase, d.off);
       heads.forEach((h, i) => sawSpoke(s, hx, hy, h.x, h.y, saws.radius, d.pal.base, 300 + i * 7));
       const u = frac(rc.t * 0.45);
       for (const h of heads) spokeGlint(s, hx, hy, h.x, h.y, u * 1.3);
     }
     // The boss: a domed cap with a bolt circle that turns with the wheel, and the axle nut.
-    const a = rotorAngles(m, rc.frame, d.r.phase)[0];
+    const a = rotorAngles(m, poseFrame(rc), d.r.phase)[0];
     const R = 15;
     ball(s, hx, hy, R, d.pal.base, 131);
     s.fillStyle = css(d.pal.dark, 4, 0.9);
@@ -422,7 +422,7 @@ const stampingLineShell = (rc: RC, m: Deco, d: DrawCtx) => {
       const cx = p.at[0] + d.off[0];
       stamp(s, pressFrame(p.width, floor - top, crown, i + 1, t), cx, top);
       // The ram's bulk behind its rod, down to the head wherever the stroke has it.
-      const st = pistonState(p, rc.frame, d.r.phase);
+      const st = pistonState(p, poseFrame(rc), d.r.phase);
       const head = pistonHead(p, st.ext, d.off, beamOf(d.o, d.r, d.r.mods.indexOf(p))?.len);
       const rw = p.width * 0.46;
       const ram = boxPts(cx - rw / 2, m.at[1] + d.off[1] - 2, rw, Math.max(4, head.y - (m.at[1] + d.off[1]) + 2), 1.2, 7 + i, 0.05);

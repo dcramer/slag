@@ -4,7 +4,7 @@ import { hash2 } from '../../../core/rng';
 import { type ModuleOf, type RotorArm, rotorAngles, rotorArms, rotorPlatform } from '../../../sim/props';
 import { blob, inkFor, line, type P, stroke } from '../../ink';
 import { ball, bar, barLine, boxPts, dot, glint, ovalPts, part, path, pen, poly, sprite, stamp, tick, tone } from '../../ink-props';
-import { bulb, circle, glowDot, light, type RC } from '../../kit';
+import { bulb, circle, glowDot, light, type RC, poseFrame } from '../../kit';
 import { BACKDROP, type DrawCtx, defineArt } from '../common';
 import { ceilingAbovePx, chain, groundBelowPx, lattice, plank, rope } from './setpiece';
 import { rotorSkin } from '../skins';
@@ -274,7 +274,7 @@ function drawArms(rc: RC, m: Rotor, d: DrawCtx, arms: RotorArm[]) {
   if (m.look === 'cog') {
     if (skin?.wheel) skin.wheel(rc, m, d, arms, hx, hy);
     else {
-      const base = rotorAngles(m, rc.frame, d.r.phase)[0];
+      const base = rotorAngles(m, poseFrame(rc), d.r.phase)[0];
       cogWheel(rc, m, d.pal, arms, hx, hy, base);
       if (d.r.pp.def.name.includes('Hamster')) waterBottle(s, hx, hy, Math.min(m.arm * 0.5, 30));
     }
@@ -676,7 +676,7 @@ function drawHub(rc: RC, m: Rotor, d: DrawCtx) {
     }
     return;
   }
-  if (m.look === 'cog') return cogHub(s, m, d.pal, hx, hy, rotorAngles(m, rc.frame, d.r.phase)[0]);
+  if (m.look === 'cog') return cogHub(s, m, d.pal, hx, hy, rotorAngles(m, poseFrame(rc), d.r.phase)[0]);
   const r = 5.5;
   const base = m.look === 'windmill' ? ({ h: d.style.woodHue, s: 40, l: 28 } as HSL) : d.pal.base;
   ball(s, hx, hy, r, base, 131);
@@ -684,10 +684,10 @@ function drawHub(rc: RC, m: Rotor, d: DrawCtx) {
 }
 
 defineArt<'rotor'>({ type: 'rotor', layer: BACKDROP, draw: (rc, m, d) => drawSupport(rc, m, d) });
-defineArt<'rotor'>({ type: 'rotor', layer: 0, draw: (rc, m, d) => drawArms(rc, m, d, rotorArms(m, rc.frame, d.r.phase, d.off)) });
+defineArt<'rotor'>({ type: 'rotor', layer: 0, draw: (rc, m, d) => drawArms(rc, m, d, rotorArms(m, poseFrame(rc), d.r.phase, d.off)) });
 defineArt<'rotor'>({
   type: 'rotor',
   layer: 1,
-  draw: (rc, m, d) => rotorArms(m, rc.frame, d.r.phase, d.off).forEach((a, i) => drawPlatform(rc, m, d, a, i)),
+  draw: (rc, m, d) => rotorArms(m, poseFrame(rc), d.r.phase, d.off).forEach((a, i) => drawPlatform(rc, m, d, a, i)),
 });
 defineArt<'rotor'>({ type: 'rotor', layer: 2, draw: (rc, m, d) => drawHub(rc, m, d) });

@@ -636,7 +636,7 @@ function startGame(container: HTMLElement, room: string, params: URLSearchParams
     if (tp && input.touch.active && events.some((e) => e.type === 'death' && e.slot === tp.slot)) input.touch.buzz(30);
     audio.handle(events, view);
     audio.update(view, now);
-    renderer.render(view, now, events);
+    renderer.render(view, now, events, acc / DT); // drawn between the last two steps (render/blend.ts)
     pacing.frame(now, match.phase, performance.now() - start);
     requestAnimationFrame(frame);
   }

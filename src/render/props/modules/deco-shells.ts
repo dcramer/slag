@@ -1,4 +1,5 @@
 import { css, type HSL } from '../../../core/color';
+import { poseFrame } from '../../kit';
 import { hash2 } from '../../../core/rng';
 import type { DecoKind, ModuleOf } from '../../../sim/props';
 import { rotorAngles } from '../../../sim/props/modules/rotor';
@@ -214,7 +215,7 @@ const flywheel: Shell = (rc, m, d) => {
   const r = Math.max(8, Math.min(m.w, m.h) / 2 - 2);
   const cx = wheel ? wheel.hub[0] + d.off[0] : m.at[0] + d.off[0] + m.w / 2;
   const cy = wheel ? wheel.hub[1] + d.off[1] : m.at[1] + d.off[1] + m.h / 2;
-  const a = wheel ? rotorAngles(wheel, rc.frame, d.r.phase)[0] : 0;
+  const a = wheel ? rotorAngles(wheel, poseFrame(rc), d.r.phase)[0] : 0;
   const s = rc.s;
   s.save();
   s.translate(cx, cy);
