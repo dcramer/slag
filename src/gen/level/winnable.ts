@@ -51,7 +51,12 @@ import { type Bridge, canPlaceBridge, MAX_BRIDGES, searchBridges, withBridges } 
 const caches = new Map<string, ReachCache>();
 const MAX_CACHES = 4;
 
-function cacheFor(field: Level): ReachCache {
+/**
+ * The shared ReachCache for `field`'s level, rebased onto its tiles. Anything
+ * asking many questions of one level in play (bots weighing spots) should go
+ * through it: a cold cache re-traces every cell, a warm one only what changed.
+ */
+export function cacheFor(field: Level): ReachCache {
   const key = `${field.seed}:${field.theme.id}:${field.w}x${field.h}:${field.gravity ?? 1}`;
   let c = caches.get(key);
   if (c) caches.delete(key);
@@ -97,8 +102,10 @@ export function settled(level: Level, placed: readonly PlacedProp[]): { level: L
  * left of it still counts, so a bridge someone built from the plan shortens
  * it, and bridges the level no longer needs are dropped, down to [] when the
  * flag is reachable as it stands. Pass the settled state (see `settled`).
+ * `search` false never looks for a new plan (searchBridges runs dozens of
+ * analyses): null then means only that the last plan no longer holds.
  */
-export function prove(level: Level, placed: readonly PlacedProp[], prior: readonly Bridge[]): Bridge[] | null {
+export function prove(level: Level, placed: readonly PlacedProp[], prior: readonly Bridge[], search = true): Bridge[] | null {
   const field = fieldOf(level, placed);
   const cache = cacheFor(field);
   const works = (bs: readonly Bridge[]) => cache.analyze(bs.length ? withBridges(field, bs) : field).goalReached;
@@ -110,7 +117,7 @@ export function prove(level: Level, placed: readonly PlacedProp[], prior: readon
     return rest;
   }
   if (works([])) return [];
-  return searchBridges(field, prior, cache);
+  return search ? searchBridges(field, prior, cache) : null;
 }
 
 /**

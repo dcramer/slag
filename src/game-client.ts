@@ -1,6 +1,6 @@
 import 'client-only';
 import { pageAudio } from './audio/page';
-import { BotSeats } from './brain/bots';
+import { type BotBudget, BotSeats } from './brain/bots';
 import { isBotDevice } from './brain/device';
 import { parseSeed } from './core/rng';
 import { installDebug } from './debug';
@@ -35,6 +35,8 @@ import { loadProfile, saveProfile } from './ui/profile';
 
 /** About the gap between a pinch's two fingers landing, in sim frames. */
 const PINCH_WAIT_FRAMES = 6;
+/** Wall-clock ms a frame gives its bots to think, over all its steps: past it they play on with what they meant (BotBudget). */
+const BOT_THINK_MS = 3;
 
 /** One level builder for the page: its worker outlives any one lobby, so the next one starts warm. */
 let levelAhead: LevelAhead | null = null;
@@ -572,6 +574,8 @@ function startGame(container: HTMLElement, room: string, params: URLSearchParams
       acc = 0;
       return;
     }
+    // Every step this frame runs shares one deadline for bot thinking, catch-up steps included (BotBudget).
+    const botBudget: BotBudget = { until: performance.now() + BOT_THINK_MS, now: () => performance.now() };
     while (acc >= DT) {
       // Host-rolled per-match salt, re-rolled on entering the lobby; a host action so every peer shares it.
       if (net.isHost && !net.paused && match.phase === 'lobby' && match.phaseFrame === 0) net.act({ t: 'salt', salt: (Math.random() * 4294967296) >>> 0 });
@@ -584,7 +588,7 @@ function startGame(container: HTMLElement, room: string, params: URLSearchParams
       nameInput(frames);
       Object.assign(
         frames,
-        bots.frames(match, (d) => net.globalDevice(d)),
+        bots.frames(match, (d) => net.globalDevice(d), botBudget),
       );
       net.tick(frames);
       acc -= DT;

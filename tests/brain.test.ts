@@ -38,6 +38,23 @@ describe('bots', () => {
     expect(m.players.every((p) => p.claim >= 0 && p.placed && !p.afk)).toBe(true);
   });
 
+  it('with no time to spare takes turns thinking, and still plays a round through to the flag', () => {
+    const m = new Match(4);
+    const bots = new BotSeats();
+    for (let i = 0; i < 3; i++) m.join(bots.add(m));
+    m.rules = { ...m.rules, pickSeconds: 0, placeSeconds: 0, raceSeconds: 60 };
+    // Out of time before anyone starts: only the bot whose turn it is to go first thinks each step.
+    const broke = { until: 0, now: () => 1 };
+    let finished = 0;
+    for (let f = 0; f < 90 * 60 && m.phase !== 'score'; f++) {
+      m.step(bots.frames(m, undefined, broke));
+      finished = Math.max(finished, m.run?.runners.filter((r) => r.finished).length ?? 0);
+    }
+    expect(m.phase).toBe('score');
+    expect(m.players.every((p) => p.claim >= 0 && p.placed && !p.afk)).toBe(true);
+    expect(finished).toBeGreaterThan(0);
+  });
+
   it('takes its time over the crate: reads it, points at another card, then takes one', () => {
     const m = new Match(2);
     const bots = new BotSeats();
