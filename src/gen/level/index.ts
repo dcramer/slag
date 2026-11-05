@@ -2,7 +2,7 @@ import { footprintCells, type PlacedProp } from '../../sim/props';
 import { BRIDGE_W } from './validate';
 import { deriveSeed, Rng } from '../../core/rng';
 import type { Level, LevelProfile } from '../../sim/level';
-import { pickThemeId, type ThemeId } from '../../themes';
+import { pickThemeId, THEME_IDS, type ThemeId } from '../../themes';
 import { commit, finalize, SET_PIECE_UID, SET_PIECES, Site, tellFaults } from '../setpieces';
 import { type Concept, conceptName, fits, type Landmark, landmarkFaults, rollConcept } from '../stage';
 import { generateTheme, type Theme } from '../theme';
@@ -11,7 +11,7 @@ import { lowestOpen, SLAG_TIDE } from '../../sim/tide';
 import { footing } from '../../sim/weather';
 import { openUp } from './lanes';
 import { setProbeGravity } from './probe';
-import { type ProfileOverride, rollProfile } from './profile';
+import { buildsTowers, type ProfileOverride, rollProfile } from './profile';
 import { DIFFICULTY, setLevelDifficulty } from './difficulty';
 import { levelPrecision } from './precision';
 import { analyzeRoutes, MAX_SHARED } from './routes';
@@ -99,7 +99,7 @@ let lastGenAttempts = 0;
  * the level goes plain.
  */
 export function generateLevel(seed: number, themeOverride?: ThemeId, profileOverride?: ProfileOverride): Level {
-  const themeId = themeOverride ?? pickThemeId(seed);
+  const themeId = themeOverride ?? (profileOverride?.tide ? towerTheme(seed) : pickThemeId(seed));
   const theme = generateTheme(seed, themeId);
   /**
    * The layout draw `n` builds: its profile (size, route, density, set pieces) and stage concept. Draw 0's are
@@ -274,7 +274,8 @@ export function generateLevel(seed: number, themeOverride?: ThemeId, profileOver
       };
       const budget = live ? (live.budget ?? fixed.length) : 0;
       const pieces = SET_PIECES[themeId](new Rng(deriveSeed(seed, lab(`setpieces:${attempt}`))), level, {
-        count: Math.max(0, profile.hazards - budget),
+        // A Rising Slag tower is several levels tall: its hazards come at the same rate per storey.
+        count: Math.max(0, profile.hazards * (profile.tide ? Math.max(1, Math.round(profile.h / 50)) : 1) - budget),
         danger: profile.danger,
         cache,
         keep: fixed.length ? (ps) => keep([...fixed, ...ps]) : keep,
@@ -353,6 +354,15 @@ function toLevel(seed: number, s: Shape, theme: Theme, profile: LevelProfile): L
     setPieces: [],
     ...(profile.tide ? { tide: { ...SLAG_TIDE, from: lowestOpen(s.tiles, s.w, s.h) } } : {}),
   };
+}
+
+/**
+ * The seed's theme for a Rising Slag level: its own where that theme builds towers, otherwise one of those that do,
+ * from a stream of its own. A farm, a harbor and space never go tall, and the slag needs a tower to climb.
+ */
+function towerTheme(seed: number): ThemeId {
+  const own = pickThemeId(seed);
+  return buildsTowers(own) ? own : new Rng(deriveSeed(seed, 'theme-tower')).pick(THEME_IDS.filter(buildsTowers));
 }
 
 /** Flat floor, always solvable. Only used if every candidate fails. */

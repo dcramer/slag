@@ -25,8 +25,12 @@ export interface Tide {
   from?: number;
 }
 
-/** The one tide a Rising Slag level carries (gen/level/index.ts). */
-export const SLAG_TIDE: Tide = { wait: 4, speed: 0.8, gain: 0.035 };
+/**
+ * The one tide a Rising Slag level carries (gen/level/index.ts). It presses from the start (20 rows in its first
+ * 10 s) and gains fast: past 5 tiles/s by 35 s, more than a climb of switchback storeys keeps up, and over a whole
+ * 200-row tower (`TIDE_TOWER_H`) by about 52 s, so every round ends inside a minute.
+ */
+export const SLAG_TIDE: Tide = { wait: 2, speed: 1.5, gain: 0.1 };
 
 /** Px the slag has risen from where it starts on run frame `f`. 0 until it moves. */
 export function tideRise(tide: Tide, f: number): number {

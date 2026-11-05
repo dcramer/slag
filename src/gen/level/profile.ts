@@ -93,6 +93,8 @@ const ROUTE_WEIGHTS: Record<SizeClass, Weights<RouteShape>> = {
 };
 
 const TALL_SIZES = { w: [32, 40], h: [40, 60] } as const;
+/** Rows of a Rising Slag tower: more than anyone climbs before the slag catches them (`SLAG_TIDE`, sim/tide.ts). */
+export const TIDE_TOWER_H = 200;
 const WIDE_SIZES = { w: [64, 96], h: [24, 30] } as const;
 
 /** Debug/tools: force some knobs (the rest still roll from the seed). A size the theme can't do falls back to its widest. */
@@ -143,6 +145,8 @@ export function rollProfile(seed: number, themeId: ThemeId, o: ProfileOverride =
     w = rng.int(TALL_SIZES.w[0] / 2, TALL_SIZES.w[1] / 2) * 2;
     // Taller than wide by a clear margin: 40×40 is a square, not a tower.
     h = rng.int(Math.max(TALL_SIZES.h[0], w + 6), TALL_SIZES.h[1]);
+    // Rising Slag's tower has no top anyone reaches: the slag outclimbs everyone first (sim/tide.ts).
+    if (o.tide) h = TIDE_TOWER_H;
   }
   const rolledRoute = rng.weighted(ROUTE_WEIGHTS[size]);
   const routes = o.tide ? ROUTE_WEIGHTS[size].filter(([r]) => CLIMBS.has(r)) : ROUTE_WEIGHTS[size];
@@ -191,6 +195,11 @@ export function rollProfile(seed: number, themeId: ThemeId, o: ProfileOverride =
   };
 }
 
+/** Does this theme build towers? Rising Slag plays only those, unless the host picked another theme. */
+export function buildsTowers(themeId: ThemeId): boolean {
+  return SIZE_WEIGHTS[themeId].some(([s]) => s === 'tall');
+}
+
 /** Routes that go up: a level the slag rises through has to climb (game/modes.ts, Rising Slag). */
 const CLIMBS: ReadonlySet<RouteShape> = new Set(['climb', 'zigzag']);
 
@@ -199,7 +208,7 @@ const CLIMBS: ReadonlySet<RouteShape> = new Set(['climb', 'zigzag']);
  * climbs at classic size, so any theme can host the mode in its own shape language (farms and harbors never go tall).
  */
 function climbSize(themeId: ThemeId): SizeClass {
-  return SIZE_WEIGHTS[themeId].some(([s]) => s === 'tall') ? 'tall' : 'classic';
+  return buildsTowers(themeId) ? 'tall' : 'classic';
 }
 
 /** The rolled route if it climbs; otherwise the climbing route it maps to, so the rest of the roll stays the seed's. */

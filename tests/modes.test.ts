@@ -3,16 +3,16 @@ import { Match } from '../src/game/match';
 import { climbed, MODES } from '../src/game/modes';
 import { DEFAULT_RULES } from '../src/game/rules';
 import { POINTS, scoreSurvival } from '../src/game/scoring';
-import { rollProfile } from '../src/gen/level/profile';
+import { buildsTowers, rollProfile, TIDE_TOWER_H } from '../src/gen/level/profile';
 import { generateTheme } from '../src/gen/theme';
 import { hashMatch, restoreMatch, snapshotMatch } from '../src/net/snapshot';
-import { LEVEL_H, LEVEL_W, POP_HOLD, RUN_COUNTDOWN, TILE } from '../src/sim/constants';
+import { FPS, LEVEL_H, LEVEL_W, POP_HOLD, RUN_COUNTDOWN, TILE } from '../src/sim/constants';
 import type { Level } from '../src/sim/level';
 import { bodyAtCell } from '../src/sim/physics';
 import { RunWorld } from '../src/sim/run';
 import { type Tide, tideLine } from '../src/sim/tide';
 import { type InputFrame, NO_INPUT } from '../src/sim/types';
-import { THEME_IDS } from '../src/themes';
+import { pickThemeId, THEME_IDS } from '../src/themes';
 
 const FLOOR = 20; // first solid row
 const SLAG = { ...DEFAULT_RULES, mode: 'slag' as const };
@@ -41,23 +41,38 @@ function flatLevel(tide?: Tide): Level {
 const pop = (f: number): InputFrame => ({ ...NO_INPUT, alt: true, altPressed: f === 0 });
 
 describe('Rising Slag levels', () => {
-  it('climb in every theme: a tower where the theme builds them, a classic climb where it never does', () => {
+  it('climb in every theme: a tower too tall to top where the theme builds them, a classic climb where it never does', () => {
     for (const theme of THEME_IDS) {
       for (const seed of [1, 2, 3]) {
         const p = rollProfile(seed, theme, { tide: true });
         expect(['climb', 'zigzag'], `${theme} ${seed}`).toContain(p.route);
         expect(p.tide).toBe(true);
         expect(p.size === 'tall' || (p.size === 'classic' && p.route === 'climb'), `${theme} ${seed}: ${p.size}`).toBe(true);
+        if (p.size === 'tall') expect(p.h).toBe(TIDE_TOWER_H);
       }
-      expect(rollProfile(1, theme, { tide: true }).size).toBe(['farm', 'harbor', 'space'].includes(theme) ? 'classic' : 'tall');
+      expect(rollProfile(1, theme, { tide: true }).size).toBe(buildsTowers(theme) ? 'tall' : 'classic');
     }
+    expect(THEME_IDS.filter((t) => !buildsTowers(t))).toEqual(['farm', 'harbor', 'space']);
   });
 
-  it('a match in the mode builds a level that carries the slag, with its top above the spawn', () => {
+  it('plays a tower theme when the seed would roll one that builds none', () => {
+    let seed = 1;
+    while (pickThemeId(seed) !== 'farm') seed++;
+    const level = new Match(seed, undefined, SLAG).level;
+    expect(buildsTowers(level.theme.id)).toBe(true);
+    expect(level.profile!.size).toBe('tall');
+  });
+
+  it('a match in the mode builds a tower that carries the slag, which tops it inside a minute', () => {
     const m = new Match(31, 'mine', SLAG);
     expect(m.level.tide).toBeDefined();
     expect(m.level.profile?.tide).toBe(true);
+    expect(m.level.h).toBe(TIDE_TOWER_H);
     expect(m.level.goal.ty).toBeLessThan(m.level.spawn.ty);
+    expect(tideLine(m.level, RUN_COUNTDOWN + 60 * FPS)!).toBeLessThan(0);
+    // One part asked, at the top: the climb from the spawn needs none.
+    expect(m.level.solution!.length).toBe(1);
+    expect(m.level.solution![0].y).toBeLessThan(m.level.h / 4);
     // It pools in the lowest open row, in sight from GO, never over the spawn.
     expect(m.level.tide!.from).toBeGreaterThan(m.level.spawn.ty);
     expect(m.level.tiles.slice(m.level.tide!.from! * m.level.w).every((t) => t === 1)).toBe(true);

@@ -76,6 +76,9 @@ Every game design decision, preference and direction the owner has given, groupe
   2026-11-04 · `done` for the mode registry and Rising Slag; Brawl and Gauntlet are `planned` · DESIGN.md → Modes, `src/game/modes.ts`, TODO.md → 31
 - **Rising Slag levels keep their theme: a mode asks for the level it needs, and each theme builds it in its own shape.** "keep in mind rising slag still needs the thematic level stuff. they might just have to support additional annotations for it?"
   2026-11-04 · `done` (a climbing profile in every theme, the slag carried on the level as `Level.tide`); themes that never build towers climb only 7–15 rows, `planned` · DESIGN.md → Modes, TODO.md → 31
+- **Rising Slag is an endless climb, and the slag has to chase you.** "rising slag.. isnt an infinitely climbable thing and the thing doesnt rise very fast...."
+  2026-11-04 · `done` · DESIGN.md → Modes; 200-row towers of the tower themes (`TIDE_TOWER_H`), the slag at 1.5 tiles/s gaining 0.1 a second (`SLAG_TIDE`)
+  Changed: the first cut climbed a 40–60-row tower (or a classic climb) with a flag-less top to hold, under slag at 0.8 tiles/s gaining 0.035 after 4 s.
 - **A rule the level is built from (gravity, weather) rebuilds the lobby's level for everyone at once.**
   2026-11-02 · git `e64c3e5` · `done` · DESIGN.md → Rules
 
