@@ -2,10 +2,12 @@ import { describe, expect, it } from 'vitest';
 import { runnerBrain } from '../src/brain/brains/runner';
 import { BotSeats } from '../src/brain/bots';
 import { Grudges } from '../src/brain/grudge';
+import { senseView } from '../src/brain/view';
 import { Motor } from '../src/brain/motor';
 import { rollPersonality } from '../src/brain/personality';
 import { GRUDGE, rollTemperament, TEMPERAMENT_IDS, TEMPERAMENTS, type TemperamentId } from '../src/brain/temperament';
 import { Match } from '../src/game/match';
+import { isBridgePart } from '../src/gen/props';
 import { TILE } from '../src/sim/constants';
 import { BRAIN_VIEW_VERSION, type BrainView, type CardSense, type Intent, type RivalSense } from '../src/brain/types';
 
@@ -30,6 +32,8 @@ function view(over: Partial<BrainView>): BrainView {
     live: false,
     canPlace: () => true,
     keepsWay: () => true,
+    route: () => ({ cells: [], tight: 0, length: 0 }),
+    assess: () => null,
     ...over,
   };
 }
@@ -175,5 +179,118 @@ describe('temperaments and grudges', () => {
     expect(Math.abs(p.cursor.x / TILE - 10)).toBeLessThan(1);
     expect(Math.abs(p.cursor.y / TILE - 6)).toBeLessThan(1);
     expect(p.placed).toBe(false);
+  });
+});
+
+/** Route cells on row 9, and how hard a hazard on each would make the run: one too tight to pass itself, one that breaks the plan. */
+const WAY = [4, 8, 12, 16].map((x) => 9 * 24 + x);
+const HARDER: Record<number, { tight: number; length: number } | null> = {
+  4: { tight: 0, length: 30 },
+  8: { tight: 1, length: 31 },
+  12: { tight: 3, length: 40 },
+  16: null,
+};
+
+/**
+ * A Hard bot with no grudge and every round a blocking one, through a race
+ * (someone finishes it unless `nobody`), a pick from a crate of a block and
+ * hazards, and a place on a level whose route is WAY: where it puts its part,
+ * and the spots it weighed.
+ */
+function blockRound({ nobody = false } = {}) {
+  const brain = runnerBrain(7, { ...rollPersonality(7, 'hard'), block: 1 }, TEMPERAMENTS.speedrunner);
+  brain.think(view({}));
+  const self = {
+    x: 2.5,
+    y: 10,
+    tx: 2,
+    ty: 9,
+    pace: 'still',
+    lift: 'level',
+    facing: 1,
+    grounded: true,
+    wall: 0,
+    alive: true,
+    finished: false,
+    togo: 20,
+    away: 20,
+  } as const;
+  for (let f = 0; f < 20; f++)
+    brain.think(
+      view({
+        phase: 'run',
+        phaseFrame: f,
+        live: true,
+        self: { ...self, alive: f < 10 },
+        runners: [{ slot: 1, x: 5, y: 10, alive: true, finished: !nobody && f > 15 }],
+      }),
+    );
+  brain.think(view({ phase: 'score' }));
+  const crate = [card('utility'), card('build'), card('hazard')];
+  let took = -1;
+  for (let f = 0; f < 600 && took < 0; f++) {
+    const it = brain.think(view({ phase: 'pick', phaseFrame: f, crate, rivals: [rival(1)] }));
+    if (it.do === 'pick') took = it.card;
+  }
+  const weighed: number[] = [];
+  const held = crate.map((c, i) => (i === took ? card(c.role, 0) : c));
+  let put: Intent | undefined;
+  for (let f = 0; f < 600 && put?.do !== 'place'; f++)
+    put = brain.think(
+      view({
+        phase: 'place',
+        phaseFrame: f,
+        crate: held,
+        claim: took,
+        rivals: [rival(1)],
+        route: () => ({ cells: WAY, tight: 0, length: 30 }),
+        assess: (tx) => {
+          weighed.push(tx);
+          return HARDER[tx] ?? null;
+        },
+      }),
+    );
+  return { took: crate[took], put, weighed };
+}
+
+describe('blocking', () => {
+  it('a Hard bot takes a hazard and puts it where the way gets hardest, short of what it couldn’t pass itself', () => {
+    const { took, put, weighed } = blockRound();
+    expect(took.role).toBe('hazard');
+    expect(weighed.sort((a, b) => a - b)).toEqual([4, 8, 12, 16]);
+    expect(put).toMatchObject({ do: 'place', tx: 8, ty: 9 });
+  });
+
+  it('after a race nobody finished, it lets the level be', () => {
+    const { weighed, put } = blockRound({ nobody: true });
+    expect(weighed).toEqual([]);
+    expect(put?.do).toBe('place');
+  });
+
+  it('in a real round, once someone holds the bridge, a Hard bot puts a hazard on the way everyone runs', () => {
+    const m = new Match(4);
+    const bots = new BotSeats(
+      (p) => ({ ...p, block: 1 }),
+      () => TEMPERAMENTS.speedrunner,
+    );
+    const p = m.join(bots.add(m))!;
+    p.bot = 'hard';
+    const q = m.join('kb')!;
+    m.rules = { ...m.rules, pickSeconds: 0, placeSeconds: 0 };
+    m.startMatch();
+    // Someone else already holds the bridge: the way through is in hand, so it's free to get in the way.
+    const bridge = m.crate.findIndex((c) => isBridgePart(c.def));
+    m.crate[bridge].claimedBy = q.slot;
+    q.claim = bridge;
+    let way: number[] = [];
+    for (let f = 0; f < 30 * 60 && !p.placed; f++) {
+      if (m.phase === 'place') way = senseView(m, p).route().cells;
+      m.step(bots.frames(m));
+    }
+    const pp = m.placed.find((x) => x.owner === p.slot)!;
+    expect(pp.def.role).toBe('hazard');
+    const w = m.level.w;
+    expect(way.length).toBeGreaterThan(0);
+    expect(way.some((c) => Math.abs((c % w) - pp.tx) <= 1 && Math.abs(Math.floor(c / w) - pp.ty) <= 1)).toBe(true);
   });
 });

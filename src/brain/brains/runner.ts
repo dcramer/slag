@@ -2,7 +2,7 @@ import { Rng } from '../../core/rng';
 import { Grudges } from '../grudge';
 import type { Personality } from '../personality';
 import type { Temperament } from '../temperament';
-import type { Brain, BrainView, Intent } from '../types';
+import type { Brain, BrainView, CardSense, Intent } from '../types';
 
 /**
  * A race that stops getting closer to the flag (by its route, or the rough way where no route leads):
@@ -44,6 +44,15 @@ const AROUND = [
 ] as const;
 /** A death counts this many frames of standing there: where someone died is where a trap goes. */
 const DEATH_WEIGHT = 240;
+/** Frames between spots weighed for a block: each asks the proof again, so it looks the level over a spot at a time. */
+const WEIGH_EVERY = 4;
+/** Tiles of detour a tight jump is worth when weighing how hard a block makes the run. */
+const TIGHT_TILES = 20;
+/**
+ * Tight jumps a block may add to the run. Past that it would beat the bot too, and a race nobody finishes scores
+ * nobody: it makes the run hard for everyone, not impossible.
+ */
+const TIGHT_ADDED = 1;
 
 type Place = Extract<Intent, { do: 'place' }>;
 /** Cell (y * w + x) → frames spent there, deaths weighted. */
@@ -55,9 +64,18 @@ interface Scheme {
   mischief: boolean;
   /** It does it well: the spot that hurts most, still leaving a way through. */
   sharp: boolean;
+  /** With nobody to get, it still gets in everyone's way. */
+  block: boolean;
 }
 
-const NO_SCHEME: Scheme = { target: -1, mischief: false, sharp: false };
+const NO_SCHEME: Scheme = { target: -1, mischief: false, sharp: false, block: false };
+
+/** Spots in the way still to weigh, and the hardest so far. */
+interface Weighing {
+  left: Place[];
+  best: Place | null;
+  score: number;
+}
 
 /**
  * The built-in brain: runs the route to the flag; with no way on, it jumps
@@ -88,6 +106,11 @@ export function runnerBrain(seed: number, traits: Personality, mood: Temperament
   let scheme = NO_SCHEME;
   /** Place: the phase frame it stops eyeing its target. */
   let glareUntil = 0;
+  let weighing: Weighing | null = null;
+  /** Nobody finished the last race: the level is hard enough, and a race nobody finishes scores nobody. */
+  let stuck = false;
+  /** Someone has finished this race. */
+  let anyone = false;
   /** Where each seat ran in the last race, its own included. */
   let trails: Record<number, Trail> = {};
   const alive: Record<number, boolean> = {};
@@ -102,6 +125,7 @@ export function runnerBrain(seed: number, traits: Personality, mood: Temperament
   /** The race is over: cool off, then take what it did to heart. */
   const reckon = (v: BrainView) => {
     grudges.cool();
+    stuck = !anyone;
     for (const k of v.kills) if (k.victim === v.slot && k.killer !== v.slot && k.killer >= 0) grudges.feel(k.killer, 'kill');
     const mine = trails[v.slot];
     if (mine) for (const pr of v.props) if (pr.owner >= 0 && pr.owner !== v.slot && pr.noGo.some((c) => mine.has(c))) grudges.feel(pr.owner, 'route');
@@ -113,8 +137,9 @@ export function runnerBrain(seed: number, traits: Personality, mood: Temperament
     for (const r of v.rivals) if (r.score === top && top > v.score) grudges.feel(r.slot, 'lead');
     const target = grudges.target(v.rivals.map((r) => r.slot));
     const sharp = rng.chance(traits.spite);
-    if (target >= 0 && rng.chance(traits.spite)) return { target, mischief: false, sharp };
-    return { target: -1, mischief: rng.chance(mood.mischief), sharp };
+    if (target >= 0 && rng.chance(traits.spite)) return { target, mischief: false, sharp, block: false };
+    const mischief = rng.chance(mood.mischief);
+    return { target: -1, mischief, sharp, block: !mischief && rng.chance(traits.block) && !stuck };
   };
 
   const pick = (v: BrainView): Intent => {
@@ -138,9 +163,14 @@ export function runnerBrain(seed: number, traits: Personality, mood: Temperament
       if (!looks.length) break;
     }
     if (looks.length) return { do: 'hover', card: looks[0] };
+    // Reaching for the bridge, but someone already has the way through in hand: it's free to be mean after all.
+    if ((scheme.block || scheme.target >= 0) && builds(v.crate[card]) && covered(v)) {
+      const free = v.crate.flatMap((c, i) => (c.claimed ? [] : [i]));
+      card = choose(v, free);
+    }
     // Out for someone: go for whatever they're pointing at, before they take it.
     const them = scheme.target >= 0 ? v.rivals.find((r) => r.slot === scheme.target) : undefined;
-    if (them && them.hover >= 0 && !v.crate[them.hover].claimed && !lastOne(v, card)) card = them.hover;
+    if (them && them.hover >= 0 && !v.crate[them.hover].claimed && !(builds(v.crate[card]) && !covered(v))) card = them.hover;
     return { do: 'pick', card };
   };
 
@@ -149,15 +179,37 @@ export function runnerBrain(seed: number, traits: Personality, mood: Temperament
     const sensible = free.find((i) => (v.level.plan.length > 0 && v.crate[i].bridge) || v.crate[i].clears);
     const hazards = free.filter((i) => v.crate[i].role === 'hazard');
     if (scheme.mischief) return hazards.length ? rng.pick(hazards) : rng.pick(free);
-    // Spite never takes the last way through: with nobody finishing, nobody scores, its target included.
-    if (scheme.target >= 0 && hazards.length && (sensible === undefined || !lastOne(v, sensible))) return rng.pick(hazards);
+    // Spite waits until someone has the way through in hand: with nobody finishing, nobody scores, its target included.
+    const mean = sensible === undefined || covered(v);
+    if (scheme.target >= 0 && hazards.length && mean) return rng.pick(hazards);
+    if (scheme.block && mean) {
+      const blocks = free.filter((i) => blocker(v.crate[i]));
+      if (blocks.length) return rng.pick(hazards.length ? hazards : blocks);
+    }
     return sensible ?? rng.pick(free);
   };
 
   const place = (v: BrainView): Intent => {
     if (v.placed || v.claim < 0) return { do: 'wait' };
+    const held = v.crate[v.claim];
+    if (spot && !v.canPlace(spot.tx, spot.ty, spot.rot)) spot = weighing = null;
+    // Looking the level over, a spot at a time: where would this make the run hardest?
+    if (!spot && scheme.block && held && blocker(held)) {
+      weighing ??= { left: inTheWay(v, traits.weigh, rng), best: null, score: -Infinity };
+      if (weighing.left.length) {
+        // Bots take turns weighing, so no one frame asks the proof for all of them.
+        if ((v.phaseFrame + v.slot) % WEIGH_EVERY === 0) {
+          const s = weighing.left.shift()!;
+          const a = v.assess(s.tx, s.ty, s.rot);
+          const score = a && a.tight <= v.route().tight + TIGHT_ADDED ? a.tight * TIGHT_TILES + a.length : -Infinity;
+          if (score > weighing.score) [weighing.best, weighing.score] = [s, score];
+        }
+        if (weighing.left.length) return { do: 'wait' };
+      }
+      spot = weighing.best;
+    }
     if (v.phaseFrame < pause) return { do: 'wait' };
-    const hazard = v.crate[v.claim]?.role === 'hazard';
+    const hazard = held?.role === 'hazard';
     const them = scheme.target >= 0 && hazard ? v.rivals.find((r) => r.slot === scheme.target) : undefined;
     if (them?.cursor && v.phaseFrame < glareUntil) return { do: 'aim', ...them.cursor };
     // Someone may have put a part where it meant to go: look again whenever that spot stops being free.
@@ -181,6 +233,7 @@ export function runnerBrain(seed: number, traits: Personality, mood: Temperament
   const race = (v: BrainView): Intent => {
     const me = v.self;
     if (v.live) {
+      if (me?.finished || v.runners.some((r) => r.finished)) anyone = true;
       const w = v.level.w;
       const cell = (x: number, y: number) => (Math.ceil(y) - 1) * w + Math.floor(x);
       for (const r of v.runners) {
@@ -220,6 +273,7 @@ export function runnerBrain(seed: number, traits: Personality, mood: Temperament
         phase = v.phase;
         card = -1;
         spot = null;
+        weighing = null;
         best = Infinity;
         near = Infinity;
         since = 0;
@@ -232,6 +286,7 @@ export function runnerBrain(seed: number, traits: Personality, mood: Temperament
         if (v.phase === 'place') glareUntil = pause + rng.int(...TEMPO.glare);
         if (v.phase === 'run') {
           trails = {};
+          anyone = false;
           for (const k of Object.keys(alive)) delete alive[+k];
         }
         if (v.phase === 'lobby') scheme = NO_SCHEME;
@@ -256,11 +311,39 @@ export function runnerBrain(seed: number, traits: Personality, mood: Temperament
   };
 }
 
-/** `i` is the only free card left that builds a way or clears one: taking anything else would leave nobody to. */
-function lastOne(v: BrainView, i: number): boolean {
-  const c = v.crate[i];
-  if (!c || !(c.bridge || c.clears) || (!v.level.plan.length && !c.clears)) return false;
-  return v.crate.filter((x) => !x.claimed && (x.bridge || x.clears)).length <= 1;
+/** A part that stands in the way: a hazard, or a block that isn't the plan's bridge. */
+function blocker(c: CardSense): boolean {
+  return c.role === 'hazard' || (c.role === 'build' && !c.bridge);
+}
+
+/** Up to `n` legal spots for the held part on the way everyone will run, drawn from all of it. */
+function inTheWay(v: BrainView, n: number, rng: Rng): Place[] {
+  const w = v.level.w;
+  const out: Place[] = [];
+  for (const c of rng.shuffle(v.route().cells)) {
+    if (out.length >= n) break;
+    const turn = rng.int(0, 3);
+    found: for (const [dx, dy] of AROUND)
+      for (let r = 0; r < 4; r++) {
+        const s: Place = { do: 'place', tx: (c % w) - dx, ty: Math.floor(c / w) - dy, rot: (turn + r) % 4 };
+        if (v.canPlace(s.tx, s.ty, s.rot)) {
+          out.push(s);
+          break found;
+        }
+      }
+  }
+  return out;
+}
+
+/** A card that builds the plan's way through or clears one. */
+function builds(c: CardSense | undefined): boolean {
+  return !!c && (c.bridge || c.clears);
+}
+
+/** Someone holds what the way through needs: the plan's bridges, or on a sealed level, the part that clears. */
+function covered(v: BrainView): boolean {
+  const held = v.crate.filter((c) => c.claimed && builds(c)).length;
+  return held >= (v.crate.some((c) => c.clears) ? 1 : v.level.plan.length);
 }
 
 /**

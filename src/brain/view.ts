@@ -1,6 +1,9 @@
 import type { Match, Player } from '../game/match';
 import { isBridgePart, type PropDef } from '../gen/props';
-import { prove, settled } from '../gen/level';
+import { type Bridge, fieldOf, planHolds, prove, settled } from '../gen/level';
+import { levelPrecision } from '../gen/level/precision';
+import { analyzeRoutes } from '../gen/level/routes';
+import type { Level } from '../sim/level';
 import { RUN_COUNTDOWN, TILE } from '../sim/constants';
 import { barrierOf, hangRow, type PlacedProp, spotAt } from '../sim/props';
 import type { Body } from '../sim/physics';
@@ -47,6 +50,33 @@ export function ghostAt(m: Match, def: PropDef, rot: number, tx: number, y: numb
   const ty = def.mount === 'hang' ? hangRow(m.level, m.placed, def, tx, y, m.frame) : y;
   return { ...spotAt(m.level, m.placed, def, rot, tx, ty, m.frame), tx, ty };
 }
+
+/** How hard the run is over `placed`: tight jumps on the forgiving way and its length, or null when no plan gets through. */
+function hardness(level: Level, placed: readonly PlacedProp[], prior: readonly Bridge[]) {
+  const s = settled(level, placed);
+  // Only the plan everyone is already building counts: searching for another can take a frame's whole budget many times over.
+  if (!planHolds(s.level, s.placed, prior)) return null;
+  const field = fieldOf(s.level, s.placed);
+  const routes = analyzeRoutes(field, prior);
+  const tight = levelPrecision(field, routes, prior);
+  return { routes, tight, length: routes.length };
+}
+
+/** The route as the parts stand, kept while nothing is placed. */
+type Route = ReturnType<BrainView['route']>;
+const routeCache = new WeakMap<Match, { key: unknown[]; route: Route }>();
+
+function routeOf(m: Match): Route {
+  const key = [m.level, m.placed, m.placed.length];
+  const hit = routeCache.get(m);
+  if (hit && hit.key.every((k, i) => k === key[i])) return hit.route;
+  const h = hardness(m.level, m.placed, m.plan);
+  const route = h ? { cells: [...new Set([...h.routes.fastest, ...h.routes.alternative])], tight: h.tight, length: h.length } : NO_ROUTE;
+  routeCache.set(m, { key, route });
+  return route;
+}
+
+const NO_ROUTE: Route = { cells: [], tight: 0, length: 0 };
 
 /** The level still has a plan (at most its bridges) with `pp` standing too. */
 function keepsWay(m: Match, pp: PlacedProp): boolean {
@@ -137,6 +167,15 @@ export function senseView(m: Match, p: Player): BrainView {
     kills: (m.phase === 'run' || m.phase === 'score') && m.run ? m.run.kills.map((k) => ({ ...k })) : [],
     live: !!run && run.frame >= RUN_COUNTDOWN,
     canPlace: (tx, ty, rot) => !!held && m.phase === 'place' && ghostAt(m, held, rot, tx, ty).ok,
+    route: () => (m.phase === 'place' ? routeOf(m) : NO_ROUTE),
+    assess: (tx, ty, rot) => {
+      if (!held || m.phase !== 'place') return null;
+      const g = ghostAt(m, held, rot, tx, ty);
+      if (!g.ok) return null;
+      const pp: PlacedProp = { uid: -1, def: g.def, owner: p.slot, tx: g.tx, ty: g.ty, rot, ...(g.ride && { ride: g.ride }) };
+      const h = hardness(m.level, [...m.placed, pp], m.plan);
+      return h && { tight: h.tight, length: h.length };
+    },
     keepsWay: (tx, ty, rot) => {
       if (!held || m.phase !== 'place') return false;
       const g = ghostAt(m, held, rot, tx, ty);

@@ -29,7 +29,7 @@ export const GRUDGE = 1;
 
 const defs = {
   /** Plays its own game: builds, forgets a slight by the next round. */
-  builder: { heat: { kill: 0.7, route: 0.2, lead: 0, snatch: 0.2 }, memory: 0.2, mischief: 0.03, hands: { care: 1.3 } },
+  builder: { heat: { kill: 0.7, route: 0.2, lead: 0, snatch: 0.2 }, memory: 0.2, mischief: 0.03, hands: { care: 1.3, block: 0.6 } },
   /** Takes the hazard because it's a hazard, and puts it wherever anyone ran, its own way too. */
   gremlin: { heat: { kill: 0.6, route: 0.3, lead: 0.3, snatch: 0.6 }, memory: 0.4, mischief: 0.6 },
   /** Remembers who hurt it, for rounds. */

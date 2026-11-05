@@ -9,8 +9,8 @@ import type { BotLevel } from '../game/match';
  * stops to think on ground it doesn't know and now and then takes a worse
  * line, so a hard level beats it some of the time. It gets harder by being
  * quicker to save a fumble, slower to doubt and better at seeing the forgiving way, not by never making one. The
- * motor reads the hands (everything but pace and spite), the brain the pace
- * and spite: a harder bot is meaner, and better at it.
+ * motor reads the hands (everything but pace, spite, block and weigh), the
+ * brain the rest: a harder bot is meaner, and better at it.
  */
 export interface Personality {
   /** Frames it takes to see what's next after a landing or a surprise, holding what it held meanwhile. */
@@ -37,6 +37,10 @@ export interface Personality {
   care: number;
   /** Chance a round it acts on a grudge (temperament.ts), and that it does it well: picks the spot that hurts and still leaves a way through. */
   spite: number;
+  /** Chance a round it puts a hazard or a block in the way everyone runs, grudge or none. */
+  block: number;
+  /** Spots in the way it weighs for the one that makes the run hardest: a sharp bot weighs more. */
+  weigh: number;
 }
 
 type Ranges = { [K in keyof Personality]: readonly [number, number] };
@@ -55,6 +59,8 @@ const RANGES: Record<BotLevel, Ranges> = {
     stray: [0.2, 0.35],
     care: [0, 8],
     spite: [0.2, 0.35],
+    block: [0.15, 0.3],
+    weigh: [1, 2],
   },
   normal: {
     reaction: [5, 10],
@@ -69,6 +75,8 @@ const RANGES: Record<BotLevel, Ranges> = {
     stray: [0.1, 0.2],
     care: [10, 25],
     spite: [0.45, 0.6],
+    block: [0.65, 0.8],
+    weigh: [2, 4],
   },
   hard: {
     reaction: [2, 5],
@@ -83,6 +91,8 @@ const RANGES: Record<BotLevel, Ranges> = {
     stray: [0.03, 0.08],
     care: [15, 30],
     spite: [0.8, 0.95],
+    block: [0.9, 1],
+    weigh: [6, 9],
   },
 };
 
@@ -104,6 +114,8 @@ export function rollPersonality(seed: number, level: BotLevel): Personality {
     stray: roll(r.stray),
     care: roll(r.care),
     spite: roll(r.spite),
+    block: roll(r.block),
+    weigh: Math.round(roll(r.weigh)),
   };
 }
 

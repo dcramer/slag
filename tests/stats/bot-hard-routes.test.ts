@@ -25,6 +25,8 @@ import { botRace } from '../lib/bot-race';
  * fumbles, pauses, wrong turns or lag), so it keeps measuring the motor and
  * the route rather than a player's lapses. Taking a safe move over a tight
  * jump that costs little more, and braking while it looks: 254 in 546.
+ * Since Hard bots put their hazards where they make the way hardest, short
+ * of sealing it: 249 in 549, most misses now a hazard in the way.
  */
 const SEEDS = Array.from({ length: 10 }, (_, i) => i + 1);
 const SIZES = ['classic', 'wide', 'tall'] as const;
