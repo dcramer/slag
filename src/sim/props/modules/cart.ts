@@ -44,7 +44,7 @@ export function cartRect(m: Cart, d: number, ox = 0, oy = 0): Rect {
  * hits; then a winch hauls it back up, slowly and harmlessly. It's never solid, so nobody rides it, and the
  * run is a fraction of its cycle, so the rail is passable by timing (barrier.ts MIN_OPENING).
  */
-export const cart = defineModule<'cart'>({
+defineModule<'cart'>({
   type: 'cart',
   resolve: (m, x) => ({ ...m, at: x.P(m.at), w: m.w * x.T, h: m.h * x.T, span: m.span * x.T }),
   // Where it's parked.

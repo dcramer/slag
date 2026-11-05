@@ -63,7 +63,7 @@ export const landed = (m: Ladle, len: number, hit: boolean) => hit && Math.abs(l
  * burn in, until it crusts over after the pour. Nothing about it is solid. It's off far longer than it's
  * on, so a route under it is passable by timing (barrier.ts MIN_OPENING).
  */
-export const ladle = defineModule<'ladle'>({
+defineModule<'ladle'>({
   type: 'ladle',
   resolve: (m, x) => ({ ...m, at: x.P(m.at), drop: m.drop * x.T, spill: [m.spill[0] * x.T, m.spill[1] * x.T], hang: m.hang * x.T }),
   // The cell under the lip, where the stream leaves.

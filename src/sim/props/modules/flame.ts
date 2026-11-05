@@ -7,7 +7,7 @@ import type { ModuleOf } from '../types';
 /** Segments: 0 off, 1 warn (sputter), 2 on (lethal). */
 export const flameCycle = (m: ModuleOf<'flame'>, f: number, phase: number) => cycle(f, phase, [m.off, m.warn, m.on]);
 
-export const flame = defineModule<'flame'>({
+defineModule<'flame'>({
   type: 'flame',
   resolve: (m, x) => ({ ...m, at: x.P(m.at), angle: m.angle + x.da, length: m.length * x.T }),
   anchors: (m) => [cellOf(m.at)],

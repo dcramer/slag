@@ -1,23 +1,14 @@
-import { css, type HSL } from '../core/color';
-import type { Vec } from '../core/geom';
+import { css } from '../core/color';
 import { hash2 } from '../core/rng';
 import { TILE } from '../sim/constants';
 import type { Decor } from './decor';
 import { blob, inkFor, line, type P, shadeOf, sn, stroke } from './ink';
-import type { MetalPalette, RC } from './kit';
 
 /**
  * ART SPIKE: a saw, a spring, a wooden block and two farm props drawn the way the terrain is. Flat
  * tones, a hard shadow shape, and tapered strokes instead of gradients and even lines. The point is to
  * find out what a part costs in this style: each of these is a rewrite of that part's art, not a filter.
  */
-
-/** A saw blade's bright steel; its pen and speed stroke are a dark of it. */
-const BLADE: HSL = { h: 214, s: 17, l: 84 };
-/** A thorn's steel, between its lit and shaded halves. */
-const THORN: HSL = { h: 220, s: 12, l: 72 };
-/** The default rail a thorn row stands on. */
-const RAIL: HSL = { h: 225, s: 12, l: 20 };
 
 /** Stroke round a closed shape in `n` overlapping pieces, heavier where it faces away from the light. */
 export function inkLoop(g: CanvasRenderingContext2D, pts: readonly P[], cx: number, cy: number, seed: number, thin: number, thick: number, pieces = 3) {
@@ -31,145 +22,6 @@ export function inkLoop(g: CanvasRenderingContext2D, pts: readonly P[], cx: numb
     const d = Math.hypot(m.x - cx, m.y - cy) || 1;
     const sh = shadeOf((m.x - cx) / d, (m.y - cy) / d);
     stroke(g, part, { w: thin + (thick - thin) * sh * sh, seed: seed + k, taper: [0.14, 0.22], press: 0.4 });
-  }
-}
-
-const sawCache = new Map<string, P[]>();
-
-function sawTeeth(R: number, teeth: number, seed: number): P[] {
-  const key = `${R.toFixed(2)}:${teeth}:${seed}`;
-  let pts = sawCache.get(key);
-  if (pts) return pts;
-  pts = [];
-  for (let i = 0; i < teeth; i++) {
-    const a = (i / teeth) * Math.PI * 2;
-    const step = (Math.PI * 2) / teeth;
-    const tip = R * (0.98 + 0.08 * hash2(i, 1, seed));
-    const root = R * (0.74 + 0.06 * hash2(i, 2, seed));
-    // A real tooth: a long back rising to a hooked tip, then a short drop into the gullet.
-    pts.push({ x: Math.cos(a) * root, y: Math.sin(a) * root });
-    pts.push({ x: Math.cos(a + step * 0.42) * (root + (tip - root) * 0.55), y: Math.sin(a + step * 0.42) * (root + (tip - root) * 0.55) });
-    pts.push({ x: Math.cos(a + step * 0.8) * tip, y: Math.sin(a + step * 0.8) * tip });
-    pts.push({ x: Math.cos(a + step * 0.72) * ((root + tip) / 2), y: Math.sin(a + step * 0.72) * ((root + tip) / 2) });
-  }
-  sawCache.set(key, pts);
-  return pts;
-}
-
-/** A saw blade with a chewed rim, a shadow fixed to the light rather than the spin, and speed strokes. */
-export function inkSaw(rc: RC, x: number, y: number, R: number, rot: number, pal: MetalPalette, seed: number, stripes = false) {
-  const s = rc.s;
-  const teeth = Math.max(9, Math.round(R * 1.05));
-  const pts = sawTeeth(R, teeth, seed);
-  const fill = (ps: readonly P[]) => {
-    s.beginPath();
-    ps.forEach((p, i) => (i ? s.lineTo(p.x, p.y) : s.moveTo(p.x, p.y)));
-    s.closePath();
-  };
-  s.save();
-  s.translate(x, y);
-  s.save();
-  s.rotate(rot);
-  s.fillStyle = '#cfd5dd';
-  fill(pts);
-  s.fill();
-  s.restore();
-  // The shadow stays put while the blade turns: that's what makes it read as a lit disc and not a sticker.
-  s.save();
-  s.rotate(rot);
-  fill(pts);
-  s.restore();
-  s.save();
-  s.clip();
-  s.fillStyle = '#8c94a2';
-  s.beginPath();
-  s.arc(R * 0.3, R * 0.42, R * 1.05, 0, Math.PI * 2);
-  s.arc(-R * 0.22, -R * 0.3, R * 1.08, 0, Math.PI * 2, true);
-  s.fill('evenodd');
-  s.restore();
-  s.rotate(rot);
-  s.fillStyle = inkFor(BLADE);
-  s.lineJoin = 'round';
-  stroke(s, [...pts, pts[0], pts[1]], { w: 0.66, seed, taper: [0.01, 0.01], press: 0.35 });
-  // Disc, holes and a bolt.
-  s.fillStyle = css(pal.base, 8);
-  blob(s, 0, 0, R * 0.5, seed + 1, 1, 0.05);
-  s.fill();
-  // Holes, the bolt and the ring are cut in the hub, so they ink in a dark of it.
-  s.fillStyle = inkFor(pal.base);
-  for (let i = 0; i < 3; i++) {
-    const a = (i / 3) * Math.PI * 2;
-    blob(s, Math.cos(a) * R * 0.31, Math.sin(a) * R * 0.31, R * 0.1, seed + 2 + i, 1, 0.14);
-    s.fill();
-  }
-  blob(s, 0, 0, R * 0.13, seed + 6, 1, 0.1);
-  s.fill();
-  const ring: P[] = [];
-  for (let i = 0; i <= 20; i++) {
-    const a = (i / 20) * 5.5;
-    ring.push({ x: Math.cos(a) * R * 0.52, y: Math.sin(a) * R * 0.52 });
-  }
-  stroke(s, ring, { w: 0.85, seed: seed + 7, taper: [0.1, 0.5] });
-  if (stripes) {
-    s.fillStyle = 'rgb(250 200 40)';
-    stroke(
-      s,
-      ring.map((p) => ({ x: p.x * 1.2, y: p.y * 1.2 })),
-      { w: 1.3, seed: seed + 8, taper: [0.1, 0.1], press: 0.2 },
-    );
-  }
-  s.rotate(-rot);
-  // Speed strokes: they don't turn with the blade, they sit around it.
-  const spin = (Math.floor(rc.frame / 3) % 3) * 2.1 + seed;
-  for (let k = 0; k < 3; k++) {
-    const a0 = spin + k * 2.09 + sn(k, spin, seed) * 0.4;
-    const arc: P[] = [];
-    for (let i = 0; i <= 8; i++) {
-      const a = a0 + (i / 8) * 1.05;
-      arc.push({ x: Math.cos(a) * (R + 2.4), y: Math.sin(a) * (R + 2.4) });
-    }
-    s.fillStyle = k === 1 ? inkFor(BLADE) : 'rgba(250,250,255,0.9)';
-    stroke(s, arc, { w: 1.15, seed: seed + k, taper: [0.5, 0.5], press: 0.1 });
-  }
-  s.restore();
-}
-
-/** A plank or crate block: boards, grain, a brace, nails; the outline comes from `inkEdges`-style strokes. */
-export function inkWood(s: CanvasRenderingContext2D, cells: readonly (readonly [number, number])[], O: Vec, hue: number, seed: number) {
-  const base: HSL = { h: hue, s: 48, l: 42 };
-  for (const [x, y] of cells) {
-    const px = x * TILE + O[0];
-    const py = y * TILE + O[1];
-    const r = (k: number) => hash2(x, y + k * 37, seed);
-    // Three boards, each its own tone.
-    for (let b = 0; b < 3; b++) {
-      s.fillStyle = css(base, (b === 1 ? -5 : b === 2 ? -11 : 3) + (r(b) - 0.5) * 8);
-      s.fillRect(px, py + (b * TILE) / 3, TILE, TILE / 3 + 0.3);
-    }
-    s.fillStyle = css(base, -30, 1, 6);
-    for (let b = 1; b < 3; b++)
-      line(s, px + 0.5, py + (b * TILE) / 3, px + TILE - 0.5, py + (b * TILE) / 3 + (r(b + 3) - 0.5) * 1.2, { w: 1, seed: seed + b, taper: [0.1, 0.25] });
-    s.fillStyle = css(base, -24, 1, 6);
-    for (let k = 0; k < 4; k++) {
-      const gx = px + 1.5 + r(k + 9) * 8;
-      const gy = py + 2 + r(k + 13) * 12;
-      line(s, gx, gy, gx + 3 + r(k + 17) * 3.5, gy + (r(k + 21) - 0.5), { w: 0.6, seed: seed + k, taper: [0.3, 0.6] });
-    }
-    // The cross brace is what says "crate" at this size.
-    s.fillStyle = inkFor(base);
-    line(s, px + 1.2, py + 1.6, px + TILE - 1.4, py + TILE - 1.6, { w: 2.96, seed: seed + 5, taper: [0.03, 0.03], press: 0.15 });
-    s.fillStyle = css(base, 14);
-    line(s, px + 1.2, py + 1.6, px + TILE - 1.4, py + TILE - 1.6, { w: 2, seed: seed + 6, taper: [0.03, 0.03], press: 0.15 });
-    s.fillStyle = inkFor(base);
-    for (const [nx, ny] of [
-      [2.6, 2.6],
-      [13.2, 2.8],
-      [2.8, 13.2],
-      [13.3, 13.4],
-    ]) {
-      blob(s, px + nx, py + ny, 0.62, seed + nx, 1, 0.2);
-      s.fill();
-    }
   }
 }
 
@@ -252,43 +104,5 @@ export function inkFence(g: CanvasRenderingContext2D, d: Decor) {
     line(g, px + 1 + lean, d.y - 11.2, px + 1, d.y + 1, { w: 2.5, seed: seed + i + 9, taper: [0.03, 0], press: 0.15 });
     g.fillStyle = css(c, 18);
     line(g, px + 0.4 + lean, d.y - 10.4, px + 0.4, d.y - 3, { w: 0.65, seed: seed + i, taper: [0.2, 0.5] });
-  }
-}
-
-/**
- * A row of three thorns on one tile face, in a frame where the face is at x = 8 and the tips point to
- * +x (`angle` is that frame's rotation, so the shadow side stays away from the light). Each thorn is two
- * flat tones split down its spine, a pen line heavier on its dark side, and a red tip that says "ow".
- */
-export function inkThorns(s: CanvasRenderingContext2D, angle: number, seed: number, rail = css(RAIL)) {
-  // Which half of a thorn faces the light: the one on local -y, turned into the world.
-  const upLit = shadeOf(Math.sin(angle), -Math.cos(angle)) < 0.5;
-  s.fillStyle = inkFor(RAIL);
-  line(s, 7.6, -7.8, 7.6, 7.8, { w: 2.52, seed, taper: [0.05, 0.05], press: 0.2 });
-  s.fillStyle = rail;
-  line(s, 7.3, -7.2, 7.3, 7.2, { w: 1.5, seed: seed + 1, taper: [0.05, 0.05], press: 0.2 });
-  for (let i = 0; i < 3; i++) {
-    const y0 = -7.2 + i * 4.8;
-    const len = 6.4 + hash2(i, 3, seed) * 1.6;
-    const lean = (hash2(i, 4, seed) - 0.5) * 1.2;
-    const tip = { x: 8.4 + len, y: y0 + 2.4 + lean };
-    const a = { x: 8.4, y: y0 + 0.1 };
-    const b = { x: 8.4, y: y0 + 4.7 };
-    const mid = { x: 8.4, y: y0 + 2.4 };
-    const tri = (p: P, q: P, r: P, fill: string) => {
-      s.fillStyle = fill;
-      s.beginPath();
-      s.moveTo(p.x, p.y);
-      s.lineTo(q.x, q.y);
-      s.lineTo(r.x, r.y);
-      s.closePath();
-      s.fill();
-    };
-    tri(a, tip, mid, upLit ? '#eef1f6' : '#8a909c');
-    tri(mid, tip, b, upLit ? '#8a909c' : '#eef1f6');
-    tri({ x: tip.x - 2.6, y: tip.y - 0.75 }, tip, { x: tip.x - 2.6, y: tip.y + 0.75 }, '#c0182a');
-    s.fillStyle = inkFor(THORN);
-    stroke(s, [a, tip], { w: upLit ? 0.7 : 1.3, seed: seed + i, taper: [0.1, 0.6], press: 0.2 });
-    stroke(s, [b, tip], { w: upLit ? 1.3 : 0.7, seed: seed + i + 5, taper: [0.1, 0.6], press: 0.2 });
   }
 }

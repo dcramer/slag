@@ -4,7 +4,7 @@ import { defineModule } from '../registry';
 import { dirOf } from '../transform';
 
 /** Spike strip on one face of some cells (the cells belong to a body module). */
-export const spikes = defineModule<'spikes'>({
+defineModule<'spikes'>({
   type: 'spikes',
   resolve: (m, x) => ({ ...m, cells: x.C(m.cells), angle: m.angle + x.da }),
   anchors: () => [],

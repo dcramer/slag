@@ -177,20 +177,6 @@ function buildGalleon(g: Grid, rng: Rng, at: { x: number; y: number; w: number; 
   };
 }
 
-/** The ship's plan read back from a level it was built on (the tests and the art). */
-export function galleonOf(
-  l: Landmark | { anchors: Record<string, Vec> },
-): Pick<Galleon, 'masts' | 'yards' | 'bowNear'> & { G: number; sx: number; ex: number } {
-  const a = l.anchors;
-  const masts: number[] = [];
-  const yards: number[] = [];
-  for (let i = 0; a[`mast${i}`]; i++) {
-    masts.push(a[`mast${i}`][0]);
-    yards.push(a[`mast${i}`][1]);
-  }
-  return { G: a.deck[1], sx: a.span[0], ex: a.span[1], bowNear: a.bow[0] === 1, masts, yards };
-}
-
 const TIMBER = (rng: Rng) => makeStyle(rng, ['brass', 'steel'], [20, 0], { woodHue: rng.range(18, 28) });
 
 function* galleonPieces(rng: Rng, s: Site, l: Landmark): Generator<Piece> {

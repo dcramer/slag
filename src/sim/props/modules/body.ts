@@ -39,7 +39,7 @@ function shapeOf(shape: readonly TileBox[], x: Xform): TileBox[] {
  * Solid cells of some material. Crumble bodies break after being stood on and respawn later. A body with a
  * `shape` collides as those rects instead of its cells (resolved to world px).
  */
-export const body = defineModule<'body'>({
+defineModule<'body'>({
   type: 'body',
   resolve: (m, x) => (m.shape ? { ...m, cells: x.C(m.cells), shape: shapeOf(m.shape, x) } : { ...m, cells: x.C(m.cells) }),
   anchors: (m) => m.cells.slice(),

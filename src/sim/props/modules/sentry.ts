@@ -67,7 +67,7 @@ function spot(m: Sentry, ctx: TickCtx, x: number, y: number): number | null {
   return best;
 }
 
-export const sentry = defineModule<'sentry'>({
+defineModule<'sentry'>({
   type: 'sentry',
   resolve: (m, x) => ({ ...m, at: x.P(m.at), angle: m.angle + x.da }),
   anchors: (m) => [cellOf(m.at)],

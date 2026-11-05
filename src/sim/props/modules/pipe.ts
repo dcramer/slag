@@ -189,7 +189,7 @@ function pin(ctx: TouchCtx, b: Body, m: Pipe): void {
  * blocked when you get there, the pipe spits you back out of the near one.
  * One runner per pipe at a time; what you carry stays in your pocket.
  */
-export const pipe = defineModule<'pipe'>({
+defineModule<'pipe'>({
   type: 'pipe',
   resolve: (m, x) => ({ ...m, cells: x.C(m.cells), at: x.P(m.at), angle: m.angle + x.da }),
   anchors: (m) => m.cells.slice(),

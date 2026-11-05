@@ -1,0 +1,24 @@
+{
+  "$schema": "https://unpkg.com/knip@6/schema.json",
+  "entry": [
+    "tools/name-words.ts",
+    "tools/art3d/style.ts",
+    "tools/art3d/flat/build.ts",
+    "tools/art3d/flat/kinds/*.ts",
+    "tools/art3d/page/main.ts",
+    ".claude/hooks/*.mjs"
+  ],
+  "project": [
+    "src/**/*.ts",
+    "app/**/*.{ts,tsx}",
+    "tools/**/*.ts",
+    "tests/**/*.ts",
+    "*.ts",
+    ".claude/hooks/*.mjs"
+  ],
+  "ignoreBinaries": [
+    "ffmpeg",
+    "convert"
+  ],
+  "ignoreExportsUsedInFile": true
+}

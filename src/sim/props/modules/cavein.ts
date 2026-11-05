@@ -73,7 +73,7 @@ export function rocksAt(m: Cavein, f: number, phase: number, ox = 0, oy = 0): Ro
  * fire. Nothing about it is solid, so nobody rides it, and it's over in `on` frames, so a route under it
  * is passable by timing (barrier.ts MIN_OPENING).
  */
-export const cavein = defineModule<'cavein'>({
+defineModule<'cavein'>({
   type: 'cavein',
   resolve: (m, x) => ({ ...m, at: x.P(m.at), w: m.w * x.T, h: m.h * x.T }),
   // The floor's middle: where the rubble lands.

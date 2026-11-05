@@ -200,84 +200,14 @@ export const IRON_SH = '#2f2723';
 export const STEEL = '#8e8a84';
 export const STEEL_SH = '#5c5852';
 export const TIN = '#d9d3c7';
-export const TIN_SH = '#a39b8e';
-export const BRASS = '#b58f45';
-export const BRASS_SH = '#7f6128';
 export const WOOD = '#a77b4f';
 export const WOOD_SH = '#7a5534';
-export const SKIN = '#efcfac';
 export const ORANGE = '#d9894a';
 export const ORANGE_SH = '#a35f2b';
-export const HOT = { h: 30, s: 100, l: 58 };
-export const HOT_CSS = '#ffb02e';
-export const WHITE_HOT = '#fff1b8';
-
 // ------------------------------------------------------------------ shapes
 
 /** Body y at fraction `u` of its height (0 bottom, 1 top). */
 export const Y = (d: D, u: number) => d.by - d.H * u;
-
-/**
- * A superellipse body: `n` 2 is an oval, 4 a soft box. `top`/`bot` scale the upper and lower half's
- * width, `sag` drops the belly. Bottom at y = 0.
- */
-export function sup(W: number, H: number, n = 2.4, top = 1, bot = 1, sag = 0, steps = 30): P[] {
-  const pts: P[] = [];
-  const e = 2 / n;
-  for (let i = 0; i < steps; i++) {
-    const a = (i / steps) * Math.PI * 2 - Math.PI / 2;
-    const c = Math.cos(a);
-    const s = Math.sin(a);
-    const x = Math.sign(c) * Math.abs(c) ** e;
-    const y = Math.sign(s) * Math.abs(s) ** e;
-    const hw = (W / 2) * (y < 0 ? top + (1 - top) * (1 + y) : bot + (1 - bot) * (1 - y)) * (y > 0 ? 1 + sag * (1 - y) * y * 2 : 1);
-    pts.push({ x: x * hw, y: -H / 2 + (y * H) / 2 });
-  }
-  return pts;
-}
-
-/** A dome: round on top, flat bottom with soft corners (shells, kettles). */
-export function dome(W: number, H: number, corner = 2.4, flare = 1): P[] {
-  const pts: P[] = [];
-  for (let i = 0; i <= 18; i++) {
-    const a = Math.PI + (i / 18) * Math.PI;
-    const w = (W / 2) * (1 + (flare - 1) * (1 - Math.abs(Math.sin(a))) ** 2);
-    pts.push({ x: Math.cos(a) * w, y: -corner + Math.sin(a) * (H - corner) });
-  }
-  const r = corner;
-  for (let i = 0; i <= 4; i++) {
-    const a = (i / 4) * (Math.PI / 2);
-    pts.push({ x: (W / 2) * flare - r + Math.cos(a) * r, y: -r + Math.sin(a) * r });
-  }
-  for (let i = 0; i <= 4; i++) {
-    const a = Math.PI / 2 + (i / 4) * (Math.PI / 2);
-    pts.push({ x: (-W / 2) * flare + r + Math.cos(a) * r, y: -r + Math.sin(a) * r });
-  }
-  return pts;
-}
-
-/** A closed outline through `pts` with each corner rounded by about `r`. */
-export function rounded(pts: readonly P[], r = 1.6, steps = 3): P[] {
-  const out: P[] = [];
-  const n = pts.length;
-  for (let i = 0; i < n; i++) {
-    const a = pts[(i + n - 1) % n];
-    const b = pts[i];
-    const c = pts[(i + 1) % n];
-    const la = Math.hypot(a.x - b.x, a.y - b.y) || 1;
-    const lc = Math.hypot(c.x - b.x, c.y - b.y) || 1;
-    const ra = Math.min(r, la / 2) / la;
-    const rc = Math.min(r, lc / 2) / lc;
-    const p0 = { x: b.x + (a.x - b.x) * ra, y: b.y + (a.y - b.y) * ra };
-    const p1 = { x: b.x + (c.x - b.x) * rc, y: b.y + (c.y - b.y) * rc };
-    for (let j = 0; j <= steps; j++) {
-      const t = j / steps;
-      const u = 1 - t;
-      out.push({ x: u * u * p0.x + 2 * u * t * b.x + t * t * p1.x, y: u * u * p0.y + 2 * u * t * b.y + t * t * p1.y });
-    }
-  }
-  return out;
-}
 
 // ------------------------------------------------------------------ marks and parts
 
@@ -319,37 +249,6 @@ export function band(d: D, u0: number, u1: number, fill: string, tilt = 0) {
     ],
     fill,
   );
-}
-
-/** The player's band with a thin pale stripe along its top: painted livery, never a flat sticker. */
-export function livery(d: D, u0: number, u1: number, tilt = 0) {
-  band(d, u0, u1, d.lk.player, tilt);
-  mark(
-    d.s,
-    d.lk.playerHi,
-    [
-      { x: -d.W * 0.62, y: Y(d, u1) - tilt + 0.6 },
-      { x: d.W * 0.62, y: Y(d, u1) + tilt + 0.6 },
-    ],
-    0.8,
-    d.sd,
-    [0, 0],
-  );
-}
-
-/** A stalk with a knob: antennae. */
-export function stalk(d: D, x0: number, y0: number, x1: number, y1: number, r: number, fill: string, shade: string) {
-  d.s.fillStyle = d.lk.ink;
-  stroke(
-    d.s,
-    [
-      { x: x0, y: y0 },
-      { x: (x0 + x1) / 2 + d.wob * 0.3, y: (y0 + y1) / 2 },
-      { x: x1, y: y1 },
-    ],
-    { w: 1.7 * d.k, seed: d.sd + x0, taper: [0, 0.3], press: 0.1 },
-  );
-  if (r > 0) tonedOval(d.s, x1, y1, r, r, 8, fill, shade, d.lk.ink, 0.6, 1 * d.k, 0.6);
 }
 
 export function rivet(d: D, x: number, y: number) {
