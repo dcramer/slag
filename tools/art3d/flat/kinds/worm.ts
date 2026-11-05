@@ -90,7 +90,8 @@ export const kind: FlatKind = {
   ],
   // Found by their whites (repainted by art/sprites/worm/prep.py), one: the drawn eyes touch and trace as one patch
   // in most poses, so the far eye is set from the near one. The whites and the teeth stay: they are the huge
-  // bulging eyes and the wide grin, and the kit's pupils sit on them.
+  // bulging eyes and the wide grin, and the kit's pupils sit on them. When the eyes shut the kit lids them in the
+  // worm's pink (`lid`, role 4): erased instead, the eyes sank inside the head and the grin went with them.
   eyes: { role: 'eye', area: [0.15, 9], gap: [0.6, 3], band: [0, 0.3], specks: { eye: 1, dark: 2 }, count: 1, pair: [1.8, -0.1] },
   wear: {
     on: ['suit'],
@@ -98,7 +99,7 @@ export const kind: FlatKind = {
     marks: [[['scuff', 0.4, 0.7, 0.5]], [['scorch', 0.5, 0.75, 0.35]]],
   },
   accessories: [{ slot: 'plaster', role: 'plaster', at: 'cheek', size: [1.4, 0.6] }],
-  face: { r: 0.7, iris: '#2a1f1a' },
+  face: { r: 0.7, iris: '#2a1f1a', far: 'sliver', lid: { role: 4, r: 2 } },
   gait: { bounce: [0.2, 0.8], lean: [0, 0.03] },
   clips: {
     idle: { frames: ['idle'], loop: true, fps: 1 },

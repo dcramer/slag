@@ -120,7 +120,7 @@ export function drawFrame(
   k: number,
   seed: number,
   t: number,
-  face?: { kit: NonNullable<SpriteSet['face']>; mood: FaceMood; facing: number },
+  face?: { kit: NonNullable<SpriteSet['face']>; mood: FaceMood; facing: number; lid?: string },
   /** The option each accessory slot shows (the first, if not given). */
   pick?: readonly number[],
   /** A kind traced from a flat illustration (`SpriteSet.flat`). */
@@ -204,5 +204,5 @@ export function drawFrame(
     s.fillStyle = body.ink;
     f.marks.forEach((r, i) => stroke(s, pointsOf(r), { w: 0.8 - i * 0.12, seed: seed + i, taper: [0.15, 0.6], press: 0.2 }));
   }
-  if (face && f.eyes) drawFace(s, face.kit, f.eyes, face.mood, face.facing, t, seed, f.head);
+  if (face && f.eyes) drawFace(s, face.kit, f.eyes, face.mood, face.facing, t, seed, f.head, f.sil.map(pointsOf), face.lid);
 }

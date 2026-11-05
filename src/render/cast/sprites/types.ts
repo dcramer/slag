@@ -87,14 +87,41 @@ export interface SpriteGait {
   lean: readonly [number, number];
 }
 
+/**
+ * The eye a kind's homage has, drawn by the face kit (`EYES` in face.ts) so it acts: `round` a white with a big
+ * pupil, `tall` a black oval twice as tall as wide with no white (the mug's, the puffball's), `dot` a small black
+ * eye (the electric mouse's), `pill` a tall white with a tall pupil, `profile` a side-on head's eye with the pupil
+ * against its front, `scowl` an almond under a hard slanted lid round a slit, `heavy` a round white half under a
+ * flat lid, `anime` a big iris under a thick lash, `square` a white block and an iris block, `cat` an almond all
+ * iris round a slit pupil (the monster slayer's).
+ */
+export type EyeStyle = 'round' | 'tall' | 'dot' | 'pill' | 'profile' | 'scowl' | 'heavy' | 'anime' | 'square' | 'cat';
+
+/**
+ * The face kit's settings for a kind: eye size (world px, the near eye's at rest), iris, its eye style (`round` if
+ * none), the mouth's place from the near eye, and the least width of its shut eyes and cheer arcs (`mark`).
+ * `far` is how a head turned side on shows its far eye: a sliver tucked behind the near one, or none. `lid` is for a
+ * kind whose drawing keeps its own eye whites (the worm's bulge out of its head): when the eyes shut, the kit paints
+ * that role's colour (its index in `roles`) over them, `r` times the eye's size, or a blink left a blank white ball.
+ */
+export interface FaceKit {
+  r: number;
+  iris: string;
+  mouth?: readonly [number, number];
+  eye?: EyeStyle;
+  mark?: number;
+  far?: 'sliver' | 'none';
+  lid?: { role: number; r: number };
+}
+
 export interface SpriteSet {
   kind: string;
   /** World px from soles to the top of the head at rest. */
   height: number;
   roles: readonly SpriteRole[];
   slots?: readonly SpriteSlot[];
-  /** The cast's face kit over the traced eyes: eye size (world px), iris, and the mouth's place from the near eye. */
-  face?: { r: number; iris: string; mouth?: readonly [number, number]; eye?: 'tall' | 'dot'; mark?: number };
+  /** The cast's face kit over the traced eyes. */
+  face?: FaceKit;
   gait?: SpriteGait;
   /**
    * Traced from a flat illustration rather than a 3D render: its parts are the drawing's own shapes, so

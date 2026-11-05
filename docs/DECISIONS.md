@@ -99,6 +99,11 @@ Every game design decision, preference and direction the owner has given, groupe
   2026-11-04 · `done` for the marker (`ModeDef.builds`, the Level card); interchangeable sets `planned` · DESIGN.md → Modes, TODO.md → 31
 - **A level set is a kit of pieces with declared sizes and attributes (landmarks, hazards, decor, floors, connectors, walls), and the level builders, one per shape or mode, are set-agnostic and compose any set's kit, so every set supports every mode.** "i guess really all level sets should support all modes right because isnt it just retyling stuff etc?" / "i was thinking the landmarks etc are part of the set kit and the level builders just know how to use them (because tey know their sizes/attributes/etc)"
   2026-11-04 · `done` for tower kits in every set (farm, harbor and space added: Rising Slag loops everywhere); the kit contract and set-agnostic course builders `planned` · TODO.md → 32; the tall builder over per-set kits (`TallKit`, `src/gen/level/sculptors/tall.ts`) is the pattern
+- **Rising Slag's leash is set the way SpeedRunners' camera is, in seconds behind the leader (about 3–4 s): 4.5, 3.75 and 3 s of climb by lap, squeezing from 30 s.** "hows our difficulty vs speedrunners" / "Lets do it"
+  2026-11-04 · `done` · DESIGN.md → Modes; `TIER_LEASH_SECONDS`, `SQUEEZE` in `src/gen/level/tide.ts`
+  Changed: 18, 15 and 8 rows (the hard laps about 2 s), squeezing from 45 s.
+- **Catch-up for the trailing pack is open: rethink which items exist, and maybe give loops mystery boxes of their own rather than only placed ones.** "im not sure on (2) we might wanna rethink which items exist, and/or add mystery boxes by default maybe? not just placed ones?"
+  2026-11-04 · `open` · TODO.md → 31
 - **A rule the level is built from (gravity, weather) rebuilds the lobby's level for everyone at once.**
   2026-11-02 · git `e64c3e5` · `done` · DESIGN.md → Rules
 
@@ -265,9 +270,12 @@ Every game design decision, preference and direction the owner has given, groupe
 - **Agents may run Tripo image calls without a prompt: allowed in the owner's user settings, since each worktree reads its own project settings.** "Add the rule" · "Add to user settings"
   2026-11-04 · `done` · `~/.claude/settings.json` (`tripo.ts image`, `balance`)
 - **The cast grows past twenty with retro picks: the rapping paper puppy (the owner's example), the limbless hero, the worm in a super suit, the little purple dragon and the snouted cube hopper. The weak reads and audit leftovers get fixed in the same push.** "Ok lets continue working through. Something akin to some old timey characters would be good to add to our list too. Parapa the Rapper for example" (asked which to add beside him: all four offered)
-  2026-11-04 · `in progress` · CHARACTERS.md → The cast, Roster; `LOOK_CAST` 9
+  2026-11-04 · `done` (all five drawn flat; the rapper's blind read is open, TODO.md → 31) · CHARACTERS.md → The cast, Roster; `LOOK_CAST` 9
 - **Two more picks past the retro five: the round Slavic warrior from the Polish comic (its big round half; the comic gives "at least some recognizable character") and the white-haired monster slayer. The sneaking soldier already stands for the stealth game's hero.** "add kajko & kokosz to our list - at least some recognizable character from it" · "witcher is another good one, snake from metal gear solid"
-  2026-11-04 · `in progress` · CHARACTERS.md → The cast, Roster; `LOOK_CAST` 10
+  2026-11-04 · `done` (both drawn flat; their blind reads are open, TODO.md → 31) · CHARACTERS.md → The cast, Roster; `LOOK_CAST` 10
+- **Every drawn kind's eyes work the way the cup-headed toon's do: each kind's kit eye is its homage's own eye design, drawn by the face kit so it acts, and bold enough to read at play scale.** "seems like we want mughead approach so the eyes are animated/drawn correctly" (after "some have issues w/ their eyes")
+  2026-11-04 · `done` (but for the worm, the warrior and the slayer, being drawn) · CHARACTERS.md → Rendered kinds → The cast's face, `EYES` in `src/render/cast/sprites/face.ts`, `tools/art3d/README.md` → 5
+  Changed: every kind but the mug, the puffball, the dino and the three dot-eyed kinds wore one generic round eye (a white, a rim, a coloured iris, a pupil and a glint), and a head side on wore its far eye as a second full circle beside the near one.
 - **Set-piece machines that look solid are made solid: guns on ledges, wheel and swing hubs, ladles, carts, signs, posts.** "Make them solid" (asked: make them solid, or draw them as not-ground)
   2026-11-02 · `open` · TODO.md → 21, `pnpm shot fairplay` (`PENDING`)
 - **Tripo output is licensed for the game: the owner pays for Tripo.** "our license here is fine as we pay for tripo"

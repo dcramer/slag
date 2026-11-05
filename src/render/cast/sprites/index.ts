@@ -39,6 +39,7 @@ export const LOADERS: Partial<Record<Kind, () => Promise<{ sprites: SpriteSet }>
   hopper: () => import('./hopper/frames'),
   dragon: () => import('./dragon/frames'),
   warrior: () => import('./warrior/frames'),
+  slayer: () => import('./slayer/frames'),
 };
 
 const loaded: Partial<Record<Kind, SpriteSet>> = {};
@@ -217,7 +218,8 @@ export function drawSprite(s: CanvasRenderingContext2D, set: SpriteSet, c: Chara
   const got = pick(set, p, x, d.v);
   if (!got) return false;
   const mood = p.dead !== undefined ? ('dead' as const) : moodOf(p);
-  const face = set.face ? { kit: set.face, mood, facing: got.facing } : undefined;
+  const lid = set.face?.lid ? d.paints[set.face.lid.role]?.fill : undefined;
+  const face = set.face ? { kit: set.face, mood, facing: got.facing, lid } : undefined;
   const t = p.t;
   const seed = c.seed & 0xffff;
   const draw = (g: CanvasRenderingContext2D, cut = false) =>

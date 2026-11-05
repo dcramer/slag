@@ -42,6 +42,14 @@ Phone support (follow camera, pinch, scaled HUD, settings sheet) is on `main` bu
 ## 8. Render polish
 - **Impact words** can hide a hazard for most of a second; `?lettering=0` turns them off. Decide whether they stay. Big plain walls are a taste call. Try a real phone.
 
+## 31. Three kinds under the blind-read bar
+The rapper, the warrior and the slayer are drawn flat and read in colour, but two fresh readers never named them from the silhouette (each one's rounds and readers' words are in its Rig line in docs/CHARACTERS.md). Each needs a new silhouette idea, not another edit:
+- **Rapper:** seven rounds, the closest "unsure, maybe the rapping puppy (beanie)". Re-read him first: those reads had stand-in blobs on the sheet and cells too narrow for the mic, both fixed since.
+- **Warrior:** his helmet and head close into one mound with no neck at play size; readers saw a hooded figure, the mercenary or a wizard. Readers are asked for game characters and he's from a comic. The engineer's knobbed hard hat read as a warrior's helmet in every round.
+- **Slayer:** a slim figure with something over his back is the elf's outline too, and his white hair can't show in a silhouette; readers paired him with the elf.
+
+Tools that would have saved their agents turns: a design read from a quick trace of the design at blind-sheet size (a design read from the drawing passed the slayer at medium while the traced sheet failed); a `keep` list of white roles exempt from `holes` (the hopper's and the slayer's tint scripts); keeping a design prompt under about 900 characters, since the image model drops what comes last.
+
 ## 10. Housekeeping
 - Enable GitHub Actions and make `ci.yml` a required check. This must be done on GitHub by the repo owner.
 - Consider stricter TS flags: `noUncheckedIndexedAccess` gives about 600 errors, so it's a project of its own.
@@ -84,7 +92,7 @@ Both themes are on `main`. Space has no weather. Ice skids and 0.55 space gravit
 ## 31. Playstyle modes
 Modes are entries in `MODES` (`src/game/modes.ts`, DESIGN.md → Modes). Rising Slag is in. Next, one agent each:
 
-1. **Rising Slag: playtest and tune.** The slag's floor pace, leash per lap and squeeze (`src/gen/level/tide.ts`) are fitted to bots, not played by hand: against the difficulty standard (`tests/stats/slag-climb.test.ts`) every bot level lands within about 12 points of its targets. Farm, harbor and space loop on first-pass tower kits (barn lofts, pier decks, a station shaft in `sculptors/tall.ts`): give them landmarks of their own for a shaft (a silo, a lighthouse or crane, a docking spine) once concepts can stand in a loop. On a phone the Race emblem (a chequered flag) sits beside Rules' flag icon and reads alike. The world is drawn once per copy of the loop the view sees, so render-side state in prop art (a rope's rig) can step twice near the seam; ragdolls, self-destruct rings and impact words of a runner a lap away aren't moved onto the leader's lap. No sound yet: a pour and a rising boil.
+1. **Rising Slag: playtest and tune.** The slag's floor pace, leash per lap and squeeze (`src/gen/level/tide.ts`) are fitted to bots, not played by hand: against the difficulty standard (`tests/stats/slag-climb.test.ts`, 32 seeds) Normal bots land within 7 points of their targets. Catch-up for the trailing pack is open (owner: rethink which items exist, and maybe mystery boxes in every loop, not only placed ones): today nothing reels a runaway leader back but the winged shell. Farm, harbor and space loop on first-pass tower kits (barn lofts, pier decks, a station shaft in `sculptors/tall.ts`): give them landmarks of their own for a shaft (a silo, a lighthouse or crane, a docking spine) once concepts can stand in a loop. On a phone the Race emblem (a chequered flag) sits beside Rules' flag icon and reads alike. The world is drawn once per copy of the loop the view sees, so render-side state in prop art (a rope's rig) can step twice near the seam; ragdolls, self-destruct rings and impact words of a runner a lap away aren't moved onto the leader's lap. No sound yet: a pour and a rising boil.
 2. **Brawl.** Last one standing in an arena, knocked into hazards or the pit; the losers of a round pick and place parts into the arena. Needs spawn points for every player (`Level.spawns`, additive), an arena sculptor, items on spawners, and a fight brain. Decide with the owner first: one-hit lethal items, or knockback into the level only (today's rule: items never kill).
 3. **Gauntlet.** Co-op: everyone must finish, and the crate deals hazards. Scoring flips Race's "everyone finished scores nothing".
 

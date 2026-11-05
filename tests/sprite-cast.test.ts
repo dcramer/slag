@@ -2,9 +2,11 @@ import { describe, expect, it } from 'vitest';
 import { generateCharacter, type Kind } from '../src/gen/character';
 import { coloursOf, LOADERS, shadowOf, SPRITE_KINDS } from '../src/render/cast/sprites';
 import { drawFrame, hexHsl, paintOf, ringPoints } from '../src/render/cast/sprites/draw';
+import { EYES, eyesOf } from '../src/render/cast/sprites/face';
 import { type ClipName, clipFor, frameAt, GAIT_MAX, gaitAt, pick, picks, VARIETY, varietyOf, variantsOf } from '../src/render/cast/sprites/play';
 import type { SpriteClip, SpriteSet, VFrame } from '../src/render/cast/sprites/types';
 import type { RunnerPose } from '../src/render/ink-figure';
+import { FLAT_KINDS, kitFace } from '../tools/art3d/flat/kinds';
 
 /** Kinds rendered from 3D models (tools/art3d, docs/CHARACTERS.md → Rendered kinds): their frames and how they're chosen. */
 
@@ -53,6 +55,17 @@ function extremes(fs: readonly VFrame[]): VFrame[] {
           }
         });
   return [...new Set(best)];
+}
+
+/** Whether (x, y) is inside a ring (even-odd). */
+function inside(x: number, y: number, ring: readonly { x: number; y: number }[]) {
+  let odd = false;
+  for (let i = 0, j = ring.length - 1; i < ring.length; j = i++) {
+    const a = ring[i];
+    const b = ring[j];
+    if (a.y > y !== b.y > y && x < ((b.x - a.x) * (y - a.y)) / (b.y - a.y) + a.x) odd = !odd;
+  }
+  return odd;
 }
 
 const pose = (p: Partial<RunnerPose>): RunnerPose => ({ facing: 1, vx: 0, vy: 0, grounded: true, t: 0, ...p });
@@ -131,15 +144,6 @@ describe('rendered kinds: frames', () => {
   });
 
   it('keep every eye on the head it rides and on the figure, at the kit’s size, in every frame, deaths included', () => {
-    const inside = (x: number, y: number, ring: readonly { x: number; y: number }[]) => {
-      let odd = false;
-      for (let i = 0, j = ring.length - 1; i < ring.length; j = i++) {
-        const a = ring[i];
-        const b = ring[j];
-        if (a.y > y !== b.y > y && x < ((b.x - a.x) * (y - a.y)) / (b.y - a.y) + a.x) odd = !odd;
-      }
-      return odd;
-    };
     for (const s of SETS) {
       if (!s.face) continue;
       // A kind traced from a rig records the head its eyes ride; a generated shape (no head bone) doesn't,
@@ -178,6 +182,30 @@ describe('rendered kinds: frames', () => {
           fs.every((f) => (f.eyes?.length ?? 0) >= 3),
           `${s.kind} idle`,
         ).toBe(true);
+    }
+  });
+
+  it('draw a head turned side on with its far eye as a sliver tucked behind the near one, or none, never a second full eye', () => {
+    for (const [kind, spec] of Object.entries(FLAT_KINDS)) {
+      if (!(spec.eyes?.count === 1 && spec.eyes.pair && spec.face)) continue;
+      const face = kitFace(spec)!;
+      expect(face.far, `${kind}: a side-on face with no far eye rule`).toBeDefined();
+      const set = SETS.find((s) => s.kind === kind);
+      if (!set) continue;
+      for (const [name, c] of Object.entries(set.clips))
+        for (const f of [...c.r, ...c.l]) {
+          if (!f.eyes || f.eyes.length < 6) continue;
+          const at = eyesOf(face, f.eyes);
+          if (face.far === 'none') {
+            expect(at.length, `${kind} ${name}: far eye drawn`).toBe(1);
+            continue;
+          }
+          const [near, far] = at;
+          const ex = EYES[face.eye ?? 'round'].extent[0];
+          expect(far.w, `${kind} ${name}: far eye as wide as the near`).toBeLessThanOrEqual(0.5);
+          // Its back edge behind the near eye: overlapped, not a second eye beside it.
+          expect(Math.abs(far.x - near.x) - far.r * ex * far.w, `${kind} ${name}: far eye apart`).toBeLessThan(near.r * ex);
+        }
     }
   });
 });

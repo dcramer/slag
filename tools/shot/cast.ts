@@ -1,5 +1,5 @@
 /**
- * The toy cast's sheet for docs/CHARACTERS.md: `pnpm shot cast [--seed S] [--only catalog]`. The
+ * The toy cast's sheet for docs/CHARACTERS.md: `pnpm shot cast [--seed S] [--only catalog|faces|colors]`. The
  * eight-runner lineup at play scale on a light theme and a dark one, a 3× close-up, the race start,
  * toys coming apart, the lobby cards and the catalog of every kind, composed into `cast.png`.
  */
@@ -162,6 +162,12 @@ async function recognise(): Promise<string> {
   return castSheet('cast-recognise', 'recognise');
 }
 
+/** Every drawn kind's face through the moods, close up and at play scale (`castFaces`). */
+async function faces(): Promise<string> {
+  await open(`seed=${seed}`);
+  return castSheet('cast-faces', 'faces');
+}
+
 async function compose(name: string, html: string, width = 1900) {
   const hp = `${out}/${name}.html`;
   writeFileSync(
@@ -190,6 +196,10 @@ export const shots: Scenarios = {
       await colors();
       return;
     }
+    if (opt('only') === 'faces') {
+      await faces();
+      return;
+    }
     if (opt('only') === 'catalog') {
       // Fast iteration on the art: the catalog and the silhouette test alone.
       await catalog();
@@ -203,6 +213,7 @@ export const shots: Scenarios = {
     const cat = await catalog();
     const sil = await silhouettes();
     const rec = await recognise();
+    const fc = await faces();
     await compose(
       'cast',
       h('The foundry toys') +
@@ -213,6 +224,7 @@ export const shots: Scenarios = {
         img(dark?.x3, `3× close-up, ${DARK}`) +
         img(lb, 'Lobby cards, 8 players') +
         img(rec, 'Is it the homage? Every kind close up beside what it should be taken for') +
+        img(fc, 'Faces: every drawn kind through the moods close up, then at play scale px for px') +
         img(sil, 'The silhouette test: every kind solid black, at rest and mid-run, 1× and play scale') +
         img(cat, 'Catalog: every kind on two seeds, poses, the cast at play scale'),
     );
