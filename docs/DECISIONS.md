@@ -100,6 +100,11 @@ Every game design decision, preference and direction the owner has given, groupe
   2026-11-02 · git `45e64b2` · `done` · DESIGN.md → Movement
 - **Walking is slow and precise; holding Run gives speed and long jumps with momentum.**
   2026-11-02 · git `66ae3f0` · `done` · DESIGN.md → Movement
+- **The left and right edges of a level are open air, and going all the way off one kills, as the pit does. They used to be invisible walls you could wall-jump up.** "you can currently jump up the side of the screen even if theres no block" / "a better answer would be if most levels had a left/right that was just... death" / "Hold for death edges"
+  2026-11-04 · `done` · DESIGN.md → Movement, AGENTS.md → Game rules, src/sim/level.ts `offMap`
+  Changed: the screen edges were solid walls you could wall-slide and wall-jump on, and the generator's proofs used them.
+- **Every spawn pocket has a terrain wall at the level's left edge, a row taller than a jump, so holding left at GO doesn't walk you off the level. Walls are only ever terrain you can see.** "Build both"
+  2026-11-04 · `done` · DESIGN.md → Movement, src/gen/level/kit.ts `finish`
 - **A full jump is about 3.7 tiles high.**
   2026-11-02 · git `0cdb23a` · `done` · DESIGN.md → Movement
   Changed: it was about 4.5 tiles (`c5715ab`).
@@ -616,6 +621,9 @@ Every game design decision, preference and direction the owner has given, groupe
   Changed: shorter levels stood on the view's bottom with sky above (`3254ddd`).
 - **The picture fills the window with no bars, and nobody sees more by resizing.**
   2026-11-02 · git `d367e5e` · `done` · DESIGN.md → Levels
+- **Past the map's left and right edges, nothing is drawn but sky, skyline and pool, so it reads as a drop; the screen edge is the map edge wherever the camera can manage it, and the rest reads as out of bounds.** "step back and figure out what the ideal setup is for our game (that will be flexible with our work going on w/ other playstyles)" / "Build both"
+  2026-11-04 · `done` · DESIGN.md → Levels (The picture fills the window), src/render/surround.ts
+  Changed: the level carried on past its sides as hazy scenery in its own theme (farmland, curtain walls, a harbor shed, moraine, bodies adrift in space), which looked like ground once the edges killed.
 
 ## Online play and netcode
 

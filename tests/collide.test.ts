@@ -55,7 +55,7 @@ const steps = (run: RunWorld, n: number) => {
   for (let f = 0; f < n; f++) run.step(noInputs(run));
 };
 const feet = (b: Body) => b.y + b.h;
-const terrain = (level: Level) => ({ tileAt: (x: number, y: number) => tileAt(level, x, y), solids: [] });
+const terrain = (level: Level) => ({ tileAt: (x: number, y: number) => tileAt(level, x, y), cols: level.w, solids: [] });
 
 /** A placed prop made of these modules. */
 function prop(modules: Module[], tx: number, ty: number, owner = 7, uid = 1, extra: Partial<PropDef> = {}): PlacedProp {
@@ -1054,6 +1054,7 @@ describe('fuzz', () => {
     const level = testLevel();
     for (let x = 8; x < 16; x++) level.tiles[14 * LEVEL_W + x] = 2; // A one-way shelf.
     for (let x = 18; x < 24; x++) level.tiles[(FLOOR - 2) * LEVEL_W + x] = 1; // A low overhang.
+    for (let y = 0; y < FLOOR; y++) level.tiles[y * LEVEL_W] = level.tiles[y * LEVEL_W + LEVEL_W - 1] = 1; // Walls, so nobody leaves.
     const world = terrain(level);
     for (const seed of [11, 22, 33]) {
       const rng = new Rng(seed);

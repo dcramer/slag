@@ -39,7 +39,7 @@ export interface MapShot {
 }
 
 /** Seeds a picture is drawn from, first first: a landmark that doesn't stand up at one tries the next. */
-export const SHOT_SEEDS = [1, 2, 3, 4, 5, 6];
+export const SHOT_SEEDS = [1, 2, 3, 4, 5, 6, 7, 8];
 /** Placements tried per terrain for a hazard (as tests/conformance/hazards does). */
 const REROLLS = 12;
 /** Pictures are clear: mist would veil a level with nobody on it. */

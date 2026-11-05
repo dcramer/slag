@@ -813,12 +813,13 @@ export class Renderer {
         case 'death': {
           const c = m.player(e.slot)?.character;
           const body = c?.body ?? { h: 0, s: 0, l: 80 };
-          if (c && e.cause !== 'fall' && spritesOf(c)) this.fallen.push({ c, x: e.x, y: e.y + PLAYER_H / 2, facing: Math.sign(e.vx) || 1, age: 0 });
+          if (c && e.cause !== 'fall' && e.cause !== 'out' && spritesOf(c))
+            this.fallen.push({ c, x: e.x, y: e.y + PLAYER_H / 2, facing: Math.sign(e.vx) || 1, age: 0 });
           if (e.cause === 'fall') {
             const pool = m.level.h * TILE;
             this.fx.burst('splash', e.x, Math.min(e.y, pool - 10), 26, 180, [th.liquid.glow, th.liquid.color], 2, 0.9, 120);
             this.fx.burst('smoke', e.x, Math.min(e.y, pool - 12), 8, 30, [{ h: 0, s: 0, l: 50 }], 3, 1.4);
-          } else {
+          } else if (e.cause !== 'out') {
             // The character comes apart: its own parts, if it has any, and shards of its colors and the player's.
             const parts = c ? partsOf(c) : ['shard' as const];
             for (let i = 0; i < 14; i++) {

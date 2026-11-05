@@ -16,7 +16,7 @@ import { once, rule } from './lib';
  * every theme shows only decor registered for it, with some of its very own.
  */
 
-const SEEDS = [1, 2];
+const SEEDS = [2, 1];
 const SIZES: SizeClass[] = ['classic', 'wide'];
 
 const levelsOf = (theme: ThemeId): Level[] => SEEDS.map((seed, i) => generateLevel(seed, theme, { size: SIZES[i] }));

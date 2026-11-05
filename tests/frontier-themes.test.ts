@@ -203,7 +203,8 @@ describe('space gravity', () => {
   });
 
   it('floats sparser at its own gravity than under a host’s Normal', () => {
-    const solid = (l: Level) => l.tiles.reduce((a, t) => a + (t ? 1 : 0), 0);
+    // Column 0 holds the spawn's back wall, which is a jump tall: taller where the jump is.
+    const solid = (l: Level) => l.tiles.reduce((a, t, i) => a + (t && i % l.w ? 1 : 0), 0);
     let own = 0;
     let normal = 0;
     for (let i = 0; i < 3; i++) {
