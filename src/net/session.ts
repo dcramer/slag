@@ -22,6 +22,8 @@ import {
   relayAction,
   SEAT_PHASES,
   type Watcher,
+  type Wear,
+  cleanWear,
 } from './actions';
 import { CONFIRM_BIT, decode, type Enc, encode, held, heldPeerFrame, mergePeerFrames, type PeerFrame, PRESSED, samePeerFrame } from './codec';
 import { type Depth, foldTo, newDepth, paceFor, QUEUE_HARD, type Queued, relieve, sampleSlack } from './pace';
@@ -178,6 +180,8 @@ export interface SessionOptions {
   watch?: boolean;
   /** The name an observer's chip shows, read when it starts watching. */
   name?: () => string;
+  /** The look this person saved, read each time a seat is asked for, so the host seats them already wearing it. */
+  wear?: () => Wear | undefined;
   log?: (msg: string) => void;
 }
 
@@ -299,6 +303,7 @@ export class NetSession {
   private viewDirty = true;
   private primaryFn: () => string;
   private nameFn: () => string;
+  private wearFn: () => Wear | undefined;
   /** The intent has been squared with the room's state once (see settleIntent). */
   private arrived = false;
   private wasWatching = false;
@@ -320,7 +325,8 @@ export class NetSession {
   private sizes = new WeakMap<Bundle, number>();
   private lastTickAt = -1e9;
   private hashes = new Map<number, number>();
-  private wants = new Set<string>();
+  /** Devices asking to be seated, with the look each asked to wear. */
+  private wants = new Map<string, Wear | undefined>();
   private sentK = new Map<string, string>();
 
   // guest state
@@ -383,6 +389,7 @@ export class NetSession {
     const primary = opts.primaryDevice ?? 'kb1';
     this.primaryFn = typeof primary === 'function' ? primary : () => primary;
     this.nameFn = opts.name ?? (() => '');
+    this.wearFn = opts.wear ?? (() => undefined);
     this.intent = opts.watch ? 'watch' : 'play';
     this.log = opts.log ?? (() => {});
     // Input/action sequence numbers start at wall-clock ms: a refreshed page always counts higher than its old self.
@@ -532,7 +539,8 @@ export class NetSession {
     this.intent = 'play';
     const mine = this.match.players.filter((p) => personOf(p.device) === this.self);
     if (this.asked || (mine.length && !mine.some((p) => p.leaving)) || this.queued) return;
-    const a: NetAction = { t: 'seat', dev: this.globalDevice(this.primaryFn()), on: true };
+    const wear = this.wearFn();
+    const a: NetAction = { t: 'seat', dev: this.globalDevice(this.primaryFn()), on: true, ...(wear ? { wear } : {}) };
     this.asked = a;
     this.seatAsk = 'asking';
     addBreadcrumb('room', 'join request', { frame: this.match.frame });
@@ -1019,7 +1027,7 @@ export class NetSession {
       q.took++;
       q.actN = n;
       if (a.t === 'join') {
-        if (peerOf(a.dev) === from) this.wants.add(a.dev); // seated by reconcile() between rounds
+        if (peerOf(a.dev) === from) this.wants.set(a.dev, a.wear && cleanWear(a.wear)); // seated by reconcile() between rounds
       } else if (guestMay(from, a)) this.hostActions.push(relayAction(this.match, a));
     }
     if (msg.h) this.checkHash(from, q, msg.h);
@@ -1272,7 +1280,7 @@ export class NetSession {
     for (const q of this.ns.queue) {
       if (!present.has(q.peer)) out.push({ t: 'seat', dev: q.dev, on: false });
       else if (SEAT_PHASES.has(m.phase) && seats < MAX_PLAYERS && !seated.has(q.dev)) {
-        out.push({ t: 'join', dev: q.dev });
+        out.push(q.wear ? { t: 'join', dev: q.dev, wear: q.wear } : { t: 'join', dev: q.dev });
         seats++;
         seated.add(q.dev);
       }
@@ -1289,10 +1297,10 @@ export class NetSession {
       }
     }
     if (m.phase === 'lobby' || m.phase === 'score' || m.phase === 'victory') {
-      if (m.phase === 'lobby' && !this.seated && this.intent === 'play' && !this.watching) this.wants.add(this.globalDevice(this.primaryFn()));
-      for (const dev of this.wants) {
+      if (m.phase === 'lobby' && !this.seated && this.intent === 'play' && !this.watching) this.wants.set(this.globalDevice(this.primaryFn()), this.wearFn());
+      for (const [dev, wear] of this.wants) {
         if (!present.has(peerOf(dev)) || seated.has(dev) || seats >= MAX_PLAYERS || this.banLeft(peerOf(dev), this.clients.get(peerOf(dev))) > 0) continue;
-        out.push({ t: 'join', dev });
+        out.push(wear ? { t: 'join', dev, wear } : { t: 'join', dev });
         seats++;
         seated.add(dev);
       }
@@ -1359,7 +1367,8 @@ export class NetSession {
     const pick = dev ?? this.primaryFn();
     this.wantSentTo = this.hostId;
     this.wantAt = t;
-    this.pendingActs.push([++this.actN, { t: 'join', dev: this.globalDevice(pick) }]);
+    const wear = this.wearFn();
+    this.pendingActs.push([++this.actN, { t: 'join', dev: this.globalDevice(pick), ...(wear ? { wear } : {}) }]);
   }
 
   private applyInbox(t: number) {

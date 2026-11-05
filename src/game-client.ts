@@ -99,6 +99,11 @@ function startGame(container: HTMLElement, room: string, params: URLSearchParams
     params,
     onRejoin: () => nav.hardLoad(lobby(room)),
     name: () => loadProfile().name ?? '',
+    wear: () => {
+      const p = loadProfile();
+      if (p.look == null) return undefined;
+      return { seed: p.look, ...(p.color === undefined ? {} : { color: p.color }), ...(p.name ? { name: p.name } : {}) };
+    },
     // Back from the back/forward cache with the session closed: join the room again.
     onRestored: () => nav.hardLoad(lobby(room)),
   });

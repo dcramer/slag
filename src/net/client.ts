@@ -3,7 +3,7 @@ import type { Match } from '../game/match';
 import type { HudAction, NetArrival, NetInfo, NetWatcher } from '../render/hud';
 import type { InputFrame } from '../sim/types';
 import { addBreadcrumb } from '../telemetry';
-import { peerOf, personOf } from './actions';
+import { peerOf, personOf, type Wear } from './actions';
 import { acquirePeerId, clientId, kickedUntil, loadResume, markKicked, saveResume } from './identity';
 import { NetSession, type NetStatus } from './session';
 import { HttpSignal } from './signal-client';
@@ -62,6 +62,8 @@ export interface ConnectOptions {
   onRestored(): void;
   /** The name an observer's chip shows. */
   name?: () => string;
+  /** The saved look to be seated in (see `SessionOptions.wear`). */
+  wear?: () => Wear | undefined;
 }
 
 /** Joining screens shorter than this aren't shown: a fresh room of our own is up before anyone could read one. */
@@ -114,6 +116,7 @@ export function connectRoom(room: string, match: Match, opts: ConnectOptions): R
     primaryDevice: opts.primaryDevice,
     watch: params.has('watch'),
     name: opts.name,
+    wear: opts.wear,
     resume: () => loadResume(room, opened, expireSeconds > 0 ? expireSeconds * 1000 : undefined), // a previous visit's state, never this one's
     client: clientId(),
     banFrames: banSeconds > 0 ? banSeconds * 60 : undefined,

@@ -2,7 +2,7 @@ import { BOT_LEVELS } from '../game/match';
 import { type CharacterDef, CAST } from '../gen/character';
 import type { MatchRules } from '../game/rules';
 import { THEME_IDS } from '../themes';
-import { type DeviceId, type NetAction, type NetState, peerOf, localOf, type Watcher } from './actions';
+import { type DeviceId, type NetAction, type NetState, peerOf, localOf, type Watcher, type Wear } from './actions';
 import type { Enc, PeerFrame } from './codec';
 import { MAX_PEERS } from './signal-protocol';
 import type { MatchSnap } from './snapshot';
@@ -136,13 +136,20 @@ const parseCharacter: Parse<CharacterDef> = (c) => {
   return c as unknown as CharacterDef;
 };
 
+/** A saved look sent with a seat request: a seed, and maybe a swatch and a name (the host filters the name). */
+const parseWear: Parse<Wear> = (w) => {
+  if (!isObj(w) || !int(w.seed) || !opt(w.color, int) || !opt(w.name, text)) return null;
+  return { seed: w.seed, ...(w.color === undefined ? {} : { color: w.color }), ...(w.name === undefined ? {} : { name: w.name }) };
+};
+
 /** One field-check per action, and the mapped type won't compile with one missing: a new action is unparseable until it has its checks. */
 const ACTION_PARSERS: { [K in NetAction['t']]: (a: Record<string, unknown>) => Extract<NetAction, { t: K }> | null } = {
   join: (a) => {
     if (!id(a.dev)) return null;
-    if (a.char === undefined) return { t: 'join', dev: a.dev };
-    const char = parseCharacter(a.char);
-    return char && { t: 'join', dev: a.dev, char };
+    const char = a.char === undefined ? undefined : parseCharacter(a.char);
+    const wear = a.wear === undefined ? undefined : parseWear(a.wear);
+    if (char === null || wear === null) return null;
+    return { t: 'join', dev: a.dev, ...(char ? { char } : {}), ...(wear ? { wear } : {}) };
   },
   leave: (a) => (id(a.dev) ? { t: 'leave', dev: a.dev } : null),
   away: (a) => (id(a.dev) && bool(a.on) ? { t: 'away', dev: a.dev, on: a.on } : null),
@@ -175,7 +182,12 @@ const ACTION_PARSERS: { [K in NetAction['t']]: (a: Record<string, unknown>) => E
     if (a.afk !== undefined) out.afk = a.afk;
     return out;
   },
-  seat: (a) => (id(a.dev) && bool(a.on) ? { t: 'seat', dev: a.dev, on: a.on } : null),
+  seat: (a) => {
+    if (!id(a.dev) || !bool(a.on)) return null;
+    if (a.wear === undefined) return { t: 'seat', dev: a.dev, on: a.on };
+    const wear = parseWear(a.wear);
+    return wear && { t: 'seat', dev: a.dev, on: a.on, wear };
+  },
 };
 
 /** A match action off the wire, or null if it isn't one this build knows, whole. */
@@ -224,7 +236,12 @@ const parseWatcher: Parse<Watcher> = (v) => {
   if (!isObj(v) || !text(v.name) || (v.afk !== undefined && v.afk !== true)) return null;
   return v.afk ? { name: v.name, afk: true } : { name: v.name };
 };
-const parseQueued: Parse<NetState['queue'][number]> = (v) => (isObj(v) && id(v.peer) && id(v.dev) ? { peer: v.peer, dev: v.dev } : null);
+const parseQueued: Parse<NetState['queue'][number]> = (v) => {
+  if (!isObj(v) || !id(v.peer) || !id(v.dev)) return null;
+  if (v.wear === undefined) return { peer: v.peer, dev: v.dev };
+  const wear = parseWear(v.wear);
+  return wear && { peer: v.peer, dev: v.dev, wear };
+};
 
 function parseNetState(v: unknown): NetState | null {
   if (!isObj(v)) return null;
