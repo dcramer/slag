@@ -150,6 +150,86 @@ export interface CollisionWorld {
    * Unset, `tileAt` answers for every column.
    */
   cols?: number;
+  /**
+   * Optional: a bucket grid over `solids` (`solidGrid`), for a caller that
+   * steps many bodies against one frame's solids (reach.ts tracing a bot's
+   * moves). Read only while its `solids` is this world's.
+   */
+  grid?: SolidGrid;
+}
+
+/**
+ * Solids bucketed by GRID_CELL px cells, so an overlap test reads the few
+ * solids near a body instead of every one. `firstOverlap` answers exactly as
+ * the plain scan does (the first overlapping solid in list order): each
+ * bucket keeps its indices ascending and the lowest hit wins.
+ */
+export interface SolidGrid {
+  readonly solids: readonly Solid[];
+  readonly cells: Map<number, number[]>;
+  /** Solids too big or too far out to bucket: tested every time. */
+  readonly loose: number[];
+}
+
+const GRID_CELL = 64;
+/** Cells a solid may span on either axis before it goes in `loose`. */
+const GRID_SPAN = 64;
+const GRID_BIAS = 2048;
+const GRID_STRIDE = 4096;
+
+const gridKey = (cx: number, cy: number) => (cy + GRID_BIAS) * GRID_STRIDE + cx + GRID_BIAS;
+
+export function solidGrid(solids: readonly Solid[]): SolidGrid {
+  const cells = new Map<number, number[]>();
+  const loose: number[] = [];
+  for (let i = 0; i < solids.length; i++) {
+    const s = solids[i];
+    const cx0 = Math.floor(s.x / GRID_CELL);
+    const cx1 = Math.floor((s.x + s.w) / GRID_CELL);
+    const cy0 = Math.floor(s.y / GRID_CELL);
+    const cy1 = Math.floor((s.y + s.h) / GRID_CELL);
+    const inside = (v: number) => Number.isFinite(v) && Math.abs(v) < GRID_BIAS - GRID_SPAN;
+    if (!inside(cx0) || !inside(cx1) || !inside(cy0) || !inside(cy1) || cx1 - cx0 > GRID_SPAN || cy1 - cy0 > GRID_SPAN) {
+      loose.push(i);
+      continue;
+    }
+    for (let cy = cy0; cy <= cy1; cy++)
+      for (let cx = cx0; cx <= cx1; cx++) {
+        const k = gridKey(cx, cy);
+        const list = cells.get(k);
+        if (list) list.push(i);
+        else cells.set(k, [i]);
+      }
+  }
+  return { solids, cells, loose };
+}
+
+/** The lowest index in `list` below `best` whose solid blocks `r`, else `best`. */
+function lowestHit(list: readonly number[], solids: readonly Solid[], r: Rect, oneWayFrom: number, best: number): number {
+  for (let j = 0; j < list.length; j++) {
+    const i = list[j];
+    if (i >= best) return best;
+    const s = solids[i];
+    if (s.id === passing) continue;
+    if (s.oneWay && s.y < oneWayFrom - 0.01) continue;
+    if (overlaps(r, s)) return i;
+  }
+  return best;
+}
+
+function gridOverlap(r: Rect, grid: SolidGrid, oneWayFrom: number): Solid | null {
+  const { solids, cells } = grid;
+  let best = lowestHit(grid.loose, solids, r, oneWayFrom, solids.length);
+  const cx0 = Math.floor(r.x / GRID_CELL);
+  const cx1 = Math.floor((r.x + r.w) / GRID_CELL);
+  const cy0 = Math.floor(r.y / GRID_CELL);
+  const cy1 = Math.floor((r.y + r.h) / GRID_CELL);
+  for (let cy = cy0; cy <= cy1; cy++)
+    for (let cx = cx0; cx <= cx1; cx++) {
+      const list = cells.get(gridKey(cx, cy));
+      if (list) best = lowestHit(list, solids, r, oneWayFrom, best);
+    }
+  return best < solids.length ? solids[best] : null;
 }
 
 /** Plain data only (snapshot-friendly). */
@@ -287,6 +367,7 @@ export function firstOverlap(r: Rect, world: CollisionWorld, dynamicOnly = false
     }
   }
   const solids = world.solids;
+  if (world.grid && world.grid.solids === solids) return gridOverlap(r, world.grid, oneWayFrom);
   for (let i = 0; i < solids.length; i++) {
     const s = solids[i];
     if (s.id === passing) continue;

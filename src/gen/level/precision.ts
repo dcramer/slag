@@ -1,7 +1,7 @@
 import { TILE } from '../../sim/constants';
 import { type Level, offMap, T_SOLID } from '../../sim/level';
 import { type Body, type CollisionWorld, type Controls, createBody, stepBody } from '../../sim/physics';
-import { movesOn } from '../../sim/reach';
+import { type Move, movesOn, type ReadBox } from '../../sim/reach';
 import { groundSurfaceAt } from '../../sim/ground';
 import { footing } from '../../sim/weather';
 import type { Routes } from './routes';
@@ -152,37 +152,109 @@ export interface RouteJump {
   tight: boolean;
 }
 
-/** Every jump along `route` (stand cells, spawn first), in order: the moves a slip can cost, where they are. */
-export function routeJumps(level: Level, route: readonly number[], bridges: readonly BridgeHint[] = []): RouteJump[] {
+/**
+ * Each step of a route measured on one level whose tiles change a little at a
+ * time (a bot weighing where a part would go), kept with the tiles its traces
+ * read: a step is measured again only when one of those changed, with exactly
+ * a fresh measurement's answer. Only for one level: its size, gravity, footing
+ * and ground are taken as fixed.
+ */
+export class JumpCache {
+  private readonly steps = new Map<number, { box: ReadBox; seen: Uint8Array; jump: RouteJump | null }>();
+  constructor(private readonly level: Level) {}
+
+  /** The jump from `from` to `to` on `tiles` if one is kept and still holds; undefined when it must be measured. */
+  get(tiles: Uint8Array, from: number, to: number): RouteJump | null | undefined {
+    const hit = this.steps.get(from * this.level.w * this.level.h + to);
+    if (!hit) return undefined;
+    const { box, seen } = hit;
+    const w = this.level.w;
+    let i = 0;
+    for (let y = box.y0; y <= box.y1; y++) for (let x = box.x0; x <= box.x1; x++) if (tiles[y * w + x] !== seen[i++]) return undefined;
+    return hit.jump;
+  }
+
+  set(tiles: Uint8Array, from: number, to: number, read: ReadBox, jump: RouteJump | null): void {
+    const { w, h } = this.level;
+    const box = { x0: Math.max(0, read.x0), y0: Math.max(0, read.y0), x1: Math.min(w - 1, read.x1), y1: Math.min(h - 1, read.y1) };
+    const seen = new Uint8Array(Math.max(0, box.x1 - box.x0 + 1) * Math.max(0, box.y1 - box.y0 + 1));
+    let i = 0;
+    for (let y = box.y0; y <= box.y1; y++) for (let x = box.x0; x <= box.x1; x++) seen[i++] = tiles[y * w + x];
+    this.steps.set(from * w * h + to, { box, seen, jump });
+  }
+}
+
+/** `world` reading through to `tiles`, widening `read` by every tile in the level it reads. */
+function watched(world: CollisionWorld, w: number, h: number, read: ReadBox): CollisionWorld {
+  return {
+    ...world,
+    tileAt: (x, y) => {
+      if (x >= 0 && x < w && y >= 0 && y < h) {
+        if (x < read.x0) read.x0 = x;
+        if (x > read.x1) read.x1 = x;
+        if (y < read.y0) read.y0 = y;
+        if (y > read.y1) read.y1 = y;
+      }
+      return world.tileAt(x, y);
+    },
+  };
+}
+
+/** The jump from `from` to `to`, or null if no air move makes that step. */
+function jumpOf(level: Level, world: CollisionWorld, moves: (b: Body, read?: ReadBox) => Move[], from: number, to: number, read?: ReadBox): RouteJump | null {
+  const body = standing(level, world, from);
+  let move: Controls[] | null = null;
+  for (const m of moves(body, read)) if (m.to === to && m.air && (!move || m.controls.length < move.length)) move = m.controls;
+  if (!move) return null;
+  const tight = SLIPS.some((kind) => {
+    const c = slip(move, kind);
+    return !!c && falls(level, world, body, c);
+  });
+  return { row: Math.floor(from / level.w), tight };
+}
+
+/**
+ * Every jump along `route` (stand cells, spawn first), in order: the moves a slip can cost, where they are. Pass the
+ * level's `cache` when asking many times over tiles that change a little at a time.
+ */
+export function routeJumps(level: Level, route: readonly number[], bridges: readonly BridgeHint[] = [], cache?: JumpCache): RouteJump[] {
   const tiles = withBridges(level, bridges);
   const world = worldOf(level, tiles);
-  const moves = movesOn({ ...level, tiles });
+  let moves: ((b: Body, read?: ReadBox) => Move[]) | null = null;
   const out: RouteJump[] = [];
   for (let i = 1; i < route.length; i++) {
     const from = route[i - 1];
     const to = route[i];
-    const body = standing(level, world, from);
-    let move: Controls[] | null = null;
-    for (const m of moves(body)) if (m.to === to && m.air && (!move || m.controls.length < move.length)) move = m.controls;
-    if (!move) continue;
-    const tight = SLIPS.some((kind) => {
-      const c = slip(move, kind);
-      return !!c && falls(level, world, body, c);
-    });
-    out.push({ row: Math.floor(from / level.w), tight });
+    let jump = cache?.get(tiles, from, to);
+    if (jump === undefined) {
+      moves ??= movesOn({ ...level, tiles });
+      if (cache) {
+        const read = { x0: Infinity, y0: Infinity, x1: -Infinity, y1: -Infinity };
+        const box = { ...read };
+        jump = jumpOf(level, watched(world, level.w, level.h, read), moves, from, to, box);
+        cache.set(
+          tiles,
+          from,
+          to,
+          { x0: Math.min(read.x0, box.x0), y0: Math.min(read.y0, box.y0), x1: Math.max(read.x1, box.x1), y1: Math.max(read.y1, box.y1) },
+          jump,
+        );
+      } else jump = jumpOf(level, world, moves, from, to);
+    }
+    if (jump) out.push(jump);
   }
   return out;
 }
 
 /** How many of the jumps along `route` (stand cells, spawn first) some slip turns into a fall. */
-export function routePrecision(level: Level, route: readonly number[], bridges: readonly BridgeHint[] = []): RoutePrecision {
-  const jumps = routeJumps(level, route, bridges);
+export function routePrecision(level: Level, route: readonly number[], bridges: readonly BridgeHint[] = [], cache?: JumpCache): RoutePrecision {
+  const jumps = routeJumps(level, route, bridges, cache);
   return { jumps: jumps.length, tight: jumps.filter((j) => j.tight).length };
 }
 
 /** Tight jumps on the level's more forgiving route: what a player who picks the safe way still has to land. */
-export function levelPrecision(level: Level, routes: Routes, bridges: readonly BridgeHint[] = []): number {
-  const fast = routePrecision(level, routes.fastest, bridges).tight;
+export function levelPrecision(level: Level, routes: Routes, bridges: readonly BridgeHint[] = [], cache?: JumpCache): number {
+  const fast = routePrecision(level, routes.fastest, bridges, cache).tight;
   if (!fast || !routes.alternative.length) return fast;
-  return Math.min(fast, routePrecision(level, routes.alternative, bridges).tight);
+  return Math.min(fast, routePrecision(level, routes.alternative, bridges, cache).tight);
 }

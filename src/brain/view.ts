@@ -1,8 +1,8 @@
 import type { Match, Player } from '../game/match';
 import { MODES } from '../game/modes';
 import { isBridgePart, type PropDef } from '../gen/props';
-import { type Bridge, fieldOf, planHolds, prove, settled } from '../gen/level';
-import { levelPrecision } from '../gen/level/precision';
+import { type Bridge, cacheFor, canPlaceBridge, fieldOf, prove, settled, withBridges } from '../gen/level';
+import { JumpCache, levelPrecision } from '../gen/level/precision';
 import { analyzeRoutes } from '../gen/level/routes';
 import type { Level } from '../sim/level';
 import { RUN_COUNTDOWN, TILE } from '../sim/constants';
@@ -52,14 +52,21 @@ export function ghostAt(m: Match, def: PropDef, rot: number, tx: number, y: numb
   return { ...spotAt(m.level, m.placed, def, rot, tx, ty, m.frame), tx, ty };
 }
 
+/** Each level's jumps as measured, shared by every bot weighing spots on it: a spot only re-measures the jumps near it. */
+const jumpCaches = new WeakMap<Level, JumpCache>();
+
 /** How hard the run is over `placed`: tight jumps on the forgiving way and its length, or null when no plan gets through. */
 function hardness(level: Level, placed: readonly PlacedProp[], prior: readonly Bridge[]) {
+  let jumps = jumpCaches.get(level);
+  if (!jumps) jumpCaches.set(level, (jumps = new JumpCache(level)));
   const s = settled(level, placed);
-  // Only the plan everyone is already building counts: searching for another can take a frame's whole budget many times over.
-  if (!planHolds(s.level, s.placed, prior)) return null;
   const field = fieldOf(s.level, s.placed);
-  const routes = analyzeRoutes(field, prior);
-  const tight = levelPrecision(field, routes, prior);
+  // The level's own cache: each spot weighed differs from the last by a few cells, so only those get traced again.
+  const cache = cacheFor(field);
+  // Only the plan everyone is already building counts: searching for another can take a frame's whole budget many times over.
+  if (!prior.every((b) => canPlaceBridge(field, b)) || !cache.analyze(withBridges(field, prior)).goalReached) return null;
+  const routes = analyzeRoutes(field, prior, cache);
+  const tight = levelPrecision(field, routes, prior, jumps);
   return { routes, tight, length: routes.length };
 }
 
@@ -79,11 +86,12 @@ function routeOf(m: Match): Route {
 
 const NO_ROUTE: Route = { cells: [], tight: 0, length: 0 };
 
-/** The level still has a plan (at most its bridges) with `pp` standing too. */
+/** The plan everyone is building (or what's left of it) still gets through with `pp` standing too. */
 function keepsWay(m: Match, pp: PlacedProp): boolean {
   if (pp.def.modules.some((x) => x.type === 'bomb' && !x.delay)) return true; // a blast only takes away
   const s = settled(m.level, [...m.placed, pp]);
-  return prove(s.level, s.placed, m.plan) !== null;
+  // Never searches for another plan: that runs dozens of analyses, and a bot asks this of many spots in a row.
+  return prove(s.level, s.placed, m.plan, false) !== null;
 }
 
 function selfOf(m: Match, p: Player): SelfSense | null {

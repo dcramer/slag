@@ -117,6 +117,8 @@ export class Motor {
   private prev: InputFrame = NO_INPUT;
   /** Frame of the last confirm or alt press: a press is an edge, so never on two frames running. */
   private pressed = -2;
+  /** No time to pick a move this frame (see drive). */
+  private rushed = false;
 
   constructor(
     /** Its hands: how quick, clean and careful it is. Set again when the room's Bots rule changes. */
@@ -126,8 +128,14 @@ export class Motor {
     this.rng = new Rng(seed);
   }
 
-  /** This frame's input for seat `p` doing `intent`. */
-  drive(m: Match, p: Player, intent: Intent): InputFrame {
+  /**
+   * This frame's input for seat `p` doing `intent`. `rushed`: the machine has
+   * no time this frame (BotSeats' budget), so it plays on with the move under
+   * way and picks no new one: on the ground it brakes, as on a landing's
+   * pause; in the air it holds what it held, presses aside.
+   */
+  drive(m: Match, p: Player, intent: Intent, rushed = false): InputFrame {
+    this.rushed = rushed;
     const out = this.frame(m, p, intent);
     if (out.confirmPressed || out.altPressed) this.pressed = m.frame;
     this.prev = out;
@@ -241,9 +249,10 @@ export class Motor {
       this.visits.clear();
       this.last = -1;
     }
+    const b = r.body;
+    if (this.rushed) return this.follow(b) ?? this.coast(b);
     const map = raceMap(run);
     this.fore = foresight(run, map);
-    const b = r.body;
     const act = this.act;
     if (
       act?.kind === 'move' &&
@@ -305,6 +314,14 @@ export class Motor {
       case 'leap':
         return (this.act = null); // a leap belongs to the leap intent; a route picks afresh
     }
+  }
+
+  /** Rushed with nothing under way: brake on the ground, keep the held buttons in the air (a jump not cut short). */
+  private coast(b: Body): InputFrame {
+    if (b.onGround)
+      return Math.abs(b.vx) <= BRAKE_TO || this.gust() !== 0 ? this.still(b) : this.press({ left: b.vx > 0, right: b.vx < 0, jump: false, jumpPressed: false });
+    const { left, right, jump, run, down } = this.prev;
+    return { ...NO_INPUT, left, right, jump, run, down };
   }
 
   /** The gust blowing on the race this frame, px/s (+ right). */
