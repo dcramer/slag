@@ -2,7 +2,7 @@ import { footprintCells, type PlacedProp } from '../../sim/props';
 import { BRIDGE_W } from './validate';
 import { deriveSeed, Rng } from '../../core/rng';
 import { type Level, type LevelProfile, LOOP_BAND } from '../../sim/level';
-import { pickThemeId, THEME_IDS, type ThemeId } from '../../themes';
+import { pickThemeId, type ThemeId } from '../../themes';
 import { commit, finalize, SET_PIECE_UID, SET_PIECES, Site, tellFaults, windowFaults } from '../setpieces';
 import { type Concept, conceptName, fits, type Landmark, landmarkFaults, rollConcept } from '../stage';
 import { generateTheme, type Theme } from '../theme';
@@ -11,7 +11,7 @@ import { slagTide } from './tide';
 import { footing } from '../../sim/weather';
 import { openUp } from './lanes';
 import { setProbeGravity } from './probe';
-import { buildsTowers, type ProfileOverride, rollProfile } from './profile';
+import { type ProfileOverride, rollProfile } from './profile';
 import { DIFFICULTY, setLevelDifficulty } from './difficulty';
 import { levelPrecision } from './precision';
 import { analyzeRoutes, MAX_SHARED } from './routes';
@@ -96,7 +96,7 @@ let lastGenAttempts = 0;
  * the level goes plain.
  */
 export function generateLevel(seed: number, themeOverride?: ThemeId, profileOverride?: ProfileOverride): Level {
-  const themeId = themeOverride ?? (profileOverride?.tide ? towerTheme(seed) : pickThemeId(seed));
+  const themeId = themeOverride ?? pickThemeId(seed);
   const theme = generateTheme(seed, themeId);
   /**
    * The layout draw `n` builds: its profile (size, route, density, set pieces) and stage concept. Draw 0's are
@@ -160,7 +160,8 @@ export function generateLevel(seed: number, themeOverride?: ThemeId, profileOver
     const lab = (s: string) => (n ? `draw${n}:${s}` : s);
     for (let attempt = 0; attempt < MAX_ATTEMPTS + LEGACY_ATTEMPTS; attempt++) {
       const rng = new Rng(deriveSeed(seed, lab(`level:${attempt}`)));
-      const sculptor = attempt < MAX_ATTEMPTS ? SCULPTORS[themeId] : FALLBACK_SCULPTOR;
+      // A Rising Slag loop stays with its set's tower builder: only it closes a loop (sculptors/tall.ts closeLoop).
+      const sculptor = attempt < MAX_ATTEMPTS || profile.tide ? SCULPTORS[themeId] : FALLBACK_SCULPTOR;
       const live = concept && attempt < MAX_ATTEMPTS && rejects.landmark < MAX_LANDMARK_REJECTS ? concept : undefined;
       const reject = () => rejects.landmark++;
       const shape = sculptor({ rng, themeId, theme, attempt, profile, challenge, ...(live ? { concept: live } : {}) });
@@ -354,15 +355,6 @@ function toLevel(seed: number, s: Shape, theme: Theme, profile: LevelProfile): L
     ...(profile.tide ? { tide: slagTide(profile, s.tiles, s.w, s.h) } : {}),
     ...(profile.tide && profile.size === 'tall' ? { loop: profile.h - LOOP_BAND } : {}),
   };
-}
-
-/**
- * The seed's theme for a Rising Slag level: its own where that theme builds towers, otherwise one of those that do,
- * from a stream of its own. A farm, a harbor and space never go tall, and the slag needs a tower to climb.
- */
-function towerTheme(seed: number): ThemeId {
-  const own = pickThemeId(seed);
-  return buildsTowers(own) ? own : new Rng(deriveSeed(seed, 'theme-tower')).pick(THEME_IDS.filter(buildsTowers));
 }
 
 /** Flat floor, always solvable. Only used if every candidate fails. */

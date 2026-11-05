@@ -152,7 +152,7 @@ export interface SetKit {
   chain?: ChainKit;
   /** Or course pieces for a level cut from solid rock. */
   carved?: CarvedKit;
-  /** Tower pieces (the tower builder): floors, connectors, shell. Absent where the set builds no tower yet (TODO 32 step 1). */
+  /** Tower pieces (the tower builder): floors, connectors, shell. */
   tower?: TallKit;
   /** Applied to every tower this set builds (glacier lays its ice). */
   towerPost?(shape: Shape, ctx: SculptCtx): Shape;

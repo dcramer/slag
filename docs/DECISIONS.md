@@ -98,7 +98,7 @@ Every game design decision, preference and direction the owner has given, groupe
 - **Level sets should be fully interchangeable across modes, since the engine builds the level; until they are, a set may show which modes it supports.** "its totally ok if level sets show which modes they support while they're wip" / "tho ideally the level sets are fully interchangeable since the main engine should build the level."
   2026-11-04 · `done` for the marker (`ModeDef.builds`, the Level card); interchangeable sets `planned` · DESIGN.md → Modes, TODO.md → 31
 - **A level set is a kit of pieces with declared sizes and attributes (landmarks, hazards, decor, floors, connectors, walls), and the level builders, one per shape or mode, are set-agnostic and compose any set's kit, so every set supports every mode.** "i guess really all level sets should support all modes right because isnt it just retyling stuff etc?" / "i was thinking the landmarks etc are part of the set kit and the level builders just know how to use them (because tey know their sizes/attributes/etc)"
-  2026-11-04 · the kit contract and the course, climb and descent builders `done` (`SET_KITS`, `KIT_KINDS`, `BUILDERS`, `src/gen/level/sets/`, `builders/`; levels unchanged); tower pieces for farm, harbor and space and an arena builder `planned` · DESIGN.md → Levels, TODO.md → 32
+  2026-11-04 · `done` (`SET_KITS`, `KIT_KINDS`, `BUILDERS`, `src/gen/level/sets/`, `builders/`; tower kits in every set, so Rising Slag loops everywhere; the course, climb and descent builders, levels unchanged); an arena builder `planned` · DESIGN.md → Levels, TODO.md → 32
 - **A rule the level is built from (gravity, weather) rebuilds the lobby's level for everyone at once.**
   2026-11-02 · git `e64c3e5` · `done` · DESIGN.md → Rules
 
@@ -268,6 +268,9 @@ Every game design decision, preference and direction the owner has given, groupe
   2026-11-04 · `in progress` · CHARACTERS.md → The cast, Roster; `LOOK_CAST` 9
 - **Two more picks past the retro five: the round Slavic warrior from the Polish comic (its big round half; the comic gives "at least some recognizable character") and the white-haired monster slayer. The sneaking soldier already stands for the stealth game's hero.** "add kajko & kokosz to our list - at least some recognizable character from it" · "witcher is another good one, snake from metal gear solid"
   2026-11-04 · `in progress` · CHARACTERS.md → The cast, Roster; `LOOK_CAST` 10
+- **Every drawn kind's eyes work the way the cup-headed toon's do: each kind's kit eye is its homage's own eye design, drawn by the face kit so it acts, and bold enough to read at play scale.** "seems like we want mughead approach so the eyes are animated/drawn correctly" (after "some have issues w/ their eyes")
+  2026-11-04 · `done` (but for the worm, the warrior and the slayer, being drawn) · CHARACTERS.md → Rendered kinds → The cast's face, `EYES` in `src/render/cast/sprites/face.ts`, `tools/art3d/README.md` → 5
+  Changed: every kind but the mug, the puffball, the dino and the three dot-eyed kinds wore one generic round eye (a white, a rim, a coloured iris, a pupil and a glint), and a head side on wore its far eye as a second full circle beside the near one.
 - **Set-piece machines that look solid are made solid: guns on ledges, wheel and swing hubs, ladles, carts, signs, posts.** "Make them solid" (asked: make them solid, or draw them as not-ground)
   2026-11-02 · `open` · TODO.md → 21, `pnpm shot fairplay` (`PENDING`)
 - **Tripo output is licensed for the game: the owner pays for Tripo.** "our license here is fine as we pay for tripo"

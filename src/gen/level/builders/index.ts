@@ -42,7 +42,6 @@ export const BUILDERS: Record<BuilderId, BuilderDef> = {
     about: 'storeys stacked up a shaft, two connectors between every pair, moats on the spawn and goal storeys; a Rising Slag shaft loops',
     takes: (p) => p.size === 'tall',
     asks: ['floor', 'connector', 'shell'],
-    // A set with no tower pieces yet never rolls a tall level (profile.ts), so this only guards a forced one.
     build: (ctx, set) => (set.tower ? (set.towerPost ?? keep)(sculptTall(ctx, set.tower), ctx) : onCourse(ctx, set)),
   },
 };

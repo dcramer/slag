@@ -5,7 +5,7 @@ import { deriveSeed, Rng } from '../../src/core/rng';
 import { BUILDERS, type BuilderId } from '../../src/gen/level/builders';
 import { setLevelDifficulty } from '../../src/gen/level/difficulty';
 import { setProbeGravity } from '../../src/gen/level/probe';
-import { rollProfile } from '../../src/gen/level/profile';
+import { type ProfileOverride, rollProfile } from '../../src/gen/level/profile';
 import { KIT_KINDS, kitShortfalls, SET_KITS } from '../../src/gen/level/sets';
 import type { SculptCtx } from '../../src/gen/level/types';
 import { generateTheme } from '../../src/gen/theme';
@@ -22,20 +22,20 @@ import { THEME_IDS, type ThemeId } from '../../src/themes';
 describe('every set provides every kind', () => {
   for (const theme of THEME_IDS) {
     const short = kitShortfalls(SET_KITS[theme]);
-    if (short.length) it.todo(`${theme} still needs ${short.join(', ')} (TODO 32: tower pieces)`);
+    if (short.length) it.todo(`${theme} still needs ${short.join(', ')}`);
     else it(`${theme} provides ${Object.keys(KIT_KINDS).join(', ')}`, () => expect(kitShortfalls(SET_KITS[theme])).toEqual([]));
   }
 });
 
-/** The profiles a builder takes, forced from the seed: a course, a climb, a descent, a tower. */
-const FORCE: Record<BuilderId, { size: LevelProfile['size']; route: LevelProfile['route'] }[]> = {
+/** The profiles a builder takes, forced from the seed: a course, a climb, a descent, a race tower and a Rising Slag shaft. A set that never rolls one (farm races never go tall) skips it. */
+const FORCE: Record<BuilderId, ProfileOverride[]> = {
   course: [
     { size: 'classic', route: 'ltr' },
     { size: 'wide', route: 'ltr' },
   ],
   climb: [{ size: 'classic', route: 'climb' }],
   descent: [{ size: 'wide', route: 'descent' }],
-  tower: [{ size: 'tall', route: 'zigzag' }],
+  tower: [{ size: 'tall', route: 'zigzag' }, { tide: true }],
 };
 
 function ctxFor(seed: number, theme: ThemeId, p: LevelProfile, attempt = 0): SculptCtx {
@@ -57,13 +57,12 @@ describe('every builder composes every set’s kit', () => {
         }
         it(theme, () => {
           const faults: string[] = [];
+          let built = 0;
           for (const force of FORCE[id])
             for (const seed of [1, 2]) {
               const p = rollProfile(seed, theme, force);
-              if (!b.takes(p)) {
-                faults.push(`seed ${seed} ${force.size} ${force.route}: rolled a ${p.size} ${p.route} it doesn't take`);
-                continue;
-              }
+              if (!b.takes(p)) continue;
+              built++;
               const shape = b.build(ctxFor(seed, theme, p), set);
               const again = b.build(ctxFor(seed, theme, p), set);
               const at = `seed ${seed} ${p.size} ${p.route}`;
@@ -71,6 +70,7 @@ describe('every builder composes every set’s kit', () => {
               if (shape.w !== p.w || shape.h !== p.h) faults.push(`${at}: ${shape.w}×${shape.h}, not the profile's ${p.w}×${p.h}`);
               if (!shape.tiles.every((t, i) => t === again.tiles[i])) faults.push(`${at}: two different shapes from one seed`);
             }
+          if (!built) faults.push(`none of ${JSON.stringify(FORCE[id])} rolled a level it takes`);
           expect(faults).toEqual([]);
         });
       }

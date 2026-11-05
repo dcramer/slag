@@ -98,7 +98,7 @@ export const kind: FlatKind = {
     ],
   },
   accessories: [{ slot: 'plaster', role: 'plaster', at: 'cheek', size: [1.6, 0.8] }],
-  face: { r: 0.8, iris: '#4a3cae' },
+  face: { r: 0.8, iris: '#4a3cae', eye: 'square' },
   // Stiff-limbed: a small hop on each step and almost no lean, the toy rocking upright.
   gait: { bounce: [0.1, 0.55], lean: [0, 0.02] },
   clips: {

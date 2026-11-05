@@ -10,7 +10,18 @@ import { JUNGLE_COURSE } from './jungle';
 import { MINE_CARVED } from './mine';
 import { ROOFTOPS_CHAIN } from './rooftops';
 import { SPACE_CHAIN } from './space';
-import { CASTLE_TOWER, FACTORY_TOWER, GLACIER_TOWER, JUNGLE_TOWER, MINE_TOWER, ROOFTOPS_TOWER, VOLCANO_TOWER } from '../sculptors/tall';
+import {
+  CASTLE_TOWER,
+  FACTORY_TOWER,
+  FARM_TOWER,
+  GLACIER_TOWER,
+  HARBOR_TOWER,
+  JUNGLE_TOWER,
+  MINE_TOWER,
+  ROOFTOPS_TOWER,
+  SPACE_TOWER,
+  VOLCANO_TOWER,
+} from '../sculptors/tall';
 import { VOLCANO_COURSE } from './volcano';
 import { FARM_COURSE } from './farm';
 import type { ChainKit, CourseKit, SetKit } from './types';
@@ -20,12 +31,12 @@ import type { ChainKit, CourseKit, SetKit } from './types';
  * builders (builders/, BUILDERS) to compose. One entry per theme; KIT_KINDS says what each must provide.
  */
 export const SET_KITS: Record<ThemeId, SetKit> = {
-  farm: { theme: 'farm', course: FARM_COURSE },
+  farm: { theme: 'farm', course: FARM_COURSE, tower: FARM_TOWER },
   factory: { theme: 'factory', course: FACTORY_COURSE as CourseKit, tower: FACTORY_TOWER },
   castle: { theme: 'castle', course: CASTLE_COURSE as CourseKit, tower: CASTLE_TOWER },
   jungle: { theme: 'jungle', course: JUNGLE_COURSE, tower: JUNGLE_TOWER },
   volcano: { theme: 'volcano', course: VOLCANO_COURSE as CourseKit, tower: VOLCANO_TOWER },
-  harbor: { theme: 'harbor', chain: HARBOR_CHAIN },
+  harbor: { theme: 'harbor', chain: HARBOR_CHAIN, tower: HARBOR_TOWER },
   mine: { theme: 'mine', carved: MINE_CARVED, tower: MINE_TOWER },
   rooftops: { theme: 'rooftops', chain: ROOFTOPS_CHAIN as ChainKit, tower: ROOFTOPS_TOWER },
   glacier: {
@@ -34,7 +45,7 @@ export const SET_KITS: Record<ThemeId, SetKit> = {
     tower: GLACIER_TOWER,
     towerPost: (s, ctx) => glaze(s, new Uint8Array(s.w * s.h), ctx.rng, 0.75),
   },
-  space: { theme: 'space', chain: SPACE_CHAIN as ChainKit },
+  space: { theme: 'space', chain: SPACE_CHAIN as ChainKit, tower: SPACE_TOWER },
 };
 
 /**
