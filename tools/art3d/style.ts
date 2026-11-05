@@ -599,6 +599,32 @@ export const BRIEFS: Record<string, Brief> = {
       'The snout is a paper party blower: two pale bands are wrapped round it.',
     worn: 'the toe of the front trainer is split open and its sole flaps loose; the snout has a big crease kinked into it halfway along, so it bends a little but still points straight out; a round tuft of fur sticks up out of the back of the ball. The eyes stay as they are.',
   },
+  slayer: {
+    // The nod, each part of the read at race size and each a shape in outline: the two hilts standing up over his
+    // shoulders in an X, clear of the head (the read: nobody else in the cast carries two blades on the back, and
+    // the elf's one poker lies flat); the long white hair tied back, a ponytail hanging behind (the only white
+    // hair in the cast, and never a hood); tall and lean in a long coat flared to the knees (not the slim merc in
+    // a knit top, not the elf's short tunic); the round medallion on his chest and the yellow cat's eyes (the
+    // monster hunter, in colour).
+    // Ours, and the joke: the second sword is a furled black umbrella, its crook handle the second hilt, and the
+    // wolf medallion is a bottle cap stamped with a wolf's head, on a shoelace.
+    // The palette is neutral (Decisions 4): the coat in the player's colour, the gloves and boots a dark of it;
+    // the hair white, the skin, the steel and the bottle cap their own.
+    // Pushed for 24 px: the first designs, a long coat with a small head and thin hilts, were a plain pillar in
+    // silhouette; the second, a big head with the ponytail streaming out behind, was the elf's flopping cap in
+    // outline, and the sword's hilt merged into the hair. So the ponytail hangs down his back, and the two hilts
+    // stand upright behind each shoulder, one each side of the head and far above it, with background between.
+    // What ships came from two more edits of the worn design (art/sprites/slayer/design.prompt.txt): one each side of
+    // the head the hilts read as horns in the blind reads, so the sword and the umbrella are slung over one shoulder.
+    design:
+      'The character: a lean, grim monster hunter. Two thick long handles stand straight up behind his shoulders, one on each side of his head, both rising far above the top of his head, each as thick as his arm, with wide white background between each handle and his head: ' +
+      'behind his left shoulder the hilt of a big sword with a wide straight steel cross-guard (#b8bcc4) making a big cross shape, and behind his right shoulder the big hooked crook handle of a furled black umbrella (#3a3a40), curled like a big letter J. ' +
+      'Thick white hair (#f2f0ec) swept back and tied in a ponytail that hangs straight down his back, never sticking out. A pale face (#e6c4a2), narrow yellow cat eyes, a scar down over one eye, a stern frown. ' +
+      'A long brown leather coat (#7a5638) buttoned to the neck, flaring wide out to his knees like a bell, a belt at the waist, his legs apart below it. On his chest a big round silver bottle cap (#c8ccd0) hangs on a shoelace. ' +
+      'Dark brown gloves and tall dark brown boots (#4a3222).',
+    // The design drew no medallion, so the edit adds the bottle cap (the twist) with the wear.
+    worn: "a big round silver bottle cap (#c8ccd0) with a crimped edge now hangs in the middle of his chest on a brown shoelace, as wide as his eye-to-eye span, a little wolf's head pressed into it; one broken spoke pokes out sideways from the umbrella's furled cloth by his shoulder, its crook handle still a clean J; the hem of the coat is torn into a big ragged notch on one side; one boot's sole is flapping loose at the toe. The face, the hair and the sword stay as they are.",
+  },
 };
 
 function brief(kind: string): Brief {

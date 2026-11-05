@@ -132,7 +132,7 @@ const PAINTS: Record<Kind, readonly HSL[]> = {
   dragon: [hsl3(285, 50, 50)],
   hopper: [hsl3(22, 85, 52)],
   warrior: [hsl3(8, 55, 45)],
-  slayer: [hsl3(30, 25, 30)],
+  slayer: [hsl3(28, 30, 40)],
 };
 
 /** How many `vary` rolls a character has, and how many of them come from the look's main stream. */
