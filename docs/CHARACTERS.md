@@ -145,7 +145,7 @@ The strongest reads first. **Keyed** marks the non-humanoids, the riskiest: thei
 | 25 | hopper | Kewbert | **keyed**, legs only | low |
 | 26 | warrior | Kakosh | humanoid, round | drawn flat; the blind read fails (the head and helmet close into one mound) |
 | 27 | slayer | Gerald | humanoid | drawn flat; the blind read not passed (low, and paired with the elf): the white hair doesn't show in silhouette |
-| 28 | raider | Laura Craft | humanoid | medium: the braid against the slayer's tail and the elf's cap |
+| 28 | raider | Laura Craft | humanoid | drawn flat; named by both blind readers at medium, each pairing her weakly with a slim long-haired kind (the slayer, the puppy) |
 | 29 | fighter | Chun-Lee | humanoid | low: the buns |
 | 30 | stinger | Hornette | **keyed**, bug | medium: the horns against the king's and the hedgehog's spikes |
 

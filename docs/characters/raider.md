@@ -4,13 +4,21 @@ A kind of the cast: [CHARACTERS.md](../CHARACTERS.md) has the rules every kind f
 
 - **Kind:** `raider` · **Name:** Laura Craft
 - **A stranger should say:** "the tomb raider with the braid and two pistols."
-- **Silhouette:** an athletic woman side on: one long thick braid swinging out behind her head, a pistol in a holster on each thigh (held out, one in each hand, when she's in the air), a small backpack, boots.
-- **Traits:** a long single braid; a fitted tank top; shorts; twin pistols in thigh holsters; a small backpack; fingerless gloves; boots; an athletic build.
-- **Palette:** the tank top in the player's colour; skin, hair, shorts, holsters, boots and the pistols neutral.
-- **Color slot:** costume.
-- **Gait:** a quick, confident athletic run; she vaults and flips in the air.
-- **The nod:** the braid (the outline behind her head); the twin pistols at the thighs; the tank top and shorts.
-- **Our twist:** the pistols are bright plastic water pistols, the backpack a school satchel with a torn strap, and the braid is tied off with a shoelace.
-- **Swaps:** a plaster on the cheek; a compass on the satchel; a torn knee.
-- **Rig:** to draw flat (2026-11-04).
+- **Silhouette:** an athletic woman, legs apart in shorts: one long thick braid streaming out behind her head, clear of her back, a pistol in each hand (held out, one each side, when she stands and aims, and both forward when she leaps), a small satchel at her hip, boots.
+- **Traits:** a long single braid; a fitted tank top; shorts; twin pistols in thigh holsters; a small satchel; fingerless gloves; boots; an athletic build.
+- **Palette:** the tank top in the player's colour (drawn `#3f9ea6`), the water pistols a light of it (+20), bright plastic; the rest neutral: skin `#e2a87e`, shorts `#6e5440`, the braid, hair, boots, gloves and holsters one dark brown `#4a3226` (one colour in the drawing), the satchel tan canvas `#b8a074`, the tape grey `#9a9c98`.
+- **Color slot:** costume: the tank top, the pistols a light of it.
+- **Palette alts:** the satchel in tan canvas `#b8a074`, olive `#8e8a64` or grey `#9a968e`.
+- **Idles and cheers:** the idle is the aiming stance, a pistol out each side; weight on one hip with a pistol up by her shoulder. A pistol punched up high, eyes squeezed shut; a grin with a pistol up by her shoulder.
+- **Gait range:** a bounce of 0.2–0.8 px on each step, a lean of up to 0.04.
+- **Wear:** in the drawing, the satchel's strap torn and knotted, tape round the near pistol's cracked tank, a tear on one thigh, the near boot's sole flapping; scuffed is a pale scuff on the tank top, scorched a soot mark there (tones of the top).
+- **Gait:** a quick, confident athletic run; she leaps aiming both pistols forward.
+- **The nod:** the braid (the outline behind her head); the twin pistols; the tank top and shorts.
+- **Our twist:** the pistols are bright plastic water pistols with a round tank on top, the backpack a school satchel with a torn strap, and the braid is tied off with a shoelace.
+- **Swaps:** a plaster on the cheek. The compass and the torn knee aren't swaps: a compass on the satchel is a speck at play size, and the tear is in every drawing.
+- **Rig:** drawn flat (2026-11-04, `art/sprites/raider/design.prompt.txt`), 24 px tall, side on to three-quarter: one round of four designs (all four drew the braid, the water pistols and the satchel; the chunkiest kept), one wear edit, and twelve pose drawings three to a 16:9 image, cut apart, five of them drawn again after the first blind read. The far eye of the profile run drawings is painted in, a copy of the near one moved back along the face, so every pose has the pair the face kit finds and draws as its `dot` (the drawing's small black ovals; the `tall` oval was twice their size, with a blush); the alarmed fall's eye whites are inked to match. Design read, the black design beside six cast designs, two fresh readers: "Lara Croft (Tomb Raider), medium-high. A long braid or ponytail curving up and behind the head, a wide action stance and arms out"; "the braided tomb raider. Medium confidence. A long braid or ponytail arcs back and curls behind the head" (one paired her with the worm, the other with the elf: "something flowing off the head"). The blind sheet, three rounds of two fresh readers:
+  - Round 1, the braid hanging behind her in a J, its curl at her hip: "Lara Croft, medium (could be Indiana Jones). Long braid or whip loop behind the head, adventurer stance" and "Diddy Kong, medium. Monkey with a cap and a long curling tail". At play size the curl at the hip is a tail.
+  - Round 2 (what ships), the braid streaming level behind her head in the idle, the run and the leap (redrawn: the stance, both runs, the leap and the second idle): "Lara Croft (tomb raider), medium: slim athletic body, arm out holding a pistol, ponytail or braid behind, athletic run and leap" and "Lara Croft, medium. Ponytail or braid swinging back, arm out pointing a pistol, athletic run". Both named her; each said she "might" be the same as one long-haired figure, the slayer ("15 and 20 might both be a long-haired raider type") or the puppy ("14 and 20 (long hair or braid behind a slim body)").
+  - Round 3, the same drawings with the second idle opening on the stance, so she stood with a pistol out each side: "unsure (ninja, low). Arms spread, long scarf or sword, low dash" and "low, possibly a ninja (Strider or Shinobi). Arms spread wide, a scarf or ponytail streaming back". Arms spread under a level braid is a ninja's scarf; round 2's order is back.
+  - Named by both at medium, not yet clear of the pairing with the slim long-haired kinds. The image service refused every image after round 2's drawings (a 403, "project banned"), so the walk, the wall slide and the cheers keep the round-1 braid.
 - **Concept prompt:** An athletic cartoon adventurer woman seen from the side, one long thick braid swinging out behind her head tied off with a shoelace, a fitted tank top, shorts, fingerless gloves and boots, two bright plastic water pistols in holsters strapped to her thighs, and a small school satchel with a torn strap on her back.
