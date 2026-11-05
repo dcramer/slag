@@ -562,7 +562,7 @@ export const KINDS: Record<Kind, KindArt> = {
     arms: 'none',
     gait: (g) => (g.moving ? { rot: S(g.ph * 1.5) * 0.07, hop: abs(S(g.ph * 1.5)) * 0.5, pivot: 0, bend: 0.03 } : {}),
     paintFace: (d) => {
-      // The visor: a wide pale capsule standing proud of the front, darker below, a hard glint.
+      // The visor: a wide capsule of pale grey glass standing proud of the front, darker below, a hard glint.
       const y = Y(d, 0.7);
       const x0 = -d.W * 0.06;
       const x1 = d.W * 0.56;
@@ -575,7 +575,7 @@ export const KINDS: Record<Kind, KindArt> = {
         const a = Math.PI / 2 + (i / 10) * Math.PI;
         cap.push({ x: d.f * (x0 + 2 + Math.cos(a) * 2), y: y + Math.sin(a) * 2 });
       }
-      toned(d.s, cap, '#a9dbe8', '#6aa6ba', d.lk.ink, 0.4, 0.8 * d.k, 0.6);
+      toned(d.s, cap, '#c4ccd2', '#7c8893', d.lk.ink, 0.4, 0.8 * d.k, 0.6);
       mark(
         d.s,
         '#ffffff',

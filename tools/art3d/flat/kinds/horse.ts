@@ -88,8 +88,9 @@ export const kind: FlatKind = {
   face: { r: 0.65, iris: '#2a1f1a' },
   gait: { bounce: [0.2, 0.9], lean: [0, 0.03] },
   clips: {
-    idle: { frames: ['idle'], loop: true, fps: 1 },
-    idle2: { frames: ['idle2', 'idle'], loop: true, holds: [1.8, 2.4] },
+    // Standing square with its neck slanting forward, its nose reaches past the box over its feet: centred on itself.
+    idle: { frames: ['idle'], loop: true, fps: 1, centre: 'box' },
+    idle2: { frames: ['idle2', 'idle'], loop: true, holds: [1.8, 2.4], centre: 'box' },
     walk: { frames: ['walk-1', 'walk-2'], loop: true, stride: 28 },
     // Stretched out flat, the gallop is longer than the box at the body size.
     run: { frames: ['run-1', 'run-2'], loop: true, stride: 44, scale: 0.86 },
@@ -103,7 +104,9 @@ export const kind: FlatKind = {
   // Drawn three to a 16:9 image and cut apart (README → 3. Poses); the sheets' prompts are in
   // art/sprites/horse/design.prompt.txt. These are each pose alone, for a redraw.
   poses: {
-    idle2: { pose: `standing still, pawing the ground with one front hoof raised and bent, its head held high, a smug grin; ${KEEP}.` },
+    idle2: {
+      pose: `standing still with its back level and its neck slanting forward, pawing the ground with one front hoof raised and bent, a smug grin; ${KEEP}.`,
+    },
     'walk-1': {
       pose: `walking to the right at a high-stepping trot, the near front leg lifted high with its knee bent and its hoof dangling, the far back leg lifted, the other two legs planted; ${KEEP}.`,
     },

@@ -44,9 +44,9 @@ export const kind: FlatKind = {
     // The fur is the costume, in the player's colour (Decisions 4: the region a stranger names him by).
     { name: 'fur', color: '#7a4e2c', slot: 'player' },
     { name: 'skin', color: '#e2b98a' },
-    // The clip-on tie, a little darker than the fur: far darker, on the pale chest right under the muzzle, it read as a
-    // gaping mouth; lighter, the orange and yellow ties sank into the chest.
-    { name: 'tie', color: '#808080', on: 0, tone: -10 },
+    // The clip-on tie, a dark of the fur. At −10 it ran into the fur of the arm beside it and vanished at play
+    // scale; lighter, the orange and yellow ties sank into the pale chest.
+    { name: 'tie', color: '#808080', on: 0, tone: -24 },
     { name: 'tape', color: '#9aa0a8', alts: ['#b8b2a4', '#6f757c'], vary: 6 },
     // The banana, a light of the fur: a fixed yellow broke the neutral palette and vanished on yellow apes.
     { name: 'banana', color: '#808080', on: 0, tone: 30 },
