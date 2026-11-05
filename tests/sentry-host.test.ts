@@ -2,7 +2,18 @@ import type { ErrorEvent } from '@sentry/browser';
 import { describe, expect, it } from 'vitest';
 import { REPORT_EVERY_MS, StoreFailureThrottle, storeStatus } from '../app/api/net/_server/report';
 import { StoreError } from '../app/api/net/_server/store';
-import { clientOf, EventBudget, eventFingerprint, keepBreadcrumb, MAX_EVENTS_PER_PAGE, metricAttributes, noiseReason, stampScope } from '../app/sentry-filter';
+import {
+  type BatteryLike,
+  clientOf,
+  EventBudget,
+  eventFingerprint,
+  keepBreadcrumb,
+  MAX_EVENTS_PER_PAGE,
+  metricAttributes,
+  noiseReason,
+  stampScope,
+  watchPower,
+} from '../app/sentry-filter';
 import { serverTraceRate } from '../app/sentry-options';
 
 const ORIGIN = 'https://slag.example';
@@ -101,6 +112,19 @@ describe('sentry event shaping', () => {
     ];
     for (const [ua, touch, browser, version, os] of cases)
       expect(clientOf(ua, touch), ua).toEqual({ 'browser.name': browser, 'browser.version': version, 'os.name': os });
+  });
+
+  it('follows whether the device is on battery, and stays unknown where it can’t tell', async () => {
+    const seen: string[] = [];
+    let change = () => {};
+    const battery: BatteryLike = { charging: false, addEventListener: (_t, l) => (change = l) };
+    await watchPower({ getBattery: async () => battery }, (p) => seen.push(p));
+    battery.charging = true;
+    change();
+    expect(seen).toEqual(['battery', 'plugged']);
+    await watchPower({}, (p) => seen.push(p));
+    await watchPower({ getBattery: () => Promise.reject(new Error('NotAllowedError')) }, (p) => seen.push(p));
+    expect(seen).toHaveLength(2);
   });
 
   it('puts the browser under the game’s tags on a metric', () => {

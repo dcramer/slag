@@ -15,7 +15,19 @@ import {
   withScope,
 } from '@sentry/browser';
 import { type MetricType, telemetryScope, type TelemetryData, type TelemetryLevel, type TelemetryReporter } from '../src/telemetry';
-import { clientOf, EventBudget, eventFingerprint, keepBreadcrumb, metricAttributes, noiseReason, type PageState, stampScope } from './sentry-filter';
+import {
+  type BatteryLike,
+  type Client,
+  clientOf,
+  EventBudget,
+  eventFingerprint,
+  keepBreadcrumb,
+  metricAttributes,
+  noiseReason,
+  watchPower,
+  type PageState,
+  stampScope,
+} from './sentry-filter';
 import { sentryOptions } from './sentry-options';
 
 /**
@@ -52,7 +64,8 @@ export function startSentry(): TelemetryReporter {
   addEventListener('pagehide', () => (page.leaving = true));
   addEventListener('pageshow', () => (page.leaving = false));
   const budget = new EventBudget();
-  const client = clientOf(navigator.userAgent, navigator.maxTouchPoints);
+  const client: Client = { ...clientOf(navigator.userAgent, navigator.maxTouchPoints), 'device.power': 'unknown' };
+  void watchPower(navigator as Navigator & { getBattery?: () => Promise<BatteryLike> }, (p) => (client['device.power'] = p));
   init({
     ...sentryOptions,
     // Errors are rare and every one is wanted; the caps in src/telemetry.ts and the page budget bound them instead.
