@@ -48,6 +48,8 @@ The rapper, the warrior and the slayer are drawn flat and read in colour, but tw
 - **Warrior:** his helmet and head close into one mound with no neck at play size; readers saw a hooded figure, the mercenary or a wizard. Readers are asked for game characters and he's from a comic. The engineer's knobbed hard hat read as a warrior's helmet in every round.
 - **Slayer:** a slim figure with something over his back is the elf's outline too, and his white hair can't show in a silhouette; readers paired him with the elf.
 
+A full-cast read (2026-11-04, every kind drawn, cells wide enough for a held prop; two fresh readers) agrees: the rapper "unsure, a big-haired or hooded figure" and "Luigi, low"; the warrior "King Dedede, low" twice (a round body under a tall headpiece); the slayer "Princess Peach or Zelda, low" twice (his long coat reads as a gown, his hair as a princess's). The worm passed at medium twice. Both readers also paired the plumber with the engineer (4 and 22, capped and moustached), the robot with the hunter (the arm cannons) and the hopper with the dino (a round head with a long snout); the merc read as "Crash Bandicoot or Tails, low" twice.
+
 Tools that would have saved their agents turns: a design read from a quick trace of the design at blind-sheet size (a design read from the drawing passed the slayer at medium while the traced sheet failed); a `keep` list of white roles exempt from `holes` (the hopper's and the slayer's tint scripts); keeping a design prompt under about 900 characters, since the image model drops what comes last.
 
 ## 10. Housekeeping
