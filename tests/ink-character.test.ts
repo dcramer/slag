@@ -3,7 +3,7 @@ import { generateCharacter, CAST } from '../src/gen/character';
 import { drawInkRunner, type RunnerPose } from '../src/render/ink-character';
 import { CAST_ART } from '../src/render/cast';
 import type { D } from '../src/render/cast/kit';
-import { lookOf, type Mood } from '../src/render/ink-figure';
+import { inked, lookOf, type Mood } from '../src/render/ink-figure';
 
 /** A 2D context that only records where paths go, in the character's own space (transforms are ignored). */
 function recorder() {
@@ -111,5 +111,47 @@ describe('inked runner', () => {
         const a = faceOf(11, kind, m);
         expect(faceOf(90210, kind, m), `${kind} ${m}`).toEqual(a);
       }
+  });
+});
+
+describe('the ink mass round an outline', () => {
+  /** Where `inked` pushes each point of `pts`: the first path it draws is the mass, one point per point. */
+  const massOf = (pts: { x: number; y: number }[]) => {
+    const { ctx, pts: out } = recorder();
+    inked(ctx, pts, '#fff', '#000', 0.6, 1.2);
+    return out.slice(0, pts.length).map(([x, y], i) => ({ x: x - pts[i].x, y: y - pts[i].y }));
+  };
+
+  it('grows a wedge cut to the middle across its edges, not along them', () => {
+    // A dot-eater: a circle with a mouth cut to its centre, the jaws sampled as densely as the arc.
+    const at = (a: number, r: number) => ({ x: Math.cos(a) * r, y: Math.sin(a) * r });
+    const pts = [
+      ...Array.from({ length: 8 }, (_, i) => at(0.6, (8 * (i + 1)) / 8)),
+      ...Array.from({ length: 39 }, (_, i) => at(0.6 + ((Math.PI * 2 - 1.2) * (i + 1)) / 40, 8)),
+      ...Array.from({ length: 8 }, (_, i) => at(-0.6, (8 * (8 - i)) / 8)),
+      { x: 0, y: 0 },
+    ];
+    const off = massOf(pts);
+    for (const [i, a] of [
+      [3, 0.6],
+      [5, 0.6],
+      [pts.length - 5, -0.6],
+      [pts.length - 7, -0.6],
+    ] as const) {
+      // Along the jaw, and its normal out into the mouth.
+      const [tx, ty] = [Math.cos(a), Math.sin(a)];
+      const [nx, ny] = a > 0 ? [ty, -tx] : [-ty, tx];
+      const o = off[i];
+      expect(o.x * nx + o.y * ny, `jaw point ${i} grows into the mouth`).toBeGreaterThan(0.4);
+      expect(Math.abs(o.x * tx + o.y * ty), `jaw point ${i} doesn't slide along the jaw`).toBeLessThan(0.25);
+    }
+  });
+
+  it('grows a round outline straight out from its middle', () => {
+    const pts = Array.from({ length: 24 }, (_, i) => ({ x: Math.cos((i / 24) * Math.PI * 2) * 6, y: Math.sin((i / 24) * Math.PI * 2) * 4 }));
+    massOf(pts).forEach((o, i) => {
+      const r = Math.hypot(pts[i].x, pts[i].y);
+      expect(Math.abs(o.x * (pts[i].y / r) - o.y * (pts[i].x / r)), `point ${i}`).toBeLessThan(1e-9);
+    });
   });
 });

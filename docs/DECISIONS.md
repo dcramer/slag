@@ -333,8 +333,13 @@ Every game design decision, preference and direction the owner has given, groupe
   2026-11-03 · `in progress` · DESIGN.md → AI players; `Player.bot`, the `bot` action
   Changed: a room-wide Bots rule in the Rules menu, replaced before it landed.
 - **No bot level is unbeatable: every level fumbles, chokes on tight jumps and randomly stops to think; harder bots are harder mostly by sabotage, not perfect hands.** "for our AI difficulty i dont want them to be unbeatable, harder difficulties probably should have more sabotage type behavior and they should still randomly have to stop and think idk" / "tl;dr im not sure hard bots ever make mistakes?"
-  2026-11-04 · `done` (mistakes and pauses), sabotage `planned` (TODO.md → 27) · DESIGN.md → AI players, src/brain/personality.ts
+  2026-11-04 · `done` (mistakes and pauses; sabotage in pick and place); sabotage in the race `planned` (TODO.md → 27) · DESIGN.md → AI players, src/brain/personality.ts
   Changed: Hard bots reacted in 0–1 frames and fumbled about one jump in a hundred, only ever coming up short.
+- **Bots have temperaments, brain personalities apart from their level, and are vindictive sometimes: against a player whose part hurt them, or one who's winning.** "i just want bots to be more interesting to play with, and have different "brain" personality type things if that makes sense? and to be vindictive sometimes (say a player placed something to mess w/ them, or a player is winning? idk)". The proposal taken with "Yes, start it": five temperaments (builder, gremlin, grudger, sheriff, speedrunner) rolled from the bot's seed, hidden and found out by play; grudges only from what a player could see; a bot's level sets how often it acts on one and how well.
+  2026-11-04 · `done` (pick and place); spite in the race and with held items `planned` (TODO.md → 27) · DESIGN.md → AI players, src/brain/temperament.ts, src/brain/grudge.ts
+- **Normal and Hard bots always try to block the others, grudge or none, to make the run harder.** "one thing important for the AI, espcially on medium/hard, it needs to try to block other people to make it harder, and im not sure it always does that"
+  2026-11-04 · `done` · DESIGN.md → AI players → Bots get in the way, `block` and `weigh` in src/brain/personality.ts
+  Changed: with no grudge, a bot put its part on a random legal spot.
 - **Bot finish targets, alone with the plan built (gentle, medium, hard level): Easy 75, 50, 30 in a hundred; Normal 90, 70, 50; Hard 95, 85, 70.** Proposed and taken with "Yes, start part 1".
   2026-11-04 · `in progress` (gentle and medium are there; hard levels play little harder than medium ones until more of them land in their band) · DESIGN.md → AI players, tests/stats/bot-finish.test.ts
 - **Each theme has at least 1 and at most 3 grand landmarks among its 5+.** "id like at least one grand landmark, no more than 3 (in the min 5 landmarks)"

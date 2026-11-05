@@ -1,6 +1,7 @@
 import type { Phase } from '../game/match';
 import type { Role } from '../sim/props';
 import type { Personality } from './personality';
+import type { Temperament } from './temperament';
 
 /**
  * The contract between a brain and the game (docs/DESIGN.md → AI players).
@@ -11,7 +12,7 @@ import type { Personality } from './personality';
  */
 
 /** Bumped when BrainView changes shape. A player's script will declare the version it was written against. */
-export const BRAIN_VIEW_VERSION = 1;
+export const BRAIN_VIEW_VERSION = 3;
 
 /** How fast across the ground, as a player would say it. */
 export type Pace = 'still' | 'walking' | 'running' | 'flying';
@@ -59,11 +60,30 @@ export interface PropSense {
 
 export interface CardSense {
   claimed: boolean;
+  /** The seat that took it, as its card shows; -1 while it's free. */
+  by: number;
   role: Role;
   /** A plain strip that spans a gap, the part the level's plan is made of. */
   bridge: boolean;
   /** The crate's way out of a level the parts have sealed: it clears parts. */
   clears: boolean;
+}
+
+/** Another seat, as the screen shows it in any phase. */
+export interface RivalSense {
+  slot: number;
+  /** Points on the board. */
+  score: number;
+  /** Pick: the crate card under its cursor, or -1. */
+  hover: number;
+  /** Place: its cursor, in tiles (rounded to a quarter); null in any other phase. */
+  cursor: { x: number; y: number } | null;
+}
+
+/** A death a part was to blame for, as the race shows it: `killer` owns the part. */
+export interface KillSense {
+  victim: number;
+  killer: number;
 }
 
 export interface BrainView {
@@ -74,6 +94,8 @@ export interface BrainView {
   slot: number;
   /** Lobby: ready to go. */
   ready: boolean;
+  /** Its own points on the board. */
+  score: number;
   level: {
     w: number;
     h: number;
@@ -95,12 +117,26 @@ export interface BrainView {
   self: SelfSense | null;
   /** Race: the other runners. */
   runners: RunnerSense[];
+  /** Every other seat, in every phase. */
+  rivals: RivalSense[];
+  /** Race and its score: the deaths so far that a part's owner is credited with. */
+  kills: KillSense[];
   /** Race: the countdown is over. */
   live: boolean;
   /** Place: would the held part go at (tx, ty) turned `rot` quarter turns? */
   canPlace(tx: number, ty: number, rot: number): boolean;
   /** Place: would the level still have a way to the flag, with at most its bridges, after that? */
   keepsWay(tx: number, ty: number, rot: number): boolean;
+  /**
+   * Place: where everyone will run, with the plan built: the stand cells (y * w + x) of the quickest way to the flag
+   * and its best alternative, and how hard the run is as the parts stand (as `assess` measures it).
+   */
+  route(): { cells: number[]; tight: number; length: number };
+  /**
+   * Place: how hard the run would be with the held part there: the tight jumps (ones a slip turns into a fall) on the
+   * more forgiving way, and its length in tiles. Null if the spot isn't legal or would break the plan's way through.
+   */
+  assess(tx: number, ty: number, rot: number): { tight: number; length: number } | null;
 }
 
 /** What a brain wants this frame. The motor does the rest, with the same inputs a player has. */
@@ -112,6 +148,8 @@ export type Intent =
   | { do: 'pick'; card: number }
   /** Pick: point at crate card `card` without taking it, as a player weighs it up. */
   | { do: 'hover'; card: number }
+  /** Place: move the cursor to (x, y), in tiles, without placing: a player eyeing a spot, or someone. */
+  | { do: 'aim'; x: number; y: number }
   /** Place: put the held part with its origin at (tx, ty), turned `rot`. */
   | { do: 'place'; tx: number; ty: number; rot: number }
   /** Race: get to the cell (tx, ty) by the route the motor finds. */
@@ -125,8 +163,8 @@ export interface Brain {
   think(view: BrainView): Intent;
 }
 
-/** A kind of brain, as BRAINS lists it. `make` gets a seed so a bot's choices replay, and the bot's personality. */
+/** A kind of brain, as BRAINS lists it. `make` gets a seed so a bot's choices replay, the bot's personality and its temperament. */
 export interface BrainDef {
   label: string;
-  make(seed: number, traits: Personality): Brain;
+  make(seed: number, traits: Personality, mood: Temperament): Brain;
 }

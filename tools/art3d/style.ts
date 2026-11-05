@@ -298,14 +298,21 @@ export const BRIEFS: Record<string, Brief> = {
     // the big boots on a small body (the proportions, a kid's); the arm cannon held out (what he does).
     // Small and round-headed where the hunter is big, wide at the shoulders and visored; a smooth round
     // helmet where the speedster's quills sweep back.
-    // Ours, and the joke: a robot boy from the parts bin. The cannon is a tin can with both ends cut out and
-    // its paper label still on, a big battery is strapped to his back, and one boot was repainted a shade off.
+    // Ours, and the joke: a robot boy from the parts bin. The cannon is a ribbed tin can slid over his forearm
+    // like a sleeve, and one boot was repainted a shade off.
+    // Five rounds of blind reads (2026-11-04) named him at low or low-medium at best: a narrow rounded blob on
+    // little legs, the can at the end of his arm "something blocky" held out, a battery filling the notch
+    // behind. So the sixth round draws the outline the original is known by: a wide stance on huge flared
+    // boots, a small body, a ridge down the helmet and both ear discs standing proud, and the forearm itself a
+    // thick cylinder, no hand, held out level. The battery went: it filled his back. The face is pale and
+    // ringed in a dark rim, so on an orange or a yellow helmet it stays a shape of its own.
     design:
-      'The character: a small boyish robot kid, about half of him one big round helmet. His signature prop: his front forearm ends in an arm cannon made from a tin food can (#c9ccd2), a short fat silver cylinder with ribbed rims, both ends cut out so it is open and dark inside, held out level in front of him at chest height, with a paper label (#f4efe6) round its middle and one wide red band (#d8382f) on the label. ' +
-      'On his head a big smooth round blue helmet (#2a5fc4), a ball wider than his body, with one light-blue stripe (#4fb8ec) running from the brow back over the crown and two round flat ear discs on its sides, and a big round opening at the front showing a cheerful peach face (#f3d0aa) with two big eyes. ' +
-      'A small light-blue suit (#4fb8ec), narrow, with no shoulders to speak of and short arms; a blue mitten glove (#2a5fc4) on the free hand; huge chunky round blue boots (#2a5fc4), the biggest shapes below the helmet. ' +
-      'Strapped upright on his back, a big dark battery (#2a2a30), a fat cylinder with a brass band (#c99a4a) round it and a little terminal stud on top, peeking out behind him under the helmet.',
-    worn: 'a big round dent is knocked into the top of the helmet, flattening its crown at the back; the front rim of the tin can is crumpled in and its paper label torn, one flap of it hanging loose; the far boot has been repainted a lighter blue and is a little bigger than the near one; the battery is bound on with a wide band of grey tape. The face, the eyes and the ear discs stay as they are.',
+      'The character: a small chunky robot boy in a wide action stance, his short legs planted far apart in an upside-down V with a big gap of white background between them, on huge flared blue boots (#2a5fc4), wide at the top like buckets, a third of his height. ' +
+      'His front arm is held straight out level at shoulder height, and from the elbow on his forearm is the cannon: a thick smooth round cylinder twice as wide as his arm, no hand, an old dark-blue painted tin can (#1d4594) with ribbed rims slid over the forearm like a sleeve, its open end a dark round muzzle, reaching well out to the right past his helmet. ' +
+      'On his head a big round blue helmet (#2a5fc4), much wider than his body, with a low raised ridge running down its middle from the crown to the brow, and two big round ear discs standing far out from its sides like headphones, sticking out past its outline. ' +
+      'The face opening is ringed with a thick dark grey rim (#3a3a42) and shows a pale face (#f6e6d6) with two big eyes. ' +
+      'A tiny light-blue body (#7fc4f0) with short thin arms and legs; a blue mitten (#2a5fc4) on the free hand.',
+    worn: 'a big round dent is knocked into the side of the helmet, behind the ridge; the tin-can cannon is dented in at its middle and its muzzle rim crumpled; the far boot has been repainted a lighter blue and is a little bigger than the near one. The face, the eyes, the ridge and the ear discs stay as they are.',
   },
   engineer: {
     // The nod, each part of the read at race size: the kit, carried low and clear of the body (the read in

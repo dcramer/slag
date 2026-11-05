@@ -4,17 +4,18 @@ import { pair } from '../faces';
 import { oval, poly, toned, tonedOval } from '../../ink-figure';
 
 /**
- * The robot boy from the parts bin: a big round helmet with a stripe and an ear disc, the face in its
- * opening, a small light suit on big boots, a tin-can arm cannon held out front and a battery on his back.
- * Small where the hunter is broad at the shoulders; one round helmet where the speedster's quills sweep
- * back. A rendered kind draws from its frames (src/render/cast/sprites/robot/); this is what shows before
- * they load, and on the hand-drawn sheets.
+ * The robot boy from the parts bin: a big round helmet with a ridge down it and an ear disc standing proud of
+ * its back, the face in its opening inside a grey rim, a small light suit on big boots, and the forearm itself
+ * the cannon, a thick taped tin can held out level. Small where the hunter is tall and broad at the shoulders;
+ * one round helmet where the speedster's quills sweep back. A rendered kind draws from its frames
+ * (src/render/cast/sprites/robot/); this is what shows before they load, and on the hand-drawn sheets.
  */
 export const art: KindArt = {
   size: [0.88, 0.96],
-  // The helmet is the top half and wider than everything under it; the body under it is narrow.
+  // The helmet is the top half and wider than everything under it, its ear disc a bump out of its back; the
+  // body under it is small.
   outline:
-    'M 0.02 -1 C 0.3 -1 0.46 -0.84 0.46 -0.68 C 0.46 -0.54 0.36 -0.44 0.22 -0.42 C 0.22 -0.28 0.24 -0.12 0.22 0 L -0.2 0 C -0.22 -0.12 -0.2 -0.28 -0.2 -0.42 C -0.36 -0.44 -0.46 -0.54 -0.46 -0.68 C -0.46 -0.86 -0.28 -1 0.02 -1 Z',
+    'M 0.04 -1 C 0.32 -1 0.46 -0.84 0.46 -0.68 C 0.46 -0.54 0.36 -0.44 0.22 -0.42 C 0.2 -0.3 0.22 -0.14 0.24 0 L -0.22 0 C -0.2 -0.14 -0.18 -0.3 -0.18 -0.42 C -0.32 -0.44 -0.42 -0.5 -0.44 -0.56 C -0.6 -0.54 -0.62 -0.82 -0.44 -0.8 C -0.4 -0.92 -0.24 -1 0.04 -1 Z',
   lift: 2.6,
   feet: 'boot',
   arms: 'mitten',
@@ -24,29 +25,8 @@ export const art: KindArt = {
   // A bouncy run on the big boots.
   gait: (g) => (g.moving ? { hop: Math.abs(Math.sin(g.ph)) * (0.6 + g.run * 0.4), sy: 1 - Math.abs(Math.sin(g.ph)) * 0.04, upright: 0.7 } : {}),
   paintFace: (d) => pair(d, 0.7, 0.1, 0.72, 'smile', 0.13),
-  back: (d) => {
-    // The battery strapped upright on his back, its brass cap above.
-    const x = -d.f * d.W * 0.34;
-    const pts = [
-      { x: x - 1.7, y: Y(d, 0.52) },
-      { x: x + 1.7, y: Y(d, 0.52) },
-      { x: x + 1.7, y: Y(d, 0.1) },
-      { x: x - 1.7, y: Y(d, 0.1) },
-    ];
-    toned(d.s, pts, '#3a3a42', '#26262c', d.lk.ink, 0.35, 0.7 * d.k, 0.5);
-    poly(
-      d.s,
-      [
-        { x: x - 1.5, y: Y(d, 0.52) + 0.2 },
-        { x: x + 1.5, y: Y(d, 0.52) + 0.2 },
-        { x: x + 1.5, y: Y(d, 0.42) },
-        { x: x - 1.5, y: Y(d, 0.42) },
-      ],
-      '#c99a4a',
-    );
-  },
   print: (d) => {
-    // The suit, a light tone of the helmet under it, and the helmet's stripe over the crown.
+    // The suit, a light tone of the helmet over it, and the ridge down the helmet's middle.
     band(d, -0.1, 0.42, d.lk.playerHi);
     mark(
       d.s,
@@ -62,33 +42,35 @@ export const art: KindArt = {
     );
   },
   front: (d) => {
-    // The ear disc on the helmet's near side, and the face's opening.
-    tonedOval(d.s, -d.f * d.W * 0.3, Y(d, 0.68), 1.7, 1.9, 10, d.lk.playerShade, d.lk.playerDark, d.lk.ink, 0.35, 0.7 * d.k, 0.4);
-    tonedOval(d.s, d.f * d.W * 0.14, Y(d, 0.68), 2.9, 3.1, 12, '#f3d0aa', '#dcae86', d.lk.ink, 0.3, 0.6 * d.k, 0.4);
-    // The tin-can cannon held out level at chest height, its open end dark and a band of label round it.
+    // The ear disc standing out of the helmet's back, and the face's opening ringed in grey: pale, so on an
+    // orange or a gold helmet it stays a shape of its own.
+    tonedOval(d.s, -d.f * d.W * 0.46, Y(d, 0.68), 1.6, 2.1, 10, d.lk.playerShade, d.lk.playerDark, d.lk.ink, 0.35, 0.7 * d.k, 0.4);
+    tonedOval(d.s, d.f * d.W * 0.14, Y(d, 0.68), 3.4, 3.6, 12, '#4a4c55', '#3a3c44', d.lk.ink, 0.3, 0.6 * d.k, 0.4);
+    tonedOval(d.s, d.f * d.W * 0.15, Y(d, 0.67), 2.7, 2.9, 12, '#f7e7d6', '#e6d2bc', d.lk.ink, 0.2, 0.5 * d.k, 0.4);
+    // The forearm is the cannon: a thick tin can held out level at shoulder height, taped on at its root, its
+    // open end dark.
     const up = d.m === 'up' ? -1 : 0;
-    const x0 = d.f * d.W * 0.12;
-    const x1 = x0 + d.f * 4.6;
-    const y = Y(d, 0.3);
+    const x0 = d.f * d.W * 0.26;
+    const x1 = x0 + d.f * 6;
+    const y = Y(d, 0.34);
     const can = [
-      { x: x0, y: y - 1.8 },
-      { x: x1, y: y - 1.8 + up },
-      { x: x1, y: y + 1.8 + up },
-      { x: x0, y: y + 1.8 },
+      { x: x0, y: y - 2 },
+      { x: x1, y: y - 2 + up },
+      { x: x1, y: y + 2 + up },
+      { x: x0, y: y + 2 },
     ];
-    toned(d.s, can, '#c9ccd2', '#9ea2aa', d.lk.ink, 0.35, 0.7 * d.k, 0.5);
-    const mx = (x0 + x1) / 2;
+    toned(d.s, can, d.lk.playerDark, d.lk.ink, d.lk.ink, 0.35, 0.7 * d.k, 0.5);
     poly(
       d.s,
       [
-        { x: mx - d.f * 0.8, y: y - 1.5 + up / 2 },
-        { x: mx + d.f * 0.8, y: y - 1.5 + up / 2 },
-        { x: mx + d.f * 0.8, y: y + 1.5 + up / 2 },
-        { x: mx - d.f * 0.8, y: y + 1.5 + up / 2 },
+        { x: x0, y: y - 1.7 },
+        { x: x0 + d.f * 1.3, y: y - 1.7 + up / 4 },
+        { x: x0 + d.f * 1.3, y: y + 1.7 + up / 4 },
+        { x: x0, y: y + 1.7 },
       ],
-      d.lk.player,
+      '#c9ccd2',
     );
-    poly(d.s, oval(x1, y + up, 0.7, 1.5, 8), '#4a3f3c');
+    poly(d.s, oval(x1, y + up, 0.8, 1.7, 8), '#2b2d38');
   },
   parts: ['shard', 'shard', 'bolt'],
 };
