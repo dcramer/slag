@@ -76,7 +76,7 @@ export interface TallKit {
 }
 
 /** Plan and build a tall level with a theme kit. */
-function sculptTall(ctx: SculptCtx, kit: TallKit): Shape {
+export function sculptTall(ctx: SculptCtx, kit: TallKit): Shape {
   const { rng, attempt } = ctx;
   const k = knobs(ctx);
   const { W, H } = k;
@@ -422,7 +422,7 @@ function perchFlight(g: Grid, l: Link): void {
 // Theme kits.
 
 /** Stone tower floors (2 thick), stair flights, crenellated battlements, arrow-slit tower walls. */
-const CASTLE: TallKit = {
+export const CASTLE_TOWER: TallKit = {
   style: 'castle',
   margin: 2,
   linkW: (rise) => stairW(rise),
@@ -453,7 +453,7 @@ const CASTLE: TallKit = {
 };
 
 /** Steel floors, stair stringers (one-way) or ladders, crates and ducts. */
-const FACTORY: TallKit = {
+export const FACTORY_TOWER: TallKit = {
   style: 'factory',
   margin: 1,
   linkW: (rise) => stairW(rise),
@@ -490,7 +490,7 @@ const FACTORY: TallKit = {
 };
 
 /** Solid rock: noise caverns, a tunnel carved per level, rung shafts between them, timber cap beams. */
-const MINE: TallKit = {
+export const MINE_TOWER: TallKit = {
   style: 'mine',
   margin: 1,
   linkW: () => 5,
@@ -533,7 +533,7 @@ const MINE: TallKit = {
 };
 
 /** Giant edge trunks, mossy branch decks, vine ladders, a canopy crown over the top. */
-const JUNGLE: TallKit = {
+export const JUNGLE_TOWER: TallKit = {
   style: 'jungle',
   margin: 3,
   linkW: () => 4,
@@ -583,7 +583,7 @@ const JUNGLE: TallKit = {
 };
 
 /** Stacked roofs with window facades hanging below, fire-escape ladders, rooftop clutter. */
-const ROOFTOPS: TallKit = {
+export const ROOFTOPS_TOWER: TallKit = {
   style: 'rooftops',
   margin: 1,
   linkW: () => 4,
@@ -619,7 +619,7 @@ const ROOFTOPS: TallKit = {
 };
 
 /** Jagged rock ledges over a lava floor, rock-step ramps, floating stones and spires. */
-const VOLCANO: TallKit = {
+export const VOLCANO_TOWER: TallKit = {
   style: 'volcano',
   margin: 1,
   linkW: (rise) => stairW(rise),
@@ -645,7 +645,7 @@ const VOLCANO: TallKit = {
 };
 
 /** Shelves of rock stacked up an icefall, rock-step flights between them; the ice is laid later (glacier.ts `glaze`). */
-const GLACIER: TallKit = {
+export const GLACIER_TOWER: TallKit = {
   style: 'glacier',
   margin: 1,
   linkW: (rise) => stairW(rise),
@@ -657,7 +657,6 @@ const GLACIER: TallKit = {
   },
 };
 
-export const glacierTall = (ctx: SculptCtx): Shape => sculptTall(ctx, GLACIER);
 /**
  * The three sets that never build race towers have tower kits of their own for Rising Slag's shaft (game/modes.ts):
  * the climb's structure is the builder's, the set brings its floors, connectors and dressing, and its look does the
@@ -665,7 +664,7 @@ export const glacierTall = (ctx: SculptCtx): Shape => sculptTall(ctx, GLACIER);
  */
 
 /** Hay lofts in a barn: packed-earth floors that grass and farm decor grow on, opened by plank loft boards; ladders and board stairs. */
-const FARM: TallKit = {
+export const FARM_TOWER: TallKit = {
   style: 'farm',
   margin: 1,
   linkW: (rise) => stairW(rise),
@@ -697,7 +696,7 @@ const FARM: TallKit = {
 };
 
 /** Warehouse decks over the water: two-row pier floors, crate stacks to hop, crate stair flights and ladders. */
-const HARBOR: TallKit = {
+export const HARBOR_TOWER: TallKit = {
   style: 'harbor',
   margin: 1,
   linkW: (rise) => stairW(rise),
@@ -722,7 +721,7 @@ const HARBOR: TallKit = {
 };
 
 /** A station shaft: thin hull decks with service gaps, ladders between them. Space's gravity spaces the decks itself (probe.ts). */
-const SPACE: TallKit = {
+export const SPACE_TOWER: TallKit = {
   style: 'space',
   margin: 1,
   linkW: () => 5,
@@ -736,13 +735,3 @@ const SPACE: TallKit = {
     return rungShaft(g, l, easyRise());
   },
 };
-
-export const farmTall = (ctx: SculptCtx): Shape => sculptTall(ctx, FARM);
-export const harborTall = (ctx: SculptCtx): Shape => sculptTall(ctx, HARBOR);
-export const spaceTall = (ctx: SculptCtx): Shape => sculptTall(ctx, SPACE);
-export const castleTall = (ctx: SculptCtx): Shape => sculptTall(ctx, CASTLE);
-export const factoryTall = (ctx: SculptCtx): Shape => sculptTall(ctx, FACTORY);
-export const mineTall = (ctx: SculptCtx): Shape => sculptTall(ctx, MINE);
-export const jungleTall = (ctx: SculptCtx): Shape => sculptTall(ctx, JUNGLE);
-export const rooftopsTall = (ctx: SculptCtx): Shape => sculptTall(ctx, ROOFTOPS);
-export const volcanoTall = (ctx: SculptCtx): Shape => sculptTall(ctx, VOLCANO);
