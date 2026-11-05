@@ -37,6 +37,8 @@ export const CAST_NOTES: Record<Kind, string> = {
   worm: 'Launched a cow once.',
   dragon: 'Small-batch hoarder.',
   hopper: '@!#?@!',
+  warrior: 'Crumbles under pressure.',
+  slayer: 'Hmm.',
 };
 
 export interface CastEntry {
