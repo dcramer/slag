@@ -497,6 +497,25 @@ export const BRIEFS: Record<string, Brief> = {
     // player's colour in the game); the wear stays off the head and the dome's outline but for one bent spike.
     worn: "a big square grey riveted patch plate (#9aa0a8) is bolted flat onto the middle of the green shell; a big chunk is broken out of the shell's cream rim near the bottom; the pale-blue paper crown sits crooked, one of its points torn and folded down; one of the shell's spikes is bent over sideways.",
   },
+  dragon: {
+    // The nod, each part of the read at race size: small and low on four short legs, side on (the horse is tall
+    // with a long neck, the dino upright); the horns swept straight back off the head (the head's outline, and
+    // back, never up like the king's); stubby wings standing up off the back (a dragon, not a lizard); the pale
+    // belly and the ridge of small spines (the purple dragon's markings, in neutral bone); the tail's arrowhead
+    // tip (the tip everyone draws him with).
+    // Ours, and the joke: the wings are umbrella cloth on bent spokes, and he carries his own light, a firefly
+    // in a jam jar tied to his tail.
+    // The palette is neutral (Decisions 4): the scales in the player's colour, the wing cloth a light of it; the
+    // belly, horns, spines and tip bone; the jar glass.
+    design:
+      'The character: a small cute cartoon baby dragon standing low on all four short stubby legs, seen from its side, facing right, its whole outline unmistakably a little dragon, long and low with no neck. ' +
+      'Its big round head has a short blunt snout and one big eye, and two long pale bone horns (#ecdcb8) sweep straight back off the top of its head, flat and backward, longer than the head. ' +
+      'Two small stubby wings stand up off its shoulders, each made of umbrella cloth (#c4a2ea) stretched over three bent thin black metal spokes, the cloth scalloped between the spoke tips. ' +
+      'A row of small pale bone triangle spines runs along the top of its back. A pale bone belly (#ecdcb8). ' +
+      'A long thin tail curves out behind and ends in a big flat pale bone arrowhead tip; a small glass jam jar with a firefly glowing pale inside hangs from the tail on a string. ' +
+      'The head, body, legs and tail are all one purple (#8a5cc0).',
+    worn: "one wing's cloth is torn, a big flap of it hanging loose, and one of its spokes is bent and poking out past the cloth; a big square patch of grey cloth (#9a9c98) is sewn on the other wing with big stitches; the arrowhead tail tip is bent sideways and wrapped with a strip of grey tape.",
+  },
   horse: {
     // The nod, each part of the read at race size, and each a shape only a horse has in outline: four long legs
     // under a long barrel body (upright on two legs, ten blind readers took it for a fox or the bandicoot); a long
@@ -537,6 +556,24 @@ export const BRIEFS: Record<string, Brief> = {
       'On the very top of his head a tall spiky tuft of brown hair (#8a5a34) stands straight up in three big spikes. A huge round nose (#f0c8a0) sticks far out of the front of his face, two big oval eyes above it, peach skin (#f0c8a0). ' +
       'The body is a small round purple hooded top (#7b3fa6) with a big round pale ring on the chest, and a red neckerchief (#c9473f) tied round where his neck would be, between head and body.',
     worn: 'the gloves are washing-up gloves, each with its long cuff rolled down in a thick ring at the wrist; the far shoe is much bigger than the near one, a size too big, its toe curled up; a big silver safety pin is stuck through the front of the neckerchief; one spike of the hair tuft is bent over at its tip. Every glove and shoe still floats free of the body with white space all round it.',
+  },
+  hopper: {
+    // The nod, each part of the read at race size and each a shape in outline: the long tube snout sticking
+    // straight out front, wider at its open end (the read: nobody else in the cast has a horn for a nose, and it
+    // parts him from the puffball's plain ball); the round ball with no arms on two short legs with big feet
+    // (the arcade hopper, not a creature with hands); the big eyes on top (the face, looking down the snout);
+    // the hop, both feet together (the clips, never a walk).
+    // Ours, and the joke: the snout is a paper party blower, striped and creased, that unrolls when he cheers,
+    // and he hops in a pair of worn-out old trainers.
+    // The palette is neutral (Decisions 4): the ball in the player's colour, the snout a light tone of it; the
+    // trainers a worn canvas grey.
+    design:
+      'The character: a round orange ball (#e8742a) with no arms at all, seen from its side facing right. ' +
+      'Out of the front of the ball, from its middle, a long straight tube snout sticks straight out level to the right, as long as the ball is wide, a narrow cylinder that flares wider at its round open end like a trumpet, the open end dark inside (#3a2418); the snout is a paler orange (#f4a868). ' +
+      'Two big round white eyes with black pupils sit high on top of the ball, looking forward. ' +
+      'Under the ball two short thick orange legs, close together, end in two big chunky old canvas trainers (#d4d0c6) with thick grey soles (#8e8a84), the feet much bigger than the legs. ' +
+      'The snout is a paper party blower: two pale bands are wrapped round it.',
+    worn: 'the toe of the front trainer is split open and its sole flaps loose; the snout has a big crease kinked into it halfway along, so it bends a little but still points straight out; a round tuft of fur sticks up out of the back of the ball. The eyes stay as they are.',
   },
 };
 

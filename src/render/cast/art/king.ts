@@ -7,7 +7,7 @@ import { type D, type KindArt, poly, spot, Y } from '../kit';
  * The spiked turtle king (docs/CHARACTERS.md → The spiked turtle king), hand-inked from his drawn design:
  * side on, two shapes carry him, a smooth shell dome on his back with its rim and only three big spikes along
  * its top, and a big horned head out front with a heavy open jaw. Spikes all round read as a porcupine. His
- * skin is the player's colour, the shell and mane darks of it, the paper crown a light. A rendered kind draws
+ * skin is the player's colour, the shell a dark of it, the mane and the paper crown lights. A rendered kind draws
  * from its frames (src/render/cast/sprites/king/); this is what shows before they load, and on the hand-drawn
  * sheets.
  */
@@ -64,7 +64,7 @@ export const art: KindArt = {
     poly(
       d.s,
       [at(d, -0.02, 0.92), at(d, -1, 1.2), at(d, -1, 0.14), at(d, -0.58, 0.14), at(d, -0.3, 0.3), at(d, -0.12, 0.6), at(d, -0.04, 0.8)],
-      css(shift(d.c.body, -22)),
+      css(shift(d.c.body, -20)),
     );
     poly(d.s, [at(d, -0.6, 0.6), at(d, -0.36, 0.7), at(d, -0.3, 0.48), at(d, -0.52, 0.4)], PLATE);
     poly(
@@ -87,7 +87,7 @@ export const art: KindArt = {
     );
     // The banded belly, the mane swept back over the top of the shell, the open jaw's mouth.
     spot(d.s, d.bx(0.3) + d.f * d.W * 0.24, Y(d, 0.3), d.W * 0.14, d.H * 0.18, d.sd, BELLY, 0.08);
-    spot(d.s, d.bx(0.92) + d.f * d.W * 0.02, Y(d, 0.93), d.W * 0.12, d.H * 0.06, d.sd + 1, css(shift(d.c.body, -36)), 0.3);
+    spot(d.s, d.bx(0.92) + d.f * d.W * 0.02, Y(d, 0.93), d.W * 0.12, d.H * 0.06, d.sd + 1, css(shift(d.c.body, 20)), 0.3);
     poly(d.s, [at(d, 0.62, 0.62), at(d, 0.46, 0.7), at(d, 0.66, 0.74), at(d, 0.6, 0.71), at(d, 0.5, 0.7), at(d, 0.58, 0.65)], MOUTH);
     for (const s of SPIKES) tri(d, s, BONE);
     // The two horns.
