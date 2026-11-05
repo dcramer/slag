@@ -29,6 +29,22 @@ export function rollItem(pool: readonly ItemKind[], seed: number, uid: number, m
 }
 
 /**
+ * What a Rising Slag loop's box deals by rank (gen/level/loop-boxes.ts), the way a kart racer's boxes do: whoever
+ * is behind draws something to catch up with (a burst upward, a step, the shell that hunts the leader, a throw that
+ * bonks the one ahead), and whoever leads something to hold on with. Every item is ours already; none kills.
+ */
+export const CATCH_UP: { chase: readonly ItemKind[]; lead: readonly ItemKind[] } = {
+  chase: ['rocket', 'block', 'tax', 'boomerang'],
+  lead: ['shield', 'sword', 'block'],
+};
+
+/** Is the runner who knocked the box the leader, highest of everyone still racing (`RunnerView.up`)? */
+function leads(r: RunnerView, all: readonly RunnerView[]): boolean {
+  if (r.up === undefined) return true;
+  return !all.some((o) => o !== r && o.active && o.up !== undefined && o.up < r.up!);
+}
+
+/**
  * Hit from below (head flush with the underside) or bumped from the side
  * (flush with a side face, overlapping vertically). Standing on it never counts.
  */
@@ -70,8 +86,10 @@ defineModule<'mystery'>({
     for (const [cx, cy] of m.cells) {
       const x = cx * TILE + ctx.off[0];
       const y = cy * TILE + ctx.off[1];
-      if (!ctx.runners.some((r) => r.active && touches(r, x, y))) continue;
-      const kind = rollItem(m.pool, ctx.itemSeed ?? ctx.level.seed, ctx.r.pp.uid, ctx.mi, st.pops);
+      const hitter = ctx.runners.find((r) => r.active && touches(r, x, y));
+      if (!hitter) continue;
+      const pool = m.catchUp ? (leads(hitter, ctx.runners) ? CATCH_UP.lead : CATCH_UP.chase) : m.pool;
+      const kind = rollItem(pool, ctx.itemSeed ?? ctx.level.seed, ctx.r.pp.uid, ctx.mi, st.pops);
       // Out of the top, so whoever hit it has to hop up for it, or a rival snatches it. Under a low roof it drops out of the bottom instead.
       const roofed = tileAt(ctx.level, Math.floor((x + TILE / 2) / TILE), Math.floor((y - 1) / TILE)) === T_SOLID;
       ctx.spawnItem?.({ kind, x: x + TILE / 2, y: roofed ? y + TILE + 6 : y - 6, vx: 0, vy: roofed ? 60 : -190, grace: 14 });

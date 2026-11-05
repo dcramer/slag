@@ -3,7 +3,7 @@ import { tallEyes } from '../faces';
 import type { P } from '../../ink';
 
 /**
- * The cup-headed toon (docs/CHARACTERS.md → Roster): a white enamel camping mug for a head, its loop handle
+ * The cup-headed toon (docs/characters/cuptoon.md): a white enamel camping mug for a head, its loop handle
  * out the back and a soggy straw flopped over out of the tea, on a tiny body of high-waisted shorts, hose
  * limbs, white gloves and big shoes. The shorts are the player's colour; the rim, the straw and the tea-bag
  * tag are tones of it; the enamel, the tea and the shoes are neutrals. A rendered kind draws from its frames

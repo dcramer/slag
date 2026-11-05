@@ -6,7 +6,7 @@
 
 /** One material of the model as the game paints it. */
 export interface Role {
-  /** The flat colour, from the kind's palette in docs/CHARACTERS.md. */
+  /** The flat colour, from the kind's palette in docs/characters/<kind>.md. */
   color: string;
   /**
    * Colours this role shows as in the model's texture. Every texel goes to the role of its nearest

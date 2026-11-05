@@ -13,6 +13,7 @@
   "bracketSpacing": true,
   "ignorePatterns": [
     "package-lock.json",
-    ".next/**"
+    ".next/**",
+    "src/render/cast/sprites/*/frames.ts"
   ]
 }

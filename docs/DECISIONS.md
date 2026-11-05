@@ -102,8 +102,8 @@ Every game design decision, preference and direction the owner has given, groupe
 - **Rising Slag's leash is set the way SpeedRunners' camera is, in seconds behind the leader (about 3–4 s): 4.5, 3.75 and 3 s of climb by lap, squeezing from 30 s.** "hows our difficulty vs speedrunners" / "Lets do it"
   2026-11-04 · `done` · DESIGN.md → Modes; `TIER_LEASH_SECONDS`, `SQUEEZE` in `src/gen/level/tide.ts`
   Changed: 18, 15 and 8 rows (the hard laps about 2 s), squeezing from 45 s.
-- **Catch-up for the trailing pack is open: rethink which items exist, and maybe give loops mystery boxes of their own rather than only placed ones.** "im not sure on (2) we might wanna rethink which items exist, and/or add mystery boxes by default maybe? not just placed ones?"
-  2026-11-04 · `open` · TODO.md → 31
+- **Catch-up for the trailing pack: rethink which items exist, and maybe give loops mystery boxes of their own rather than only placed ones.** "im not sure on (2) we might wanna rethink which items exist, and/or add mystery boxes by default maybe? not just placed ones?" / "Boxes first"
+  2026-11-04 · `done` for the boxes (every loop places its own, dealing by rank: `src/gen/level/loop-boxes.ts`, `CATCH_UP`); which items exist is `open` (a grapple, a shot that hits whoever is above you) · DESIGN.md → Modes, TODO.md → 31
 - **A rule the level is built from (gravity, weather) rebuilds the lobby's level for everyone at once.**
   2026-11-02 · git `e64c3e5` · `done` · DESIGN.md → Rules
 
@@ -754,6 +754,12 @@ Every game design decision, preference and direction the owner has given, groupe
   2026-11-02 15:27Z · `done` · git `8b1ea2e`
 - **Resume interrupted agents, and resume merging.** "Resume all" / "Yes, resume merging"
   2026-11-02 07:22Z, 16:20Z · `done`
+- **Unused code is part of the gate: knip runs in `pnpm check` and CI, and what it finds is deleted, not ignored.** "add knip if it snot there too"
+  2026-11-04 · `done` · AGENTS.md → Commands
+- **Full sweeps move out of `pnpm test`: it runs a rotation of each sweep and `tests/stats/` runs the whole product, through one helper in `tests/lib/`.** "some of our tests could maybe be a dedicated suite or benchmark or something else thats not run on every change?"
+  2026-11-04 · `done` · AGENTS.md → Definition of done
+- **Keep what an audit or a fix teaches, in short docs: a line in the owning AGENTS.md for a rule, a TODO item for open work, no long write-ups.** "we dont need crazy docs but i wanna make sure we keep learnings"
+  2026-11-04 · `done` · AGENTS.md, TODO.md → 33
 - **Make the GitHub Actions check required (an owner step).**
   2026-11-02 · `open` · TODO.md → 10
 - **Apply the quick wins from the transcript review: guard-safe commands for worktree agents, one `pnpm land` per batch instead of a merge and a gate per branch, and `SNAP_VERSION` bumped once at landing, never in a branch.** "Apply quick wins"
