@@ -102,8 +102,8 @@ Every game design decision, preference and direction the owner has given, groupe
 - **Rising Slag's leash is set the way SpeedRunners' camera is, in seconds behind the leader (about 3–4 s): 4.5, 3.75 and 3 s of climb by lap, squeezing from 30 s.** "hows our difficulty vs speedrunners" / "Lets do it"
   2026-11-04 · `done` · DESIGN.md → Modes; `TIER_LEASH_SECONDS`, `SQUEEZE` in `src/gen/level/tide.ts`
   Changed: 18, 15 and 8 rows (the hard laps about 2 s), squeezing from 45 s.
-- **Catch-up for the trailing pack is open: rethink which items exist, and maybe give loops mystery boxes of their own rather than only placed ones.** "im not sure on (2) we might wanna rethink which items exist, and/or add mystery boxes by default maybe? not just placed ones?"
-  2026-11-04 · `open` · TODO.md → 31
+- **Catch-up for the trailing pack: rethink which items exist, and maybe give loops mystery boxes of their own rather than only placed ones.** "im not sure on (2) we might wanna rethink which items exist, and/or add mystery boxes by default maybe? not just placed ones?" / "Boxes first"
+  2026-11-04 · `done` for the boxes (every loop places its own, dealing by rank: `src/gen/level/loop-boxes.ts`, `CATCH_UP`); which items exist is `open` (a grapple, a shot that hits whoever is above you) · DESIGN.md → Modes, TODO.md → 31
 - **A rule the level is built from (gravity, weather) rebuilds the lobby's level for everyone at once.**
   2026-11-02 · git `e64c3e5` · `done` · DESIGN.md → Rules
 
