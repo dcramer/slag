@@ -517,6 +517,30 @@ export const BRIEFS: Record<string, Brief> = {
       'The head, neck, body and legs are all one colour.',
     worn: 'it is a cheap horse costume: a thick knitted red scarf (#c9473f) is wound round the top of its neck just under the head, one short end hanging down its chest; a big silver zip runs straight down the front of its chest from under the scarf to between its front legs, stuck open at the bottom, its two sides parted in a V; a big square patch of grey cloth is sewn on the knee of one front leg with big stitches.',
   },
+  rapper: {
+    // The nod, each part of the read at race size: the tall knit beanie standing straight up off the head, a thumb
+    // with a round top and a snug band (the head's outline; with a brim, or leaning back to a point, it read as a
+    // wizard's hat); the long floppy ear hanging behind the head (a dog, and not the zapmouse, whose ears stand up);
+    // the round nose on a snout low on the face (level with the band, it read as a cap's bill: the plumber); the
+    // flat card body with a sliver of edge down the back (the paper look the original is known for); the mic held out
+    // in front (the rapper). Side on: in the three-quarter view the beanie, head, ears and mic were one tall pill in
+    // silhouette. The baggy tee and shorts and big trainers are the colour block, on a chubby body, so the cuptoon's
+    // tight hose-limbed toon doesn't rhyme.
+    // Ours, and the joke: he's a cardboard shop standee come loose (the card's edge, a fold crease across his middle, a
+    // torn bite out of the card at his shorts). The karaoke mic's coiled cord went: hanging below his arm, it read as
+    // a monkey's curly tail.
+    // The palette is neutral (Decisions 4): the beanie and the tee in the player's colour, the shorts a dark of it;
+    // the fur cream, the nose brown, the trainers grey, the mic black, the card's edge plain cardboard.
+    // The design was reached in edits (art/sprites/rapper/design.prompt.txt); this is it as one brief, for a redraw.
+    design:
+      'The character: a chubby cartoon puppy who is a flat cardboard cut-out, seen side on in profile, facing right. ' +
+      'His signature: a very tall knitted beanie (#e8922e) standing straight up on his head like a thumb, round on top, never pointed, with a snug thick ribbed band only a little wider than his head and no brim. ' +
+      "He holds a chunky black cordless microphone out in front of him at arm's length, clear of his face. " +
+      'A big round head of pale cream fur (#f1dfb8) under the band, a snout low on his face ending in a big round dark brown nose (#4a3428), two eyes, one long floppy dog ear hanging down behind his head past his chin. ' +
+      'A short round body in a baggy orange tee (#e8922e), baggy dark brown-orange shorts (#9a4f1e), short cream legs, huge chunky grey trainers (#9aa0a8) with thick pale soles. ' +
+      'Down the back edge of his outline a narrow strip of plain brown cardboard edge (#b8946a) shows, the thickness of the cut-out.',
+    worn: "he is a cardboard shop standee come loose: a crisp fold crease runs straight across his middle at the waist, the card kinked a little there; a torn bite is missing from the card at the edge of his shorts, showing the rough brown card inside. The beanie's shape and the ear don't change.",
+  },
 };
 
 function brief(kind: string): Brief {
