@@ -18,7 +18,7 @@ export const PASS_TARGETS: Record<BotLevel, Record<Difficulty, number>> = {
 
 /**
  * Where each mode's measurement may land today before its suite fails: bands around what the suite measured
- * (seeds 1–40 for a race, 1–16 for a loop), so they catch a regression, not the distance to the target. A band
+ * (seeds 1–40 for a race, 1–32 for a loop), so they catch a regression, not the distance to the target. A band
  * that sits away from its target is a known gap, said beside it; close the gap and move the band, never the target.
  */
 export const PASS_BANDS: Record<ModeId, Record<BotLevel, Record<Difficulty, readonly [number, number]>>> = {
@@ -30,11 +30,13 @@ export const PASS_BANDS: Record<ModeId, Record<BotLevel, Record<Difficulty, read
     normal: { gentle: [0.8, 1], medium: [0.55, 0.82], hard: [0.5, 0.8] },
     hard: { gentle: [0.88, 1], medium: [0.68, 0.92], hard: [0.7, 0.95] },
   },
-  // Measured lap by lap round the loop (seeds 1–16): Easy 81 62 38, Normal 94 80 42, Hard 94 73 64, the slag on
-  // its leash to the leader (gen/level/tide.ts): every level within about 12 points of its targets.
+  // Measured lap by lap round the loop (seeds 1–32): Easy 63 75 53, Normal 88 75 43, Hard 84 74 75, the slag a
+  // racer's-camera gap behind the leader (4.5, 3.75 and 3 s of climb, squeezing from 30 s; gen/level/tide.ts).
+  // Normal sits within 7 points of its targets. Easy's later laps read high because only the Easy runs that got
+  // through the first are counted there, and those are its good ones.
   slag: {
-    easy: { gentle: [0.65, 0.95], medium: [0.45, 0.8], hard: [0.2, 0.6] },
-    normal: { gentle: [0.8, 1], medium: [0.62, 0.95], hard: [0.25, 0.6] },
-    hard: { gentle: [0.8, 1], medium: [0.58, 0.9], hard: [0.45, 0.82] },
+    easy: { gentle: [0.5, 0.8], medium: [0.58, 0.9], hard: [0.35, 0.72] },
+    normal: { gentle: [0.78, 1], medium: [0.6, 0.9], hard: [0.28, 0.6] },
+    hard: { gentle: [0.72, 0.96], medium: [0.6, 0.88], hard: [0.58, 0.9] },
   },
 };
