@@ -2,18 +2,15 @@ import type { Rng } from '../../../core/rng';
 import { volcanoOwns } from '../../stage/volcano';
 import { finish, Grid, hintGap, noise1D } from '../kit';
 import { jumpProfile } from '../probe';
-import type { SculptCtx, Sculptor } from '../types';
+import type { Sculptor } from '../types';
 import {
-  type Claim,
-  claimSite,
+  claimFlatSite,
   jumpCount,
   jumpCrossing,
   jumpGap,
   easyRise,
-  flatten,
   hardGap,
   hopGap,
-  type Knobs,
   knobs,
   pit,
   relax,
@@ -57,7 +54,7 @@ export const volcano: Sculptor = (ctx) => {
   locked.fill(1, 0, 6);
   locked.fill(1, W - 6, W);
   // The stage concept's landmark comes first; it owns one crossing, or both where its box made room for a two-part one.
-  const claim = ctx.concept ? claimVolcanoSite(ctx, k, slots, surf, locked) : null;
+  const claim = ctx.concept ? claimFlatSite(ctx, k, slots, surf, locked) : null;
   if (ctx.concept && !claim) return finish(g, { row: sRow - 1 }, { row: gRow - 1 }, 'volcano:unclaimed');
   const challenges = rollChallenges(attempt, k);
   g.wantsProps = challenges > 0;
@@ -174,22 +171,6 @@ export const volcano: Sculptor = (ctx) => {
 
   return finish(g, { row: sRow - 1 }, { row: gRow - 1 }, `volcano:${style}`);
 };
-
-/**
- * The landmark's site (claimSite), on ground levelled a couple of columns past it either side and never
- * so low that its tubes have no rock under them. Nothing else lands within a running jump of its far
- * side, where a pit could be cleared bare off its top.
- */
-function claimVolcanoSite(ctx: SculptCtx, k: Knobs, slots: Slots, surf: number[], locked: Uint8Array): Claim | null {
-  const claim = claimSite(ctx, k, slots, surf, locked);
-  if (!claim) return null;
-  const { x, w } = claim.at;
-  const ground = Math.min(claim.ground, k.H - 5);
-  slots.mark(x - 3, x + w + 8);
-  flatten(surf, k.H, x - 2, x + w + 1, ground);
-  for (let i = Math.max(0, x - 3); i <= Math.min(k.W - 1, x + w + 2); i++) locked[i] = 1;
-  return { ...claim, ground, at: { ...claim.at, y: ground - claim.at.h } };
-}
 
 /** Floating rock: flat top at row y, tapering to a dripping point underneath. */
 function rock(g: Grid, rng: Rng, x: number, y: number, w: number): void {

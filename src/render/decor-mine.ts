@@ -3,6 +3,7 @@ import type { DecorDef } from './decor';
 import { blob, inkFor, line, type P, stroke } from './ink';
 import { ball, bar, barLine, boxPts, dot, glint, part, path, poly, tick } from './ink-props';
 import { circle, flutter, glowDot, light } from './kit';
+import { bits01, low16 } from './decor-kit';
 
 /**
  * The mine's decor, inked like the rock it stands on: a heap of ore, a crate of dynamite, a canary in its
@@ -11,9 +12,6 @@ import { circle, flutter, glowDot, light } from './kit';
  * Only a lamp glows (it's a light); ore glints are flat bright flecks, never a halo. What hangs sways only
  * when a gust really blows (`flutter`, 0 in still air).
  */
-
-const k01 = (seed: number, n: number) => ((seed >>> n) % 1000) / 1000;
-const sd = (seed: number) => seed & 0xffff;
 
 const WOOD: HSL = hsl3(28, 36, 30);
 const IRON: HSL = hsl3(220, 8, 24);
@@ -37,7 +35,7 @@ function cord(s: CanvasRenderingContext2D, pts: readonly P[], w: number, c: HSL,
 
 /** A pointed rock spike from (x, y) along `dir` (-1 up, 1 down), `h` long and `w` wide at its root. */
 function spike(s: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, dir: number, c: HSL, seed: number) {
-  const lean = (k01(seed, 3) - 0.5) * w * 0.6;
+  const lean = (bits01(seed, 3) - 0.5) * w * 0.6;
   part(s, poly(x - w / 2, y, x + lean, y + dir * h, x + w / 2, y), c, seed, { depth: 0.5, thin: 0.35, thick: 0.9 });
   tick(s, x - w * 0.15, y + dir * h * 0.3, x + lean * 0.6, y + dir * h * 0.75, 0.4, seed + 1, css(c, 14));
 }
@@ -57,7 +55,7 @@ export const MINE_DECOR = {
         [1.8, -4.8, 1.9],
         [0, -7.2, 1.7],
       ];
-      for (const [i, [x, y, r]] of lumps.entries()) ball(s, d.x + x * k, d.y + y * k, r * k, shift(rock, (i % 3) * 4), sd(d.seed) + i, css(rock, 26));
+      for (const [i, [x, y, r]] of lumps.entries()) ball(s, d.x + x * k, d.y + y * k, r * k, shift(rock, (i % 3) * 4), low16(d.seed) + i, css(rock, 26));
       for (let i = 0; i < 4; i++) {
         s.fillStyle = css(d.color, 8);
         const [x, y] = lumps[(i * 2 + (d.seed & 3)) % lumps.length];
@@ -73,11 +71,15 @@ export const MINE_DECOR = {
       const f = d.flip ? -1 : 1;
       for (let i = 0; i < 4; i++) {
         const x = d.x + (-3.2 + i * 2.1) * k;
-        const h = (8.5 + k01(d.seed, i * 4) * 1.6) * k;
-        part(s, boxPts(x - 0.8 * k, d.y - h, 1.7 * k, h - 3, 0.6, sd(d.seed) + i, 0.05), shift(d.color, (i % 2) * 5), i, { depth: 0.3, thin: 0.3, thick: 0.6 });
+        const h = (8.5 + bits01(d.seed, i * 4) * 1.6) * k;
+        part(s, boxPts(x - 0.8 * k, d.y - h, 1.7 * k, h - 3, 0.6, low16(d.seed) + i, 0.05), shift(d.color, (i % 2) * 5), i, {
+          depth: 0.3,
+          thin: 0.3,
+          thick: 0.6,
+        });
       }
-      const crate = boxPts(d.x - 5 * k, d.y - 5.4 * k, 10 * k, 5.6 * k, 0.6, sd(d.seed) + 9, 0.12);
-      part(s, crate, WOOD, sd(d.seed) + 9, { depth: 0.6, thin: 0.4, thick: 1 });
+      const crate = boxPts(d.x - 5 * k, d.y - 5.4 * k, 10 * k, 5.6 * k, 0.6, low16(d.seed) + 9, 0.12);
+      part(s, crate, WOOD, low16(d.seed) + 9, { depth: 0.6, thin: 0.4, thick: 1 });
       tick(s, d.x - 4.4 * k, d.y - 2.8 * k, d.x + 4.4 * k, d.y - 2.8 * k, 0.5, 3, css(WOOD, -14));
       // The stencilled warning on its side: a red diamond, no words.
       s.fillStyle = css(RED, 6);
@@ -172,7 +174,7 @@ export const MINE_DECOR = {
         { w: 0.5, seed: 4, taper: [0.02, 0.04], press: 0 },
       );
       const pail = poly(bx - 3 * k, by + 2 * k, bx + 3 * k, by + 2 * k, bx + 2.3 * k, by + 7 * k, bx - 2.3 * k, by + 7 * k);
-      part(s, pail, d.color, sd(d.seed), { depth: 0.5, thin: 0.35, thick: 0.8 });
+      part(s, pail, d.color, low16(d.seed), { depth: 0.5, thin: 0.35, thick: 0.8 });
       tick(s, bx - 2.7 * k, by + 3.4 * k, bx + 2.7 * k, by + 3.4 * k, 0.5, 9, css(d.color, -16));
       glint(s, poly(bx - 1.6 * k, by + 3.8 * k, bx - 1.3 * k, by + 6.4 * k), css(d.color, 26), 0.5);
     },
@@ -186,9 +188,9 @@ export const MINE_DECOR = {
       cord(s, poly(d.x - 7 * k * f, d.y - 0.8, d.x + 2 * k * f, d.y - 0.8), 0.8, shift(IRON, 14), 2);
       for (const dx of [-5, -1.5])
         part(s, boxPts(d.x + dx * k * f - 0.8, d.y - 0.6, 1.6 * k, 1.2, 0.3, dx + 30, 0.1), WOOD, dx + 30, { depth: 0.2, thin: 0.3, thick: 0.5 });
-      part(s, at(d.x, d.y, k, f, 0.5, 0, 3.5, 0, 3.5, -7, 2, -7), WOOD, sd(d.seed), { depth: 0.4, thin: 0.35, thick: 0.8 });
-      part(s, at(d.x, d.y, k, f, -1.6, -2, 0.6, -2, 3.6, -6.4, 3.6, -5), shift(WOOD, -6), sd(d.seed) + 1, { depth: 0.3, thin: 0.3, thick: 0.7 });
-      part(s, boxPts(d.x + (f > 0 ? -0.5 : -4.8) * k, d.y - 7.6 * k, 5.3 * k, 2.2 * k, 0.4, sd(d.seed) + 2, 0.1), d.color, 4, {
+      part(s, at(d.x, d.y, k, f, 0.5, 0, 3.5, 0, 3.5, -7, 2, -7), WOOD, low16(d.seed), { depth: 0.4, thin: 0.35, thick: 0.8 });
+      part(s, at(d.x, d.y, k, f, -1.6, -2, 0.6, -2, 3.6, -6.4, 3.6, -5), shift(WOOD, -6), low16(d.seed) + 1, { depth: 0.3, thin: 0.3, thick: 0.7 });
+      part(s, boxPts(d.x + (f > 0 ? -0.5 : -4.8) * k, d.y - 7.6 * k, 5.3 * k, 2.2 * k, 0.4, low16(d.seed) + 2, 0.1), d.color, 4, {
         depth: 0.3,
         thin: 0.3,
         thick: 0.7,
@@ -204,8 +206,8 @@ export const MINE_DECOR = {
       const k = d.size;
       const f = d.flip ? -1 : 1;
       const h = 22 * k;
-      part(s, boxPts(d.x - 1.1 * k, d.y - h, 2.2 * k, h, 0.4, sd(d.seed), 0.06), WOOD, sd(d.seed), { depth: 0.4, thin: 0.35, thick: 0.8 });
-      part(s, boxPts(d.x - 1.4 * k + (f > 0 ? 0 : -4.6 * k), d.y - h + 1.5 * k, 7.4 * k, 1.6 * k, 0.3, sd(d.seed) + 1, 0.06), WOOD, sd(d.seed) + 1, {
+      part(s, boxPts(d.x - 1.1 * k, d.y - h, 2.2 * k, h, 0.4, low16(d.seed), 0.06), WOOD, low16(d.seed), { depth: 0.4, thin: 0.35, thick: 0.8 });
+      part(s, boxPts(d.x - 1.4 * k + (f > 0 ? 0 : -4.6 * k), d.y - h + 1.5 * k, 7.4 * k, 1.6 * k, 0.3, low16(d.seed) + 1, 0.06), WOOD, low16(d.seed) + 1, {
         depth: 0.3,
         thin: 0.3,
         thick: 0.7,
@@ -242,8 +244,8 @@ export const MINE_DECOR = {
       const n = 2 + (d.seed % 2);
       for (let i = 0; i < n; i++) {
         const x = d.x + (i - (n - 1) / 2) * 3 * k * (d.flip ? -1 : 1);
-        const h = (i === 0 ? 9 : 4 + k01(d.seed, i * 5) * 3) * k;
-        spike(s, x, d.y + 0.5, (i === 0 ? 3.6 : 2.6) * k, h, -1, shift(d.color, -i * 4), sd(d.seed) + i);
+        const h = (i === 0 ? 9 : 4 + bits01(d.seed, i * 5) * 3) * k;
+        spike(s, x, d.y + 0.5, (i === 0 ? 3.6 : 2.6) * k, h, -1, shift(d.color, -i * 4), low16(d.seed) + i);
       }
     },
   },
@@ -256,8 +258,8 @@ export const MINE_DECOR = {
       let tip = { x: d.x, y: d.y };
       for (let i = 0; i < n; i++) {
         const x = d.x + (i - (n - 1) / 2) * 2.6 * k;
-        const h = (i === 0 ? 8 + (d.seed % 4) : 3 + k01(d.seed, i * 3) * 3) * k;
-        spike(s, x, d.y - 0.5, (i === 0 ? 3.2 : 2.2) * k, h, 1, shift(d.color, -i * 4), sd(d.seed) + i);
+        const h = (i === 0 ? 8 + (d.seed % 4) : 3 + bits01(d.seed, i * 3) * 3) * k;
+        spike(s, x, d.y - 0.5, (i === 0 ? 3.2 : 2.2) * k, h, 1, shift(d.color, -i * 4), low16(d.seed) + i);
         if (i === 0) tip = { x, y: d.y + h };
       }
       ball(s, tip.x, tip.y + 1.2, 0.7, hsl3(200, 30, 70), 3, 'rgba(255,255,255,0.9)');
@@ -273,7 +275,7 @@ export const MINE_DECOR = {
       s.fillStyle = css(d.color, 40);
       line(s, d.x, d.y - 2.1, d.x + w, d.y - 2.1, { w: 0.35, seed: 5, taper: [0, 0], press: 0 });
       if (d.seed % 2) {
-        const x = d.x + w * k01(d.seed, 7);
+        const x = d.x + w * bits01(d.seed, 7);
         tick(s, x, d.y - 0.4, x + 2.6, d.y - 1.2, 0.6, 9, css(d.color, 20));
       }
     },

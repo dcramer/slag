@@ -8,8 +8,8 @@ import { light, type RC } from '../../kit';
 import { beamOf, type DrawCtx } from '../common';
 import { SHELLS } from '../modules/deco-shells';
 import { groundBelowPx } from '../modules/setpiece';
-import type { Deco, Rotor, ThemeSkins } from './common';
-import { bands, CONCRETE, flat, FRAME, type Haze, HAZARD, hazer, IRON, member, PAINT, rivets, STEEL } from './factory-ink';
+import { type Deco, flat, type Haze, hazer, type Rotor, type ThemeSkins } from './common';
+import { bands, CONCRETE, FRAME, HAZARD, IRON, member, PAINT, rivets, SHELL, STEEL } from './factory-ink';
 import { boilerStack, factoryFacade, factoryPiece } from './factory-works';
 
 /**
@@ -51,7 +51,7 @@ const sawsOf = (d: DrawCtx) => d.r.mods.find((x): x is Swinger => x.type === 'sw
  */
 function flywheel(R: number, cars: number, t: Haze) {
   const pad = 10;
-  return sprite(`gw|rim|${R | 0}|${cars}|${t.key}`, -R - pad, -R - pad, 2 * (R + pad), 2 * (R + pad), (g) => {
+  return sprite(`gw|rim|${R | 0}|${cars}|${t.k}`, -R - pad, -R - pad, 2 * (R + pad), 2 * (R + pad), (g) => {
     const outer = R + 5;
     const inner = R - 8;
     // Spokes first, under the rims: a heavy one to every car, a light one between.
@@ -116,7 +116,7 @@ function flywheel(R: number, cars: number, t: Haze) {
  * a cross-tie with the safety board on two chains, and the drive motor between the feet. Relative to the axle.
  */
 function aFrame(spread: number, drop: number, R: number, t: Haze) {
-  return sprite(`gw|frame|${spread | 0}|${drop | 0}|${R | 0}|${t.key}`, -spread - 30, -24, 2 * spread + 60, drop + 26, (g) => {
+  return sprite(`gw|frame|${spread | 0}|${drop | 0}|${R | 0}|${t.k}`, -spread - 30, -24, 2 * spread + 60, drop + 26, (g) => {
     for (const k of [-1, 1]) {
       const fx = k * spread;
       // The leg: two chords and a web, a box girder you can see through.
@@ -225,7 +225,7 @@ function belt(rc: RC, ax: number, ay: number, bx: number, by: number, ra: number
 const greatWheelShell = (rc: RC, m: Deco, d: DrawCtx) => {
   const w = wheelOf(d);
   if (!w) return SHELLS.flywheel?.(rc, m, d);
-  const t = hazer(d);
+  const t = hazer(d, SHELL);
   const hx = w.hub[0] + d.off[0];
   const hy = w.hub[1] + d.off[1];
   const R = w.arm;
@@ -364,7 +364,7 @@ const greatWheel = {
  * standing up behind the walkway, posts down each side with hazard feet, and the press's number.
  */
 function pressFrame(w: number, down: number, crown: number, n: number, t: Haze) {
-  return sprite(`sl|frame|${w | 0}|${down | 0}|${crown | 0}|${n}|${t.key}`, -w / 2 - 14, -crown - 6, w + 28, down + crown + 8, (g) => {
+  return sprite(`sl|frame|${w | 0}|${down | 0}|${crown | 0}|${n}|${t.k}`, -w / 2 - 14, -crown - 6, w + 28, down + crown + 8, (g) => {
     const half = w / 2 + 6;
     for (const k of [-1, 1]) {
       const x = k * half;
@@ -395,7 +395,7 @@ function pressFrame(w: number, down: number, crown: number, n: number, t: Haze) 
 
 /** The conveyor's drive drum at one end of the line, behind the belt. */
 function drum(t: Haze) {
-  return sprite(`sl|drum|${t.key}`, -12, -12, 24, 24, (g) => {
+  return sprite(`sl|drum|${t.k}`, -12, -12, 24, 24, (g) => {
     flat(g, ovalPts(0, 0, 10, 10, 3, 0.02, 20), IRON, t, 4, 1.2);
     for (let i = 0; i < 6; i++) {
       const a = (i / 6) * Math.PI * 2;
@@ -407,7 +407,7 @@ function drum(t: Haze) {
 const stampingLineShell = (rc: RC, m: Deco, d: DrawCtx) => {
   const presses = d.r.mods.filter((x): x is Piston => x.type === 'piston');
   if (!presses.length) return SHELLS.gantry?.(rc, m, d);
-  const t = hazer(d);
+  const t = hazer(d, SHELL);
   const s = rc.s;
   const x0 = m.at[0] + d.off[0];
   const top = m.at[1] + d.off[1] - TILE;

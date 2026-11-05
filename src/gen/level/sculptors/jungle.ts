@@ -1,24 +1,8 @@
 import type { Rng } from '../../../core/rng';
 import { jungleOwns } from '../../stage/jungle';
 import { carveCorridor, finish, Grid, noise1D, noise2D, smoothCA } from '../kit';
-import type { SculptCtx, Sculptor } from '../types';
-import {
-  type Claim,
-  claimSite,
-  jumpCount,
-  jumpCrossing,
-  easyRise,
-  flatten,
-  hardGap,
-  type Knobs,
-  knobs,
-  pit,
-  raiseLandmark,
-  relax,
-  keepClear,
-  rollChallenges,
-  Slots,
-} from './common';
+import type { Sculptor } from '../types';
+import { claimFlatSite, jumpCount, jumpCrossing, easyRise, hardGap, knobs, pit, raiseLandmark, relax, keepClear, rollChallenges, Slots } from './common';
 import { jungleTall } from './tall';
 
 type JungleStyle = 'canopy' | 'temple' | 'grotto';
@@ -55,7 +39,7 @@ export const jungle: Sculptor = (ctx) => {
   locked.fill(1, 0, 6);
   locked.fill(1, W - 6, W);
   // The stage concept's landmark comes first; it owns one crossing, or both where its box made room for a two-part one.
-  const claim = ctx.concept ? claimJungleSite(ctx, k, slots, surf, locked) : null;
+  const claim = ctx.concept ? claimFlatSite(ctx, k, slots, surf, locked) : null;
   if (ctx.concept && !claim) return finish(g, { row: sRow - 1 }, { row: gRow - 1 }, 'jungle:unclaimed');
 
   // Pools: hard ones get a broken log, easy ones now and then a whole one, or stones.
@@ -141,22 +125,6 @@ export const jungle: Sculptor = (ctx) => {
 
   return finish(g, { row: sRow - 1 }, { row: gRow - 1 }, `jungle:${style}`);
 };
-
-/**
- * The landmark's site (claimSite), on ground levelled a couple of columns past it either side and never so
- * low that its river has no bank under it. Nothing else lands within a running jump of its far side, where
- * a pool could be cleared bare off its top.
- */
-function claimJungleSite(ctx: SculptCtx, k: Knobs, slots: Slots, surf: number[], locked: Uint8Array): Claim | null {
-  const claim = claimSite(ctx, k, slots, surf, locked);
-  if (!claim) return null;
-  const { x, w } = claim.at;
-  const ground = Math.min(claim.ground, k.H - 5);
-  slots.mark(x - 3, x + w + 8);
-  flatten(surf, k.H, x - 2, x + w + 1, ground);
-  for (let i = Math.max(0, x - 3); i <= Math.min(k.W - 1, x + w + 2); i++) locked[i] = 1;
-  return { ...claim, ground, at: { ...claim.at, y: ground - claim.at.h } };
-}
 
 /** CA canopy band hanging from the top edge, with vine one-ways dangling from it, none of it in columns `off[0]..off[1]`. */
 function canopy(g: Grid, rng: Rng, depth: number, off: readonly [number, number]): void {

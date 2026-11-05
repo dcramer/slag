@@ -81,6 +81,16 @@ export function reachMin(min: number): number {
 }
 
 /**
+ * The narrowest and widest crossing `hardGap(rng, parts)` rolls at this gravity (the probe's by default). A
+ * landmark that owns its crossing sizes its box by the top end, so the roll always fits.
+ */
+export function hardGapRange(parts = 1, gravity?: number): [number, number] {
+  const j = jumpProfile(gravity);
+  const lo = parts === 1 ? j.gap + 2 : j.gapAt(-6) + j.rise + 1;
+  return [lo, Math.max(lo, parts === 1 ? BRIDGE_W + j.walkGap * 2 : j.gap + BRIDGE_W * 2 + j.walkGap + 1)];
+}
+
+/**
  * A gap no running jump clears (pair it with `undercut` on the far bank so it
  * can't be wall-climbed from below), but that `parts` bridges close (1 or 2).
  * A bridge is too short to run on, so a player runs and jumps onto it from
@@ -95,8 +105,7 @@ export function reachMin(min: number): number {
  */
 export function hardGap(rng: Rng, parts = 1): number {
   const j = jumpProfile();
-  const lo = parts === 1 ? j.gap + 2 : j.gapAt(-6) + j.rise + 1;
-  const hi = Math.max(lo, parts === 1 ? BRIDGE_W + j.walkGap * 2 : j.gap + BRIDGE_W * 2 + j.walkGap + 1);
+  const [lo, hi] = hardGapRange(parts);
   const far = Math.min(hi, Math.max(lo, j.gapAt(-6) + 1));
   return rng.chance(0.3) ? rng.int(lo, far) : rng.int(far, hi);
 }
@@ -236,7 +245,7 @@ export interface Claim {
 }
 
 /** Columns a landmark keeps from either end: the spawn or goal pocket plus the set pieces' safety margin. */
-const SITE_MARGIN = POCKET + SAFE_TILES;
+export const SITE_MARGIN = POCKET + SAFE_TILES;
 
 /**
  * Give the level's stage concept (ctx.concept) its site, before the ground is
@@ -267,6 +276,24 @@ export function claimSite(ctx: SculptCtx, k: Knobs, slots: Slots, surf: number[]
     return { concept, at: { x, y: ground - h, w, h }, ground };
   }
   return null;
+}
+
+/**
+ * `claimSite` on ground levelled a couple of columns past the box either side (and locked against `relax`),
+ * never lower than `lowest` rows off the bottom, so the crossing a landmark digs has a bank under it. Nothing
+ * else lands within a running jump of its far side, where a crossing could be cleared bare off its top. With
+ * `sky`, a box that levelling pushed down must still have a row of sky over it, or there's no site.
+ */
+export function claimFlatSite(ctx: SculptCtx, k: Knobs, slots: Slots, surf: number[], locked: Uint8Array, lowest = 5, sky = false): Claim | null {
+  const claim = claimSite(ctx, k, slots, surf, locked);
+  if (!claim) return null;
+  const { x, w } = claim.at;
+  const ground = Math.min(claim.ground, k.H - lowest);
+  if (sky && ground - claim.at.h < 1) return null;
+  slots.mark(x - 3, x + w + 8);
+  flatten(surf, k.H, x - 2, x + w + 1, ground);
+  for (let i = Math.max(0, x - 3); i <= Math.min(k.W - 1, x + w + 2); i++) locked[i] = 1;
+  return { ...claim, ground, at: { ...claim.at, y: ground - claim.at.h } };
 }
 
 /**

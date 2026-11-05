@@ -10,6 +10,10 @@ export interface Rect {
 export type Cell = readonly [number, number];
 export type Vec = readonly [number, number];
 
+/** Angles that aim straight up and straight down, in screen space (+y down): a spike's or a gun's facing. */
+export const UP = -Math.PI / 2;
+export const DOWN = Math.PI / 2;
+
 const EPS = 1e-4;
 
 /** Strict overlap (touching edges do not count), with a small epsilon for float drift. */

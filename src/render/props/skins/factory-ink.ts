@@ -1,8 +1,8 @@
 import { css, type HSL } from '../../../core/color';
 import { hash2 } from '../../../core/rng';
-import { blob, inkFor, type P } from '../../ink';
-import { barLine, boxPts, path, pen, poly, tick, tone } from '../../ink-props';
-import type { DrawCtx } from '../common';
+import { blob, inkFor } from '../../ink';
+import { barLine, boxPts, path, poly, tick } from '../../ink-props';
+import { type Haze, type HazeSpec } from './common';
 
 /**
  * The factory skins' shared pen (./factory.ts, ./factory-works.ts): the theme's paint and steel, and the
@@ -18,30 +18,14 @@ export const PAINT: HSL = { h: 12, s: 48, l: 44 };
 export const FRAME: HSL = { h: 44, s: 56, l: 50 };
 
 /** Share of the way a shell's tones go toward the sky's haze: back, but still the biggest thing in the level. */
-export const HAZE = 0.26;
+const HAZE = 0.26;
 
-/** A shell's tones under this level's sky: pulled toward its fog, and a pen that's a dark of the tone, not black. */
-export function hazer(d: DrawCtx) {
-  const fog = d.o.level?.theme.fog;
-  const hsl = (c: HSL): HSL => (fog ? { h: c.h, s: c.s * (1 - HAZE * 1.3), l: c.l + (fog.l - c.l) * HAZE } : c);
-  return {
-    key: fog ? `${fog.h | 0},${fog.s | 0},${fog.l | 0}` : '-',
-    hsl,
-    c: (base: HSL, dl = 0) => css(hsl(base), dl),
-    ink: (base: HSL) => css({ h: base.h, s: base.s * 0.5, l: Math.max(5, hsl(base).l * 0.26) }),
-  };
-}
-export type Haze = ReturnType<typeof hazer>;
+/** This theme's shells under the sky (`hazer`, `flat`). */
+export const SHELL: HazeSpec = { haze: HAZE, desat: 1.3, pen: { dark: 0.26, floor: 5 }, weights: [0.4, 1] };
 
 /** A girder drawn with the backdrop pen: its hazed tone in a thin rim of its own dark, and a lit flange toward the light. */
 export function member(g: CanvasRenderingContext2D, ax: number, ay: number, bx: number, by: number, w: number, base: HSL, t: Haze, seed: number) {
   barLine(g, ax, ay, bx, by, w, t.hsl(base), seed, { ink: t.ink(base), rim: 0.3, press: 0.05, lit: w > 1.5 ? 12 : 0 });
-}
-
-/** A flat shape in a hazed tone, penned in a dark of itself. */
-export function flat(g: CanvasRenderingContext2D, pts: readonly P[], base: HSL, t: Haze, seed: number, depth = 1) {
-  tone(g, pts, t.hsl(base), { depth });
-  pen(g, pts, seed, 0.4, 1, 3, t.ink(base));
 }
 
 /**

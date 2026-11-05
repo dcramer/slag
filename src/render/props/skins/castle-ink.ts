@@ -1,35 +1,26 @@
-import { css, type HSL } from '../../../core/color';
+import { type HSL } from '../../../core/color';
 import { hash2 } from '../../../core/rng';
 import { type P } from '../../ink';
-import { boxPts, path, pen, tick, tone } from '../../ink-props';
-import type { DrawCtx } from '../common';
+import { boxPts, path, tick, tone } from '../../ink-props';
+import { flat, type Haze, type HazeSpec } from './common';
 
 /**
- * The castle skins' shared kit (./castle.ts, ./castle-stage.ts): the haze every backdrop shell sinks
- * toward, a flat two-tone shape with a light pen in its own dark, a doorway seen through its opening, and
- * the castle's colours. Shells are scenery, never a slab to stand on (docs/ART.md, Fair play).
+ * The castle skins' shared kit (./castle.ts, ./castle-stage.ts): how far its backdrop shells sink toward
+ * the haze (`SHELL`, for `hazer` and `flat` in ./common.ts), a doorway seen through its opening, coursed
+ * stone, and the castle's colours. Shells are scenery, never a slab to stand on (docs/ART.md, Fair play).
  */
 
-export const HAZE = 0.28;
-/** A hazed tone: toward the level's fog in lightness and saturation, never in hue. */
-export function hz(d: DrawCtx) {
-  const fog = d.o.level?.theme.fog;
-  const k = fog ? `${fog.h | 0},${fog.l | 0}` : '-';
-  const hsl = (c: HSL): HSL => (fog ? { h: c.h, s: c.s * (1 - HAZE), l: c.l + (fog.l - c.l) * HAZE } : c);
-  return { k, hsl, c: (b: HSL, dl = 0, a = 1) => css(hsl(b), dl, a), ink: (b: HSL) => css({ h: b.h, s: b.s * 0.5, l: Math.max(5, hsl(b).l * 0.3) }) };
-}
-export type Hz = ReturnType<typeof hz>;
+/** Share of the way a shell's tones go toward the sky's haze. */
+const HAZE = 0.28;
 
-export function flat(g: CanvasRenderingContext2D, pts: readonly P[], base: HSL, t: Hz, seed: number, depth = 0.6) {
-  tone(g, pts, t.hsl(base), { depth });
-  pen(g, pts, seed, 0.3, 0.8, 3, t.ink(base));
-}
+/** This theme's shells under the sky (`hazer`, `flat`). */
+export const SHELL: HazeSpec = { haze: HAZE, pen: { dark: 0.3, floor: 5 }, depth: 0.6 };
 
 /**
  * A coursed stone wall over (x, y, w, h) in a hazed tone: the face flat, about a third of the blocks cut by hand in
  * a second tone, and a joint where one block meets the next, lifted often. Never a ruled grid of joints.
  */
-export function ashlar(g: CanvasRenderingContext2D, t: Hz, x: number, y: number, w: number, h: number, stone: HSL, seed: number, course = 9) {
+export function ashlar(g: CanvasRenderingContext2D, t: Haze, x: number, y: number, w: number, h: number, stone: HSL, seed: number, course = 9) {
   tone(g, boxPts(x, y, w, h, 0.4, seed, 0.05), t.hsl(stone), { depth: 0.4 });
   const len = course * 2.3;
   g.save();
@@ -53,7 +44,7 @@ export function ashlar(g: CanvasRenderingContext2D, t: Hz, x: number, y: number,
 }
 
 /** A doorway through a wall, seen behind its opening: the wall's reveal down both sides, a dark arch, a threshold. */
-export function doorway(g: CanvasRenderingContext2D, t: Hz, x: number, y: number, w: number, h: number, wall: HSL, seed: number) {
+export function doorway(g: CanvasRenderingContext2D, t: Haze, x: number, y: number, w: number, h: number, wall: HSL, seed: number) {
   flat(g, boxPts(x, y, w, h, 0.4, seed, 0.05), wall, t, seed, 0.5);
   const j = 4;
   const r = (w - 2 * j) / 2;

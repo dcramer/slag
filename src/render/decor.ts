@@ -18,6 +18,7 @@ import { inkFence, inkHay } from './ink-parts';
 import { ball, boxPts, dot, glint, ovalPts, part, path, pen, poly, tick, tone } from './ink-props';
 import { letterPts, neonWord } from './props/modules/neon';
 import { bulb, circle, flame, flutter, glowDot, light, type RC } from './kit';
+import { bits01, low16 } from './decor-kit';
 
 /**
  * Terrain decor art, inked like the terrain it stands on (docs/ART.md, World art). Where each kind grows,
@@ -42,8 +43,6 @@ export interface DecorDef {
 
 const WOOD: HSL = hsl3(28, 40, 34);
 const IRON: HSL = hsl3(220, 8, 22);
-const k01 = (d: Decor, n: number) => ((d.seed >>> n) % 1000) / 1000;
-const sd = (d: Decor) => d.seed & 0xffff;
 
 /** An inked box: hand-cut, two tones, the pen round it. */
 function box(s: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, c: HSL, seed: number, r = 0.8) {
@@ -130,7 +129,7 @@ export const DECOR: Record<DecorKind, DecorDef> = {
         s.fillStyle = css(d.color, 20);
         path(s, [{ x: bx, y: by }, tip, r]);
         s.fill();
-        pen(s, [l, tip, r], sd(d) + i, 0.4, 0.9, 2, css(d.color, -46, 1, 10));
+        pen(s, [l, tip, r], low16(d.seed) + i, 0.4, 0.9, 2, css(d.color, -46, 1, 10));
       }
       const pulse = 0.6 + Math.sin(rc.t * 2 + d.seed) * 0.25;
       light(rc, d.x, d.y - 4, 34 * k, d.color, 0.45 * pulse);
@@ -141,15 +140,15 @@ export const DECOR: Record<DecorKind, DecorDef> = {
     bake(s, d, th) {
       const k = d.size;
       const h = 5 * k;
-      stick(s, poly(d.x, d.y, d.x + 0.2, d.y - h), 1.4, shift(hsl3(40, 25, 80), th.night ? -25 : 0), sd(d));
+      stick(s, poly(d.x, d.y, d.x + 0.2, d.y - h), 1.4, shift(hsl3(40, 25, 80), th.night ? -25 : 0), low16(d.seed));
       const cap: P[] = [];
       for (let i = 0; i <= 10; i++) {
         const a = Math.PI + (i / 10) * Math.PI;
         cap.push({ x: d.x + Math.cos(a) * 3.6 * k, y: d.y - h + Math.sin(a) * 2.6 * k });
       }
-      part(s, cap, shift(d.color, -6), sd(d) + 1, { depth: 0.6 * k, thin: 0.4, thick: 0.9 });
+      part(s, cap, shift(d.color, -6), low16(d.seed) + 1, { depth: 0.6 * k, thin: 0.4, thick: 0.9 });
       if (!th.night) {
-        dot(s, d.x - 1.2 * k, d.y - h - 1.2 * k, 0.6 * k, sd(d) + 2, undefined, inkFor(d.color));
+        dot(s, d.x - 1.2 * k, d.y - h - 1.2 * k, 0.6 * k, low16(d.seed) + 2, undefined, inkFor(d.color));
         s.fillStyle = 'rgba(255,255,255,0.9)';
         circle(s, d.x - 1.2 * k, d.y - h - 1.2 * k, 0.5 * k);
         circle(s, d.x + 1.4 * k, d.y - h - 0.7 * k, 0.45 * k);
@@ -174,7 +173,7 @@ export const DECOR: Record<DecorKind, DecorDef> = {
       const k = d.size;
       const h = 6 * k;
       const sw = flutter(rc, 2, d.seed) * 1.5;
-      stick(s, stemPts(d.x, d.y, h, sw, 4), 0.7, shift(th.terrain.capColor, -12), sd(d));
+      stick(s, stemPts(d.x, d.y, h, sw, 4), 0.7, shift(th.terrain.capColor, -12), low16(d.seed));
       const hx = d.x + sw;
       const hy = d.y - h;
       s.fillStyle = inkFor(d.color);
@@ -201,7 +200,7 @@ export const DECOR: Record<DecorKind, DecorDef> = {
       const lx = d.x + Math.sin(sw) * len;
       const ly = d.y + Math.cos(sw) * len;
       s.fillStyle = inkFor(IRON);
-      line(s, d.x, d.y, lx, ly, { w: 0.49, seed: sd(d), taper: [0, 0], press: 0 });
+      line(s, d.x, d.y, lx, ly, { w: 0.49, seed: low16(d.seed), taper: [0, 0], press: 0 });
       const fl = 0.85 + Math.sin(rc.t * 9 + d.seed) * 0.08;
       s.fillStyle = css(d.color, 20);
       s.fillRect(lx - 2, ly + 1.3, 4, 4.7);
@@ -226,7 +225,7 @@ export const DECOR: Record<DecorKind, DecorDef> = {
       const segs = 4 + (d.seed % 7);
       const pts: P[] = [{ x: d.x, y: d.y }];
       for (let i = 1; i <= segs; i++) pts.push({ x: d.x + flutter(rc, 1.1, i * 0.6 + d.seed) * i * 0.4, y: d.y + i * 2.6 * k });
-      stick(s, pts, 0.8, shift(d.color, -8), sd(d));
+      stick(s, pts, 0.8, shift(d.color, -8), low16(d.seed));
       for (let i = 1; i <= segs; i++) leaf(s, pts[i].x, pts[i].y, i % 2 ? 0.5 : Math.PI - 0.5, 2.6, 1.1, shift(d.color, (i % 3) * 5));
     },
   },
@@ -239,7 +238,7 @@ export const DECOR: Record<DecorKind, DecorDef> = {
         [-4, -0.8, 4, -1.8],
         [-2, -2.8, 3, -0.6],
       ]) {
-        stick(s, poly(d.x + ax * k, d.y + ay, d.x + bx * k, d.y + by), 1.1 * k, c, sd(d) + ax);
+        stick(s, poly(d.x + ax * k, d.y + ay, d.x + bx * k, d.y + by), 1.1 * k, c, low16(d.seed) + ax);
         for (const [ex, ey] of [
           [ax, ay],
           [bx, by],
@@ -252,8 +251,8 @@ export const DECOR: Record<DecorKind, DecorDef> = {
     color: (th) => th.lamp,
     bake(s, d) {
       const k = d.size;
-      stick(s, poly(d.x, d.y, d.x, d.y - 9 * k), 1.8, shift(WOOD, -6), sd(d));
-      box(s, d.x - 2.2, d.y - 10 * k, 4.4, 2, shift(IRON, 10), sd(d) + 1, 0.4);
+      stick(s, poly(d.x, d.y, d.x, d.y - 9 * k), 1.8, shift(WOOD, -6), low16(d.seed));
+      box(s, d.x - 2.2, d.y - 10 * k, 4.4, 2, shift(IRON, 10), low16(d.seed) + 1, 0.4);
     },
     live(rc, d) {
       const k = d.size;
@@ -269,9 +268,9 @@ export const DECOR: Record<DecorKind, DecorDef> = {
     bake(s, d) {
       const k = d.size;
       const c = d.seed % 2 ? hsl3(25, 30, 36) : hsl3(150, 18, 34);
-      box(s, d.x - 2, d.y - 10 * k, 4, 10 * k, c, sd(d), 0.5);
-      box(s, d.x - 3, d.y - 11 * k, 6, 2, shift(c, 10), sd(d) + 1, 0.4);
-      box(s, d.x - 2.5, d.y - 4 * k, 5, 1.3, shift(c, 10), sd(d) + 2, 0.3);
+      box(s, d.x - 2, d.y - 10 * k, 4, 10 * k, c, low16(d.seed), 0.5);
+      box(s, d.x - 3, d.y - 11 * k, 6, 2, shift(c, 10), low16(d.seed) + 1, 0.4);
+      box(s, d.x - 2.5, d.y - 4 * k, 5, 1.3, shift(c, 10), low16(d.seed) + 2, 0.3);
     },
     live(rc, d) {
       steam(rc, d.x, d.y - 11 * d.size, d.seed, d.size);
@@ -292,8 +291,8 @@ export const DECOR: Record<DecorKind, DecorDef> = {
     live(rc, d) {
       const s = rc.s;
       for (let i = 0; i < 6; i++) {
-        const bx = d.x - 5 + i * 2 + k01(d, i) * 1.2;
-        const h = 7 + k01(d, i + 3) * 5;
+        const bx = d.x - 5 + i * 2 + bits01(d.seed, i) * 1.2;
+        const h = 7 + bits01(d.seed, i + 3) * 5;
         const sw = flutter(rc, 1.8, bx * 0.2) * 1.8;
         s.fillStyle = css(d.color, -22, 1, 6);
         stroke(s, stemPts(bx, d.y, h, sw, 4), { w: 0.6, seed: i, taper: [0.02, 0.3], press: 0 });
@@ -320,7 +319,7 @@ export const DECOR: Record<DecorKind, DecorDef> = {
       const r = 3.6 * k;
       const cy = d.y - r + 0.5;
       s.fillStyle = inkFor(d.color);
-      path(s, ovalPts(d.x + 0.2, cy + 0.2, r * 1.35 + 0.5, r + 0.5, sd(d), 0.04, 20));
+      path(s, ovalPts(d.x + 0.2, cy + 0.2, r * 1.35 + 0.5, r + 0.5, low16(d.seed), 0.04, 20));
       s.fill();
       for (const [dx, dl] of [
         [-1.6, -8],
@@ -328,13 +327,13 @@ export const DECOR: Record<DecorKind, DecorDef> = {
         [0, 4],
       ]) {
         s.fillStyle = css(d.color, dl);
-        path(s, ovalPts(d.x + dx * k, cy, r * 0.7, r, sd(d) + dx, 0.03, 16));
+        path(s, ovalPts(d.x + dx * k, cy, r * 0.7, r, low16(d.seed) + dx, 0.03, 16));
         s.fill();
       }
-      tick(s, d.x - 1.6 * k + r * 0.25, cy - r * 0.8, d.x - 1.6 * k + r * 0.25, cy + r * 0.8, 0.5, sd(d), css(d.color, -30));
-      tick(s, d.x + 1.6 * k - r * 0.25, cy - r * 0.8, d.x + 1.6 * k - r * 0.25, cy + r * 0.8, 0.5, sd(d) + 1, css(d.color, -30));
+      tick(s, d.x - 1.6 * k + r * 0.25, cy - r * 0.8, d.x - 1.6 * k + r * 0.25, cy + r * 0.8, 0.5, low16(d.seed), css(d.color, -30));
+      tick(s, d.x + 1.6 * k - r * 0.25, cy - r * 0.8, d.x + 1.6 * k - r * 0.25, cy + r * 0.8, 0.5, low16(d.seed) + 1, css(d.color, -30));
       glint(s, poly(d.x - r * 0.4, cy - r * 0.5, d.x - r * 0.1, cy - r * 0.75), 'rgba(255,230,190,0.9)', 0.6);
-      stick(s, poly(d.x - 0.2, cy - r + 0.4, d.x + 0.4, cy - r - 2.2), 1, hsl3(90, 50, 30), sd(d) + 2);
+      stick(s, poly(d.x - 0.2, cy - r + 0.4, d.x + 0.4, cy - r - 2.2), 1, hsl3(90, 50, 30), low16(d.seed) + 2);
     },
   },
   sunflower: {
@@ -345,7 +344,7 @@ export const DECOR: Record<DecorKind, DecorDef> = {
       const h = 14 * k;
       const sw = flutter(rc, 1.2, d.seed);
       const stem = stemPts(d.x, d.y, h, sw, 6);
-      stick(s, stem, 1, shift(th.terrain.capColor, -14), sd(d));
+      stick(s, stem, 1, shift(th.terrain.capColor, -14), low16(d.seed));
       leaf(s, stem[3].x, stem[3].y, -0.4, 4, 1.4, shift(th.terrain.capColor, -6));
       leaf(s, stem[2].x, stem[2].y, Math.PI + 0.4, 4, 1.4, shift(th.terrain.capColor, -6));
       const hx = d.x + sw;
@@ -371,7 +370,7 @@ export const DECOR: Record<DecorKind, DecorDef> = {
     color: () => hsl3(210, 8, 42),
     bake(s, d) {
       const k = d.size;
-      box(s, d.x - 4 * k, d.y - 5 * k, 8 * k, 5 * k, d.color, sd(d));
+      box(s, d.x - 4 * k, d.y - 5 * k, 8 * k, 5 * k, d.color, low16(d.seed));
       for (let i = 0; i < 3; i++) tick(s, d.x - 3 * k, d.y - 4 * k + i * 1.4 * k, d.x + 3 * k, d.y - 4 * k + i * 1.4 * k, 0.45, i, css(d.color, -30));
     },
     live(rc, d) {
@@ -386,7 +385,7 @@ export const DECOR: Record<DecorKind, DecorDef> = {
       const h = 9 * k;
       const x = d.x - w / 2;
       const y = d.y - h;
-      const pts = boxPts(x, y, w, h, 1.4, sd(d), 0.4);
+      const pts = boxPts(x, y, w, h, 1.4, low16(d.seed), 0.4);
       tone(s, pts, d.color, { depth: 1 });
       s.save();
       path(s, pts);
@@ -401,9 +400,13 @@ export const DECOR: Record<DecorKind, DecorDef> = {
       if (th.id === 'harbor') for (let xx = x + 1.8; xx < x + w - 1; xx += 1.8) tick(s, xx, y + 0.5, xx, y + h - 0.5, 0.35, xx, css(d.color, -18));
       glint(s, poly(x + 1.2, y + h * 0.3, x + 1.1, y + h * 0.6), css(d.color, 22), 0.6);
       s.restore();
-      pen(s, pts, sd(d) + 1, 0.45, 1.1, 3, inkFor(d.color));
+      pen(s, pts, low16(d.seed) + 1, 0.45, 1.1, 3, inkFor(d.color));
       if (th.id === 'factory' && d.seed % 3 === 0) {
-        part(s, poly(d.x, y + h * 0.32, d.x + 1.8, y + h * 0.6, d.x - 1.8, y + h * 0.6), hsl3(48, 90, 56), sd(d) + 2, { depth: 0.2, thin: 0.3, thick: 0.5 });
+        part(s, poly(d.x, y + h * 0.32, d.x + 1.8, y + h * 0.6, d.x - 1.8, y + h * 0.6), hsl3(48, 90, 56), low16(d.seed) + 2, {
+          depth: 0.2,
+          thin: 0.3,
+          thick: 0.5,
+        });
       }
     },
   },
@@ -430,14 +433,14 @@ export const DECOR: Record<DecorKind, DecorDef> = {
         s.restore();
         pen(s, pts, seed + 1, 0.45, 1.1, 3, inkFor(c));
       };
-      if (d.seed % 2) one(d.x - w / 2 + w * 0.2, d.y - w - w * 0.7, w * 0.7, shift(d.color, -6), sd(d) + 3);
-      one(d.x - w / 2, d.y - w, w, d.color, sd(d));
+      if (d.seed % 2) one(d.x - w / 2 + w * 0.2, d.y - w - w * 0.7, w * 0.7, shift(d.color, -6), low16(d.seed) + 3);
+      one(d.x - w / 2, d.y - w, w, d.color, low16(d.seed));
     },
   },
   beacon: {
     color: () => hsl3(32, 100, 55),
     bake(s, d) {
-      box(s, d.x - 2.5, d.y - 3, 5, 3, shift(IRON, 6), sd(d), 0.4);
+      box(s, d.x - 2.5, d.y - 3, 5, 3, shift(IRON, 6), low16(d.seed), 0.4);
     },
     live(rc, d) {
       const a = rc.t * 4 + d.seed;
@@ -487,7 +490,7 @@ export const DECOR: Record<DecorKind, DecorDef> = {
           const a = -Math.PI * 0.1 + (i / 8) * Math.PI * 1.2;
           hook.push({ x: x + Math.cos(a) * 2, y: y + 1.5 + Math.sin(a) * 2 });
         }
-        stick(s, hook, 0.8, shift(d.color, 4), sd(d));
+        stick(s, hook, 0.8, shift(d.color, 4), low16(d.seed));
       }
     },
   },
@@ -503,7 +506,7 @@ export const DECOR: Record<DecorKind, DecorDef> = {
         pts.push({ x: u * u * (d.x - 6) + 2 * u * t * (d.x + sw) + t * t * (d.x + 7), y: u * u * d.y + 2 * u * t * (d.y + sag) + t * t * d.y });
       }
       rc.s.fillStyle = css(d.color, -6);
-      stroke(rc.s, pts, { w: 1.3, seed: sd(d), taper: [0, 0], press: 0.1 });
+      stroke(rc.s, pts, { w: 1.3, seed: low16(d.seed), taper: [0, 0], press: 0.1 });
     },
   },
   cagelamp: {
@@ -524,8 +527,8 @@ export const DECOR: Record<DecorKind, DecorDef> = {
       s.fillRect(d.x - 3.2, d.y + 3, 6.4, 1.6);
       const cage: P[] = [];
       for (let i = 0; i <= 8; i++) cage.push({ x: d.x + Math.cos((i / 8) * Math.PI) * 2.9, y: d.y + 4.4 + Math.sin((i / 8) * Math.PI) * 2.9 });
-      stroke(s, cage, { w: 0.6, seed: sd(d), taper: [0, 0], press: 0 });
-      line(s, d.x, d.y + 4.4, d.x, d.y + 7.3, { w: 0.5, seed: sd(d) + 1, taper: [0, 0], press: 0 });
+      stroke(s, cage, { w: 0.6, seed: low16(d.seed), taper: [0, 0], press: 0 });
+      line(s, d.x, d.y + 4.4, d.x, d.y + 7.3, { w: 0.5, seed: low16(d.seed) + 1, taper: [0, 0], press: 0 });
       // Cone of light downward: one flat wedge, not a fade.
       const g = rc.g;
       g.fillStyle = css(d.color, 10, 0.1 * fl);
@@ -556,24 +559,24 @@ export const DECOR: Record<DecorKind, DecorDef> = {
       for (let i = 6; i >= 0; i--) cloth.push({ x: d.x - w / 2 + wave(i), y: d.y + 2 + (h * i) / 6 });
       tone(s, cloth, d.color, { depth: 1.2 });
       const ey = d.y + 2 + h * 0.42 + wave(3) * 0.5;
-      part(s, poly(d.x, ey - 2.4, d.x + 2, ey, d.x, ey + 2.4, d.x - 2, ey), hsl3(45, 90, 60), sd(d) + 1, { depth: 0.3, thin: 0.3, thick: 0.6 });
+      part(s, poly(d.x, ey - 2.4, d.x + 2, ey, d.x, ey + 2.4, d.x - 2, ey), hsl3(45, 90, 60), low16(d.seed) + 1, { depth: 0.3, thin: 0.3, thick: 0.6 });
       s.fillStyle = css(hsl3(45, 90, 60), -10);
       s.fillRect(d.x - w / 2, d.y + 3, w, 0.8);
-      pen(s, cloth, sd(d), 0.45, 1.1, 3, inkFor(d.color));
-      stick(s, poly(d.x - w / 2 - 1.5, d.y + 1.3, d.x + w / 2 + 1.5, d.y + 1.3), 1.2, shift(WOOD, -6), sd(d) + 2);
+      pen(s, cloth, low16(d.seed), 0.45, 1.1, 3, inkFor(d.color));
+      stick(s, poly(d.x - w / 2 - 1.5, d.y + 1.3, d.x + w / 2 + 1.5, d.y + 1.3), 1.2, shift(WOOD, -6), low16(d.seed) + 2);
     },
   },
   skull: {
     color: () => hsl3(42, 22, 80),
     bake(s, d) {
       const k = d.size;
-      const head = ovalPts(d.x, d.y - 2.9 * k, 2.5 * k, 2.4 * k, sd(d), 0.05, 14);
-      part(s, head, d.color, sd(d), { depth: 0.5 * k, thin: 0.4, thick: 0.9 });
-      box(s, d.x - 1.5 * k, d.y - 1.6 * k, 3 * k, 1.6 * k, d.color, sd(d) + 1, 0.3);
+      const head = ovalPts(d.x, d.y - 2.9 * k, 2.5 * k, 2.4 * k, low16(d.seed), 0.05, 14);
+      part(s, head, d.color, low16(d.seed), { depth: 0.5 * k, thin: 0.4, thick: 0.9 });
+      box(s, d.x - 1.5 * k, d.y - 1.6 * k, 3 * k, 1.6 * k, d.color, low16(d.seed) + 1, 0.3);
       s.fillStyle = css(d.color, -50);
-      blob(s, d.x - 0.95 * k, d.y - 3 * k, 0.75 * k, sd(d) + 2, 1, 0.15);
+      blob(s, d.x - 0.95 * k, d.y - 3 * k, 0.75 * k, low16(d.seed) + 2, 1, 0.15);
       s.fill();
-      blob(s, d.x + 0.95 * k, d.y - 3 * k, 0.75 * k, sd(d) + 3, 1, 0.15);
+      blob(s, d.x + 0.95 * k, d.y - 3 * k, 0.75 * k, low16(d.seed) + 3, 1, 0.15);
       s.fill();
       tick(s, d.x - 0.5 * k, d.y - 1.4 * k, d.x - 0.5 * k, d.y - 0.2, 0.3, 4, css(d.color, -40));
       tick(s, d.x + 0.5 * k, d.y - 1.4 * k, d.x + 0.5 * k, d.y - 0.2, 0.3, 5, css(d.color, -40));
@@ -618,7 +621,7 @@ export const DECOR: Record<DecorKind, DecorDef> = {
         const len = (10 + i * 2) * k;
         const ex = d.x + Math.cos(a) * len;
         const ey = d.y + Math.sin(a) * len;
-        stick(s, poly(d.x, d.y, ex, ey), 0.6, shift(d.color, -18), sd(d) + i);
+        stick(s, poly(d.x, d.y, ex, ey), 0.6, shift(d.color, -18), low16(d.seed) + i);
         leaf(s, d.x + Math.cos(a) * 2, d.y + Math.sin(a) * 2, a, len * 0.95, 2.8 * k, shift(d.color, i * 4 - 4));
       }
     },
@@ -628,16 +631,16 @@ export const DECOR: Record<DecorKind, DecorDef> = {
     bake(s, d) {
       for (let i = 0; i < 3; i++) {
         const x = d.x + (i - 1) * 3;
-        const len = 4 + k01(d, i) * 9;
-        const cx = x + (k01(d, i + 2) - 0.5) * 6;
-        const ex = x + (k01(d, i + 4) - 0.5) * 4;
+        const len = 4 + bits01(d.seed, i) * 9;
+        const cx = x + (bits01(d.seed, i + 2) - 0.5) * 6;
+        const ex = x + (bits01(d.seed, i + 4) - 0.5) * 4;
         const pts: P[] = [];
         for (let j = 0; j <= 6; j++) {
           const t = j / 6;
           const u = 1 - t;
           pts.push({ x: u * u * x + 2 * u * t * cx + t * t * ex, y: u * u * (d.y - 1) + 2 * u * t * (d.y + len * 0.6) + t * t * (d.y + len) });
         }
-        stick(s, pts, 1.1 - i * 0.2, d.color, sd(d) + i);
+        stick(s, pts, 1.1 - i * 0.2, d.color, low16(d.seed) + i);
       }
     },
   },
@@ -646,13 +649,13 @@ export const DECOR: Record<DecorKind, DecorDef> = {
   fumarole: {
     color: (th) => th.terrain.vein,
     bake(s, d, th) {
-      part(s, poly(d.x - 5, d.y + 0.5, d.x - 2, d.y - 4, d.x + 2, d.y - 4, d.x + 5, d.y + 0.5), shift(th.terrain.dark, -2), sd(d), {
+      part(s, poly(d.x - 5, d.y + 0.5, d.x - 2, d.y - 4, d.x + 2, d.y - 4, d.x + 5, d.y + 0.5), shift(th.terrain.dark, -2), low16(d.seed), {
         depth: 0.7,
         thin: 0.45,
         thick: 1,
       });
       s.fillStyle = css(th.terrain.dark, -14);
-      path(s, ovalPts(d.x, d.y - 4, 2.2, 0.9, sd(d) + 1, 0.05, 10));
+      path(s, ovalPts(d.x, d.y - 4, 2.2, 0.9, low16(d.seed) + 1, 0.05, 10));
       s.fill();
     },
     live(rc, d) {
@@ -676,7 +679,7 @@ export const DECOR: Record<DecorKind, DecorDef> = {
     bake(s, d) {
       const k = d.size;
       const pts = poly(-4, 0, -2.5, -6, 0, -9, 1.5, -5, 4, -3, 4.5, 0).map((p) => ({ x: d.x + p.x * k, y: d.y + p.y * k }));
-      part(s, pts, hsl3(270, 25, 12), sd(d), { depth: 0.8 * k, thin: 0.45, thick: 1.1 });
+      part(s, pts, hsl3(270, 25, 12), low16(d.seed), { depth: 0.8 * k, thin: 0.45, thick: 1.1 });
       s.fillStyle = css(hsl3(260, 30, 34));
       path(s, poly(d.x - 2.5 * k, d.y - 6 * k, d.x, d.y - 9 * k, d.x - 0.5 * k, d.y - 2 * k));
       s.fill();
@@ -686,7 +689,7 @@ export const DECOR: Record<DecorKind, DecorDef> = {
       const k = d.size;
       const pulse = 0.5 + Math.sin(rc.t * 1.7 + d.seed) * 0.3;
       rc.g.fillStyle = css(d.color, 5, 0.8 * pulse);
-      line(rc.g, d.x - 3 * k, d.y, d.x + 1.5 * k, d.y - 5 * k, { w: 0.8, seed: sd(d), taper: [0.1, 0.3], press: 0 });
+      line(rc.g, d.x - 3 * k, d.y, d.x + 1.5 * k, d.y - 5 * k, { w: 0.8, seed: low16(d.seed), taper: [0.1, 0.3], press: 0 });
     },
   },
 
@@ -696,7 +699,7 @@ export const DECOR: Record<DecorKind, DecorDef> = {
     bake(s, d) {
       const k = d.size;
       for (let i = 0; i < 3; i++) {
-        const ring = ovalPts(d.x, d.y - 1.5 - i * 1.3, (5 - i * 1.2) * k, 1.5 * k, sd(d) + i, 0.04, 16);
+        const ring = ovalPts(d.x, d.y - 1.5 - i * 1.3, (5 - i * 1.2) * k, 1.5 * k, low16(d.seed) + i, 0.04, 16);
         s.fillStyle = inkFor(d.color);
         stroke(s, [...ring, ring[0]], { w: 1.8, seed: i, taper: [0, 0], press: 0.1 });
         s.fillStyle = css(d.color, -14 + i * 8);
@@ -708,9 +711,9 @@ export const DECOR: Record<DecorKind, DecorDef> = {
     color: () => hsl3(215, 10, 26),
     bake(s, d) {
       const c = d.color;
-      const body = boxPts(d.x - 3, d.y - 7, 6, 7.5, 2.4, sd(d), 0.1);
-      part(s, body, shift(c, 4), sd(d), { depth: 0.9, thin: 0.45, thick: 1.1 });
-      box(s, d.x - 3.6, d.y - 5, 7.2, 1.6, c, sd(d) + 1, 0.4);
+      const body = boxPts(d.x - 3, d.y - 7, 6, 7.5, 2.4, low16(d.seed), 0.1);
+      part(s, body, shift(c, 4), low16(d.seed), { depth: 0.9, thin: 0.45, thick: 1.1 });
+      box(s, d.x - 3.6, d.y - 5, 7.2, 1.6, c, low16(d.seed) + 1, 0.4);
       glint(s, poly(d.x - 1.6, d.y - 6, d.x - 1.6, d.y - 1.4), css(c, 22), 0.6);
     },
   },
@@ -718,10 +721,10 @@ export const DECOR: Record<DecorKind, DecorDef> = {
     color: (th) => th.lamp,
     bake(s, d) {
       const h = 26;
-      stick(s, poly(d.x, d.y, d.x, d.y - h), 1.8, shift(IRON, 6), sd(d));
-      box(s, d.x - 2, d.y - 3, 4, 3, IRON, sd(d) + 1, 0.4);
-      box(s, d.x - 3, d.y - h - 1, 6, 1.4, IRON, sd(d) + 2, 0.3);
-      part(s, poly(d.x - 3.2, d.y - h - 5, d.x, d.y - h - 7.6, d.x + 3.2, d.y - h - 5), IRON, sd(d) + 3, { depth: 0.3, thin: 0.35, thick: 0.7 });
+      stick(s, poly(d.x, d.y, d.x, d.y - h), 1.8, shift(IRON, 6), low16(d.seed));
+      box(s, d.x - 2, d.y - 3, 4, 3, IRON, low16(d.seed) + 1, 0.4);
+      box(s, d.x - 3, d.y - h - 1, 6, 1.4, IRON, low16(d.seed) + 2, 0.3);
+      part(s, poly(d.x - 3.2, d.y - h - 5, d.x, d.y - h - 7.6, d.x + 3.2, d.y - h - 5), IRON, low16(d.seed) + 3, { depth: 0.3, thin: 0.35, thick: 0.7 });
     },
     live(rc, d, th) {
       const h = 26;
@@ -799,7 +802,7 @@ export const DECOR: Record<DecorKind, DecorDef> = {
         }
         stroke(s, pts, { w: 0.5, seed: j + 9, taper: [0.1, 0.1], press: 0.2 });
       }
-      ball(s, d.x - 1 + 1, d.y + h + 0.6, 1.2, hsl3(10, 70, 50), sd(d));
+      ball(s, d.x - 1 + 1, d.y + h + 0.6, 1.2, hsl3(10, 70, 50), low16(d.seed));
     },
   },
 
@@ -809,9 +812,9 @@ export const DECOR: Record<DecorKind, DecorDef> = {
     bake(s, d) {
       const h = 20;
       const c = d.color;
-      for (const dx of [-6, 6]) box(s, d.x + dx - 1.6, d.y - h, 3.2, h, shift(c, 2), sd(d) + dx, 0.5);
-      for (const dx of [-1, 1]) stick(s, poly(d.x + dx * 6, d.y - h + 5, d.x + dx * 2, d.y - h), 1.2, shift(c, -6), sd(d) + dx * 3);
-      box(s, d.x - 9, d.y - h - 3.4, 18, 4, shift(c, 4), sd(d) + 9, 0.6);
+      for (const dx of [-6, 6]) box(s, d.x + dx - 1.6, d.y - h, 3.2, h, shift(c, 2), low16(d.seed) + dx, 0.5);
+      for (const dx of [-1, 1]) stick(s, poly(d.x + dx * 6, d.y - h + 5, d.x + dx * 2, d.y - h), 1.2, shift(c, -6), low16(d.seed) + dx * 3);
+      box(s, d.x - 9, d.y - h - 3.4, 18, 4, shift(c, 4), low16(d.seed) + 9, 0.6);
       for (const nx of [-7.5, 7.5]) dot(s, d.x + nx, d.y - h - 1.4, 0.45, nx, undefined, inkFor(c));
     },
   },
@@ -819,14 +822,18 @@ export const DECOR: Record<DecorKind, DecorDef> = {
     color: () => hsl3(20, 25, 32),
     bake(s, d) {
       const c = d.color;
-      stick(s, poly(d.x - 9, d.y - 0.6, d.x + 9, d.y - 0.6), 0.8, shift(IRON, 10), sd(d));
+      stick(s, poly(d.x - 9, d.y - 0.6, d.x + 9, d.y - 0.6), 0.8, shift(IRON, 10), low16(d.seed));
       const ore: P[] = [];
       for (let i = 0; i <= 8; i++) {
         const a = Math.PI + (i / 8) * Math.PI;
         ore.push({ x: d.x + Math.cos(a) * 5, y: d.y - 9.4 + Math.sin(a) * 2.4 });
       }
-      part(s, ore, hsl3(30, 10, 30), sd(d) + 1, { depth: 0.5, thin: 0.35, thick: 0.8 });
-      part(s, poly(d.x - 7, d.y - 9.4, d.x + 7, d.y - 9.4, d.x + 5.5, d.y - 3, d.x - 5.5, d.y - 3), c, sd(d) + 2, { depth: 0.8, thin: 0.45, thick: 1.1 });
+      part(s, ore, hsl3(30, 10, 30), low16(d.seed) + 1, { depth: 0.5, thin: 0.35, thick: 0.8 });
+      part(s, poly(d.x - 7, d.y - 9.4, d.x + 7, d.y - 9.4, d.x + 5.5, d.y - 3, d.x - 5.5, d.y - 3), c, low16(d.seed) + 2, {
+        depth: 0.8,
+        thin: 0.45,
+        thick: 1.1,
+      });
       s.fillStyle = css(c, -18);
       s.fillRect(d.x - 7, d.y - 9.6, 14, 1.2);
       for (const wx of [-3.5, 3.5]) ball(s, d.x + wx, d.y - 2.2, 1.6, hsl3(220, 8, 26), wx + 9);
@@ -841,14 +848,14 @@ export const DECOR: Record<DecorKind, DecorDef> = {
     color: () => hsl3(215, 8, 60),
     bake(s, d) {
       const dir = d.flip ? -1 : 1;
-      stick(s, poly(d.x - dir * 4, d.y, d.x + dir * 3, d.y - 10), 1.1, shift(WOOD, 8), sd(d));
+      stick(s, poly(d.x - dir * 4, d.y, d.x + dir * 3, d.y - 10), 1.1, shift(WOOD, 8), low16(d.seed));
       const head: P[] = [];
       for (let i = 0; i <= 8; i++) {
         const t = i / 8;
         const u = 1 - t;
         head.push({ x: d.x + dir * (u * u * -1 + 2 * u * t * 3 + t * t * 7), y: u * u * (d.y - 11.5) + 2 * u * t * (d.y - 11.5) + t * t * (d.y - 7) });
       }
-      stick(s, head, 1.3, d.color, sd(d) + 1);
+      stick(s, head, 1.3, d.color, low16(d.seed) + 1);
     },
   },
 
@@ -858,9 +865,9 @@ export const DECOR: Record<DecorKind, DecorDef> = {
     bake(s, d) {
       const h = 20 + (d.seed % 14);
       const c = shift(IRON, 14);
-      stick(s, poly(d.x, d.y, d.x, d.y - h), 0.8, c, sd(d));
-      for (let i = 1; i <= 3; i++) stick(s, poly(d.x - 5 + i, d.y - h + i * 5, d.x + 5 - i, d.y - h + i * 5), 0.6, c, sd(d) + i);
-      stick(s, poly(d.x - 4, d.y, d.x, d.y - h * 0.5, d.x + 4, d.y), 0.5, c, sd(d) + 9);
+      stick(s, poly(d.x, d.y, d.x, d.y - h), 0.8, c, low16(d.seed));
+      for (let i = 1; i <= 3; i++) stick(s, poly(d.x - 5 + i, d.y - h + i * 5, d.x + 5 - i, d.y - h + i * 5), 0.6, c, low16(d.seed) + i);
+      stick(s, poly(d.x - 4, d.y, d.x, d.y - h * 0.5, d.x + 4, d.y), 0.5, c, low16(d.seed) + 9);
     },
     live(rc, d) {
       const h = 20 + (d.seed % 14);
@@ -874,7 +881,7 @@ export const DECOR: Record<DecorKind, DecorDef> = {
     bake(s, d) {
       const w = 12;
       const h = 9;
-      box(s, d.x - w / 2, d.y - h, w, h, d.color, sd(d), 1);
+      box(s, d.x - w / 2, d.y - h, w, h, d.color, low16(d.seed), 1);
       s.fillStyle = inkFor(d.color);
       circle(s, d.x + 1.5, d.y - h / 2, 3.6);
       s.fillStyle = css(d.color, -34);
@@ -894,8 +901,8 @@ export const DECOR: Record<DecorKind, DecorDef> = {
   neon: {
     color: (th, rng) => (rng.chance(0.5) ? (th.layers[th.layers.length - 1]?.detail ?? th.accent) : hsl3(rng.pick([190, 320, 50, 140]), 100, 60)),
     bake(s, d) {
-      for (const lx of [-4.5, 4.5]) stick(s, poly(d.x + lx, d.y, d.x + lx, d.y - 4), 0.8, shift(IRON, 6), sd(d) + lx);
-      part(s, boxPts(d.x - 8, d.y - 15, 16, 11, 1.5, sd(d), 0.1), hsl3(250, 18, 17), sd(d), { depth: 0.6, thin: 0.45, thick: 1 });
+      for (const lx of [-4.5, 4.5]) stick(s, poly(d.x + lx, d.y, d.x + lx, d.y - 4), 0.8, shift(IRON, 6), low16(d.seed) + lx);
+      part(s, boxPts(d.x - 8, d.y - 15, 16, 11, 1.5, low16(d.seed), 0.1), hsl3(250, 18, 17), low16(d.seed), { depth: 0.6, thin: 0.45, thick: 1 });
     },
     live(rc, d) {
       const g = rc.g;
@@ -916,14 +923,14 @@ export const DECOR: Record<DecorKind, DecorDef> = {
     color: () => hsl3(210, 8, 78),
     bake(s, d) {
       const dir = d.flip ? -1 : 1;
-      stick(s, poly(d.x, d.y, d.x, d.y - 6), 0.9, shift(IRON, 10), sd(d));
+      stick(s, poly(d.x, d.y, d.x, d.y - 6), 0.9, shift(IRON, 10), low16(d.seed));
       s.save();
       s.translate(d.x + dir * 1.2, d.y - 9.2);
       s.rotate(-0.6 * dir);
-      part(s, ovalPts(0, 0, 6, 2.6, sd(d), 0.02, 18), d.color, sd(d) + 1, { depth: 0.8, thin: 0.45, thick: 1 });
+      part(s, ovalPts(0, 0, 6, 2.6, low16(d.seed), 0.02, 18), d.color, low16(d.seed) + 1, { depth: 0.8, thin: 0.45, thick: 1 });
       s.restore();
-      stick(s, poly(d.x + dir * 1.4, d.y - 9.4, d.x + dir * 5, d.y - 13), 0.5, shift(IRON, 14), sd(d) + 2);
-      dot(s, d.x + dir * 5, d.y - 13, 0.6, sd(d) + 3, undefined, inkFor(IRON));
+      stick(s, poly(d.x + dir * 1.4, d.y - 9.4, d.x + dir * 5, d.y - 13), 0.5, shift(IRON, 14), low16(d.seed) + 2);
+      dot(s, d.x + dir * 5, d.y - 13, 0.6, low16(d.seed) + 3, undefined, inkFor(IRON));
     },
   },
   ...FRONTIER_DECOR,

@@ -6,7 +6,8 @@
     "tools/art3d/flat/build.ts",
     "tools/art3d/flat/kinds/*.ts",
     "tools/art3d/page/main.ts",
-    ".claude/hooks/*.mjs"
+    ".claude/hooks/*.mjs",
+    "tools/lint/*.mjs"
   ],
   "project": [
     "src/**/*.ts",
@@ -14,7 +15,8 @@
     "tools/**/*.ts",
     "tests/**/*.ts",
     "*.ts",
-    ".claude/hooks/*.mjs"
+    ".claude/hooks/*.mjs",
+    "tools/lint/*.mjs"
   ],
   "ignoreBinaries": [
     "ffmpeg",

@@ -1,12 +1,12 @@
 import type { Rng } from '../../../core/rng';
 import { GROUND_ICE } from '../../../sim/ground';
 import { T_EMPTY, T_SOLID } from '../../../sim/level';
-import { glacierOwns, rectsOf } from '../../stage/glacier';
+import { glacierOwns } from '../../stage/glacier';
+import { rectsOf } from '../../stage/kit';
 import { finish, Grid, noise1D } from '../kit';
-import type { SculptCtx, Sculptor, Shape } from '../types';
+import type { Sculptor, Shape } from '../types';
 import {
-  type Claim,
-  claimSite,
+  claimFlatSite,
   jumpCount,
   jumpCrossing,
   easyRise,
@@ -14,7 +14,6 @@ import {
   hardGap,
   hopGap,
   keepClear,
-  type Knobs,
   knobs,
   pit,
   raiseLandmark,
@@ -68,7 +67,7 @@ export const glacier: Sculptor = (ctx) => {
   }
 
   // The stage concept's landmark comes first; it owns one crossing, or both where its box made room for a two-part one.
-  const claim = ctx.concept ? claimGlacierSite(ctx, k, slots, surf, locked) : null;
+  const claim = ctx.concept ? claimFlatSite(ctx, k, slots, surf, locked) : null;
   if (ctx.concept && !claim) return finish(g, { row: surf[2] - 1 }, { row: surf[W - 3] - 1 }, 'glacier:unclaimed');
 
   // Crevasses: hard ones need a bridge, easy ones are a hop. Each gets rock lips to land on.
@@ -130,22 +129,6 @@ export const glacier: Sculptor = (ctx) => {
 
   return glaze(finish(g, { row: sRow - 1 }, { row: gRow - 1 }, `glacier:${style}`), ice, rng, style === 'icefall' ? 0.75 : 0.85);
 };
-
-/**
- * The landmark's site (claimSite), on ground levelled a couple of columns past it either side and never so
- * low that its crevasse has no bank under it. Nothing else lands within a running jump of its far side, where
- * a crevasse could be cleared bare off its top.
- */
-function claimGlacierSite(ctx: SculptCtx, k: Knobs, slots: Slots, surf: number[], locked: Uint8Array): Claim | null {
-  const claim = claimSite(ctx, k, slots, surf, locked);
-  if (!claim) return null;
-  const { x, w } = claim.at;
-  const ground = Math.min(claim.ground, k.H - 5);
-  slots.mark(x - 3, x + w + 8);
-  flatten(surf, k.H, x - 2, x + w + 1, ground);
-  for (let i = Math.max(0, x - 3); i <= Math.min(k.W - 1, x + w + 2); i++) locked[i] = 1;
-  return { ...claim, ground, at: { ...claim.at, y: ground - claim.at.h } };
-}
 
 /**
  * A melt pond: a hollow a hop wide and two rows deep in a flat stretch of the field, off the landmark and off

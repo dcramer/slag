@@ -1,13 +1,13 @@
-import { css, type HSL } from '../../../core/color';
+import { type HSL } from '../../../core/color';
 import { hash2 } from '../../../core/rng';
 import { TILE } from '../../../sim/constants';
 import { type Level, T_SOLID, tileAt } from '../../../sim/level';
-import { inkFor, line, type P } from '../../ink';
+import { line, type P } from '../../ink';
 import { barLine, boxPts, path, pen, poly, sprite, stamp, tick, tone } from '../../ink-props';
 import type { RC } from '../../kit';
 import type { DrawCtx } from '../common';
 import { SHELLS } from '../modules/deco-shells';
-import type { Deco, DecoSkin, ThemeSkins } from './common';
+import { boxOf, type Deco, type DecoSkin, type Haze, hazer, type HazeSpec, type ThemeSkins } from './common';
 
 /**
  * The backdrop shells of the glacier's stage concepts (src/gen/stage/glacier.ts), drawn as the deco `facade`
@@ -33,16 +33,7 @@ const CLOTH: HSL = { h: 40, s: 16, l: 78 };
 const STEEL: HSL = { h: 212, s: 8, l: 66 };
 
 const HAZE = 0.32;
-function hz(d: DrawCtx) {
-  const fog = d.o.level?.theme.fog;
-  const k = fog ? `${fog.h | 0},${fog.l | 0}` : '-';
-  const hsl = (c: HSL): HSL => (fog ? { h: c.h, s: c.s * (1 - HAZE), l: c.l + (fog.l - c.l) * HAZE } : c);
-  return { k, hsl, c: (b: HSL, dl = 0, a = 1) => css(hsl(b), dl, a), ink: (b: HSL) => inkFor(hsl(b)) };
-}
-type Hz = ReturnType<typeof hz>;
-
-/** The shell's box, in tiles. */
-const boxOf = (m: Deco) => ({ x: Math.round(m.at[0] / TILE), y: Math.round(m.at[1] / TILE), w: Math.round(m.w / TILE), h: Math.round(m.h / TILE) });
+const SHELL: HazeSpec = { haze: HAZE, pen: 'ink' };
 
 /** The first solid row in column x from row y0 down to y1 (y1 when none). */
 function topOf(lv: Level, x: number, y0: number, y1: number): number {
@@ -58,12 +49,12 @@ function roofOver(lv: Level, x: number, top: number, G: number): number {
 }
 
 /** A spar, post or brace: its hazed tone in a thin rim of its own dark, lit along its top when it's broad. */
-function beam(g: CanvasRenderingContext2D, ax: number, ay: number, bx: number, by: number, w: number, base: HSL, t: Hz, seed: number, dl = 0) {
+function beam(g: CanvasRenderingContext2D, ax: number, ay: number, bx: number, by: number, w: number, base: HSL, t: Haze, seed: number, dl = 0) {
   barLine(g, ax, ay, bx, by, w, t.hsl({ ...base, l: base.l + dl }), seed, { lit: w >= 1.6 ? 10 : 0 });
 }
 
 /** An ice cave's inside over `w`×`h` px: deep blue, faceted walls lighter toward the floor, icicles off its roof. */
-function iceInside(g: CanvasRenderingContext2D, w: number, h: number, t: Hz, seed: number) {
+function iceInside(g: CanvasRenderingContext2D, w: number, h: number, t: Haze, seed: number) {
   g.fillStyle = t.c(DEEP);
   g.fillRect(0, 0, w, h);
   for (let x = -6; x < w; x += 11) {
@@ -84,7 +75,7 @@ function iceInside(g: CanvasRenderingContext2D, w: number, h: number, t: Hz, see
 }
 
 /** A spire of ice over a tower `w` px wide whose top is at y: a cone, a band of windows, a pennant. */
-function spire(g: CanvasRenderingContext2D, cx: number, y: number, w: number, t: Hz, seed: number) {
+function spire(g: CanvasRenderingContext2D, cx: number, y: number, w: number, t: Haze, seed: number) {
   const hgt = w * 1.6 + 10;
   const cone = poly(cx - w / 2 - 1, y, cx - w * 0.22, y - hgt * 0.55, cx, y - hgt, cx + w * 0.22, y - hgt * 0.55, cx + w / 2 + 1, y);
   tone(g, cone, t.hsl(PALE), { depth: 1 });
@@ -104,7 +95,7 @@ function spire(g: CanvasRenderingContext2D, cx: number, y: number, w: number, t:
 function palace(rc: RC, m: Deco, d: DrawCtx) {
   const lv = d.o.level;
   if (!lv) return;
-  const t = hz(d);
+  const t = hazer(d, SHELL);
   const b = boxOf(m);
   const G = b.y + b.h;
   const tops = Array.from({ length: b.w }, (_, i) => topOf(lv, b.x + i, b.y, G));
@@ -176,7 +167,7 @@ function palace(rc: RC, m: Deco, d: DrawCtx) {
 
 /** The Summit's ice cave through its foot. */
 function summitCave(rc: RC, m: Deco, d: DrawCtx) {
-  const t = hz(d);
+  const t = hazer(d, SHELL);
   const sp = sprite(`glacier|cave|${m.w}|${m.h}|${m.seed}|${t.k}`, 0, 0, m.w, m.h, (g) => iceInside(g, m.w, m.h, t, m.seed));
   stamp(rc.s, sp, m.at[0] + d.off[0], m.at[1] + d.off[1]);
 }
@@ -186,7 +177,7 @@ function summitCave(rc: RC, m: Deco, d: DrawCtx) {
  * out from the ice to under the bowsprit, the stern's counter raking back over a transom. Hazed back like
  * every shell, sloped all over (nothing on it reads as a floor), its strakes following the curve.
  */
-function hullEnds(g: CanvasRenderingContext2D, m: Deco, t: Hz, sternLeft: boolean, bowX: number, bowDeck: number, sternX: number, sternDeck: number) {
+function hullEnds(g: CanvasRenderingContext2D, m: Deco, t: Haze, sternLeft: boolean, bowX: number, bowDeck: number, sternX: number, sternDeck: number) {
   const foot = m.h;
   const out = sternLeft ? 1 : -1;
   const curve = (x0: number, y0: number, cx: number, cy: number, x1: number, y1: number, n = 8): P[] => {
@@ -244,7 +235,7 @@ function hullEnds(g: CanvasRenderingContext2D, m: Deco, t: Hz, sternLeft: boolea
 function wreck(rc: RC, m: Deco, d: DrawCtx) {
   const lv = d.o.level;
   if (!lv) return;
-  const t = hz(d);
+  const t = hazer(d, SHELL);
   const b = boxOf(m);
   const G = b.y + b.h;
   const tops = Array.from({ length: b.w }, (_, i) => topOf(lv, b.x + i, b.y, G));
@@ -329,7 +320,7 @@ function wreck(rc: RC, m: Deco, d: DrawCtx) {
 function falls(rc: RC, m: Deco, d: DrawCtx) {
   const lv = d.o.level;
   if (!lv) return;
-  const t = hz(d);
+  const t = hazer(d, SHELL);
   const b = boxOf(m);
   // The cave: from its floor (two rows up from the box's foot, over the pool's bed) up to its roof.
   const floor = b.y + b.h - 2;
@@ -369,7 +360,7 @@ function falls(rc: RC, m: Deco, d: DrawCtx) {
 function skiJump(rc: RC, m: Deco, d: DrawCtx) {
   const lv = d.o.level;
   if (!lv) return;
-  const t = hz(d);
+  const t = hazer(d, SHELL);
   const b = boxOf(m);
   const G = b.y + b.h;
   const tops = Array.from({ length: b.w }, (_, i) => topOf(lv, b.x + i, b.y, G));

@@ -8,7 +8,7 @@ import type { RC } from '../../kit';
 import { cannonTiming } from '../../../sim/props';
 import type { DrawCtx } from '../common';
 import { SHELLS } from '../modules/deco-shells';
-import type { Cannon, CannonPose, Deco, DecoSkin, ThemeSkins } from './common';
+import { boxOf, type Cannon, type CannonPose, type Deco, type DecoSkin, flat, type Haze, hazer, type HazeSpec, type ThemeSkins } from './common';
 
 /**
  * Harbor skins (docs/SETPIECES.md, Harbor): the backdrops behind its landmarks and its harpoon gun.
@@ -22,26 +22,15 @@ import type { Cannon, CannonPose, Deco, DecoSkin, ThemeSkins } from './common';
  */
 
 const HAZE = 0.26;
-function hz(d: DrawCtx) {
-  const fog = d.o.level?.theme.fog;
-  const k = fog ? `${fog.h | 0},${fog.l | 0}` : '-';
-  const hsl = (c: HSL): HSL => (fog ? { h: c.h, s: c.s * (1 - HAZE), l: c.l + (fog.l - c.l) * HAZE } : c);
-  return { k, hsl, c: (b: HSL, dl = 0, a = 1) => css(hsl(b), dl, a), ink: (b: HSL) => css({ h: b.h, s: b.s * 0.5, l: Math.max(5, hsl(b).l * 0.3) }) };
-}
-type Hz = ReturnType<typeof hz>;
-
-function flat(g: CanvasRenderingContext2D, pts: readonly P[], base: HSL, t: Hz, seed: number, depth = 0.6) {
-  tone(g, pts, t.hsl(base), { depth });
-  pen(g, pts, seed, 0.3, 0.8, 3, t.ink(base));
-}
+const SHELL: HazeSpec = { haze: HAZE, pen: { dark: 0.3, floor: 5 }, depth: 0.6 };
 
 /** A member with the backdrop pen: its hazed tone in a thin rim of its own dark. */
-function spar(g: CanvasRenderingContext2D, ax: number, ay: number, bx: number, by: number, w: number, base: HSL, t: Hz, seed: number) {
+function spar(g: CanvasRenderingContext2D, ax: number, ay: number, bx: number, by: number, w: number, base: HSL, t: Haze, seed: number) {
   barLine(g, ax, ay, bx, by, w, t.hsl(base), seed, { ink: t.ink(base), rim: 0.25, press: 0.05 });
 }
 
 /** A rope or stay in the backdrop: one tapered pen line in a dark of what it's made of, no rim. */
-function stay(g: CanvasRenderingContext2D, ax: number, ay: number, bx: number, by: number, base: HSL, t: Hz, seed: number) {
+function stay(g: CanvasRenderingContext2D, ax: number, ay: number, bx: number, by: number, base: HSL, t: Haze, seed: number) {
   g.fillStyle = t.ink(base);
   line(g, ax, ay, bx, by, { w: 0.9, seed, taper: [0.05, 0.12], press: 0.25 });
 }
@@ -64,11 +53,10 @@ function tiles(level: Level | null | undefined) {
   return (x: number, y: number) => (!level || x < 0 || y < 0 || x >= level.w || y >= level.h ? T_EMPTY : level.tiles[y * level.w + x]);
 }
 
-/** A shell's box in tiles. */
-function boxOf(m: Deco) {
-  const x0 = Math.round(m.at[0] / TILE);
-  const y0 = Math.round(m.at[1] / TILE);
-  return { x0, y0, x1: x0 + Math.round(m.w / TILE) - 1, y1: y0 + Math.round(m.h / TILE) - 1 };
+/** A shell's box in tiles, as its first and last column and row. */
+function cornersOf(m: Deco) {
+  const { x, y, w, h } = boxOf(m);
+  return { x0: x, y0: y, x1: x + w - 1, y1: y + h - 1 };
 }
 
 /**
@@ -91,10 +79,10 @@ function rooms(at: (x: number, y: number) => number, x0: number, x1: number, y0:
 
 // ------------------------------------------------------------------------------------------------- galleon
 
-function galleonArt(m: Deco, d: DrawCtx, t: Hz) {
+function galleonArt(m: Deco, d: DrawCtx, t: Haze) {
   const level = d.o.level;
   const at = tiles(level);
-  const { x0, y0, x1, y1 } = boxOf(m);
+  const { x0, y0, x1, y1 } = cornersOf(m);
   const key = `harbor|galleon|${level?.seed}|${x0},${y0},${x1},${y1}|${t.k}`;
   return sprite(key, -4 * TILE, -2 * TILE, m.w + 8 * TILE, m.h + 2 * TILE, (g) => {
     const X = (tx: number) => tx * TILE - m.at[0];
@@ -200,15 +188,15 @@ function galleonArt(m: Deco, d: DrawCtx, t: Hz) {
 
 const hull: DecoSkin = (rc, m, d) => {
   if (d.o.level?.landmark?.concept !== 'galleon') return SHELLS.hull?.(rc, m, d);
-  stamp(rc.s, galleonArt(m, d, hz(d)), m.at[0] + d.off[0], m.at[1] + d.off[1]);
+  stamp(rc.s, galleonArt(m, d, hazer(d, SHELL)), m.at[0] + d.off[0], m.at[1] + d.off[1]);
 };
 
 // ---------------------------------------------------------------------------------------------- tidal pier
 
-function pierArt(m: Deco, d: DrawCtx, t: Hz) {
+function pierArt(m: Deco, d: DrawCtx, t: Haze) {
   const level = d.o.level;
   const at = tiles(level);
-  const { x0, y0, x1, y1 } = boxOf(m);
+  const { x0, y0, x1, y1 } = cornersOf(m);
   return sprite(`harbor|pier|${level?.seed}|${x0},${y0},${x1},${y1}|${t.k}`, -4, -3 * TILE, m.w + 8, m.h + 3 * TILE + 4, (g) => {
     const X = (tx: number) => tx * TILE - m.at[0];
     const Y = (ty: number) => ty * TILE - m.at[1];
@@ -299,8 +287,8 @@ function pierArt(m: Deco, d: DrawCtx, t: Hz) {
 
 // --------------------------------------------------------------------------------------------- lighthouse
 
-function lighthouseArt(m: Deco, t: Hz) {
-  const { x0, y0, x1, y1 } = boxOf(m);
+function lighthouseArt(m: Deco, t: Haze) {
+  const { x0, y0, x1, y1 } = cornersOf(m);
   return sprite(`harbor|light|${x0},${y0},${x1},${y1}|${m.seed}|${t.k}`, -6, -6, m.w + 12, m.h + 8, (g) => {
     const w = m.w;
     const roof = 4 * TILE;
@@ -351,7 +339,7 @@ function lighthouseArt(m: Deco, t: Hz) {
 
 // -------------------------------------------------------------------------------------------- sea stack
 
-function caveArt(m: Deco, t: Hz) {
+function caveArt(m: Deco, t: Haze) {
   return sprite(`harbor|cave|${m.w}|${m.h}|${m.seed % 5}|${t.k}`, -2, -2, m.w + 4, m.h + 4, (g) => {
     // Only the mouth shows past the rock in front: dark inside, the light from the far side, weed hanging.
     const top = m.h - 3 * TILE;
@@ -381,7 +369,7 @@ function caveArt(m: Deco, t: Hz) {
 
 const facade: DecoSkin = (rc, m, d) => {
   const concept = d.o.level?.landmark?.concept;
-  const t = hz(d);
+  const t = hazer(d, SHELL);
   const ox = m.at[0] + d.off[0];
   const oy = m.at[1] + d.off[1];
   if (concept === 'tidal-pier') stamp(rc.s, pierArt(m, d, t), ox, oy);
@@ -392,10 +380,10 @@ const facade: DecoSkin = (rc, m, d) => {
 
 // --------------------------------------------------------------------------------------------- the crane
 
-function craneArt(m: Deco, d: DrawCtx, t: Hz) {
+function craneArt(m: Deco, d: DrawCtx, t: Haze) {
   const level = d.o.level;
   const at = tiles(level);
-  const { x0, y0, x1, y1 } = boxOf(m);
+  const { x0, y0, x1, y1 } = cornersOf(m);
   const reach = 5 * TILE;
   return sprite(`harbor|crane|${level?.seed}|${x0},${y0},${x1},${y1}|${m.seed % 4}|${t.k}`, -reach - 4, -4, m.w + reach + 8, m.h + 6, (g) => {
     const w = m.w;
@@ -445,7 +433,7 @@ function craneArt(m: Deco, d: DrawCtx, t: Hz) {
 
 const gantry: DecoSkin = (rc, m, d) => {
   if (d.o.level?.landmark?.concept !== 'container-terminal') return SHELLS.gantry?.(rc, m, d);
-  stamp(rc.s, craneArt(m, d, hz(d)), m.at[0] + d.off[0], m.at[1] + d.off[1]);
+  stamp(rc.s, craneArt(m, d, hazer(d, SHELL)), m.at[0] + d.off[0], m.at[1] + d.off[1]);
 };
 
 // ------------------------------------------------------------------------------------------- harpoon gun
