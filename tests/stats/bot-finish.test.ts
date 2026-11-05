@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { BotLevel } from '../../src/game/match';
 import type { Difficulty } from '../../src/sim/level';
+import { PASS_BANDS } from '../../src/game/expectations';
 import { botRace } from '../lib/bot-race';
 
 /**
@@ -13,7 +14,8 @@ import { botRace } from '../lib/bot-race';
  * Seeds 1–40, (gentle, medium, hard level). Before bots made mistakes at every
  * level: Easy 85 70 72, Normal 98 88 88, Hard 98 93 88. Since: Easy 70 58 60,
  * Normal 90 68 63, Hard 95 78 88; with temperaments tilting the hands, Easy
- * 73 58 58, Normal 93 65 60, Hard 93 78 88. The owner's targets are Easy 75 50 30,
+ * 73 58 58, Normal 93 65 60, Hard 93 78 88. The owner's targets (`PASS_TARGETS`,
+ * src/game/expectations.ts, with the bands checked here) are Easy 75 50 30,
  * Normal 90 70 50, Hard 95 85 70: gentle and medium are there, but a hard
  * level plays little harder than a medium one, because only about half of
  * them land in their band (docs/TODO.md → Level follow-ups); as they do, the
@@ -40,25 +42,6 @@ function rates(level: BotLevel): number[] {
   });
 }
 
-/** [lo, hi] finish rates per level difficulty, gentle to hard. */
-const BANDS: Record<BotLevel, readonly (readonly [number, number])[]> = {
-  easy: [
-    [0.6, 0.85],
-    [0.45, 0.72],
-    [0.45, 0.72],
-  ],
-  normal: [
-    [0.8, 1],
-    [0.55, 0.82],
-    [0.5, 0.8],
-  ],
-  hard: [
-    [0.88, 1],
-    [0.68, 0.92],
-    [0.7, 0.95],
-  ],
-};
-
 const measured = new Map<BotLevel, number[]>();
 
 describe('bot finish rate', () => {
@@ -67,8 +50,9 @@ describe('bot finish rate', () => {
       const r = rates(level);
       measured.set(level, r);
       r.forEach((x, i) => {
-        expect(x, `${level}/${DIFFICULTIES[i]}`).toBeGreaterThanOrEqual(BANDS[level][i][0]);
-        expect(x, `${level}/${DIFFICULTIES[i]}`).toBeLessThanOrEqual(BANDS[level][i][1]);
+        const [lo, hi] = PASS_BANDS.race[level][DIFFICULTIES[i]];
+        expect(x, `${level}/${DIFFICULTIES[i]}`).toBeGreaterThanOrEqual(lo);
+        expect(x, `${level}/${DIFFICULTIES[i]}`).toBeLessThanOrEqual(hi);
       });
       expect(r[0]).toBeGreaterThan(r[2]);
     });

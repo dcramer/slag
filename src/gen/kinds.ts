@@ -15,7 +15,7 @@ import { contractOf } from './stage/contract';
  * | set piece, hazard | SET_PIECE_RECIPES, gen/setpieces (`defineSetPiece`)        | `finalize`, `keep`, `noFreeRide`, `tellFaults` |
  * | decor             | DECOR_RULES, gen/decor (`defineDecor`)                     | `placeDecor`                               |
  * | level shape       | SCULPTORS, gen/level/sculptors                             | `judge`, lanes, LAST_RESORT, fallbacks     |
- * | part              | RECIPES, gen/props.ts (`definePart`)                       | `rollPart` (sizes only scale)              |
+ * | part              | RECIPES, gen/props.ts                                     | `rollPart` (sizes only scale)              |
  * | look              | RECIPES, gen/theme/presets.ts                              | (the type: Record<ThemeId, …>)             |
  * | weather           | WEATHER_KINDS, sim/weather.ts; gates in gen/level/weather  | the weather gate                           |
  *

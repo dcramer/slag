@@ -1,4 +1,5 @@
 import type { ListedPhase, ListedRoom } from '../../net/signal-protocol';
+import { MODE_IDS, MODES, type ModeId } from '../../game/modes';
 import { THEME_IDS, THEME_LABELS, type ThemeId } from '../../themes';
 
 /**
@@ -10,8 +11,6 @@ import { THEME_IDS, THEME_LABELS, type ThemeId } from '../../themes';
 /** Join: rooms with a seat. Watch: full rooms, which you can only watch (observer mode). */
 export type LobbyFilter = 'join' | 'watch';
 export const LOBBY_FILTERS: readonly LobbyFilter[] = ['join', 'watch'];
-export const FILTER_LABELS: Record<LobbyFilter, string> = { join: 'Join', watch: 'Watch' };
-
 export const isFull = (r: ListedRoom) => r.players >= r.max;
 
 /**
@@ -45,5 +44,12 @@ export function themeLabel(id: string): string {
  */
 export function rowTitle(r: ListedRoom): { title: string; sub: string } {
   const theme = themeLabel(r.theme);
-  return r.host ? { title: r.host, sub: `${theme} · ${r.room}` } : { title: theme.toUpperCase(), sub: r.room };
+  // A mode other than a race leads the second line: it's what you'd be joining.
+  const mode = r.mode ? `${modeLabel(r.mode)} · ` : '';
+  return r.host ? { title: r.host, sub: `${mode}${theme} · ${r.room}` } : { title: theme.toUpperCase(), sub: `${mode}${r.room}` };
+}
+
+/** A mode's name; one this build doesn't know yet (a newer host) by its id. */
+export function modeLabel(id: string): string {
+  return MODE_IDS.includes(id as ModeId) ? MODES[id as ModeId].label : id.charAt(0).toUpperCase() + id.slice(1);
 }

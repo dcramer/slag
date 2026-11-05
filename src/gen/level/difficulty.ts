@@ -1,5 +1,5 @@
 import { deriveSeed, Rng } from '../../core/rng';
-import type { Difficulty } from '../../sim/level';
+import { type Difficulty, LOOP_BAND } from '../../sim/level';
 
 /**
  * How much precision a level asks of you. Every level rolls one (owner
@@ -118,10 +118,45 @@ export function setLevelDifficulty(d: Difficulty): void {
   current = d;
 }
 
-export function levelDifficulty(): Difficulty {
-  return current;
+/** Run `f` building to difficulty `d`, then back to the level's own: a Rising Slag shaft's connectors are built to its tier. */
+export function withDifficulty<T>(d: Difficulty, f: () => T): T {
+  const was = current;
+  current = d;
+  try {
+    return f();
+  } finally {
+    current = was;
+  }
 }
 
 export function difficultyKnobs(d: Difficulty = current): DifficultyKnobs {
   return DIFFICULTY[d];
+}
+
+/**
+ * A stretch of route measured on its own (docs/DESIGN.md → Difficulty): a race level is one stretch, a Rising Slag
+ * shaft one per lap. Each has a tier, and the same expectation holds in every mode: how often a bot of each level
+ * gets through a stretch of that tier (`PASS_TARGETS`, src/game/expectations.ts).
+ */
+export interface Stretch {
+  /** Rows climbed above the spawn's floor where the stretch starts and ends (end exclusive; Infinity: the rest). */
+  from: number;
+  to: number;
+  tier: Difficulty;
+}
+
+/**
+ * A Rising Slag shaft's curve, lap by lap: a gentle first lap, a medium second, a hard third, and hard laps after
+ * that, which the slag always wins. A loop is the same rows every lap, so what hardens is the slag's leash
+ * (gen/level/tide.ts), not the shaft.
+ */
+export const LAP_TIERS: readonly Difficulty[] = ['gentle', 'medium', 'hard'];
+
+/** The stretches a level is measured in: a looping shaft's laps, or the whole level as one stretch of its own tier. */
+export function stretchesOf(p: { tide?: boolean; curve?: boolean; difficulty: Difficulty; size?: string; h?: number }): readonly Stretch[] {
+  if (!p.tide || p.size !== 'tall' || !p.h) return [{ from: 0, to: Infinity, tier: p.difficulty }];
+  const lap = p.h - LOOP_BAND;
+  const laps: Stretch[] = LAP_TIERS.map((tier, i) => ({ from: i * lap, to: (i + 1) * lap, tier: p.curve ? tier : p.difficulty }));
+  laps.push({ from: LAP_TIERS.length * lap, to: Infinity, tier: p.curve ? 'hard' : p.difficulty });
+  return laps;
 }

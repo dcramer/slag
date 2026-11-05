@@ -26,7 +26,7 @@ export const SHELLS: ReadonlySet<DecoKind> = new Set([
 export const TURNING_SHELLS: ReadonlySet<DecoKind> = new Set(['flywheel']);
 
 /** Scenery dressing for set pieces. Occupies its cells for placement (a backdrop shell none); no runtime behavior. */
-export const deco = defineModule<'deco'>({
+defineModule<'deco'>({
   type: 'deco',
   resolve: (m, x) => ({ ...m, at: x.P(m.at), w: m.w * x.T, h: m.h * x.T }),
   anchors: (m) => {

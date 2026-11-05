@@ -32,7 +32,7 @@ function cellRect(cx: number, cy: number, ox: number, oy: number): Rect {
  * other is gone), so you hop across in rhythm. Never materializes inside a
  * runner: an occupied cell stays open until they leave it.
  */
-export const phase = defineModule<'phase'>({
+defineModule<'phase'>({
   type: 'phase',
   resolve: (m, x) => ({ ...m, cells: x.C(m.cells) }),
   anchors: (m) => m.cells.slice(),

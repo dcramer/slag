@@ -27,7 +27,7 @@ export function magnetCycle(m: Magnet, f: number, phase: number) {
  * to nothing at the edge. Pulling fields bend jumps and drag you sideways
  * off ledges; pushing fields hold you off an area or float you over gaps.
  */
-export const magnet = defineModule<'magnet'>({
+defineModule<'magnet'>({
   type: 'magnet',
   resolve: (m, x) => ({ ...m, at: x.P(m.at), radius: m.radius * x.T }),
   anchors: (m) => [cellOf(m.at)],

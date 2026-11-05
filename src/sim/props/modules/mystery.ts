@@ -41,7 +41,7 @@ function touches(r: RunnerView, x: number, y: number): boolean {
 }
 
 /** A solid crate block that pops a random held item. */
-export const mystery = defineModule<'mystery'>({
+defineModule<'mystery'>({
   type: 'mystery',
   resolve: (m, x) => ({ ...m, cells: x.C(m.cells) }),
   rides: true,

@@ -41,7 +41,7 @@ export function pistonHead(m: Piston, ext: number, off: Vec, cap = m.reach): Rec
  * It runs on a timer with no memory, so what's in its way only caps the stroke:
  * the head stops on terrain or a block, and pins whoever's in between.
  */
-export const piston = defineModule<'piston'>({
+defineModule<'piston'>({
   type: 'piston',
   resolve: (m, x) => ({ ...m, at: x.P(m.at), angle: m.angle + x.da, reach: m.reach * x.T, width: m.width * x.T }),
   anchors: (m) => [cellOf(m.at)],

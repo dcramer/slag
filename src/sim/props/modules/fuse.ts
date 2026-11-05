@@ -67,7 +67,7 @@ function blow(m: Fuse, ctx: TickCtx, box: Rect): void {
  * or another crate's blast touching it sets it off at once, so crates chain.
  * The blast clears no terrain and no props; kills go to whoever placed it.
  */
-export const fuse = defineModule<'fuse'>({
+defineModule<'fuse'>({
   type: 'fuse',
   resolve: (m, x) => ({ ...m, cells: x.C(m.cells) }),
   anchors: (m) => m.cells.slice(),

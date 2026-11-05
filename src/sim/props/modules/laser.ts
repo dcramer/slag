@@ -14,7 +14,7 @@ export function laserAngle(m: Laser, f: number, phase: number): number {
   return m.sweep ? m.angle + m.sweep * dsin(Math.PI * 2 * (f / m.sweepPeriod + phase)) : m.angle;
 }
 
-export const laser = defineModule<'laser'>({
+defineModule<'laser'>({
   type: 'laser',
   resolve: (m, x) => ({ ...m, at: x.P(m.at), angle: m.angle + x.da }),
   anchors: (m) => [cellOf(m.at)],

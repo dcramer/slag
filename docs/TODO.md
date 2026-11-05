@@ -81,6 +81,19 @@ Some steps need the owner. Run after setting the Vercel env vars.
 ## 22. Glacier and space follow-ups
 Both themes are on `main`. Space has no weather. Ice skids and 0.55 space gravity are measured, not played by hand.
 
+## 31. Playstyle modes
+Modes are entries in `MODES` (`src/game/modes.ts`, DESIGN.md → Modes). Rising Slag is in. Next, one agent each:
+
+1. **Rising Slag: playtest and tune.** The slag's floor pace, leash per lap and squeeze (`src/gen/level/tide.ts`) are fitted to bots, not played by hand: against the difficulty standard (`tests/stats/slag-climb.test.ts`) every bot level lands within about 12 points of its targets. Farm, harbor and space loop on first-pass tower kits (barn lofts, pier decks, a station shaft in `sculptors/tall.ts`): give them landmarks of their own for a shaft (a silo, a lighthouse or crane, a docking spine) once concepts can stand in a loop. On a phone the Race emblem (a chequered flag) sits beside Rules' flag icon and reads alike. The world is drawn once per copy of the loop the view sees, so render-side state in prop art (a rope's rig) can step twice near the seam; ragdolls, self-destruct rings and impact words of a runner a lap away aren't moved onto the leader's lap. No sound yet: a pour and a rising boil.
+2. **Brawl.** Last one standing in an arena, knocked into hazards or the pit; the losers of a round pick and place parts into the arena. Needs spawn points for every player (`Level.spawns`, additive), an arena sculptor, items on spawners, and a fight brain. Decide with the owner first: one-hit lethal items, or knockback into the level only (today's rule: items never kill).
+3. **Gauntlet.** Co-op: everyone must finish, and the crate deals hazards. Scoring flips Race's "everyone finished scores nothing".
+
+## 32. Set kits and level builders
+Owner direction (docs/DECISIONS.md → Levels): a level set is a kit of pieces with declared attributes, and the level builders compose any set's kit, so every set supports every mode. Every set has a tower kit now, so Rising Slag loops everywhere. Landmarks, set pieces and decor already declare contracts that conformance enforces; what's left is the shapes, which each set's sculptor writes by hand today. The tall builder over `TallKit` is the pattern: one builder, a few pieces per set. In order, one agent each:
+
+1. **The kit contract, written down**: what a set provides (ground and floor profiles, connectors with their rise and reach, walls and shells, gap styles, its landmarks, hazards and decor) and what a builder may ask of them, as data in the registry, with a conformance check that every set provides every kind.
+2. **Builders, one at a time**: the course (ltr, classic and wide), the climb and the descent, each moved off the per-set sculptors onto kits, holding the race's numbers as they go (`pnpm level --stats 50`: no fallbacks, needBridges, parts shares, open routes, precision bands). Then a Brawl arena is one new builder.
+
 ## 30. Native build
 A real game binary that runs the same TypeScript in a native host (owner decision: no Electron). The sim and generators stay as they are, because lockstep crossplay with the web build needs the same code. Steps, one agent each:
 

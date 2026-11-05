@@ -2,10 +2,11 @@ import { isBotDevice } from '../brain/device';
 import { tidyName } from '../core/name';
 import { nameBlocked } from '../core/name-filter';
 import { type CharacterDef, generateCharacter } from '../gen/character';
-import { BOT_LEVELS, type BotLevel, type Match } from '../game/match';
+import type { BotLevel, Match } from '../game/match';
+import { MODE_IDS } from '../game/modes';
 import { BLOOD_CHOICES, DEFAULT_RULES, DIFFICULTY_CHOICES, GRAVITY_CHOICES, type MatchRules, nearestLength, PART_VARIETIES, RULE_CHOICES } from '../game/rules';
 import { MAX_PLAYERS } from '../sim/constants';
-import { THEME_IDS, type ThemeId } from '../themes';
+import type { ThemeId } from '../themes';
 
 /**
  * Discrete, host-sequenced match actions. They ride in input bundles and are
@@ -31,7 +32,7 @@ export type NetAction =
    * Host only: a bot seat moves to the host as device `to` (`<host>:botN`), look, score and all. Bot seats are the
    * room's and the host runs them, so a new host takes over every one it finds under another peer's id.
    */
-  | { t: 'adopt'; dev: string; to: string }
+  | { t: 'adopt'; dev: string; to: DeviceId }
   /** Host only: the per-match salt (crate order) for the next match start. */
   | { t: 'salt'; salt: number }
   /** Host only, lobby only. */
@@ -122,10 +123,53 @@ export function relayAction(m: Match, a: NetAction): NetAction {
   return { ...a, name: p ? generateCharacter(p.character.seed).name : '' };
 }
 
+/**
+ * A match device online: `<peer>:<local device>` (`k3j9x2ab:kb1`), so one machine can seat several players. Offline
+ * sessions keep raw local ids, so a device read off a player is a plain string; build one with deviceId.
+ */
+export type DeviceId = string & { readonly __device: true };
+
+/** The global id of a peer's local device. A local name never holds ':' (wire.ts refuses one), so peerOf and localOf split it back. */
+export function deviceId(peer: string, local: string): DeviceId {
+  return `${peer}:${local}` as DeviceId;
+}
+
 /** Peer id that owns a global device id (`<peer>:<local device>`), or '' for un-namespaced (offline/debug) devices. */
 export function peerOf(dev: string): string {
   const i = dev.indexOf(':');
   return i < 0 ? '' : dev.slice(0, i);
+}
+
+/** The local device in a global id (`kb1` in `<peer>:kb1`); an un-namespaced id is already one. */
+export function localOf(dev: string): string {
+  return dev.slice(dev.indexOf(':') + 1);
+}
+
+/**
+ * Who may ask for each action: `host` only, or `self`, any peer for its own devices (the host relays it). Exhaustive,
+ * so a new action won't compile until it says, and only an action that names a device can be `self`. A guest's
+ * `join` is never relayed as sent either way: it asks for a seat, which the host's reconcile grants.
+ */
+export const ACTION_AUTH: { [K in NetAction['t']]: Extract<NetAction, { t: K }> extends { dev: string } ? 'host' | 'self' : 'host' } = {
+  join: 'host',
+  leave: 'self',
+  away: 'self',
+  name: 'self',
+  look: 'self',
+  color: 'self',
+  bot: 'self',
+  adopt: 'host',
+  salt: 'host',
+  rules: 'host',
+  level: 'host',
+  kick: 'host',
+  watch: 'self',
+  seat: 'self',
+};
+
+/** May guest `from` have this action sequenced? */
+export function guestMay(from: string, a: NetAction): boolean {
+  return ACTION_AUTH[a.t] === 'self' && 'dev' in a && peerOf(a.dev) === from;
 }
 
 /**
@@ -230,7 +274,7 @@ export function applyAction(m: Match, ns: NetState, a: NetAction): void {
     case 'name': {
       const p = m.players.find((q) => q.device === a.dev);
       if (!p) return;
-      const typed = tidyName(a.name); // wire data: don't trust the type
+      const typed = tidyName(a.name);
       // Refused by the name filter: the player goes by the name its look came with.
       const name = nameBlocked(typed) ? generateCharacter(p.character.seed).name : typed;
       if (name && !m.players.some((q) => q !== p && q.character.name === name)) m.setName(p.slot, name);
@@ -239,51 +283,49 @@ export function applyAction(m: Match, ns: NetState, a: NetAction): void {
     case 'look': {
       const p = m.players.find((q) => q.device === a.dev);
       // Two tabs of one browser share a saved look; the second one keeps the character it rolled.
-      if (p && Number.isInteger(a.seed)) m.setLook(p.slot, a.seed >>> 0, a.color);
+      if (p) m.setLook(p.slot, a.seed >>> 0, a.color);
       return;
     }
     case 'bot': {
       const p = m.players.find((q) => q.device === a.dev);
-      if (!p || !isBotDevice(a.dev) || !BOT_LEVELS.includes(a.level)) return; // wire data
+      if (!p || !isBotDevice(a.dev)) return;
       if (a.level === 'normal') delete p.bot; // keep snapshots canonical
       else p.bot = a.level;
       return;
     }
     case 'adopt': {
       const p = m.players.find((q) => q.device === a.dev);
-      // Wire data: bot seats only, onto a bot device nobody holds.
-      if (!p || typeof a.to !== 'string' || !isBotDevice(a.dev) || !isBotDevice(a.to) || !peerOf(a.to) || m.players.some((q) => q.device === a.to)) return;
+      // Bot seats only, onto a bot device nobody holds.
+      if (!p || !isBotDevice(a.dev) || !isBotDevice(a.to) || m.players.some((q) => q.device === a.to)) return;
       p.device = a.to;
       return;
     }
     case 'color': {
       const p = m.players.find((q) => q.device === a.dev);
-      if (p) m.setColor(p.slot, a.color); // wire data: setColor checks it's a swatch
+      if (p) m.setColor(p.slot, a.color); // setColor checks it's a swatch
       return;
     }
     case 'salt':
-      if (Number.isInteger(a.salt)) m.nextSalt = a.salt >>> 0;
+      m.nextSalt = a.salt >>> 0;
       return;
     case 'rules':
       if (m.phase === 'lobby') m.setRules(sanitizeRules(a.rules));
       return;
     case 'level':
-      // Wire data: a seed and a theme this build has, or nothing changes.
-      if (Number.isInteger(a.seed) && (a.theme === null || (THEME_IDS as readonly unknown[]).includes(a.theme)))
-        m.pickLevel(a.seed >>> 0, a.theme ?? undefined);
+      m.pickLevel(a.seed >>> 0, a.theme ?? undefined);
       return;
     case 'kick':
-      if (m.phase !== 'lobby' || typeof a.peer !== 'string') return;
+      if (m.phase !== 'lobby') return;
       for (const p of m.players.filter((q) => peerOf(q.device) === a.peer)) m.leave(p.device);
       delete ns.parked[a.peer];
       delete ns.watching[a.peer];
       ns.queue = ns.queue.filter((q) => q.peer !== a.peer);
       {
-        const until = Number.isSafeInteger(a.until) ? (a.until as number) : m.frame + KICK_BAN_FRAMES;
+        const until = a.until ?? m.frame + KICK_BAN_FRAMES;
         // Bans that ran out go, so the lists stay as short as the room's recent kicks.
         for (const list of [ns.kicked, ns.banned]) for (const [k, v] of Object.entries(list)) if (v <= m.frame) delete list[k];
         ns.kicked[a.peer] = until;
-        if (typeof a.client === 'string' && a.client) ns.banned[a.client] = until;
+        if (a.client) ns.banned[a.client] = until;
       }
       return;
     case 'watch': {
@@ -322,6 +364,7 @@ const choice =
  * Points and rounds travel as a pair, so a packet can't invent a match that never ends.
  */
 const RULE_CHECKS: { [K in keyof MatchRules]: (v: unknown, r: Partial<MatchRules>) => MatchRules[K] | undefined } = {
+  mode: choice(MODE_IDS),
   targetScore: (v) => (typeof v === 'number' ? nearestLength(v).targetScore : undefined),
   maxRounds: (_v, r) => (typeof r.targetScore === 'number' ? nearestLength(r.targetScore).maxRounds : undefined),
   pickSeconds: choice(RULE_CHOICES.pickSeconds),

@@ -47,6 +47,15 @@ describe('the lobby list', () => {
     expect(rowTitle(room('K7QX2', 3))).toEqual({ title: 'FARM', sub: 'K7QX2' });
   });
 
+  it("says a room's mode when it isn't a race, and lists a race as every older host does", () => {
+    expect(rowTitle({ ...room('K7QX2', 3), host: 'Wobblesnout', mode: 'slag' })).toEqual({ title: 'Wobblesnout', sub: 'Rising Slag · Farm · K7QX2' });
+    expect(rowTitle({ ...room('K7QX2', 3), mode: 'brawl' })).toEqual({ title: 'FARM', sub: 'Brawl · K7QX2' });
+    const listed = { players: 1, max: 8, observers: 0, theme: 'mine', phase: 'lobby' };
+    expect(cleanListing({ ...listed, mode: 'slag' })).toEqual({ ...listed, mode: 'slag' });
+    expect(cleanListing({ ...listed, mode: 'race' })).toEqual(listed);
+    expect(cleanListing({ ...listed, mode: '<b>' })).toEqual(listed);
+  });
+
   it('opens a room watching from Watch, the same screen at the same URL', () => {
     expect(routePath(lobby('FULL', { watch: true }))).toBe('/r/FULL');
     expect(sameRoute(lobby('FULL', { watch: true }), lobby('FULL'))).toBe(true);

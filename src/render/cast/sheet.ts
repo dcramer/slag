@@ -325,10 +325,14 @@ export function castBlind(t = 0.4): HTMLCanvasElement {
   const order = CAST.map((k, i) => [k, (i * 5 + 3) % CAST.length] as const)
     .sort((a, b) => a[1] - b[1])
     .map(([k]) => k);
-  // Narrow enough for every kind across a 1280 px window.
-  const cell = Math.min(88, Math.floor(1260 / order.length));
-  const W = order.length * cell + 20;
-  const H = 360;
+  // Each cell is as wide as a runner reaches (40 world px at 2.5): narrower, a prop held out front (the worm's
+  // pistol, the rapper's mic) was cut off and never part of the read. The kinds wrap onto as many bands as
+  // keep a band under 1440 px.
+  const cell = 100;
+  const cols = Math.min(order.length, Math.floor(1420 / cell));
+  const band = 340;
+  const W = cols * cell + 20;
+  const H = Math.ceil(order.length / cols) * band + 20;
   const cv = document.createElement('canvas');
   cv.width = W;
   cv.height = H;
@@ -346,11 +350,12 @@ export function castBlind(t = 0.4): HTMLCanvasElement {
     [320, { grounded: false, vy: -300, vx: 120 }, 0],
   ];
   order.forEach((kind, i) => {
-    const x = 10 + cell * (i + 0.5);
+    const x = 10 + cell * ((i % cols) + 0.5);
+    const y0 = Math.floor(i / cols) * band;
     s.font = '700 16px Barlow, sans-serif';
     s.fillStyle = '#3d2e26';
     s.textAlign = 'center';
-    s.fillText(String(i + 1), x, 22);
+    s.fillText(String(i + 1), x, y0 + 22);
     for (const [y, p, stride] of poses) {
       g.globalCompositeOperation = 'source-over';
       g.clearRect(0, 0, cell, 110);
@@ -358,7 +363,7 @@ export function castBlind(t = 0.4): HTMLCanvasElement {
       g.globalCompositeOperation = 'source-in';
       g.fillStyle = '#000';
       g.fillRect(0, 0, cell, 110);
-      s.drawImage(scratch, x - cell / 2, y - 92);
+      s.drawImage(scratch, x - cell / 2, y0 + y - 92);
     }
   });
   document.body.appendChild(cv);

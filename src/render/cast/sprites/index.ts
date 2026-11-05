@@ -33,10 +33,12 @@ export const LOADERS: Partial<Record<Kind, () => Promise<{ sprites: SpriteSet }>
   king: () => import('./king/frames'),
   robot: () => import('./robot/frames'),
   horse: () => import('./horse/frames'),
+  worm: () => import('./worm/frames'),
   rapper: () => import('./rapper/frames'),
   limbless: () => import('./limbless/frames'),
   hopper: () => import('./hopper/frames'),
   dragon: () => import('./dragon/frames'),
+  warrior: () => import('./warrior/frames'),
   slayer: () => import('./slayer/frames'),
 };
 
@@ -63,8 +65,6 @@ export function useSprites(v: boolean) {
   on = v;
   if (v) for (const kind of SPRITE_KINDS) void request(kind);
 }
-
-export const spritesOn = () => on;
 
 /** The kinds that have rendered frames. */
 export const SPRITE_KINDS = Object.keys(LOADERS) as Kind[];
@@ -246,5 +246,5 @@ export function drawSprite(s: CanvasRenderingContext2D, set: SpriteSet, c: Chara
   return true;
 }
 
-export { pick, type Variety } from './play';
+export { type Variety } from './play';
 export type { SpriteSet } from './types';

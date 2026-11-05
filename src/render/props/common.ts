@@ -104,22 +104,6 @@ export function drawHeld(rc: RC, run: RunWorld, r: Runner, c: CharacterDef): voi
   if (m) HELD.get(m.type)?.(rc, run, r, c);
 }
 
-function cornerRadii(set: Set<string>, x: number, y: number, R: number): number[] {
-  const has = (dx: number, dy: number) => set.has(`${x + dx},${y + dy}`);
-  const u = !has(0, -1);
-  const d = !has(0, 1);
-  const l = !has(-1, 0);
-  const r = !has(1, 0);
-  return [u && l ? R : 0, u && r ? R : 0, d && r ? R : 0, d && l ? R : 0];
-}
-
-export function bodyPath(cells: Cell[], off: Vec, R: number, inset = 0): Path2D {
-  const set = new Set(cells.map(([x, y]) => `${x},${y}`));
-  const p = new Path2D();
-  for (const [x, y] of cells) p.roundRect(x * TILE + off[0] + inset, y * TILE + off[1] + inset, TILE - inset * 2, TILE - inset * 2, cornerRadii(set, x, y, R));
-  return p;
-}
-
 export function bbox(cells: Cell[], off: Vec) {
   let x0 = Infinity;
   let y0 = Infinity;

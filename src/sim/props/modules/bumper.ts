@@ -11,7 +11,7 @@ const BUMPER_LIFT = 140;
  * The angle you hit it at is the angle you leave at, which makes it a tool
  * for both shortcuts and shoves into danger.
  */
-export const bumper = defineModule<'bumper'>({
+defineModule<'bumper'>({
   type: 'bumper',
   resolve: (m, x) => ({ ...m, at: x.P(m.at), radius: m.radius * x.T }),
   anchors: (m) => [cellOf(m.at)],

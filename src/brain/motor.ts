@@ -155,7 +155,7 @@ export class Motor {
         const card = m.crate[intent.card];
         if (m.phase !== 'pick' || !card || p.claim >= 0) return NO_INPUT;
         const r = card.rect;
-        if (m.crateItemAt(p.cursor.x, p.cursor.y) === intent.card) return intent.do === 'pick' ? this.click(m, m.phaseFrame > 10) : NO_INPUT;
+        if (m.crateItemAt(p.cursor.x, p.cursor.y) === intent.card) return intent.do === 'pick' ? this.click(m, m.acceptsConfirm()) : NO_INPUT;
         return this.steer(p, r.x + r.w / 2, r.y + r.h / 2, 1);
       }
       case 'place': {
@@ -172,7 +172,7 @@ export class Motor {
         const cx = (intent.tx + (w - 1) / 2 + 0.5) * TILE;
         const cy = (intent.ty + (h - 1) / 2 + 0.5) * TILE;
         const tol = TILE / 2 - 2;
-        if (Math.abs(p.cursor.x - cx) <= tol && Math.abs(p.cursor.y - cy) <= tol) return this.click(m, m.phaseFrame > 10 && m.canPlaceFor(p));
+        if (Math.abs(p.cursor.x - cx) <= tol && Math.abs(p.cursor.y - cy) <= tol) return this.click(m, m.acceptsConfirm() && m.canPlaceFor(p));
         return this.steer(p, cx, cy, tol);
       }
       case 'aim':

@@ -1,5 +1,5 @@
 import type { P } from '../ink';
-import { type D, mark, oval, poly, stroke, tonedOval, Y } from './kit';
+import { type D, mark, oval, poly, stroke, Y } from './kit';
 
 /**
  * Faces, drawn small and by hand: a few dark marks rather than a sticker of big white eyes. Each kind
@@ -75,103 +75,6 @@ export function pair(d: D, u: number, spread: number, r: number, mouth: MouthKin
   const y = Y(d, u);
   for (const sd of [-1, 1]) eye(d, sd * d.W * spread + d.f * 0.5, y, r);
   if (mouth !== 'none') mouthMark(d, d.f * 0.8, y + d.H * mouthAt, 2.4, mouth);
-}
-
-/** A robot's visor: a dark slit with two pale lamps that slide toward where it's going. */
-export function slit(d: D, u: number) {
-  const y = Y(d, u);
-  const w = d.W * 0.34;
-  poly(
-    d.s,
-    [
-      { x: -w, y: y - 1.3 },
-      { x: w, y: y - 1.5 },
-      { x: w, y: y + 1.2 },
-      { x: -w, y: y + 1.4 },
-    ],
-    d.lk.eye,
-  );
-  if (blinking(d)) return;
-  for (const sd of [-1, 1]) {
-    const x = sd * w * 0.45 + d.f * w * 0.3;
-    if (d.m === 'cheer')
-      mark(
-        d.s,
-        '#f4e7c2',
-        [
-          { x: x - 0.9, y: y + 0.4 },
-          { x, y: y - 0.6 },
-          { x: x + 0.9, y: y + 0.4 },
-        ],
-        0.8,
-        sd,
-        [0, 0],
-      );
-    else poly(d.s, oval(x, y, d.m === 'fall' ? 1.1 : 0.8, d.m === 'fall' ? 1.1 : 0.7, 7), '#f4e7c2');
-  }
-}
-
-/** Welding goggles: two round lenses on a strap, the eyes showing small behind the glass. */
-export function goggles(d: D, u: number, spread: number) {
-  const y = Y(d, u);
-  mark(
-    d.s,
-    d.lk.eye,
-    [
-      { x: -d.W * 0.5, y: y + 0.2 },
-      { x: d.W * 0.5, y: y - 0.2 },
-    ],
-    1.1,
-    d.sd,
-    [0, 0],
-  );
-  for (const sd of [-1, 1]) {
-    const x = sd * d.W * spread + d.f * 0.6;
-    tonedOval(d.s, x, y, 2.1, 1.9, 12, '#7d8a8c', '#56605f', d.lk.ink, 0.4, 0.7 * d.k, 0.4);
-    poly(d.s, oval(x, y, 1.4, 1.3, 10), '#cfdde0');
-    if (d.m === 'cheer') squint(d, x, y, 0.8, 0.8);
-    else if (!blinking(d)) poly(d.s, oval(x + d.f * 0.4, y + 0.1, 0.55, d.m === 'fall' ? 0.8 : 0.6, 7), d.lk.eye);
-    mark(
-      d.s,
-      '#fffaf0',
-      [
-        { x: x - 0.9, y: y - 0.2 },
-        { x: x - 0.5, y: y - 0.8 },
-      ],
-      0.4,
-      sd,
-      [0.2, 0.2],
-    );
-  }
-}
-
-/** A raccoon's mask: a dark band across the eyes, the eyes bright inside it. */
-export function mask(d: D, u: number, spread: number) {
-  const y = Y(d, u);
-  const w = d.W * (spread + 0.16);
-  poly(
-    d.s,
-    [
-      { x: -w, y: y - 0.6 },
-      { x: -w * 0.4, y: y - 1.8 },
-      { x: 0, y: y - 1 },
-      { x: w * 0.4, y: y - 1.8 },
-      { x: w, y: y - 0.6 },
-      { x: w * 0.5, y: y + 1.6 },
-      { x: 0, y: y + 0.8 },
-      { x: -w * 0.5, y: y + 1.6 },
-    ].map((q) => ({ x: q.x + d.f * 0.5, y: q.y })),
-    d.lk.playerDark,
-  );
-  for (const sd of [-1, 1]) {
-    const x = sd * d.W * spread + d.f * 0.5;
-    if (d.m === 'cheer') {
-      squint(d, x, y, 0.9, 0.8);
-      continue;
-    }
-    poly(d.s, oval(x, y, 1, 1.05, 8), '#f4ede2');
-    if (!blinking(d)) poly(d.s, oval(x + d.f * 0.3, y + 0.1, 0.5, d.m === 'fall' ? 0.75 : 0.55, 7), d.lk.eye);
-  }
 }
 
 /** A puffball's tall oval eyes with a shine at the top, and two blush marks. */

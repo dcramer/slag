@@ -338,48 +338,6 @@ export function blockLoops(cells: readonly Cell[], material: Material, st: PropS
 }
 
 /**
- * Any one-tile part, inked the block way and stamped: a hand-cut tile in `base` with its hard shadow
- * shape, `marks` on top inside its outline, `over` past it (a bow on a gift), and the pen round it.
- * Baked once per `key`.
- */
-export function stampTile(
-  s: CanvasRenderingContext2D,
-  px: number,
-  py: number,
-  key: string,
-  base: HSL,
-  marks: (g: CanvasRenderingContext2D, seed: number) => void,
-  over?: (g: CanvasRenderingContext2D, seed: number, ink: string) => void,
-) {
-  let b = bakes.get(key);
-  if (!b) {
-    if (bakes.size >= CACHE_MAX) bakes.clear();
-    const seed = hashStr(key);
-    const loops = outline([[0, 0]], seed);
-    b = { canvas: document.createElement('canvas'), x: -PAD, y: -PAD, w: TILE + PAD * 2, h: TILE + PAD * 2, loops };
-    b.canvas.width = Math.ceil(b.w * K);
-    b.canvas.height = Math.ceil(b.h * K);
-    const g = b.canvas.getContext('2d')!;
-    g.setTransform(K, 0, 0, K, PAD * K, PAD * K);
-    const ink = css({ h: base.h, s: Math.min(60, base.s + 10), l: 10 });
-    g.fillStyle = css(base, -15, 1, 6);
-    trace(g, loops);
-    g.fill();
-    g.save();
-    g.clip();
-    g.fillStyle = css(base);
-    trace(g, loops, -1.6, -1.8);
-    g.fill();
-    marks(g, seed);
-    g.restore();
-    pen(g, loops, ink, seed, 1);
-    over?.(g, seed, ink);
-    bakes.set(key, b);
-  }
-  s.drawImage(b.canvas, px + b.x, py + b.y, b.w, b.h);
-}
-
-/**
  * One retro blink-block tile in `hue`, stamped: `brick` for the famous brick block's courses, otherwise
  * the exclamation switch block (`retroTile`). A row of them reads as separate blocks that come and go one
  * at a time. `variant` picks one of a few hands.

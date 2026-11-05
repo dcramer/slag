@@ -3,21 +3,7 @@ import type { ThemeId } from '../../themes';
 import { RECIPES } from './presets';
 import type { Theme } from './types';
 
-export type {
-  Ambient,
-  CapKind,
-  Celestial,
-  CloudStyle,
-  DecorKind,
-  LiquidKind,
-  Mood,
-  PlatformKind,
-  SkyLayer,
-  SkylineKind,
-  TerrainKind,
-  TerrainLook,
-  Theme,
-} from './types';
+export type { CapKind, LiquidKind, PlatformKind, SkyLayer, SkylineKind, TerrainKind, TerrainLook, Theme } from './types';
 
 /**
  * Generate the look of a level: a theme-specific recipe (see ./presets.ts)

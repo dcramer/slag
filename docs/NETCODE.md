@@ -37,7 +37,8 @@ src/net/
   signal-client.ts      browser side of the API; the one place that knows where the API lives
   signal-protocol.ts    wire types and limits, shared with the routes; pure
   session.ts            NetSession: lockstep, prediction, sync, migration, desync detection
-  actions.ts            host-sequenced match actions (join/leave/away/name/look/salt/rules/kick) + replicated NetState
+  actions.ts            host-sequenced match actions (join/leave/away/name/look/salt/rules/kick), who may ask for each, device ids + replicated NetState
+  wire.ts               the trust boundary: message types, size limits, parseMsg/parseAction
   codec.ts              compact InputFrame encoding
   snapshot.ts           Match snapshot/restore/hash (exact through JSON: -0, NaN, ∞, Maps, typed arrays)
   predict.ts            cheap race-state copy for prediction
@@ -179,6 +180,13 @@ The sim is a pure function of `(seed, per-frame inputs)`, so **inputs and host-s
 - The host stamps `{frame, inputs, actions, ack deltas}` into a **bundle**, applies it, and broadcasts every tick, repeating the previous bundle so a lost packet costs nothing. Guests apply bundles strictly in frame order, the moment they arrive. A gap triggers `need`, and the host resends from its 10 s history or sends a snapshot.
 - Discrete changes (seat a rejoiner, drop a leaver, mark away, rename, a saved look, rules, the crate salt) are **actions** in bundles, applied by everyone at the same frame.
 - Sequence numbers start at wall-clock ms, so a refreshed page always counts higher than its old self.
+
+### Trust boundary
+
+- **Every message is parsed once, where it arrives** (`parseMsg` in `wire.ts`): each field has the type the session's code says, or the whole message is dropped and counted (`stats.malformed`). Nothing a peer sends can throw, and nothing past the parser checks a type again. Game rules (which values a rule allows, who sits where) stay in `applyAction`.
+- **Who may ask for an action is data** (`ACTION_AUTH` in `actions.ts`): `host`, or `self`, a peer for its own devices. It's exhaustive, so a new action doesn't compile until it says, and only one that names a device can be `self`. A guest's `join` is a request for a seat, granted by the host's reconcile.
+- **Sizes are bounded at both ends.** A guest sends at most `ACTS_PER_MSG` requests per message and the next batch once those are acked; the host puts at most `ACTS_PER_BUNDLE` actions in a bundle and holds the rest a frame. What a sender never exceeds, the parser refuses.
+- **Gates the guest predicts come from the match.** A guest marks a click pending only through `Match.acceptsConfirm`, the gate the host's step uses, so it never marks one the host refuses.
 
 ### Prediction (races)
 

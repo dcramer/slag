@@ -67,7 +67,7 @@ export function logBox(m: Swinger, h: { x: number; y: number }): Rect {
 }
 
 /** Saw / mace / axe heads on an arm: static, orbiting, or pendulum; or a log slung level, battering along its length. */
-export const swinger = defineModule<'swinger'>({
+defineModule<'swinger'>({
   type: 'swinger',
   resolve: (m, x) => ({ ...m, hub: x.P(m.hub), arm: m.arm * x.T, radius: m.radius * x.T, angle0: m.angle0 + x.da }),
   anchors: (m) => [cellOf(m.hub)],

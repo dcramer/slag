@@ -14,21 +14,7 @@ import { VOLCANO_CONCEPTS } from './volcano';
 import type { Concept } from './types';
 
 export type { Concept, Landmark } from './types';
-export {
-  contractOf,
-  defineConcept,
-  type Footing,
-  footingFaults,
-  LANDMARK_RULES,
-  type LandmarkContract,
-  landmarkFaults,
-  layoutDiff,
-  layoutOf,
-  measureScale,
-  ownPieces,
-  protectedFaults,
-  type Scale,
-} from './contract';
+export { contractOf, footingFaults, LANDMARK_RULES, landmarkFaults, layoutDiff, layoutOf, measureScale, ownPieces, protectedFaults } from './contract';
 
 /**
  * Stage concepts per theme (docs/SETPIECES.md): one file per theme in this
@@ -50,15 +36,12 @@ export const CONCEPTS: Record<ThemeId, Concept[]> = {
 /** Share of levels that stay plain where a concept would fit: the counterpoint that keeps landmarks special. */
 export const PLAIN_SHARE = 0.2;
 
-/** `ProfileOverride.concept` value that forces a plain level. */
-export const PLAIN = 'plain';
-
 /**
  * The level's concept, or null for a plain level. Fixed per level, from its
  * own stream: a per-attempt roll would quietly select for the concepts that
  * are easiest to sculpt. Only concepts that fit the level's size and route
  * are drawn. `force` (tools, `?concept=`) picks one by id regardless, or
- * `PLAIN`; an id the theme doesn't have is plain.
+ * `'plain'`: an id the theme doesn't have is plain.
  */
 export function rollConcept(
   seed: number,

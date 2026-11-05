@@ -72,6 +72,33 @@ Every game design decision, preference and direction the owner has given, groupe
   2026-11-02 06:57Z · `done` · DESIGN.md → Rules (Blood rounds)
 - **Secret Parts mode: you pick a role (build, hazard, utility, demolish) without knowing the part, and get one at random from the match's parts.** "a mode thats like secret blocks, where you dont know what it is, but you choose hazard/utility/block"
   2026-11-02 04:56Z · `done` · DESIGN.md → Props (Secret Parts), Rules
+- **Add alternative playstyle modes that keep the game's graphics and reuse its parts where they make sense; Rising Slag first, with Brawl (a Duck Game-like knock-them-off mode) and a co-op Gauntlet to follow.** "what would it look like to add alternative playstyle modes? id want graphics to be the same, sometimes we'd reuse props when they made sense" / "Rising Slag first" / "gauntlet and brawl are also great"
+  2026-11-04 · `done` for the mode registry and Rising Slag; Brawl and Gauntlet are `planned` · DESIGN.md → Modes, `src/game/modes.ts`, TODO.md → 31
+- **Rising Slag levels keep their theme: a mode asks for the level it needs, and each theme builds it in its own shape.** "keep in mind rising slag still needs the thematic level stuff. they might just have to support additional annotations for it?"
+  2026-11-04 · `done` (a climbing profile in every theme, the slag carried on the level as `Level.tide`); themes that never build towers climb only 7–15 rows, `planned` · DESIGN.md → Modes, TODO.md → 31
+- **Rising Slag is an endless climb, and the slag has to chase you.** "rising slag.. isnt an infinitely climbable thing and the thing doesnt rise very fast...."
+  2026-11-04 · `done` · DESIGN.md → Modes; 200-row towers of the tower themes (`TIDE_TOWER_H`), the slag at 1.5 tiles/s gaining 0.1 a second (`SLAG_TIDE`)
+  Changed: the first cut climbed a 40–60-row tower (or a classic climb) with a flag-less top to hold, under slag at 0.8 tiles/s gaining 0.035 after 4 s.
+- **Rising Slag towers get a difficulty curve, and difficulty expectations are standardized across modes as bot pass rates, the way the race's finish rates were set.** "these levels will also need a difficultly curve, which might mean we have to clea up the way we analyze things? we should standardize the expectations around difficulty (% win etc)" / "Yes, build it"
+  2026-11-04 · `done` · DESIGN.md → Difficulty, Modes; `src/game/expectations.ts`, `TOWER_CURVE`, `tests/stats/slag-climb.test.ts`
+  Changed: the race's targets lived only in its stats suite; the slag rose at 1.5 tiles/s gaining 0.1 after 2 s, now 2.6 gaining 0.12 after 3 s, fitted to Normal bots.
+- **A looping tower (its top wrapping to its bottom) is a nice hack for an endless climb, but complicated: not now.** "the level could loopp maybe but thats a little complicated? thats a nice hack tho"
+  2026-11-04 · `done` the same day: see the looping shaft below
+- **Rising Slag plays in the style of SpeedRunners: the slag follows the leader like its camera, so falling behind the pack is falling off the screen.** "speedrunners i think is what we want like that style" (after a survey of how other games pace a shared hazard)
+  2026-11-04 · `done` · DESIGN.md → Modes; `src/sim/tide.ts`, `src/gen/level/tide.ts`, `src/render/camera-follow.ts`
+  Changed: a fixed slag pace (2.6 tiles/s gaining 0.12), which only punished slowness: Easy bots got through 8% of medium stretches, now 43%.
+- **Rising Slag is a looping shaft: climb out of the top and carry on from the bottom, so the map fits the screen and every part placed is met once a lap.** "i can see the whole map... while item placement is fine its not super useful if its randomly in the middle of a huge map?... it could be more like a map that scrolls infinitely so when you place you're in a loop?" / "yeah rising slag as a looping shaft is more interesting"
+  2026-11-04 · `done` · DESIGN.md → Modes; `Level.loop`, `closeLoop` in `src/gen/level/sculptors/tall.ts`, `lapShift` in `src/sim/level.ts`
+  Changed: a 200-row tower with a difficulty curve up its height. The curve now runs lap by lap through the slag's leash. Also takes in the level-edge feedback relayed from another session: walled sides, 48+ columns wide.
+- **Switching modes needs a better home than the Rules card: the mode leads the lobby on a plate of its own, opening a Mode card of big tiles.** "one thing i know we need is a better way to switch modes.. the level settin gis awkward for that" / "lets do it"
+  2026-11-04 · `done` · DESIGN.md → Modes; `src/ui/menus/mode.ts`, `src/render/mode-emblem.ts`
+  Changed: Mode was a row on the Rules card.
+- **Rising Slag scores by placement (10, 6, 3 for outlasting the slag), deals its own crate mix, and its winged shell hunts the highest climber.** (agreed with "lets do it", after a review that winner-take-all scoring, race crates and a flag-seeking shell would make the mode feel unfair)
+  2026-11-04 · `done` · DESIGN.md → Modes; `SURVIVE_PLACES`, `ModeDef.crate`
+- **Level sets should be fully interchangeable across modes, since the engine builds the level; until they are, a set may show which modes it supports.** "its totally ok if level sets show which modes they support while they're wip" / "tho ideally the level sets are fully interchangeable since the main engine should build the level."
+  2026-11-04 · `done` for the marker (`ModeDef.builds`, the Level card); interchangeable sets `planned` · DESIGN.md → Modes, TODO.md → 31
+- **A level set is a kit of pieces with declared sizes and attributes (landmarks, hazards, decor, floors, connectors, walls), and the level builders, one per shape or mode, are set-agnostic and compose any set's kit, so every set supports every mode.** "i guess really all level sets should support all modes right because isnt it just retyling stuff etc?" / "i was thinking the landmarks etc are part of the set kit and the level builders just know how to use them (because tey know their sizes/attributes/etc)"
+  2026-11-04 · `done` for tower kits in every set (farm, harbor and space added: Rising Slag loops everywhere); the kit contract and set-agnostic course builders `planned` · TODO.md → 32; the tall builder over per-set kits (`TallKit`, `src/gen/level/sculptors/tall.ts`) is the pattern
 - **A rule the level is built from (gravity, weather) rebuilds the lobby's level for everyone at once.**
   2026-11-02 · git `e64c3e5` · `done` · DESIGN.md → Rules
 
@@ -581,6 +608,8 @@ Every game design decision, preference and direction the owner has given, groupe
   2026-11-02 · git `cf6c496`, `0464596` · `done` · `src/codex/`
 - **The codex talks about maps too: every theme, its landmarks and its own hazards, pictured by the game's renderer.** "the codex needs to talk about maps"
   2026-11-02 · `done` · DESIGN.md → Discovery, `src/codex/maps.ts`, TODO.md → 28
+- **The codex shows every character: the whole cast, by its sound-alike names, between the parts and the maps.** "make sure our codex shows all the characters"
+  2026-11-04 · `done` · DESIGN.md → Discovery, `src/codex/cast.ts`
 - **The main menu ends with About, after Settings: who made it, its inspiration, credits, the license and a link to the source on GitHub.** "Need an About thing after settings, which includes license, inspiration, github link etc"
   2026-11-02 · `done` · `src/ui/screens/about.ts`, `/about`
 - **About credits Ultimate Chicken Horse by name for the core concept, the one place a real game is named; every credit says what it is (display font, name filter), not just its name. No flavor prose on the page.** "those credits are weak, credit ultimate chicken horse for core concept" / "idk what lilita one etc even are..." / "i dont want ai slop for the description there either"

@@ -41,8 +41,6 @@ export const SWORD = {
   swatSpeed: 160,
 } as const;
 
-export { BONK_CREDIT, BONK_DAZE } from './common';
-
 export const PUCK = { speed: 230, maxFall: 420, bounces: 5 } as const;
 const BOOMERANG = { speed: 340 } as const;
 export const SHIELD = { jumpCap: 300, guard: 18, pop: 280 } as const;

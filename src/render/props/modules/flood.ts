@@ -1,7 +1,7 @@
 import { css, type HSL } from '../../../core/color';
 import { hash2 } from '../../../core/rng';
 import { TILE } from '../../../sim/constants';
-import { T_SOLID, tileAt } from '../../../sim/level';
+import { type Level, T_SOLID, tileAt } from '../../../sim/level';
 import { FLOOD_WARN, type FloodLook, floodState, type ModuleOf } from '../../../sim/props';
 import { blob, inkFor, line, type P, sn } from '../../ink';
 import { sprite, stamp } from '../../ink-props';
@@ -24,7 +24,7 @@ import { BACKDROP, beamOf, type DrawCtx, defineArt } from '../common';
 
 type Flood = ModuleOf<'flood'>;
 
-interface Liquid {
+export interface Liquid {
   /** Light band under the surface, body, deep. */
   top: HSL;
   body: HSL;
@@ -107,11 +107,13 @@ function bands(x0: number, w: number, L: Liquid) {
 }
 
 function drawBody(rc: RC, m: Flood, d: DrawCtx) {
-  const h = heightOf(m, d, rc.frame);
+  paintBody(rc, liquidOf(m, d), m.at[0] + d.off[0], m.w, m.at[1] + d.off[1], heightOf(m, d, rc.frame));
+}
+
+/** A liquid's body `h` px deep over `w` px from `x0`, its floor at `floor`: the bands under the crest and the deep below. Behind the terrain. */
+export function paintBody(rc: RC, L: Liquid, x0: number, w: number, floor: number, h: number) {
   if (h <= 0) return;
-  const L = liquidOf(m, d);
-  const x0 = m.at[0] + d.off[0];
-  const floor = m.at[1] + d.off[1];
+  const m = { w };
   const crest = floor - h;
   const s = rc.s;
   const deep = crest + BODY + 2;
@@ -128,8 +130,7 @@ function drawBody(rc: RC, m: Flood, d: DrawCtx) {
 }
 
 /** Runs of tile columns whose cell at `y` (just under the crest) is open: liquid, not a wall the crest would run across. */
-function openRuns(d: DrawCtx, x0: number, w: number, y: number): [number, number][] {
-  const lv = d.o.level;
+function openRuns(lv: Level | undefined, x0: number, w: number, y: number): [number, number][] {
   if (!lv) return [[x0, x0 + w]];
   const ty = Math.floor(y / TILE);
   const runs: [number, number][] = [];
@@ -151,8 +152,7 @@ function openRuns(d: DrawCtx, x0: number, w: number, y: number): [number, number
  * Open liquid under the crest at world x, px, down to the first solid tile or `cap`. Over a ledge a
  * flood can be a pixel deep: nothing drawn in front of the terrain may reach further than this.
  */
-function wet(d: DrawCtx, x: number, crest: number, cap: number): number {
-  const lv = d.o.level;
+function wet(lv: Level | undefined, x: number, crest: number, cap: number): number {
   if (!lv) return cap;
   const tx = Math.floor(x / TILE);
   for (let ty = Math.floor(crest / TILE); ty * TILE < crest + cap; ty++)
@@ -161,14 +161,14 @@ function wet(d: DrawCtx, x: number, crest: number, cap: number): number {
 }
 
 /** Bubbles that rise through `depth` px under the crest and pop at it, on the sim's clock. */
-function bubbles(rc: RC, d: DrawCtx, L: Liquid, a: number, b: number, crest: number, cap: number, rate: number) {
+function bubbles(rc: RC, lv: Level | undefined, L: Liquid, a: number, b: number, crest: number, cap: number, rate: number) {
   const s = rc.s;
   for (let cx = Math.floor(a / 9); cx * 9 < b; cx++) {
     const k = hash2(cx, 3, 21);
     if (k > rate) continue;
     const x = cx * 9 + 2 + k * 5;
     if (x < a + 1.5 || x > b - 1.5) continue;
-    const depth = wet(d, x, crest, cap);
+    const depth = wet(lv, x, crest, cap);
     if (depth < 4) continue;
     const period = 70 + Math.floor(k * 90);
     const u = ((rc.frame + Math.floor(k * 997)) % period) / period;
@@ -205,15 +205,20 @@ function froth(rc: RC, L: Liquid, a: number, b: number, crest: number, p: number
 
 function drawSurface(rc: RC, m: Flood, d: DrawCtx) {
   const st = floodState(m, rc.frame, d.r.phase);
-  const h = heightOf(m, d, rc.frame);
   const warn = st.seg === FLOOD_WARN ? st.t / st.len : 0;
+  paintSurface(rc, d.o.level ?? undefined, liquidOf(m, d), m.at[0] + d.off[0], m.w, m.at[1] + d.off[1], heightOf(m, d, rc.frame), warn);
+}
+
+/**
+ * A liquid's surface over the open columns of `lv`: the pen crest on the kill line, glints, bubbles, the warning
+ * froth (`warn` 0…1) and, when it's hot, its glow. In front of the terrain.
+ */
+export function paintSurface(rc: RC, lv: Level | undefined, L: Liquid, x0: number, w: number, floor: number, h: number, warn: number) {
   if (h <= 0 && !warn) return;
-  const L = liquidOf(m, d);
-  const x0 = m.at[0] + d.off[0];
-  const floor = m.at[1] + d.off[1];
+  const m = { w };
   const crest = floor - h;
   const s = rc.s;
-  for (const [a, b] of openRuns(d, x0, m.w, crest + 0.5)) {
+  for (const [a, b] of openRuns(lv, x0, m.w, crest + 0.5)) {
     if (h > 0) {
       // The pen crest: one stroke per tile column, lifted at some joints, centred on the kill line.
       s.fillStyle = inkFor(L.deep);
@@ -229,10 +234,10 @@ function drawSurface(rc: RC, m: Flood, d: DrawCtx) {
         const k = hash2(cx, 2, 51);
         if (k < 0.55) continue;
         const gx = cx * 13 + k * 6;
-        if (gx < a + 1 || gx + 4 > b - 1 || wet(d, gx, crest, 3) < 2.5 || wet(d, gx + 5.5, crest, 3) < 2.5) continue;
+        if (gx < a + 1 || gx + 4 > b - 1 || wet(lv, gx, crest, 3) < 2.5 || wet(lv, gx + 5.5, crest, 3) < 2.5) continue;
         line(s, gx, crest + 1.4, gx + 2.5 + k * 3, crest + 1.4, { w: 0.6, seed: cx + 7, taper: [0.3, 0.3], press: 0.1 });
       }
-      bubbles(rc, d, L, a, b, crest, Math.min(h, BODY + 6), 0.3 + warn * 0.7);
+      bubbles(rc, lv, L, a, b, crest, Math.min(h, BODY + 6), 0.3 + warn * 0.7);
     }
     if (warn) froth(rc, L, a, b, crest, warn);
     if (L.hot) {
@@ -241,7 +246,7 @@ function drawSurface(rc: RC, m: Flood, d: DrawCtx) {
       for (let cx = Math.floor(a / TILE); cx * TILE < b; cx++) {
         const xa = Math.max(a, cx * TILE);
         const xb = Math.min(b, (cx + 1) * TILE);
-        const deep = wet(d, xa, crest, Math.min(h, BAND + 1));
+        const deep = wet(lv, xa, crest, Math.min(h, BAND + 1));
         if (deep > 0) rc.g.fillRect(xa, crest, xb - xa, deep);
       }
       for (let x = a + 24; x < b; x += 48) light(rc, x, crest + 2, 70, L.body, 0.7 + warn * 0.4);
