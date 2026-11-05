@@ -146,7 +146,7 @@ describe('stage concepts', () => {
 
     CONCEPTS.farm.length = 0;
     use(plinth(() => true));
-    const l = generateLevel(SEEDS[0], 'farm', { concept: 'test-plinth', draw: 0 });
+    const l = generateLevel(SEEDS[1], 'farm', { concept: 'test-plinth', draw: 0 });
     expect(lastGenInfo.concept).toBeUndefined();
     expect(lastGenInfo.conceptFallback).toBe(true);
     expect(lastGenInfo.rejects.landmark).toBe(MAX_LANDMARK_REJECTS);

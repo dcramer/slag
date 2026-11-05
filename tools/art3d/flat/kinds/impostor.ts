@@ -55,14 +55,17 @@ export const kind: FlatKind = {
     { name: 'cap', color: '#9aa0a8' },
     { name: 'body', color: '#5aa84a', slot: 'player' },
     // The tape over the visor's crack, as silver duct tape: in the strap's pale tan it was the farm's own
-    // colour, and read as the background cutting a notch into the visor; as brown packing tape, a brow.
-    { name: 'tan', color: '#d3d8dc' },
+    // colour, and read as the background cutting a notch into the visor; as brown packing tape, a brow. Lighter
+    // than the grey glass, so the strip stays a shape on it.
+    { name: 'tan', color: '#eceeef' },
     // The strap, drawn in the tape's colour and told from it by where it is (`recolour`): pale, so the pack
     // still stands off the bean with background between. A colourway (VARIETY.palette): tan webbing, grey
     // webbing or bone.
     { name: 'strap', color: '#d9c79a', alts: ['#b4b9bf', '#ece4d2'], vary: 6 },
-    { name: 'visor', color: '#a9dbe8' },
-    { name: 'vshade', color: '#6aa6ba' },
+    // The visor, neutral glass: a pale cool grey with a darker rim below. In the original's pale blue it sank
+    // into the cyan and light-blue beans; a grey stands apart from every player's colour.
+    { name: 'visor', color: '#c4ccd2' },
+    { name: 'vshade', color: '#7c8893' },
     { name: 'glint', color: '#ffffff' },
     { name: 'dark', color: '#2a1f1a' },
     // Wear on the suit, in tones of the player's colour: a rubbed patch, and soot. One quiet mark a wear: on a

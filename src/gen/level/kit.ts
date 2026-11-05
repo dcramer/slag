@@ -166,7 +166,9 @@ export interface Pocket {
 /**
  * Carve the spawn (left) and goal (right) pockets, guarantee their floors,
  * and package the grid as a Shape. Pockets are 5 wide and 4 tall above the
- * floor; the protected rects cover pocket + floor row.
+ * floor; the protected rects cover pocket + floor row. The spawn pocket has a
+ * wall at the level's left edge, a row taller than a jump: past the edge is
+ * death, and a runner who holds left at GO shouldn't walk or hop into it.
  */
 export function finish(g: Grid, spawn: Pocket, goal: Pocket, style: string): Shape {
   const W = g.w;
@@ -178,6 +180,8 @@ export function finish(g: Grid, spawn: Pocket, goal: Pocket, style: string): Sha
     for (let x = x0; x < x0 + POCKET; x++) for (let y = p.row + 2; y <= bottom; y++) if (g.empty(x, y)) g.set(x, y, T_SOLID, true);
   };
   pocket(0, spawn);
+  // Taller than a jump at the level's gravity: a hop can't clear it, only a climb on purpose.
+  g.fill(0, spawn.row - Math.max(3, jumpProfile().rise), 0, spawn.row, T_SOLID, true);
   pocket(W - POCKET, goal);
   return {
     w: g.w,

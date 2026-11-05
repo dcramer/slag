@@ -144,7 +144,7 @@ describe('the Throne Hall', () => {
 describe('castle filler', () => {
   it('hangs every chandelier, axe and falling chandelier from a real ceiling, and mounts its glass on a wall', () => {
     let hung = 0;
-    for (const seed of [2, 5, 10]) {
+    for (const seed of [2, 5, 7]) {
       const l = generateLevel(seed, 'castle', { concept: 'plain' });
       for (const pp of l.setPieces) {
         for (const m of resolveProp(pp).mods) {

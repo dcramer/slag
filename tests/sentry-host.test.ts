@@ -2,7 +2,18 @@ import type { ErrorEvent } from '@sentry/browser';
 import { describe, expect, it } from 'vitest';
 import { REPORT_EVERY_MS, StoreFailureThrottle, storeStatus } from '../app/api/net/_server/report';
 import { StoreError } from '../app/api/net/_server/store';
-import { EventBudget, eventFingerprint, keepBreadcrumb, MAX_EVENTS_PER_PAGE, noiseReason, stampScope } from '../app/sentry-filter';
+import {
+  type BatteryLike,
+  clientOf,
+  EventBudget,
+  eventFingerprint,
+  keepBreadcrumb,
+  MAX_EVENTS_PER_PAGE,
+  metricAttributes,
+  noiseReason,
+  stampScope,
+  watchPower,
+} from '../app/sentry-filter';
 import { serverTraceRate } from '../app/sentry-options';
 
 const ORIGIN = 'https://slag.example';
@@ -55,6 +66,74 @@ describe('sentry event shaping', () => {
     stampScope(ev, { tags: { screen: 'lobby', 'match.phase': 'run', players: undefined }, contexts: { rules: { pickSeconds: 15 } } });
     expect(ev.tags).toEqual({ screen: 'codex', 'match.phase': 'run', boundary: 'screen' });
     expect(ev.contexts).toEqual({ rules: { pickSeconds: 15 }, details: { where: 'boot' } });
+  });
+
+  it('slices metrics by the game’s tags, never per room, and lets the metric’s own phase win', () => {
+    const tags = { room: 'ABCD', 'level.seed': 42, 'match.round': 3, 'match.phase': 'score', 'device.class': 'phone' as const, players: undefined };
+    expect(metricAttributes(tags, { 'match.phase': 'run' })).toEqual({ 'match.phase': 'run', 'device.class': 'phone' });
+  });
+
+  it('names the browser family, major version and OS from real user agents', () => {
+    const cases: [string, number, string, string | undefined, string][] = [
+      ['Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36', 0, 'chrome', '131', 'windows'],
+      [
+        'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36 Edg/131.0.0.0',
+        0,
+        'edge',
+        '131',
+        'windows',
+      ],
+      ['Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.1 Safari/605.1.15', 0, 'safari', '18', 'macos'],
+      ['Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.1 Safari/605.1.15', 5, 'safari', '18', 'ios'],
+      [
+        'Mozilla/5.0 (iPhone; CPU iPhone OS 18_1 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.1 Mobile/15E148 Safari/604.1',
+        5,
+        'safari',
+        '18',
+        'ios',
+      ],
+      [
+        'Mozilla/5.0 (iPhone; CPU iPhone OS 18_1 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) CriOS/131.0.6778.73 Mobile/15E148 Safari/604.1',
+        5,
+        'chrome',
+        '131',
+        'ios',
+      ],
+      [
+        'Mozilla/5.0 (Linux; Android 14; SM-S918B) AppleWebKit/537.36 (KHTML, like Gecko) SamsungBrowser/26.0 Chrome/122.0.0.0 Mobile Safari/537.36',
+        5,
+        'samsung',
+        '26',
+        'android',
+      ],
+      ['Mozilla/5.0 (X11; Linux x86_64; rv:133.0) Gecko/20100101 Firefox/133.0', 0, 'firefox', '133', 'linux'],
+      ['Mozilla/5.0 (X11; CrOS x86_64 14541.0.0) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36', 0, 'chrome', '131', 'chromeos'],
+      ['curl/8.0', 0, 'other', undefined, 'other'],
+    ];
+    for (const [ua, touch, browser, version, os] of cases)
+      expect(clientOf(ua, touch), ua).toEqual({ 'browser.name': browser, 'browser.version': version, 'os.name': os });
+  });
+
+  it('follows whether the device is on battery, and stays unknown where it can’t tell', async () => {
+    const seen: string[] = [];
+    let change = () => {};
+    const battery: BatteryLike = { charging: false, addEventListener: (_t, l) => (change = l) };
+    await watchPower({ getBattery: async () => battery }, (p) => seen.push(p));
+    battery.charging = true;
+    change();
+    expect(seen).toEqual(['battery', 'plugged']);
+    await watchPower({}, (p) => seen.push(p));
+    await watchPower({ getBattery: () => Promise.reject(new Error('NotAllowedError')) }, (p) => seen.push(p));
+    expect(seen).toHaveLength(2);
+  });
+
+  it('puts the browser under the game’s tags on a metric', () => {
+    const client = { 'browser.name': 'chrome', 'browser.version': '131', 'os.name': 'macos' };
+    expect(metricAttributes({ 'device.class': 'desktop' }, { 'match.phase': 'run' }, client)).toEqual({
+      ...client,
+      'device.class': 'desktop',
+      'match.phase': 'run',
+    });
   });
 
   it('caps a page’s events', () => {

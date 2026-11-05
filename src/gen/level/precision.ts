@@ -1,5 +1,5 @@
 import { TILE } from '../../sim/constants';
-import { type Level, T_SOLID } from '../../sim/level';
+import { type Level, offMap, T_SOLID } from '../../sim/level';
 import { type Body, type CollisionWorld, type Controls, createBody, stepBody } from '../../sim/physics';
 import { movesOn } from '../../sim/reach';
 import { groundSurfaceAt } from '../../sim/ground';
@@ -77,6 +77,7 @@ function worldOf(level: Level, tiles: Uint8Array): CollisionWorld {
   const tileSurface = footing(level);
   return {
     tileAt: (x, y) => (x < 0 || x >= w ? T_SOLID : y < 0 || y >= h ? 0 : tiles[y * w + x]),
+    cols: w,
     solids: [],
     gravity: level.gravity ?? 1,
     ...(tileSurface ? { tileSurface } : {}),
@@ -84,17 +85,17 @@ function worldOf(level: Level, tiles: Uint8Array): CollisionWorld {
   };
 }
 
-/** True if `controls` from `body`, then letting go, ends with the body out of the bottom of the level. */
+/** True if `controls` from `body`, then letting go, ends with the body out of the bottom or off a side of the level. */
 function falls(level: Level, world: CollisionWorld, body: Body, controls: readonly Controls[]): boolean {
   const b = { ...body };
   const out = level.h * TILE;
   for (const c of controls) {
     stepBody(b, c, world);
-    if (b.y > out) return true;
+    if (b.y > out || offMap(b, level.w)) return true;
   }
   for (let f = 0; f < SETTLE && !b.onGround; f++) {
     stepBody(b, NONE, world);
-    if (b.y > out) return true;
+    if (b.y > out || offMap(b, level.w)) return true;
   }
   return false;
 }

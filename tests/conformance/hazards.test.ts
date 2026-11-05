@@ -16,7 +16,9 @@ import { artFaults, hazardFaults, once, rule } from './lib';
  * hazard no other theme has (by mechanism: what hurts and how, not its look), set pieces and landmarks
  * of every other theme included.
  *
- * Each recipe is placed on its own, on plain levels of its theme, until two of it stand.
+ * Each recipe is placed on its own, on plain levels of its theme, until two of it stand: on two levels, or
+ * on one at two rolls. Levels are what this costs (a placement is a fraction of a millisecond, a level tens
+ * of them), so levels are only made until every recipe has stood once.
  */
 
 const TERRAIN_SEEDS = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12];
@@ -28,43 +30,74 @@ interface Placed {
   pp: PlacedProp;
 }
 
-/** A plain level of the theme with its set pieces taken out, to place recipes on one at a time: every difficulty, which shapes the terrain, in turn. */
+/**
+ * A plain level of the theme with no set pieces, to place recipes on one at a time: every difficulty, which
+ * shapes the terrain, in turn. Its first draw, without the search for a draw whose precision fits the
+ * difficulty, and none of its own set pieces placed and proven: neither changes the ground a recipe stands
+ * on, and together they were most of what a level cost.
+ */
 const terrain = (theme: ThemeId, i: number): Level => {
   const size: SizeClass = i % 3 === 2 ? 'wide' : 'classic';
   const difficulty = DIFFICULTIES[Math.floor(i / 2) % DIFFICULTIES.length];
-  return { ...generateLevel(TERRAIN_SEEDS[i], theme, { concept: 'plain', size, difficulty }), setPieces: [] };
+  return { ...generateLevel(TERRAIN_SEEDS[i], theme, { concept: 'plain', size, difficulty, draw: 0, hazards: 0 }), setPieces: [] };
+};
+
+/** The recipe placed alone on terrain `i`, at the first roll from `from` that stands: the piece and its roll. */
+const placeOn = (theme: ThemeId, r: Recipe, level: Level, i: number, from = 0): { pp: PlacedProp; k: number } | null => {
+  for (let k = from; k < REROLLS; k++) {
+    const got = SET_PIECES[theme](new Rng(k * 7919 + i), level, { count: 1, family: [r.name] });
+    if (got.length) return { pp: got[0], k };
+  }
+  return null;
 };
 
 /** Up to WANT instances of each recipe of a theme, placed alone. */
 const placedOf = (theme: ThemeId): Map<string, Placed[]> => {
-  const out = new Map<string, Placed[]>(SET_PIECE_RECIPES[theme].map((r) => [r.name, []]));
+  const recipes = SET_PIECE_RECIPES[theme];
+  const out = new Map<string, Placed[]>(recipes.map((r) => [r.name, []]));
+  const first = new Map<string, { i: number; k: number }>();
   const terrains: Level[] = [];
-  for (let i = 0; i < TERRAIN_SEEDS.length; i++) {
-    const missing = SET_PIECE_RECIPES[theme].filter((r) => out.get(r.name)!.length < WANT);
-    if (!missing.length) break;
-    terrains.push(terrain(theme, i));
-    const level = terrains[i];
-    for (const r of missing)
-      for (let k = 0; k < REROLLS && out.get(r.name)!.length < WANT; k++) {
-        const got = SET_PIECES[theme](new Rng(k * 7919 + i), level, { count: 1, family: [r.name] });
-        if (got.length) {
-          out.get(r.name)!.push({ level, pp: got[0] });
-          break;
-        }
+  for (let i = 0; i < TERRAIN_SEEDS.length && recipes.some((r) => !out.get(r.name)!.length); i++) {
+    const level = terrain(theme, i);
+    terrains.push(level);
+    for (const r of recipes) {
+      if (out.get(r.name)!.length >= WANT) continue;
+      const got = placeOn(theme, r, level, i);
+      if (!got) continue;
+      if (!first.has(r.name)) first.set(r.name, { i, k: got.k });
+      out.get(r.name)!.push({ level, pp: got.pp });
+    }
+  }
+  // Short of WANT: a later roll on the terrain it first stood on, if it stands somewhere else there.
+  for (const r of recipes) {
+    const list = out.get(r.name)!;
+    const at = first.get(r.name);
+    if (!at) continue;
+    const seen = new Set(list.map(({ pp }) => JSON.stringify(pp)));
+    for (let k = at.k + 1; list.length < WANT && k < REROLLS; k++) {
+      const got = placeOn(theme, r, terrains[at.i], at.i, k);
+      if (!got) break;
+      k = got.k;
+      const key = JSON.stringify(got.pp);
+      if (!seen.has(key)) {
+        seen.add(key);
+        list.push({ level: terrains[at.i], pp: got.pp });
       }
+    }
   }
   return out;
 };
 
-const placed = once(() => new Map(THEME_IDS.map((t) => [t, placedOf(t)])));
+/** Per theme, so a theme's first test pays for its own levels alone, not every theme's at once. */
+const placedBy = new Map(THEME_IDS.map((t) => [t, once(() => placedOf(t))]));
+const placed = (theme: ThemeId) => placedBy.get(theme)!();
 
 /** What hurts in every theme other than `theme`: its recipes' hazards and its landmarks' pieces. */
 const elsewhere = once(() => {
   const out = new Map<ThemeId, Map<string, string>>();
   for (const theme of THEME_IDS) {
     const seen = new Map<string, string>();
-    for (const [name, list] of placed().get(theme)!)
-      for (const { pp } of list) for (const s of hazardSignature(pp.def.modules)) seen.set(s, `${theme}/${name}`);
+    for (const [name, list] of placed(theme)) for (const { pp } of list) for (const s of hazardSignature(pp.def.modules)) seen.set(s, `${theme}/${name}`);
     for (const c of CONCEPTS[theme]) {
       const l = generateLevel(1, theme, { concept: c.id });
       if (lastGenInfo.concept === c.id)
@@ -77,7 +110,7 @@ const elsewhere = once(() => {
 
 function recipeSuite(theme: ThemeId, r: Recipe) {
   const key = (rule: string) => `hazard/${theme}/${r.name}/${rule}`;
-  const mine = () => placed().get(theme)!.get(r.name)!;
+  const mine = () => placed(theme).get(r.name)!;
   const each = (check: (p: Placed) => string[]) => () => mine().flatMap(check);
   describe(`${theme}/${r.name}`, () => {
     rule(key('placeable'), 'can be placed', () => (mine().length ? [] : [`never placed on ${TERRAIN_SEEDS.length} plain ${theme} levels`]));
