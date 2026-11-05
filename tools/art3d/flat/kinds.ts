@@ -1,3 +1,4 @@
+import type { FaceKit } from '../../../src/render/cast/sprites/types';
 import { readdirSync } from 'node:fs';
 
 /**
@@ -149,10 +150,11 @@ export interface FlatKind {
   roles: readonly FlatRole[];
   slots: readonly { name: string; vary: number; options: number }[];
   /**
-   * The cast's face kit; none for a kind with no face to draw (a visor, a jelly). `mark` is the least width of its
-   * shut eyes and cheer arcs (world px), for a small eye whose marks would otherwise be a hairline.
+   * The cast's face kit (`FaceKit`); none for a kind with no face to draw (a visor, a jelly). `mark` is the least
+   * width of its shut eyes and cheer arcs (world px), for a small eye whose marks would otherwise be a hairline.
+   * A face found with `count: 1` and a `pair` is side on, and its far eye is a sliver unless `far` says `none`.
    */
-  face?: { r: number; iris: string; mouth?: readonly [number, number]; eye?: 'tall' | 'dot'; mark?: number };
+  face?: FaceKit;
   gait: { bounce: readonly [number, number]; lean: readonly [number, number] };
   clips: Readonly<Record<string, FlatClip>>;
   /** Each pose drawing's pose, for `posePrompt` (`far` for one far from the design's). */
@@ -170,3 +172,12 @@ export const FLAT_KINDS: Record<string, FlatKind> = Object.fromEntries(
       .map(async (f) => [f.slice(0, -3), ((await import(`./kinds/${f}`)) as { kind: FlatKind }).kind] as const),
   ),
 );
+
+/**
+ * The face the build ships for a kind: its `face`, with a head found side on (`eyes.count` 1 and a `pair`)
+ * drawing its far eye as a sliver unless the kind says otherwise, never as a second full eye beside the near one.
+ */
+export function kitFace(k: FlatKind): FaceKit | undefined {
+  if (!k.face) return undefined;
+  return k.eyes?.count === 1 && k.eyes.pair && !k.face.far ? { ...k.face, far: 'sliver' } : k.face;
+}

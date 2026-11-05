@@ -131,7 +131,7 @@ export const kind: FlatKind = {
   },
   accessories: [{ slot: 'plaster', role: 'plaster', at: 'cheek', size: [1.5, 0.7] }],
   // Off the brim and thicker than the floor: his shut eyes and laugh were hairlines on the brim's ink line.
-  face: { r: 0.62, iris: '#3c6fd0', mark: 0.6 },
+  face: { r: 0.66, iris: '#2a1f1a', mark: 0.6, eye: 'dot' },
   gait: { bounce: [0.1, 0.6], lean: [0, 0.03] },
   clips: {
     idle: { frames: ['idle'], loop: true, fps: 1 },
