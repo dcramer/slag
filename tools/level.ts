@@ -14,6 +14,7 @@
  *         B a bridge from the validator's solution (levels that need props)
  */
 import { deriveSeed, parseSeed, Rng } from '../src/core/rng';
+import { argReader } from './lib/server';
 import { SCULPTORS } from '../src/gen/level/sculptors';
 import { BRIDGE_W, DIFFICULTIES, describeProfile, generateLevel, gravityClass, judge, lastGenInfo, type ProfileOverride } from '../src/gen/level';
 import { MAX_SHARED } from '../src/gen/level/routes';
@@ -25,10 +26,7 @@ import { analyzeReach } from '../src/sim/reach';
 import { THEME_IDS, type ThemeId } from '../src/themes';
 
 const args = process.argv.slice(2);
-const opt = (name: string) => {
-  const i = args.indexOf(`--${name}`);
-  return i >= 0 ? args[i + 1] : undefined;
-};
+const { opt, flag } = argReader(args);
 const themeOpt = opt('theme') as ThemeId | undefined;
 const force: ProfileOverride = {};
 if (opt('size')) force.size = opt('size') as SizeClass;
@@ -40,7 +38,7 @@ if (opt('weather')) force.weather = opt('weather') as WeatherKind;
 if (opt('concept')) force.concept = opt('concept');
 const difficulty = DIFFICULTIES.find((d) => d === opt('difficulty'));
 if (difficulty) force.difficulty = difficulty;
-if (args.includes('--tide')) force.tide = true;
+if (flag('tide')) force.tide = true;
 
 /** Share of levels whose solution takes 0, 1, 2 and 3 parts. */
 function partShares(parts: number[], n: number): Record<string, string> {
@@ -71,7 +69,7 @@ function addTo(key: string, ms: number, bridged: boolean, fallback: boolean, att
   groups.set(key, a);
 }
 
-if (args.includes('--stats')) {
+if (flag('stats')) {
   const n = Number(opt('stats') ?? 100);
   const themes = themeOpt ? [themeOpt] : THEME_IDS;
   const rows: Record<string, unknown>[] = [];

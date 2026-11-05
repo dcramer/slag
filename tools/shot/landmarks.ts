@@ -3,12 +3,12 @@
  * With no concept registered for a theme, a test landmark stands in: a building raised on the level's own
  * ground with each landmark skin, and each backdrop shell behind it (`forceLandmark`).
  */
-import { cycleFrames } from '../../src/gen/setpieces/place';
+import { cycleFrames } from '../../src/sim/props';
 import { type DecoKind, motionOffset, type PlacedProp, resolveProp } from '../../src/sim/props';
 import type { TerrainKind } from '../../src/gen/theme';
 import { CONCEPTS } from '../../src/gen/stage';
 import { THEME_IDS, type ThemeId } from '../../src/themes';
-import { argv, open, opt, page, seed, sheet, snap, step, theme, type Scenarios } from './ctx';
+import { open, opt, page, seed, sheet, snap, step, theme, type Scenarios, flag } from './ctx';
 
 /**
  * Start a race on the loaded level and stand its runners on the great wheel's rim cars, spread round the rim: the cars
@@ -201,7 +201,7 @@ export const shots: Scenarios = {
   async landmarks() {
     const only = opt('concept');
     const count = Number(opt('count', '1'));
-    const ride = argv.includes('--ride');
+    const ride = flag('ride');
     const themes = theme ? [theme as ThemeId] : THEME_IDS;
     const concepts = themes.flatMap((t) => CONCEPTS[t].filter((c) => !only || c.id === only).map((c) => ({ theme: t, id: c.id })));
     // A theme with no concepts yet gets the test landmarks, so the skins and shells are seen either way.

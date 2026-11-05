@@ -81,6 +81,6 @@ describe('rooms', async () => {
     expect(roomFromPath('/')).toBeNull();
     expect(roomFromPath('/r/')).toBeNull();
     expect(roomSeed('K7QX2')).toBe(roomSeed('K7QX2'));
-    expect(newRoomCode()).toMatch(/^[A-Z2-9]{5}$/);
+    expect(newRoomCode(Math.random)).toMatch(/^[A-Z2-9]{5}$/);
   });
 });

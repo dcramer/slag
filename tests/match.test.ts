@@ -1,10 +1,11 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { Match } from '../src/game/match';
-import { DEFAULT_RULES, loadRules, MATCH_LENGTHS, type MatchRules, nearestLength, RULE_CHOICES, type TimerRule } from '../src/game/rules';
+import { DEFAULT_RULES, MATCH_LENGTHS, type MatchRules, nearestLength, RULE_CHOICES, type TimerRule } from '../src/game/rules';
 import { POINTS } from '../src/game/scoring';
 import { RUN_COUNTDOWN, TILE, VIEW_W } from '../src/sim/constants';
 import { canPlace, footprint } from '../src/sim/props';
 import { type InputFrame, NO_INPUT } from '../src/sim/types';
+import { loadRules } from '../src/ui/rule-prefs';
 
 const press = (k: Partial<InputFrame>): InputFrame => ({ ...NO_INPUT, ...k });
 

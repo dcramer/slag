@@ -1,6 +1,6 @@
 # Owner decisions
 
-Every game design decision, preference and direction the owner has given, grouped by topic. Compiled 2026-11-02. [DESIGN.md](DESIGN.md) holds the rules as they stand; this is the full log behind them, reversals included.
+Every game design decision, preference and direction the owner has given, grouped by topic. Compiled 2026-11-02. [DESIGN.md](DESIGN.md) holds the rules as they stand; this is the log behind them. A decision that was replaced or no longer applies is pruned: the one that replaced it says what it replaced in its Changed note.
 
 **Sources.** Every Claude Code transcript for this project on this machine (the coordinating session of 2026-11-02 and a short pnpm-config session the same day): the owner's own messages and their answers to questions, never subagent output. Earlier sessions ran on other machines and their transcripts are gone, so they're covered only through git history: commit messages and the history of `DESIGN.md`, `ART.md` and `TODO.md`. A decision taken from git cites its commit; one from a transcript cites its time (UTC). All dates are UTC.
 
@@ -38,10 +38,11 @@ Every game design decision, preference and direction the owner has given, groupe
   2026-11-02 · git `d67a7e0` · `done` · DESIGN.md → Discovery
 - **Not everything is death: most parts have an upside and a side effect, and disruption is the norm.**
   2026-11-02 · git `7b4a0d2` · `done` · DESIGN.md → Props
-- **Standing goal: finish the TODO, make the art exceptional, make the netcode bug-free.** "/goal Complete our TODO, make sure the art is exceptional, netcode is bug free."
-  2026-11-02 06:33Z · `in progress` · TODO.md
-- **Every game design decision is written down, even as endless lists, covering the project's whole history.** "make sure all of my game design things are documented. even if its just like infinite listicles somewhere" / "i kind of want decisions for all of time"
-  2026-11-02 17:52Z · `done` · this file
+- **Every game design decision is written down, even as endless lists; one that was replaced or no longer applies is pruned, and what replaced it keeps a Changed note.** "make sure all of my game design things are documented. even if its just like infinite listicles somewhere" / "old decisions that are no longer relevant should also be cleaned up"
+  2026-11-02 17:52Z, 2026-11-04 · `done` · this file
+  Changed: the log kept every decision for all of time, reversals included ("i kind of want decisions for all of time").
+- **A really short lore guides design: Slag is the runoff of the Great Foundry, a scrap world of melted-down levels and characters who never made the cut, racing for the one mould that casts the winner into a real game.** "we might want in our game design a REALLY short piece of lore that explains the world of slag, who the characters are, why they're trying to get to the goal"
+  2026-11-02 · `done` · DESIGN.md → Lore
 
 ## Match flow and rules
 
@@ -76,14 +77,9 @@ Every game design decision, preference and direction the owner has given, groupe
   2026-11-04 · `done` for the mode registry and Rising Slag; Brawl and Gauntlet are `planned` · DESIGN.md → Modes, `src/game/modes.ts`, TODO.md → 31
 - **Rising Slag levels keep their theme: a mode asks for the level it needs, and each theme builds it in its own shape.** "keep in mind rising slag still needs the thematic level stuff. they might just have to support additional annotations for it?"
   2026-11-04 · `done` (a climbing profile in every theme, the slag carried on the level as `Level.tide`); themes that never build towers climb only 7–15 rows, `planned` · DESIGN.md → Modes, TODO.md → 31
-- **Rising Slag is an endless climb, and the slag has to chase you.** "rising slag.. isnt an infinitely climbable thing and the thing doesnt rise very fast...."
-  2026-11-04 · `done` · DESIGN.md → Modes; 200-row towers of the tower themes (`TIDE_TOWER_H`), the slag at 1.5 tiles/s gaining 0.1 a second (`SLAG_TIDE`)
-  Changed: the first cut climbed a 40–60-row tower (or a classic climb) with a flag-less top to hold, under slag at 0.8 tiles/s gaining 0.035 after 4 s.
 - **Rising Slag towers get a difficulty curve, and difficulty expectations are standardized across modes as bot pass rates, the way the race's finish rates were set.** "these levels will also need a difficultly curve, which might mean we have to clea up the way we analyze things? we should standardize the expectations around difficulty (% win etc)" / "Yes, build it"
   2026-11-04 · `done` · DESIGN.md → Difficulty, Modes; `src/game/expectations.ts`, `TOWER_CURVE`, `tests/stats/slag-climb.test.ts`
-  Changed: the race's targets lived only in its stats suite; the slag rose at 1.5 tiles/s gaining 0.1 after 2 s, now 2.6 gaining 0.12 after 3 s, fitted to Normal bots.
-- **A looping tower (its top wrapping to its bottom) is a nice hack for an endless climb, but complicated: not now.** "the level could loopp maybe but thats a little complicated? thats a nice hack tho"
-  2026-11-04 · `done` the same day: see the looping shaft below
+  Changed: the race's targets lived only in its stats suite.
 - **Rising Slag plays in the style of SpeedRunners: the slag follows the leader like its camera, so falling behind the pack is falling off the screen.** "speedrunners i think is what we want like that style" (after a survey of how other games pace a shared hazard)
   2026-11-04 · `done` · DESIGN.md → Modes; `src/sim/tide.ts`, `src/gen/level/tide.ts`, `src/render/camera-follow.ts`
   Changed: a fixed slag pace (2.6 tiles/s gaining 0.12), which only punished slowness: Easy bots got through 8% of medium stretches, now 43%.
@@ -124,7 +120,7 @@ Every game design decision, preference and direction the owner has given, groupe
 - **At the limit the top score wins, ties are joint winners, and with nobody on the board there's no winner.**
   2026-11-02 · git `203e3b1` · `done` · DESIGN.md → Scoring
 - **The score screen gets a redesign: no gold "50" post, a finish line, award segments.** "also i wanna improve this screen / the 50 thing looks silly tbqh..."
-  2026-11-02 17:49Z · `in progress` · DESIGN.md → Scoring
+  2026-11-02 17:49Z · `done` · DESIGN.md → Scoring
 
 ## Movement and physics
 
@@ -177,96 +173,85 @@ Every game design decision, preference and direction the owner has given, groupe
 - **Player names are filtered, so nobody puts a slur on everyone's screen or on the public lobby list.** "we also need some kind of word filter for names so people dont put racial slurs/etc"
   2026-11-02 23:11Z · `done` · DESIGN.md → Players, NETCODE.md → Seats and kicks, public/ASSETS.md → Word lists
 
+## Bots
+
+- **AI is built so players can one day script their own player, and prompt an LLM to improve it: a brain is an input device for a seat, with standard built-in brains first.** "something that'd be cool is letting people actually 'script' the a player... that means they could also prompt an LLM to improve their character controller" · "lets design an AI system that can work with its own standard brains/etc and have the future potentially to allow player scripts"; the owner approved the write-up.
+  2026-11-02 23:13Z · `planned` · DESIGN.md → AI players, TODO.md → 27
+- **Bots can play online, but native AI comes first; player scripts come after.** "bots can be in online play, but the focus is on native AI first"
+  2026-11-02 23:20Z · `planned` · DESIGN.md → AI players, TODO.md → 27
+- **Leaning: scripts sense an idea of values, not the literal values (rounded positions, speed bands, outcomes from the lookahead).** "i think scripts should maybe get an idea for values but not literal values?"
+  2026-11-02 23:22Z · `open` · DESIGN.md → AI players
+- **A bot with no real way on jumps for it anyway, and self-destructs when that gets it nowhere.** "their brain should have them kill themselves if theres no real option or somethig idk ("try to jump anyways")"
+  2026-11-03 · `in progress` · DESIGN.md → AI players, src/brain/brains/runner.ts
+- **Bots take their time picking a card (read the crate, point at one or two), unless they're on a harder setting.** "their item selection should maybe slow down unless they're on a harder setting?"
+  2026-11-03 02:50Z · `in progress` · `TEMPO` in src/brain/brains/runner.ts, scaled by each bot's pace
+- **Bots play with some variety, and have a difficulty.** "yeah make it a little bit of variability, and we could have difficulty tuning too for future? idk or for now tbqh"
+  2026-11-03 · `in progress` · DESIGN.md → AI players, src/brain/personality.ts
+- **Each bot's difficulty is set on its own card, not for the room.** "each bot should let you tweak its difficulty somehow on the character panel"
+  2026-11-03 · `in progress` · DESIGN.md → AI players; `Player.bot`, the `bot` action
+  Changed: a room-wide Bots rule in the Rules menu, replaced before it landed.
+- **No bot level is unbeatable: every level fumbles, chokes on tight jumps and randomly stops to think; harder bots are harder mostly by sabotage, not perfect hands.** "for our AI difficulty i dont want them to be unbeatable, harder difficulties probably should have more sabotage type behavior and they should still randomly have to stop and think idk" / "tl;dr im not sure hard bots ever make mistakes?"
+  2026-11-04 · `done` (mistakes and pauses; sabotage in pick and place); sabotage in the race `planned` (TODO.md → 27) · DESIGN.md → AI players, src/brain/personality.ts
+  Changed: Hard bots reacted in 0–1 frames and fumbled about one jump in a hundred, only ever coming up short.
+- **Bots have temperaments, brain personalities apart from their level, and are vindictive sometimes: against a player whose part hurt them, or one who's winning.** "i just want bots to be more interesting to play with, and have different "brain" personality type things if that makes sense? and to be vindictive sometimes (say a player placed something to mess w/ them, or a player is winning? idk)". The proposal taken with "Yes, start it": five temperaments (builder, gremlin, grudger, sheriff, speedrunner) rolled from the bot's seed, hidden and found out by play; grudges only from what a player could see; a bot's level sets how often it acts on one and how well.
+  2026-11-04 · `done` (pick and place); spite in the race and with held items `planned` (TODO.md → 27) · DESIGN.md → AI players, src/brain/temperament.ts, src/brain/grudge.ts
+- **Normal and Hard bots always try to block the others, grudge or none, to make the run harder.** "one thing important for the AI, espcially on medium/hard, it needs to try to block other people to make it harder, and im not sure it always does that"
+  2026-11-04 · `done` · DESIGN.md → AI players → Bots get in the way, `block` and `weigh` in src/brain/personality.ts
+  Changed: with no grudge, a bot put its part on a random legal spot.
+- **Bot finish targets, alone with the plan built (gentle, medium, hard level): Easy 75, 50, 30 in a hundred; Normal 90, 70, 50; Hard 95, 85, 70.** Proposed and taken with "Yes, start part 1".
+  2026-11-04 · `in progress` (gentle and medium are there; hard levels play little harder than medium ones until more of them land in their band) · DESIGN.md → AI players, tests/stats/bot-finish.test.ts
+
 ## Characters
 
-- **Runners should have more identity and variety (a bumblebee pattern, say), maybe themed bodies instead of heads, the way the barnyard game uses animals.** "they're a little generic now and while they're cute and fun id love to see more interesting textures/variety"
-  2026-11-02 16:30Z · `done` as a proposal · CHARACTERS.md
-- **Direction C, foundry toys.**
-  2026-11-02 17:16Z (answer) · `done`, then replaced · CHARACTERS.md
-- **The cast is a mix of animals and invented critters, and the critters may parody famous characters (a fake jellyfish-brain floater, a mustached plumber, a robot, a goose, a hard-hat engineer).** "idk how we ended up with toys. that wasnt the original goal, and its not on theme" · "critters could include other parody things... like a fake metroid, a fake mario, a robot, a goose, etc. a fake engineer from tf2 etc"
-  2026-11-02 · `in progress` · CHARACTERS.md, DESIGN.md → Players and Parody
-  Changed: toys replaced by animals plus parody critters.
-- **The cast is mostly homages: about two thirds parody famous game characters, with a few plain animals for contrast, and the art is raised further.** "its better but you still need more parody and the art needs to be better yet..."
-  2026-11-02 · `in progress` · CHARACTERS.md, DESIGN.md → Players
 - **Every character is a homage, which fits the lore (the cast is knock-off heroes who almost got their own game).** "tbqh EVERY character can be an homage so it fits our story design"
-  2026-11-02 · `planned` · CHARACTERS.md → Roster (all homages)
-  Changed: four plain animals (fox, frog, penguin, chicken) were kept for contrast.
+  2026-11-02 · `done` · CHARACTERS.md → Decisions 1
+  Changed: the cast was foundry toys, then animals and parody critters, then mostly homages with four plain animals (fox, frog, penguin, chicken) for contrast.
 - **The roster is the twenty greatest characters to parody, worth the credits it takes to get them right.** "you can spend the credits you need to get the greatest 20 parodies of all time to exist"
-  2026-11-02 · `in progress` · CHARACTERS.md → Roster
+  2026-11-02 · `done` · CHARACTERS.md → Decisions 8
   Changed: the roster was sixteen kinds; five join (the voxel miner, the spiky-haired mercenary, the sneaking soldier, the blue robot boy, the spiked turtle king) and the horned bug knight goes to the reserves.
-- **Hand-drawn character art pauses until the art pipeline (generated concept, traced into rigged vector parts) is tested.** "its prob worth just waiting for our pipeline test tho because the art is still jank"
-  2026-11-02 · `open` · CHARACTERS.md → History
-- **Recognisability is the top criterion: each homage must read as its original at a glance, so its iconic palette wins and the player's colour moves to a secondary slot (a ring at its feet).** "the only thing that remotely resembles the thing its mimicking is the puff ball (kirby)"
-  2026-11-02 · `in progress` · CHARACTERS.md
-  Changed: the player's colour was always the body or a big worn piece.
+- **Recognisability is the top criterion: each homage must read as its original at a glance.** "the only thing that remotely resembles the thing its mimicking is the puff ball (kirby)"
+  2026-11-02 · `done` · CHARACTERS.md → Decisions 2
 - **Player characters may parody famous characters under our own designs and sound-alike names; parts and machines stay faceless.**
-  2026-11-02 · `in progress` · DESIGN.md → Parody, CHARACTERS.md
+  2026-11-02 · `done` · DESIGN.md → Parody, CHARACTERS.md
 - **Characters are drawn cleaner, lighter and more hand-drawn: thinner, varied lines in a dark of the body color, calmer color, fewer bold outlines.** "i want more cleanly designed art that isnt so loud/bold lines etc and more visually hand draw"
-  2026-11-02 · `in progress` · CHARACTERS.md, ART.md → World art
+  2026-11-02 · `done` · CHARACTERS.md → Decisions 7, ART.md → World art
 - **Each kind is a distinct character design (its own outline, signature part and gait), and fewer strong kinds beat many similar ones.** "ultimate chicken horse doesnt have this issue because the characters are clearly unique looking"
   2026-11-02 · `done` · CHARACTERS.md
-- **The player's colour is the loudest note: the body, or a big worn piece for a kind whose palette is its identity.**
-  2026-11-02 17:16Z (answer) · `in progress` · CHARACTERS.md
-  Changed: on the toys it was always a worn or painted part, never the body.
 - **New characters come from a random roll only; players don't choose a kind.**
   2026-11-02 17:16Z (answer) · `done` · CHARACTERS.md
 - **Everyone's saved look is re-rolled once, and again whenever the cast changes what a seed means.**
   2026-11-02 17:16Z (answer) · `done` · CHARACTERS.md
 - **Characters and the menu crowd take the art style, but stay as clean as they are.** "i like how they look right now so make sure ou keep it clean like it is and dont break it"
   2026-11-02 15:49Z · `done` · git `a6963c8`, `3eb7c44`; ART.md → World art
-- **Character art comes from a generated-concept pipeline, tested before any rollout: no rollout until the owner picks one.** "Lets test that out. but dont duct tape like we need great results here" / "Not yet"
-  2026-11-02 · `in progress` · CHARACTERS.md
-- **Traced frames (round 2) look out of place beside the hand-drawn cast; wait for the 3D-to-2D test before choosing.** "i agree w/ your asssessment. they look out of place. lets wait on the new test"
-  2026-11-02 · `open` · branch `worktree-agent-ae6810c61c411904c`, behind `?traced=1`
 - **The traced homages look too much like the originals: every kind needs a clear twist of its own on top of the recognisable silhouette.** "they look TOO much like the things were trying to parody... so we'd need to spice it up too"
-  2026-11-02 · `open` · CHARACTERS.md → Roster
-- **3D-to-2D round 1 misses on art style and on "parody the original"; try a round 2 with a model sheet and a pose sheet, restroked in the game's own ink.** "the main issue with that 3d to 2d pipeline is the art style, and that its not following our 'parody the original'. i also agree that we could do a pose sheet/etc. lets try another round with improvements"
-  2026-11-02 · `in progress` · branch `worktree-agent-aacd068f51e46176c`, behind `?sprites=1`
-- **3D-to-2D round 2 (a model sheet and a pose sheet, traced into flat parts and inked by the cast's own pen) is the direction: "thats SO MUCH BETTER".** Polish these two kinds before rolling out to the rest.
-  2026-11-02 · `in progress` · `src/render/cast/sprites/`, behind `?sprites=1`; CHARACTERS.md
+  2026-11-02 · `done` · CHARACTERS.md → Decisions 8, Rules for every kind → The nod and the twist
 - **The plumber carries his plunger low, its cup behind his shoulder, so the cap, bill and nose own his silhouette.** (answer: "Carry it lower")
-  2026-11-02 · `done` · CHARACTERS.md → Roster
+  2026-11-02 · `done` · docs/characters/plumber.md
 - **Character source art (models and sheets) lives in Git LFS; builds skip it and use the generated frames.** (answer: "Git LFS")
   2026-11-02 · `done` · `.gitattributes`, `tools/art3d/README.md`
 - **The player's colour is the character's main costume colour (an alternate costume), not a foot ring.** "the sprites seem to always be the same color? like they're not re-coloring their primary based on the player color?" / "ok well thats wrong"
-  2026-11-02 · `done` for the plumber and speedster · CHARACTERS.md → the rules
+  2026-11-02 · `done` · CHARACTERS.md → Decisions 4
   Changed: iconic palettes with the player's colour on a foot ring.
 - **Characters vary only in curated ways that keep the art: costume colour, accessory swaps, designed alternate palettes on one secondary region, pose personality (two idles, two cheers, a little gait), and wear. Faces, proportions and silhouettes are never rolled; random eyes and mouths go.** "idk if theres ways we can make it a little more procedural without losing our art work" / "'random eyeballs' dont work with the art style as an example of something that likely needs to go away" / "Yes, add it"
-  2026-11-02 · `in progress` (faces `done`: each kind's face is its own, in `KINDS` and a rendered kind's `sprite.json`) · CHARACTERS.md → the rules, `tools/art3d/`
+  2026-11-02 · `done` · CHARACTERS.md → Rules for every kind → Variety, `VARIETY` in `src/render/cast/sprites/play.ts`
   Changed: every character rolled an eye count, style, iris, spread and height, and a mouth, under its kind's face.
 - **The costume-colour rule holds even where a colour is the character's identity: the dot-eater's whole ball takes the player's colour, not only his napkin.** (answer: "Keep player colour")
-  2026-11-02 · `done` · CHARACTERS.md → the rules
-- **Parts may seal the level: placement is never refused for leaving no way through, and a sealed level needs a bomb.** "the placement restrictions feel buggy in some places?" / "game was refusing letting me place items that clearly had nothing there" / "also parts CAN seal it.. it can be unwinnable and require a bomb"
-  2026-11-02 · `in progress` · DESIGN.md → Props, `src/gen/level/winnable.ts`
-  Changed: a match kept a plan of at most `MAX_BRIDGES` bridges and refused a placement that left none.
-- **Parts pass through each other: a mover's path or a set piece's swing may cross a placed part, so neither refuses a placement.** "you should be able to let some parts go through each other. your barn one. its ok to allow palcement there, and the items will just move through each other..."
-  2026-11-02 · `in progress` · DESIGN.md → Props, `src/sim/props/transform.ts`
-  Changed: placed parts and set pieces claimed their whole swept path.
-- **Character production pauses once the running jobs finish: not enough Tripo credits for the whole roster.** "we dont have enough credits to finish all art, so lets pause when we get these jobs done"
-  2026-11-02 · `open` · TODO.md → 29
+  2026-11-02 · `done` · CHARACTERS.md → Rules for every kind → Player's color
 - **Rendered kinds are the only way they draw: no `?sprites=1` option; a kind without frames stays hand-drawn until produced.** "Make sprites the only way it works now, so no option at all"
   2026-11-02 · `done` · `src/render/cast/sprites/index.ts`
-- **The rendered kinds aren't finished and are too detailed for the game's resolution: the pipeline is improved on the zapmouse first, whether through the illustration prompt or a later stage, then carried to the rest.** "its the new sprite based ones im talking about btw. we didnt finish them and im not 100% happy w/ the current outcome" / "we'll use zapmouse as a way to test an improved pipeline. whether thats an improved illustration prompt or something else" / "so i agree, its _too detailed_ for our game resolution"
-  2026-11-02 · `in progress` · CHARACTERS.md → Rendered kinds, `tools/art3d/`
 - **Every character is a little disheveled and grungier, because of the lore, and simpler than the concept sheets, which are too complicated for the game's art style; the art style itself may change to fit.** "all the characters need to be a little disheveled because of slag's lore" / "yeah they're fine but i worry those are just too complicated for our game art style (and we might need to tweak our art style). and i want them grungier as a thematic thing because of the game's lore"
-  2026-11-02 · `open` · CHARACTERS.md → Decisions 7, ART.md
+  2026-11-02 · `done` · CHARACTERS.md → Decisions 9, ART.md
   Changed: the cast was clean, light and calm in colour.
 - **The grunge is worn shape: battered, lopsided, bent and taped, with clean bright colours; not grimy colour, not a rough line.** (picked from the zapmouse style test: "Worn, like worn-2")
-  2026-11-02 · `in progress` · CHARACTERS.md → Decisions 9, `tools/art3d/style.ts`
-- **The zapmouse is drawn from its flat design and pose drawings, not its 3D model; rendered figures take no light bands.** "Yes, build it out" (after the flat zapmouse test in game, cel bands off characters)
-  2026-11-03 · `done` · CHARACTERS.md → Rendered kinds → Flat kinds, `tools/art3d/flat/`; replaces the zapmouse's 3D-traced frames
-- **The plumber is drawn flat too, from a new game-size design worn with welding goggles, a cracked bill, a knotted strap, a knee patch and a taped plunger.** "Yes, the plumber"
-  2026-11-03 · `done` · CHARACTERS.md → Rendered kinds → Flat kinds, `tools/art3d/flat/kinds.ts`; replaces the plumber's 3D-traced frames, and his brown-canvas overalls (navy instead: flat, brown canvas is the gloves' tan)
+  2026-11-02 · `done` · CHARACTERS.md → Decisions 9, `tools/art3d/style.ts`
+- **Rendered figures take no light bands.** "Yes, build it out" (after the flat zapmouse test in game, cel bands off characters)
+  2026-11-03 · `done` · CHARACTERS.md → Rendered kinds → Out of the light bands
 - **The plumber's plunger cup stays a dark of the player's colour, as the flat pass draws it.** "Leave it" (asked: back to its own red?)
-  2026-11-03 · `done` · CHARACTERS.md → The mustached plumber → Palette; replaces the cup's own red `#b8433c`
+  2026-11-03 · `done` · docs/characters/plumber.md → Palette; replaces the cup's own red `#b8433c`
 - **Every rendered kind is drawn flat; the 3D route is retired.** "Lets try to work through the remaining sprites. Make sure our pipeline documentation is correct from our learnings"
-  2026-11-03 · `done` · CHARACTERS.md → Rendered kinds, `tools/art3d/README.md`, `tools/art3d/3D.md`; replaces the 3D-traced hedgehog, elf, dot-eater and puffball. The hedgehog's design came from his round-2 concept as the reference (the image model otherwise drew the original's joined eyes); the puffball's seam and tape cross aren't drawn (a mouth and a third eye at play size); the dot-eater slides down a wall in its fall
-- **The rest of the roster is drawn flat too, one agent a kind: first the five in the cast (the impostor, the hunter, the engineer, the goose and the jelly), then the nine not yet in it, in one change.** "conintue" (after the six flat kinds landed)
-  2026-11-03 · `in progress` · TODO.md → 29, CHARACTERS.md → Rendered kinds → the second batch
+  2026-11-03 · `done` · CHARACTERS.md → Rendered kinds, `tools/art3d/README.md`, `tools/art3d/3D.md`; replaces the 3D-traced kinds
 - **Every kind's own palette is neutral, and nearly every colour on it is the player's: the costume in the player's colour, every other coloured part in a lighter or darker tone of it (the engineer's hat too); skin, eyes, hair, metal, wood, cloth greys and ink stay neutral. The swatches stay as they are: no kind skips one.** "The colors have been fine and things like eng hat can be color coded.. mostly the palette of the characters should be neutral and then pretty much all colors should be the player color"
   2026-11-04 · `done` · CHARACTERS.md → Decisions 4, Rules for every kind → Player's color and Variety; replaces each homage's own hues on its secondary parts (the plumber's blue overalls, the speedster's red shoes, the engineer's yellow hat) and the coloured palette alts
-- **The art's open items all get done: the marks left at 4.4×, the three kinds that don't read (the engineer, the hunter against the robot boy, the jelly's hooks), and the nine kinds not yet in the cast, which replace the four plain animals.** "Its worth addressing these. and getting it done"
-  2026-11-04 · `done` · TODO.md → 29, CHARACTERS.md → Roster
 - **Spend Tripo Studio credits to finish the cast's images once the free allowance runs out.** "Spend the credits" (asked: about 1,500–3,500 credits; images turned out to cost 2 each)
   2026-11-04 · `done` · `tools/art3d/README.md`
 - **Agents may run Tripo image calls without a prompt: allowed in the owner's user settings, since each worktree reads its own project settings.** "Add the rule" · "Add to user settings"
@@ -284,8 +269,6 @@ Every game design decision, preference and direction the owner has given, groupe
 - **Every drawn kind's eyes work the way the cup-headed toon's do: each kind's kit eye is its homage's own eye design, drawn by the face kit so it acts, and bold enough to read at play scale.** "seems like we want mughead approach so the eyes are animated/drawn correctly" (after "some have issues w/ their eyes")
   2026-11-04 · `done` (but for the worm, the warrior and the slayer, being drawn) · CHARACTERS.md → Rendered kinds → The cast's face, `EYES` in `src/render/cast/sprites/face.ts`, `tools/art3d/README.md` → 5
   Changed: every kind but the mug, the puffball, the dino and the three dot-eyed kinds wore one generic round eye (a white, a rim, a coloured iris, a pupil and a glint), and a head side on wore its far eye as a second full circle beside the near one.
-- **Set-piece machines that look solid are made solid: guns on ledges, wheel and swing hubs, ladles, carts, signs, posts.** "Make them solid" (asked: make them solid, or draw them as not-ground)
-  2026-11-02 · `open` · TODO.md → 21, `pnpm shot fairplay` (`PENDING`)
 - **Tripo output is licensed for the game: the owner pays for Tripo.** "our license here is fine as we pay for tripo"
   2026-11-02 · `done` · public/ASSETS.md
 
@@ -340,70 +323,10 @@ Every game design decision, preference and direction the owner has given, groupe
   2026-11-02 · `done` · ART.md → Objects, not characters
 - **Add a sentry turret, after the team shooter's.** "we need a 'sentry turret' type thing"
   2026-11-02 16:55Z · `done` · DESIGN.md → Props (Sentry guns)
-- **Conveyors must rotate like any part: a belt on the side drags wall-sliders, and one underneath shoves you when you bonk your head.** "you cant rotate conveyros.. the conveyor always stays on the top"
-  2026-11-02 17:51Z · `in progress`
 - **Coats and blocks stick to moving parts and ride them, as honey rides a turning conveyor.** "if you had honey on something like a conveyor (that rotated around), the honey would rotate with it, and then you could also stick another block on it"
   2026-11-02 17:36Z · `done` · DESIGN.md → Props, "Parts ride what they're stuck to"; `src/sim/props/ride.ts`
-- **Arriving mid-match puts you in as an observer; choosing Join opens a small lobby-style card (your toy with the New Look dice, your name) and seats you next round.** "when you join a match you'll default to observer fwiw, and then you can somehow choose to join, and if you do you might get a little screen to select your character/name almost like the lobby does"
-  2026-11-02 · `done` · DESIGN.md → Online (Seats, Join)
-  Changed: an up-front Join-or-Watch choice on arrival.
-- **Characters on the join card stay random-roll only: the New Look dice, no picker.**
-  2026-11-02 · `done` · DESIGN.md → Online (Join)
-  Changed: the colour is picked now (Players, above); the toy itself is still the dice's.
-- **A watcher's Join in the lobby seats them straight in, the way arriving does (their card appears among the players); the join card and its "You're In" are for joining mid-match.** "when you join the game on the lobby screen (like if i click the eyeball to observe, then i click to join) it says 'you're in' but that screen is just weirdly out of place in that scenario"
-  2026-11-02 · `done` · DESIGN.md → Online (Join)
-  Changed: Join opened the join card in every phase.
-- **Landmarks offer several ways through, so blocking one with a part forces rivals another way.** "the nice thing about level design like this: you could block off one exit and forces players to go a diff way (with a beam, as a player)"
-  2026-11-02 · `done` · DESIGN.md → Stage concepts
-- **At least 5 landmarks per theme; all large, some grand, every one with randomness in its layout.** "things like the haunted wing are cool. i'd want no less than 5 landmarks per theme, all should be at least large on scale, some _grand_ all should have a little bit of randomness built into them in terms of layout/etc as well"
-  2026-11-02 · `in progress` · SETPIECES.md → 3, DESIGN.md → Stage concepts
-- **Every theme has at least 12 decor pieces and at least 3 hazards unique to it.** "similarly we probably want no less than a dozen 'decor' pieces that can exist in each theme? and maybe no less than 3 unique hazards per theme?"
-  2026-11-02 · `in progress` · DESIGN.md → Stage concepts
-- **The cast is animals plus parody critters, not toys.** Toys (foundry wind-ups) are dropped: "idk how we ended up with toys. that wasnt the original goal, and its not on theme". Critters may parody famous characters with our own design and a sound-alike name: "critters could include other parody things... like a fake metroid, a fake mario, a robot, a goose, etc. a fake engineer from tf2 etc". Changed: replaces direction C (foundry toys).
-  2026-11-02 · `in progress` · CHARACTERS.md, DESIGN.md → Players
-- **Art everywhere is cleaner, lighter and more hand-drawn: thinner, varied lines, less loud colour.** "i want more cleanly designed art that isnt so loud/bold lines etc and more visually hand draw"; applies to characters, parts, terrain, landmarks and UI.
-  2026-11-02 · `in progress` · ART.md → World art
-- **A really short lore guides design: Slag is the runoff of the Great Foundry, a scrap world of melted-down levels and characters who never made the cut, racing for the one mould that casts the winner into a real game.** "we might want in our game design a REALLY short piece of lore that explains the world of slag, who the characters are, why they're trying to get to the goal"
-  2026-11-02 · `done` · DESIGN.md → Lore
-- **AI players are a future TODO.** "another future TODO: AI"
-  2026-11-02 · `planned` · TODO.md → 27
-- **AI is built so players can one day script their own player, and prompt an LLM to improve it: a brain is an input device for a seat, with standard built-in brains first.** "something that'd be cool is letting people actually 'script' the a player... that means they could also prompt an LLM to improve their character controller" · "lets design an AI system that can work with its own standard brains/etc and have the future potentially to allow player scripts"; the owner approved the write-up.
-  2026-11-02 23:13Z · `planned` · DESIGN.md → AI players, TODO.md → 27
-- **Bots can play online, but native AI comes first; player scripts come after.** "bots can be in online play, but the focus is on native AI first"
-  2026-11-02 23:20Z · `planned` · DESIGN.md → AI players, TODO.md → 27
-- **Leaning: scripts sense an idea of values, not the literal values (rounded positions, speed bands, outcomes from the lookahead).** "i think scripts should maybe get an idea for values but not literal values?"
-  2026-11-02 23:22Z · `open` · DESIGN.md → AI players
-- **Start the AI with phase 1: built-in bots that race, pick and place, added by the lobby's host.** "id like to start working on the AI" / "Yes, start phase 1"
-  2026-11-03 · `in progress` · DESIGN.md → AI players, TODO.md → 27, src/brain/
-- **A bot with no real way on jumps for it anyway, and self-destructs when that gets it nowhere.** "their brain should have them kill themselves if theres no real option or somethig idk ("try to jump anyways")"
-  2026-11-03 · `in progress` · DESIGN.md → AI players, src/brain/brains/runner.ts
-- **Bots take their time picking a card (read the crate, point at one or two), unless they're on a harder setting.** "their item selection should maybe slow down unless they're on a harder setting?"
-  2026-11-03 02:50Z · `in progress` · `TEMPO` in src/brain/brains/runner.ts, scaled by each bot's pace
-- **Bots play with some variety, and have a difficulty.** "yeah make it a little bit of variability, and we could have difficulty tuning too for future? idk or for now tbqh"
-  2026-11-03 · `in progress` · DESIGN.md → AI players, src/brain/personality.ts
-- **Each bot's difficulty is set on its own card, not for the room.** "each bot should let you tweak its difficulty somehow on the character panel"
-  2026-11-03 · `in progress` · DESIGN.md → AI players; `Player.bot`, the `bot` action
-  Changed: a room-wide Bots rule in the Rules menu, replaced before it landed.
-- **No bot level is unbeatable: every level fumbles, chokes on tight jumps and randomly stops to think; harder bots are harder mostly by sabotage, not perfect hands.** "for our AI difficulty i dont want them to be unbeatable, harder difficulties probably should have more sabotage type behavior and they should still randomly have to stop and think idk" / "tl;dr im not sure hard bots ever make mistakes?"
-  2026-11-04 · `done` (mistakes and pauses; sabotage in pick and place); sabotage in the race `planned` (TODO.md → 27) · DESIGN.md → AI players, src/brain/personality.ts
-  Changed: Hard bots reacted in 0–1 frames and fumbled about one jump in a hundred, only ever coming up short.
-- **Bots have temperaments, brain personalities apart from their level, and are vindictive sometimes: against a player whose part hurt them, or one who's winning.** "i just want bots to be more interesting to play with, and have different "brain" personality type things if that makes sense? and to be vindictive sometimes (say a player placed something to mess w/ them, or a player is winning? idk)". The proposal taken with "Yes, start it": five temperaments (builder, gremlin, grudger, sheriff, speedrunner) rolled from the bot's seed, hidden and found out by play; grudges only from what a player could see; a bot's level sets how often it acts on one and how well.
-  2026-11-04 · `done` (pick and place); spite in the race and with held items `planned` (TODO.md → 27) · DESIGN.md → AI players, src/brain/temperament.ts, src/brain/grudge.ts
-- **Normal and Hard bots always try to block the others, grudge or none, to make the run harder.** "one thing important for the AI, espcially on medium/hard, it needs to try to block other people to make it harder, and im not sure it always does that"
-  2026-11-04 · `done` · DESIGN.md → AI players → Bots get in the way, `block` and `weigh` in src/brain/personality.ts
-  Changed: with no grudge, a bot put its part on a random legal spot.
-- **Bot finish targets, alone with the plan built (gentle, medium, hard level): Easy 75, 50, 30 in a hundred; Normal 90, 70, 50; Hard 95, 85, 70.** Proposed and taken with "Yes, start part 1".
-  2026-11-04 · `in progress` (gentle and medium are there; hard levels play little harder than medium ones until more of them land in their band) · DESIGN.md → AI players, tests/stats/bot-finish.test.ts
-- **Each theme has at least 1 and at most 3 grand landmarks among its 5+.** "id like at least one grand landmark, no more than 3 (in the min 5 landmarks)"
-  2026-11-02 · `done` (enforced) · `GRAND_LANDMARKS` in src/gen/kinds.ts, tests/conformance/themes.test.ts
-- **The cast needs much more parody, and each parody must be instantly recognisable; the art must improve further.** "its better but you still need more parody and the art needs to be better yet..." / "the only thing that remotely resembles the thing its mimicking is the puff ball (kirby)". Iconic palettes win over the player-colour body rule; the player's colour moves to a visible secondary slot.
-  2026-11-02 · `in progress` · CHARACTERS.md
 - **Demolition parts rarely change terrain: the drill digs, plus one rare small bomb; the rest clear placed parts only.** "it should be RARE that they can change terrain.. so the drill is fine.. and maybe one other small one, but i think they commonly change terrain right now". Changed: bombs, charges and time bombs used to blast terrain too, and every roster held a terrain breaker.
   2026-11-02 · `done` · DESIGN.md → Props, `src/gen/props.ts`
-- **Lobby browser: a list of lobbies, showing only ones that aren't full by default.** Lobbies are public by default with a Private option. "lets make lobbies public by default with a private option"
-  2026-11-02 · `done` · DESIGN.md → Online, Rules; NETCODE.md → Lobby list
-- **Each listed lobby shows its host's name, leading the row; after a host migration it's the new host's.** "i want each lobby to show the host's name"
-  2026-11-02 · `done` · NETCODE.md → Lobby list, `src/ui/screens/lobbies.ts`
 - **Conveyors rotate: the rotation picks the belt's face.** A side belt grips and carries a clinging runner (an escalator when it runs up), a bottom belt shoves a head that bonks it. "you cant rotate conveyors.. the conveyor always stays on the top"
   2026-11-02 · `done` · DESIGN.md → Props, Conveyors
 - **The parody first batch: Walk-Off Bat, Tremor Brick, Front-Runner Tax, Pocket Block, Launch Plate, Four-Square, Boost Strip, Panic Button, Fuse Crate, Y-Fling.**
@@ -417,8 +340,8 @@ Every game design decision, preference and direction the owner has given, groupe
 - **More parts per match, set by a Parts rule (Few, Some, Many, All), default Many.** "the number of items per round seems a LITTLe limited.. like you mostly see the same items so we should up that, and maybe make it a level config?"
   2026-11-03 · `done` · DESIGN.md → Props (roster), Rules; `rosterSize` in `src/gen/props.ts`
   Changed: every match had the short roster, 8 to 14 parts (now Few).
-- **Small parts still draw small on crate cards.**
-  2026-11-02 · `open` · TODO.md → 21
+- **Small parts still draw small on crate cards: the part fills the card.**
+  2026-11-02 · git `00e3dc2f` · `done`
 
 ## Held items and the loot box
 
@@ -448,7 +371,7 @@ Every game design decision, preference and direction the owner has given, groupe
   Changed: about 80% needed parts (`6fcda7b`).
 - **What stops a bare run is a gap or wall a part solves, never a sealed level, with at most two small bridges.**
   2026-11-02 · git `3628776` · `done` · DESIGN.md → Levels
-- **Levels ask for precision: jumps reach the edge of your range, footholds are small, and every level has a run of them, as a baseline for all levels rather than a per-level setting.** "[the build-then-race party platformer] is about precision platforming and this needs more of that" (a playtester's feedback) / "i think this is broad feedback not a tweak per level?"
+- **Levels ask for precision: jumps reach the edge of your range, footholds are small, and every level has a run of them.** "[the build-then-race party platformer] is about precision platforming and this needs more of that" (a playtester's feedback) / "i think this is broad feedback not a tweak per level?"
   2026-11-03 · `done` · DESIGN.md → Levels (Precision is the point); hazards hugging the line is `open` · TODO.md → 3
 - **Levels come in three difficulties, a fifth gentle, half medium and the rest hard, so a match deals a spread of levels instead of one flat mix.** "i think the difficulty curve is there are too many easy levels, vs too many hard levels" / "Yes, 20/50/30"
   2026-11-04 · `done` · DESIGN.md → Levels, src/gen/level/difficulty.ts
@@ -514,17 +437,23 @@ Every game design decision, preference and direction the owner has given, groupe
   2026-11-02 16:40Z (answer) · `done` · DESIGN.md → Stage concepts
 - **The haunted manor (an elevator, glass on each side) is a castle concept, not a new theme.**
   2026-11-02 16:40Z (answer) · `in progress` · SETPIECES.md → 6, Wave 2
-- **Wave 2: the factory's Great Wheel and the castle's Haunted Wing.** "in a factory level it had a HUGE wheel (not just a small thing)"
-  2026-11-02 16:18Z · `in progress` · SETPIECES.md → 5
 - **World-only theme props can be much bigger and more unusual than placeable parts; the broken glass is a giant world prop you can't place.** "the broken glass could be an in-world prop that we cant place and be much larger"
   2026-11-02 17:48Z · `in progress` (Haunted Wing) · SETPIECES.md
-- **Waves 3–5: concepts for every theme.**
-  2026-11-02 · `planned` · SETPIECES.md → 5
 - **A combine harvester with spinning reel blades is a regular farm hazard, not only the Combine Run's: it drives a field on ordinary farm levels, classic ones included, and revs its reel before it pulls away.** "a combine with blades is a good farm prop as it adds a cool hazard"
   2026-11-02 · `in progress` · SETPIECES.md → What Wave 3 (farm) landed, `src/gen/setpieces/farm.ts`
   Changed: the bladed combine only drove the Combine Run, a wide-only landmark.
 - **Triggers between pieces and changes between rounds are out of scope for now.**
   2026-11-02 · `open` · DESIGN.md → Stage concepts
+- **Set-piece machines that look solid are made solid: guns on ledges, wheel and swing hubs, ladles, carts, signs, posts.** "Make them solid" (asked: make them solid, or draw them as not-ground)
+  2026-11-02 · `open` · TODO.md → 21, `pnpm shot fairplay` (`PENDING`)
+- **Landmarks offer several ways through, so blocking one with a part forces rivals another way.** "the nice thing about level design like this: you could block off one exit and forces players to go a diff way (with a beam, as a player)"
+  2026-11-02 · `done` · DESIGN.md → Stage concepts
+- **At least 5 landmarks per theme; all large, some grand, every one with randomness in its layout.** "things like the haunted wing are cool. i'd want no less than 5 landmarks per theme, all should be at least large on scale, some _grand_ all should have a little bit of randomness built into them in terms of layout/etc as well"
+  2026-11-02 · `in progress` · SETPIECES.md → 3, DESIGN.md → Stage concepts
+- **Every theme has at least 12 decor pieces and at least 3 hazards unique to it.** "similarly we probably want no less than a dozen 'decor' pieces that can exist in each theme? and maybe no less than 3 unique hazards per theme?"
+  2026-11-02 · `in progress` · DESIGN.md → Stage concepts
+- **Each theme has at least 1 and at most 3 grand landmarks among its 5+.** "id like at least one grand landmark, no more than 3 (in the min 5 landmarks)"
+  2026-11-02 · `done` (enforced) · `GRAND_LANDMARKS` in src/gen/kinds.ts, tests/conformance/themes.test.ts
 
 ## Weather and blood
 
@@ -582,6 +511,8 @@ Every game design decision, preference and direction the owner has given, groupe
   2026-11-02 · git `e778ace` · `done` · DESIGN.md → Levels
 - **Whether impact words stay is undecided.**
   2026-11-02 · `open` · TODO.md → 8
+- **Art everywhere is cleaner, lighter and more hand-drawn: thinner, varied lines, less loud colour.** "i want more cleanly designed art that isnt so loud/bold lines etc and more visually hand draw"; applies to characters, parts, terrain, landmarks and UI.
+  2026-11-02 · `in progress` · ART.md → World art
 
 ## UI, menus and copy
 
@@ -589,10 +520,8 @@ Every game design decision, preference and direction the owner has given, groupe
   2026-11-04 · `done` · DESIGN.md → Rules (the Level card), `src/ui/menus/level.ts`
 - **The theme is chosen by turning left and right through pictures of the level, with its title under it, not from a list of names; the difficulties have names with personality.** "we want like an image of the theme or something? kind of like on codex? ... instead of choosing the named level its a left/right kind of arrow with the visual and title of it?" / "put some personality into the difficulty levels (for their labels)"
   2026-11-04 · `done` · DESIGN.md → Rules (the Level card): Grab Bag, Sunday Stroll, Fair Fight, Pain Train
-
 - **The menus have music too, from the same audio as the game.** "we still have no music on like the title screen and stuff which is a little odd"
   2026-11-02 · `done` · DESIGN.md → Controls and UI (Music), `src/audio/page.ts`
-
 - **The UI is a molten foundry that doubles as a toy box: cast-iron plates, hazard tape, molten metal.**
   2026-11-02 · git `9af0a03` · `done` · ART.md → Identity
 - **The main menu is the quality bar, full window height included; everything else rises to it.** "i love the way the home screen looks btw, and the fact that its full height/etc. so hoping we can make the game just as good"
@@ -647,7 +576,7 @@ Every game design decision, preference and direction the owner has given, groupe
   2026-11-02 03:58Z · `done` · DESIGN.md → Controls and UI
 - **Touch controls: a floating stick with a run zone, hold-to-jump, held self-destruct, landscape first.**
   2026-11-02 · git `bb00a8e`, `c6a37ab` · `done` · DESIGN.md → Controls and UI, MOBILE.md
-- **Self-destruct is a deliberate 1.25 s hold on every input, counted by the sim from a fresh press, with a ring around the runner everyone sees; letting go, steering, jumping or using an item cancels it. On touch it moves to its own small button under Settings.** "also the default self destruct behavior should probably be a bit less accidental both for mobile and the hotkey"
+- **Self-destruct is a deliberate hold on every input, counted by the sim from a fresh press, with a ring around the runner everyone sees; letting go, steering, jumping or using an item cancels it. On touch it moves to its own small button under Settings.** "also the default self destruct behavior should probably be a bit less accidental both for mobile and the hotkey"
   2026-11-02 · `done` · DESIGN.md → Controls and UI, MOBILE.md, ART.md → Input prompts
   Changed: one press of alt popped you on keyboard and pad, and touch popped after a 0.35 s hold on ALT, the button that rotates during place.
 - **The self-destruct hold is 3 s, and your own charge counts down 3, 2, 1 in the middle of the screen.** "self destruct could probably be more like a 3 second hold" / "and show in the center of the screen as like a countdown so you dont miss it?"
@@ -717,6 +646,19 @@ Every game design decision, preference and direction the owner has given, groupe
   2026-11-02 03:46Z · `done` · AGENTS.md → `pnpm test:store`
 - **Whether to shorten two-peer host loss with a lower `PROBE_MS` is undecided.**
   2026-11-02 · `open` · TODO.md → 2
+- **Arriving mid-match puts you in as an observer; choosing Join opens a small lobby-style card (your toy with the New Look dice, your name) and seats you next round.** "when you join a match you'll default to observer fwiw, and then you can somehow choose to join, and if you do you might get a little screen to select your character/name almost like the lobby does"
+  2026-11-02 · `done` · DESIGN.md → Online (Seats, Join)
+  Changed: an up-front Join-or-Watch choice on arrival.
+- **Characters on the join card stay random-roll only: the New Look dice, no picker.**
+  2026-11-02 · `done` · DESIGN.md → Online (Join)
+  Changed: the colour is picked now (Players, above); the toy itself is still the dice's.
+- **A watcher's Join in the lobby seats them straight in, the way arriving does (their card appears among the players); the join card and its "You're In" are for joining mid-match.** "when you join the game on the lobby screen (like if i click the eyeball to observe, then i click to join) it says 'you're in' but that screen is just weirdly out of place in that scenario"
+  2026-11-02 · `done` · DESIGN.md → Online (Join)
+  Changed: Join opened the join card in every phase.
+- **Lobby browser: a list of lobbies, showing only ones that aren't full by default.** Lobbies are public by default with a Private option. "lets make lobbies public by default with a private option"
+  2026-11-02 · `done` · DESIGN.md → Online, Rules; NETCODE.md → Lobby list
+- **Each listed lobby shows its host's name, leading the row; after a host migration it's the new host's.** "i want each lobby to show the host's name"
+  2026-11-02 · `done` · NETCODE.md → Lobby list, `src/ui/screens/lobbies.ts`
 
 ## Platform and hosting
 
@@ -754,18 +696,14 @@ Every game design decision, preference and direction the owner has given, groupe
 - **Test suites are organized by function, not speed, and agents don't routinely run the heavy ones.** "the test suites should be functional, not 'fast vs slow' - like we dont always have to run benchmarks"
   2026-11-02 03:35Z · `done` · AGENTS.md → Commands, Definition of done
   Changed: a fast tier and a `test:slow` tier (`8e0704f`).
-- **Do a cleanup pass of the repo, docs and code.** "we'll want a cleanup pass of the repo, docs, code, etc soon"
-  2026-11-02 06:17Z · `done` · git `2ffff9d`–`d67a7e0`
-- **Delete merged and superseded branches.** "Yes"
-  2026-11-02 15:27Z · `done` · git `8b1ea2e`
-- **Resume interrupted agents, and resume merging.** "Resume all" / "Yes, resume merging"
-  2026-11-02 07:22Z, 16:20Z · `done`
 - **Unused code is part of the gate: knip runs in `pnpm check` and CI, and what it finds is deleted, not ignored.** "add knip if it snot there too"
   2026-11-04 · `done` · AGENTS.md → Commands
 - **Full sweeps move out of `pnpm test`: it runs a rotation of each sweep and `tests/stats/` runs the whole product, through one helper in `tests/lib/`.** "some of our tests could maybe be a dedicated suite or benchmark or something else thats not run on every change?"
   2026-11-04 · `done` · AGENTS.md → Definition of done
 - **Keep what an audit or a fix teaches, in short docs: a line in the owning AGENTS.md for a rule, a TODO item for open work, no long write-ups.** "we dont need crazy docs but i wanna make sure we keep learnings"
   2026-11-04 · `done` · AGENTS.md, TODO.md → 33
+- **Tighten lint where the audit found gaps: one generated config, the determinism rules over all deterministic code, exhaustive switches, no import cycles, no focused tests or bare numeric sorts, and tools that fail on an option nothing read.** "Yes, start them"
+  2026-11-05 · `done` · AGENTS.md → Commands (Lint), `tools/lint/config.ts`
 - **Make the GitHub Actions check required (an owner step).**
   2026-11-02 · `open` · TODO.md → 10
 - **Apply the quick wins from the transcript review: guard-safe commands for worktree agents, one `pnpm land` per batch instead of a merge and a gate per branch, and `SNAP_VERSION` bumped once at landing, never in a branch.** "Apply quick wins"

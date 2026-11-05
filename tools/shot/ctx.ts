@@ -8,7 +8,7 @@ import { argReader, type Engine, engineList, launchEngine, startServer, watchdog
 
 export const argv = process.argv.slice(2);
 export const scenario = argv[0] && !argv[0].startsWith('--') ? argv.shift()! : 'race';
-export const { opt } = argReader(argv);
+export const { opt, flag } = argReader(argv);
 export const out = resolve(opt('out', 'shots')!);
 export const [W, H] = opt('size', '1280x720')!.split('x').map(Number);
 export const seed = opt('seed', 'demo');
@@ -23,9 +23,9 @@ export const tq =
   (world ? `&size=${world}` : '') +
   (weather ? `&weather=${weather}` : '') +
   (concept ? `&concept=${concept}` : '') +
-  (argv.includes('--noui') ? '&ui=0' : '') +
+  (flag('noui') ? '&ui=0' : '') +
   (opt('q') ? `&q=${opt('q')}` : '') +
-  (argv.includes('--noletters') ? '&lettering=0' : '');
+  (flag('noletters') ? '&lettering=0' : '');
 export const players = Number(opt('players', '2'));
 export const frames = Number(opt('frames', '150'));
 mkdirSync(out, { recursive: true });
@@ -40,7 +40,7 @@ export const browser = await launchEngine(engine);
 export const page = await browser.newPage({ viewport: { width: W, height: H } });
 // `--nocel`: no WebGL2, so the game composites through its Canvas2D fallback, without the cel pass's light
 // bands, edge ink and hard shadows (post.ts): to judge art with and without it.
-if (argv.includes('--nocel'))
+if (flag('nocel'))
   await page.addInitScript(() => {
     const get = HTMLCanvasElement.prototype.getContext;
     (HTMLCanvasElement.prototype as any).getContext = function (this: HTMLCanvasElement, id: string, ...rest: unknown[]) {
@@ -52,7 +52,7 @@ page.on('pageerror', (e: Error) => errors.push(String(e)));
 page.on('console', (m: { type(): string; text(): string }) => m.type() === 'error' && errors.push(m.text()));
 
 export const mode = opt('mode');
-const fakeNet = argv.includes('--net');
+const fakeNet = flag('net');
 export async function open(q: string) {
   // net=off: screenshots are single-player and must never join a real online room.
   await page.goto(`${base}r/SHOTS?${q}${tq}&net=off`);
@@ -111,7 +111,7 @@ export async function castSheet(file: string, name: string, ...args: unknown[]):
 }
 export const LAUNCHER_STYLES = 'crossbow,ballista,cannon,totem,turret,thrower,rocket,glaive,gumball,mortar,gooper,cryo,prism';
 export const step = (n: number) => page.evaluate((k) => (window as any).slagDebug.step(k), n);
-export const secret = argv.includes('--secret');
+export const secret = flag('secret');
 /** `--secret`: turn the Secret Parts rule on and deal round 1 again, so the crate holds role cards. */
 export async function secretRule() {
   if (!secret) return;

@@ -24,7 +24,7 @@ import { EDGE_DRIFT } from '../../src/render/ink';
 import { CONCEPTS } from '../../src/gen/stage';
 import { THEME_IDS, type ThemeId } from '../../src/themes';
 import { writeFileSync } from 'node:fs';
-import { argv, open, opt, out, page, pet, seed, theme } from './ctx';
+import { open, opt, out, page, pet, seed, theme, flag } from './ctx';
 import type { Scenarios } from './ctx';
 
 /** Half the width of the thickest mark that still reads as thin (world px): a post, brace or ram's rod up to 4 px is fine. */
@@ -507,8 +507,8 @@ export const shots: Scenarios = {
   async fairplay() {
     const only = opt('concept')?.split(',');
     const count = Number(opt('count', '3'));
-    const decor = argv.includes('--decor');
-    const strict = argv.includes('--strict');
+    const decor = flag('decor');
+    const strict = flag('strict');
     const themes = theme ? [theme as ThemeId] : THEME_IDS;
     await open(`seed=${seed}&ui=0&lettering=0`);
     // tsx names functions through a helper that the page doesn't have.

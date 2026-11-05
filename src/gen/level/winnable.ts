@@ -25,7 +25,7 @@ import {
   traceRays,
 } from '../../sim/props';
 import { ReachCache, T_NOGO } from '../../sim/reach';
-import { cycleFrames } from '../setpieces/place';
+import { cycleFrames } from '../../sim/props';
 import { type Bridge, canPlaceBridge, MAX_BRIDGES, searchBridges, withBridges } from './validate';
 
 /**

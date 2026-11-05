@@ -2,6 +2,8 @@ import { describe, expect, it } from 'vitest';
 import { IDLE_FRAMES, LOBBY_IDLE_FRAMES, Match } from '../src/game/match';
 import { DEFAULT_RULES } from '../src/game/rules';
 import { roomSeed } from '../src/game/room';
+import { generateCharacter } from '../src/gen/character';
+import type { Wear } from '../src/net/actions';
 import { decode, type Enc } from '../src/net/codec';
 import { NetSession } from '../src/net/session';
 import { hashMatch } from '../src/net/snapshot';
@@ -40,7 +42,12 @@ class Room {
   frozen = new Set<string>();
   frame = 0;
 
-  join(id: string, script: Script = still, watch = false, more: { client?: string; banFrames?: number; dropFrames?: number } = {}): NetSession {
+  join(
+    id: string,
+    script: Script = still,
+    watch = false,
+    more: { client?: string; banFrames?: number; dropFrames?: number; wear?: () => Wear } = {},
+  ): NetSession {
     const s = new NetSession({
       transport: this.hub.transport(id),
       match: new Match(roomSeed('SEATS')),
@@ -274,6 +281,70 @@ describe('observers', () => {
     expect(o.seated).toBe(false);
     expect(o.watching).toBeDefined();
   }, 20_000);
+});
+
+describe('saved looks', () => {
+  /** Seeds whose toys differ, so two players may both wear theirs. */
+  const seeds = () => {
+    const out: number[] = [];
+    for (let seed = 1; out.length < 3; seed++) if (!out.some((s) => generateCharacter(s).kind === generateCharacter(seed).kind)) out.push(seed);
+    return out;
+  };
+  /** Every peer, every tick: a seat that exists is already in its saved look, never a rolled one first. */
+  const watchSeats = (r: Room, wears: Record<string, Wear>) => {
+    const seen: string[] = [];
+    const tick = () => {
+      for (const s of r.peers.values())
+        for (const p of s.match.players) {
+          const w = wears[p.device.split(':')[0]];
+          if (!w) continue;
+          expect([p.character.seed, p.character.color, w.name ? p.character.name : undefined]).toEqual([w.seed, w.color, w.name]);
+          seen.push(p.device);
+        }
+    };
+    return { tick, seen };
+  };
+
+  it('arriving host and guest, and a watcher taking a seat, are seated in their saved look, name and swatch from the first frame', () => {
+    const [s1, s2, s3] = seeds();
+    const wears: Record<string, Wear> = { aaaa: { seed: s1, color: 2, name: 'Ada' }, bbbb: { seed: s2, color: 5, name: 'Bo' }, cccc: { seed: s3, color: 7 } };
+    const r = new Room();
+    const check = watchSeats(r, wears);
+    r.join('aaaa', fidget, false, { wear: () => wears.aaaa });
+    r.join('bbbb', still, false, { wear: () => wears.bbbb });
+    const c = r.join('cccc', still, true, { wear: () => wears.cccc });
+    const a = r.peers.get('aaaa')!;
+    for (let i = 0; i < 300 && !(seatedPeer(a, 'aaaa') && seatedPeer(a, 'bbbb')); i++) {
+      r.run(1);
+      check.tick();
+    }
+    c.play();
+    for (let i = 0; i < 300 && !seatedPeer(a, 'cccc'); i++) {
+      r.run(1);
+      check.tick();
+    }
+    r.run(5);
+    check.tick();
+    expect(new Set(check.seen)).toEqual(new Set(['aaaa:kb1', 'bbbb:kb1', 'cccc:kb1']));
+    expect(r.hashes().size).toBe(1);
+  });
+
+  it('a saved look someone here already wears, or a name the filter refuses, leaves the seat as rolled', () => {
+    const [s1] = seeds();
+    const r = new Room();
+    const a = r.join('aaaa', fidget, false, { wear: () => ({ seed: s1, name: 'Ada' }) });
+    r.until(() => seatedPeer(a, 'aaaa'), 300);
+    // The second tab of the same browser: same toy, same name.
+    r.join('bbbb', still, false, { wear: () => ({ seed: s1, name: 'Ada' }) });
+    r.until(() => seatedPeer(a, 'bbbb'), 300);
+    const b = a.match.players.find((p) => p.device === 'bbbb:kb1')!;
+    expect(b.character.seed).not.toBe(s1);
+    expect(b.character.name).not.toBe('Ada');
+    r.join('cccc', still, false, { wear: () => ({ seed: 0x51a6, name: 'fuck' }) });
+    r.until(() => seatedPeer(a, 'cccc'), 300);
+    expect(a.match.players.find((p) => p.device === 'cccc:kb1')!.character.name).not.toBe('fuck');
+    expect(r.hashes().size).toBe(1);
+  });
 });
 
 describe('idle peers', () => {
