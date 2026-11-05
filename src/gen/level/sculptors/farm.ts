@@ -1,5 +1,6 @@
 import type { Rng } from '../../../core/rng';
 import { finish, Grid, groundFromHeights, noise1D } from '../kit';
+import { farmTall } from './tall';
 import type { SculptCtx, Sculptor } from '../types';
 import {
   type Claim,
@@ -34,6 +35,8 @@ interface Feature {
  * with one-way rails and haystack mounds.
  */
 export const farm: Sculptor = (ctx) => {
+  // Only Rising Slag asks this set for a tower (its races never go tall): its shaft is the tall builder's (./tall.ts).
+  if (ctx.profile.size === 'tall') return farmTall(ctx);
   const { rng, attempt } = ctx;
   const k = knobs(ctx);
   const { W, H } = k;

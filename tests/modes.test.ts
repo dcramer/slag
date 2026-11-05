@@ -5,7 +5,8 @@ import { DEFAULT_RULES } from '../src/game/rules';
 import { generateCrate } from '../src/gen/props';
 import { leaderIndex } from '../src/sim/items/tax';
 import { POINTS, scoreSurvival, SURVIVE_PLACES } from '../src/game/scoring';
-import { buildsTowers, LOOP_ROWS, LOOP_W, rollProfile } from '../src/gen/level/profile';
+import { generateLevel } from '../src/gen/level';
+import { LOOP_ROWS, LOOP_W, rollProfile } from '../src/gen/level/profile';
 import { LOOP_HEAD_START } from '../src/gen/level/tide';
 import { generateTheme } from '../src/gen/theme';
 import { hashMatch, restoreMatch, snapshotMatch } from '../src/net/snapshot';
@@ -15,7 +16,7 @@ import { bodyAtCell } from '../src/sim/physics';
 import { RunWorld } from '../src/sim/run';
 import { leashRows, stepTide, type Tide } from '../src/sim/tide';
 import { type InputFrame, NO_INPUT } from '../src/sim/types';
-import { pickThemeId, THEME_IDS } from '../src/themes';
+import { THEME_IDS } from '../src/themes';
 
 const FLOOR = 20; // first solid row
 const SLAG = { ...DEFAULT_RULES, mode: 'slag' as const };
@@ -46,29 +47,21 @@ function flatLevel(tide?: Tide): Level {
 const pop = (f: number): InputFrame => ({ ...NO_INPUT, alt: true, altPressed: f === 0 });
 
 describe('Rising Slag levels', () => {
-  it('climb in every theme: a looping shaft where the theme builds towers, a classic climb where it never does', () => {
+  it('loops in every set: a walled shaft, built bare, its bands the same rows', () => {
     for (const theme of THEME_IDS) {
-      for (const seed of [1, 2, 3]) {
-        const p = rollProfile(seed, theme, { tide: true });
-        expect(['climb', 'zigzag'], `${theme} ${seed}`).toContain(p.route);
-        expect(p.tide).toBe(true);
-        expect(p.size === 'tall' || (p.size === 'classic' && p.route === 'climb'), `${theme} ${seed}: ${p.size}`).toBe(true);
-        if (p.size === 'tall') {
-          expect(p.h).toBe(LOOP_ROWS + LOOP_BAND);
-          expect(p.w).toBeGreaterThanOrEqual(LOOP_W[0]);
-        }
-      }
-      expect(rollProfile(1, theme, { tide: true }).size).toBe(buildsTowers(theme) ? 'tall' : 'classic');
+      const p = rollProfile(1, theme, { tide: true });
+      expect(['climb', 'zigzag'], theme).toContain(p.route);
+      expect([p.size, p.h], theme).toEqual(['tall', LOOP_ROWS + LOOP_BAND]);
+      expect(p.w).toBeGreaterThanOrEqual(LOOP_W[0]);
+      const lv = generateLevel(1, theme, { tide: true });
+      expect(lv.loop, theme).toBe(LOOP_ROWS);
+      expect(lv.theme.id).toBe(theme);
+      expect(lv.solution ?? [], theme).toEqual([]);
+      for (let r = 0; r < LOOP_BAND; r++)
+        expect(lv.tiles.slice(r * lv.w, (r + 1) * lv.w), `${theme} row ${r}`).toEqual(lv.tiles.slice((r + lv.loop!) * lv.w, (r + lv.loop! + 1) * lv.w));
     }
-    expect(THEME_IDS.filter((t) => !buildsTowers(t))).toEqual(['farm', 'harbor', 'space']);
-  });
-
-  it('plays a tower theme when the seed would roll one that builds none', () => {
-    let seed = 1;
-    while (pickThemeId(seed) !== 'farm') seed++;
-    const level = new Match(seed, undefined, SLAG).level;
-    expect(buildsTowers(level.theme.id)).toBe(true);
-    expect(level.profile!.size).toBe('tall');
+    // Every set builds the mode's level, so the Level card marks none as work in progress.
+    expect(THEME_IDS.every((t) => MODES.slag.builds(t))).toBe(true);
   });
 
   it('a match in the mode builds a walled shaft that loops, climbs bare, and carries the slag', () => {
