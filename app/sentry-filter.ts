@@ -88,13 +88,53 @@ export function stampScope(event: ErrorEvent, scope: TelemetryScope): ErrorEvent
 const PER_ROOM_TAGS: ReadonlySet<string> = new Set(['room', 'level.seed', 'match.round']);
 
 /**
- * A metric's attributes: the game's tags minus the per-room ones, under what the
- * metric was given (a window's `match.phase` beats the phase the match moved on to).
+ * A metric's attributes: the browser it ran in, then the game's tags minus the
+ * per-room ones, then what the metric was given (a window's `match.phase` beats
+ * the phase the match moved on to).
  */
-export function metricAttributes(tags: TelemetryScope['tags'], own?: Record<string, unknown>): Record<string, unknown> {
-  const out: Record<string, unknown> = {};
+export function metricAttributes(tags: TelemetryScope['tags'], own?: Record<string, unknown>, client: Client = {}): Record<string, unknown> {
+  const out: Record<string, unknown> = { ...client };
   for (const [k, v] of Object.entries(tags)) if (v !== undefined && !PER_ROOM_TAGS.has(k)) out[k] = v;
   return { ...out, ...own };
+}
+
+/** Browser family, its major version and the OS, as metric attributes. */
+export interface Client {
+  'browser.name'?: string;
+  'browser.version'?: string;
+  'os.name'?: string;
+}
+
+/** Most specific first: Edge, Opera and Samsung say Chrome too, and Chrome says Safari. */
+const BROWSERS: [string, RegExp][] = [
+  ['edge', /Edg(?:A|iOS)?\/(\d+)/],
+  ['opera', /OPR\/(\d+)/],
+  ['samsung', /SamsungBrowser\/(\d+)/],
+  ['firefox', /(?:Firefox|FxiOS)\/(\d+)/],
+  ['chrome', /(?:Chrome|CriOS)\/(\d+)/],
+  ['safari', /Version\/(\d+)[^ ]* (?:Mobile\/\S+ )?Safari\//],
+];
+
+const SYSTEMS: [string, RegExp][] = [
+  ['ios', /iPhone|iPad|iPod/],
+  ['android', /Android/],
+  ['chromeos', /CrOS/],
+  ['windows', /Windows/],
+  ['macos', /Macintosh|Mac OS X/],
+  ['linux', /Linux/],
+];
+
+/**
+ * Sentry reads the user agent for errors on ingest but not for metrics, and a
+ * slowdown in one browser (an energy saver capping the rate, a GPU driver)
+ * looks like everyone's without it. Families and major versions only. An iPad
+ * asks for desktop sites as a Mac; its touch points give it away.
+ */
+export function clientOf(ua: string, touchPoints = 0): Client {
+  const browser = BROWSERS.find(([, re]) => re.test(ua));
+  let os = SYSTEMS.find(([, re]) => re.test(ua))?.[0] ?? 'other';
+  if (os === 'macos' && touchPoints > 1) os = 'ios';
+  return { 'browser.name': browser?.[0] ?? 'other', 'browser.version': browser ? browser[1].exec(ua)![1] : undefined, 'os.name': os };
 }
 
 /**

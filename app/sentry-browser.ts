@@ -15,7 +15,7 @@ import {
   withScope,
 } from '@sentry/browser';
 import { type MetricType, telemetryScope, type TelemetryData, type TelemetryLevel, type TelemetryReporter } from '../src/telemetry';
-import { EventBudget, eventFingerprint, keepBreadcrumb, metricAttributes, noiseReason, type PageState, stampScope } from './sentry-filter';
+import { clientOf, EventBudget, eventFingerprint, keepBreadcrumb, metricAttributes, noiseReason, type PageState, stampScope } from './sentry-filter';
 import { sentryOptions } from './sentry-options';
 
 /**
@@ -52,6 +52,7 @@ export function startSentry(): TelemetryReporter {
   addEventListener('pagehide', () => (page.leaving = true));
   addEventListener('pageshow', () => (page.leaving = false));
   const budget = new EventBudget();
+  const client = clientOf(navigator.userAgent, navigator.maxTouchPoints);
   init({
     ...sentryOptions,
     // Errors are rare and every one is wanted; the caps in src/telemetry.ts and the page budget bound them instead.
@@ -60,8 +61,8 @@ export function startSentry(): TelemetryReporter {
     beforeBreadcrumb: (b) => (keepBreadcrumb(b) ? b : null),
     // Logs carry the game's tags too, so one can be filtered like an issue.
     beforeSendLog: (log) => ({ ...log, attributes: { ...telemetryScope().tags, ...log.attributes } }),
-    // So do metrics, minus the tags that would split a series per room.
-    beforeSendMetric: (metric) => ({ ...metric, attributes: metricAttributes(telemetryScope().tags, metric.attributes) }),
+    // So do metrics, minus the tags that would split a series per room, plus the browser and OS.
+    beforeSendMetric: (metric) => ({ ...metric, attributes: metricAttributes(telemetryScope().tags, metric.attributes, client) }),
     // Spelled out to leave out BrowserApiErrors, which would wrap the game loop's
     // requestAnimationFrame for nothing (uncaught errors reach globalHandlers
     // anyway), and sessions. `dom: false`: keystrokes and clicks are game input.
