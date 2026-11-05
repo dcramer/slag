@@ -100,6 +100,9 @@ Every game design decision, preference and direction the owner has given, groupe
   2026-11-02 · git `45e64b2` · `done` · DESIGN.md → Movement
 - **Walking is slow and precise; holding Run gives speed and long jumps with momentum.**
   2026-11-02 · git `66ae3f0` · `done` · DESIGN.md → Movement
+- **The left and right edges of a level are open air, and going all the way off one kills, as the pit does. They used to be invisible walls you could wall-jump up.** "you can currently jump up the side of the screen even if theres no block" / "a better answer would be if most levels had a left/right that was just... death" / "Hold for death edges"
+  2026-11-04 · `done` · DESIGN.md → Movement, AGENTS.md → Game rules, src/sim/level.ts `offMap`
+  Changed: the screen edges were solid walls you could wall-slide and wall-jump on, and the generator's proofs used them.
 - **A full jump is about 3.7 tiles high.**
   2026-11-02 · git `0cdb23a` · `done` · DESIGN.md → Movement
   Changed: it was about 4.5 tiles (`c5715ab`).
