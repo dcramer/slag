@@ -6,7 +6,8 @@ import type { FlatKind } from '../kinds';
 // and a step at its rim (the twist: a cooking pot, its loop handles at the sides). Under it the huge round belly out
 // in front, and the roast leg held out level in his fist, clear of everything: raised, it was the penguin king's
 // hammer. The poses were drawn three to a 16:9 image with the design as the reference and cut apart
-// (art/sprites/warrior/design.prompt.txt).
+// (art/sprites/warrior/design.prompt.txt); where the image model stood the leg up again, levelpose.py there turned
+// it level about the fist. The leg held out reaches the box's edge, so the body is a little small (183).
 const KEEP =
   'seen exactly side on, his big round bald head with the big nose and the bushy moustache sticking out in front and the chin clear of his chest, the small dented iron pot always perched on top of his head, a low dome narrower than the head with its knob on top, his huge round belly always bulging out in front, the roast leg always in his front fist held out level, never raised over his head, his eye open';
 
