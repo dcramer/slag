@@ -70,6 +70,8 @@ const spec = FLAT_KINDS[kind];
 if (!spec) throw new Error(`No flat kind "${kind}". Flat kinds are the files in tools/art3d/flat/kinds/: ${Object.keys(FLAT_KINDS).join(', ')}.`);
 const art = resolve('art/sprites', kind);
 const cache = resolve('.cache/flat', kind);
+/** `FLAT_DEBUG=<pose>,…`: the poses whose eyes are printed; only they are traced, and nothing is written. */
+const debug = process.env.FLAT_DEBUG?.split(',');
 mkdirSync(cache, { recursive: true });
 
 interface RoleMap {
@@ -189,29 +191,37 @@ function cutOut(role: Int16Array, m: RoleMap, cut: NonNullable<(typeof spec)['ma
   }
 }
 
-/** Each connected patch of map role `r`: its middle (world px, before the feet are set) and area (world px²). */
-function mapSpecks(role: Int16Array, m: RoleMap, r: number): { at: Pt; a: number }[] {
+/**
+ * Each connected patch of map role `r`: its middle (world px, before the feet are set), area (world px²), and the
+ * share of the pixels round it that are map role `within` (an eye's pupil in its white).
+ */
+function mapSpecks(role: Int16Array, m: RoleMap, r: number, within = -2): { at: Pt; a: number; in: number }[] {
   const seen = new Uint8Array(role.length);
-  const out: { at: Pt; a: number }[] = [];
+  const out: { at: Pt; a: number; in: number }[] = [];
   for (let i0 = 0; i0 < role.length; i0++) {
     if (role[i0] !== r || seen[i0]) continue;
     const patch = [i0];
     seen[i0] = 1;
     let sx = 0;
     let sy = 0;
+    const rim = new Set<number>();
     for (let h = 0; h < patch.length; h++) {
       const i = patch[h];
       const x = i % m.W;
       sx += x;
       sy += (i / m.W) | 0;
-      for (const j of [x > 0 ? i - 1 : -1, x < m.W - 1 ? i + 1 : -1, i - m.W, i + m.W])
-        if (j >= 0 && j < role.length && !seen[j] && role[j] === r) {
+      for (const j of [x > 0 ? i - 1 : -1, x < m.W - 1 ? i + 1 : -1, i - m.W, i + m.W]) {
+        if (j < 0 || j >= role.length) continue;
+        if (role[j] !== r) rim.add(j);
+        else if (!seen[j]) {
           seen[j] = 1;
           patch.push(j);
         }
+      }
     }
     const n = patch.length;
-    out.push({ at: [(sx / n + 0.5) / m.R + BOX.x0, (sy / n + 0.5) / m.R - BOX.y1], a: n / (m.R * m.R) });
+    const inside = [...rim].filter((j) => role[j] === within).length;
+    out.push({ at: [(sx / n + 0.5) / m.R + BOX.x0, (sy / n + 0.5) / m.R - BOX.y1], a: n / (m.R * m.R), in: inside / Math.max(1, rim.size) });
   }
   return out;
 }
@@ -323,6 +333,7 @@ function frameOf(name: string, clip: FlatClip): Frame {
     },
   );
   const m = JSON.parse(readFileSync(json, 'utf8')) as RoleMap;
+  const px = ([x, y]: Pt) => `${Math.round((x - BOX.x0) * m.R - 0.5)},${Math.round((y + BOX.y1) * m.R - 0.5)}`;
   // Only what the tracer reads: no depth steps (a drawing is flat), and each role's smallest part.
   const settings: Pick<Settings, 'step' | 'trace' | 'roles'> = {
     step: 1e9,
@@ -350,23 +361,24 @@ function frameOf(name: string, clip: FlatClip): Frame {
     const [b0, b1] = ek.band ?? [0, 0.5];
     const edge = (x: number, y: number) =>
       Math.min(...t.sil.flatMap((r) => r.filter((_, i) => i % 2 === 0).map((rx, i) => Math.hypot(rx - x, r[i * 2 + 1] - y))));
-    // `FLAT_DEBUG=<pose>`: that pose's dark specks, to tune `eyes` (area, place in the band, distance to the edge).
-    if (process.env.FLAT_DEBUG === name)
-      for (const p of parts.filter((q) => q.role === dark)) {
-        const [x, y] = mid(p.ring);
-        console.log(
-          `  speck area ${area(p.ring).toFixed(2)} at ${x.toFixed(1)},${y.toFixed(1)} band ${((y - figTop) / (figLow - figTop)).toFixed(2)} edge ${edge(x, y).toFixed(2)}`,
-        );
-      }
     // Candidates from the traced parts, or (`from: 'map'`) from the role map itself, where an eye too small to
     // survive the tracer's smoothing is still a clean speck of its own.
     const found =
       ek.from === 'map'
-        ? mapSpecks(role, m, m.roles.indexOf(ek.role))
-        : parts.filter((p) => p.role === dark).map((p) => ({ at: mid(p.ring), a: area(p.ring) }));
-    const specks = found.filter(({ at: [x, y], a }) => {
-      if (a < ek.area[0] || a >= ek.area[1]) return false;
-      return y >= figTop + (figLow - figTop) * b0 && y <= figTop + (figLow - figTop) * b1 && edge(x, y) > 0.45;
+        ? mapSpecks(role, m, m.roles.indexOf(ek.role), ek.in ? m.roles.indexOf(ek.in) : -2)
+        : parts.filter((p) => p.role === dark).map((p) => ({ at: mid(p.ring), a: area(p.ring), in: 0 }));
+    // `FLAT_DEBUG=<pose>,…`: those poses' `role` specks, to tune `eyes` (area, place in the band, distance to the
+    // edge, and the role map's pixel, `.cache/flat/KIND/<pose>.png`).
+    if (debug?.includes(name))
+      for (const q of found.filter((q) => q.a >= 0.02)) {
+        const [x, y] = q.at;
+        console.log(
+          `  speck area ${q.a.toFixed(2)} at ${x.toFixed(1)},${y.toFixed(1)} px ${px(q.at)} band ${((y - figTop) / (figLow - figTop)).toFixed(2)} edge ${edge(x, y).toFixed(2)}${ek.in ? ` in ${q.in.toFixed(2)}` : ''}`,
+        );
+      }
+    const specks = found.filter(({ at: [x, y], a, in: within }) => {
+      if (a < ek.area[0] || a >= ek.area[1] || (ek.in && within < 0.3)) return false;
+      return y >= figTop + (figLow - figTop) * b0 && y <= figTop + (figLow - figTop) * b1 && edge(x, y) > (ek.edge ?? 0.45);
     });
     let best = -1;
     for (const a of specks)
@@ -380,8 +392,17 @@ function frameOf(name: string, clip: FlatClip): Frame {
           eyes = [pa, pb];
         }
       }
+    // A drawing that hides its eyes (the puppy's design, under his beanie) has the near one set by hand, in its
+    // figure's box, and nothing of the drawing's to paint over: the darks found there are its mouth and collar.
+    const hidden = ek.at?.[name];
+    if (hidden) {
+      const xs = t.sil.flatMap((r) => r.filter((_, i) => i % 2 === 0));
+      const [figL, figR] = [Math.min(...xs), Math.max(...xs)];
+      specks.splice(0, specks.length, { at: [figL + (figR - figL) * hidden[0], figTop + (figLow - figTop) * hidden[1]], a: 1, in: 1 });
+      eyes = [];
+    }
     // One eye found (a profile, the dot-eater): the biggest.
-    if (ek.count === 1) {
+    if (ek.count === 1 || hidden) {
       const one = [...specks].sort((a, b) => b.a - a.a)[0];
       eyes = one ? [one.at] : [];
       // The far eye of a face turned nearly side on is on the outline, or lost in its white: set from the near one.
@@ -399,8 +420,9 @@ function frameOf(name: string, clip: FlatClip): Frame {
       }
     }
     if (clip.eyes === false) eyes = [];
+    if (debug?.includes(name)) console.log(`  ${name} eyes at ${eyes.map(px).join(' ') || 'none'}`);
     // The face's specks go (eyes, nose, a drawn mouth and its tongue): the kit draws eyes and mouth there.
-    if (eyes.length) {
+    if (eyes.length && !hidden) {
       const [x0, x1] = [eyes[0][0] - 2.5, eyes[eyes.length - 1][0] + 2.5];
       const [y0, y1] = [Math.min(...eyes.map((e) => e[1])) - 1.5, Math.max(...eyes.map((e) => e[1])) + 3.6];
       gone = parts.filter((p) => {
@@ -563,6 +585,11 @@ const traced = new Map<string, Frame>();
 const clips: Record<string, unknown> = {};
 let n = 0;
 for (const [name, clip] of Object.entries(spec.clips)) {
+  // Debugging traces only the poses asked for, and writes nothing.
+  if (debug) {
+    for (const fr of clip.frames.filter((fr) => debug.includes(fr) && !traced.has(fr))) traced.set(fr, frameOf(fr, clip));
+    continue;
+  }
   const fs = clip.frames.map((fr) => {
     let f = traced.get(fr);
     if (!f) {
@@ -575,6 +602,7 @@ for (const [name, clip] of Object.entries(spec.clips)) {
   const { frames: _, eyes: __, centre: ___, ...timing } = clip;
   clips[name] = { ...timing, r: fs.map((f) => vframe(f, false)), l: fs.map((f) => vframe(f, true)) };
 }
+if (debug) process.exit(0);
 const idle = traced.get(spec.clips.idle.frames[0])!;
 const top = Math.min(...idle.sil.flatMap((r) => r.filter((_, i) => i % 2 === 1)));
 const set = {

@@ -110,7 +110,9 @@ export const kind: FlatKind = {
     { name: 'wear', vary: 11, options: 3 },
   ],
   // The near eye from the role map; the far one sits on the face's outline under the fringe, so it's set from it.
-  eyes: { role: 'dark', from: 'map', area: [0.06, 1.6], gap: [1.6, 4.2], band: [0.2, 0.45], specks: { dark: 2, brown: 1.2 }, count: 1, pair: [2.9, 0] },
+  // The band stops above the mouth and `area` under the far eye where it runs into the fringe's ink: the wall
+  // slide's eye sat on his teeth, and the cheer's on the far eye, its sliver on his arm.
+  eyes: { role: 'dark', from: 'map', area: [0.06, 1], gap: [1.6, 4.2], band: [0.2, 0.37], specks: { dark: 2, brown: 1.2 }, count: 1, pair: [2.9, 0] },
   wear: {
     on: ['top', 'pants'],
     chin: 3,

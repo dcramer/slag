@@ -100,7 +100,8 @@ export type EyeStyle = 'round' | 'tall' | 'dot' | 'pill' | 'profile' | 'scowl' |
 /**
  * The face kit's settings for a kind: eye size (world px, the near eye's at rest), iris, its eye style (`round` if
  * none), the mouth's place from the near eye, and the least width of its shut eyes and cheer arcs (`mark`).
- * `far` is how a head turned side on shows its far eye: a sliver tucked behind the near one, or none. `lid` is for a
+ * `far` is how a head turned side on shows its far eye: a sliver tucked behind the near one, or none; `turned` is a
+ * three-quarter face's, drawn where the drawing has it and foreshortened, narrower than the near one. `lid` is for a
  * kind whose drawing keeps its own eye whites (the worm's bulge out of its head): when the eyes shut, the kit paints
  * that role's colour (its index in `roles`) over them, `r` times the eye's size, or a blink left a blank white ball.
  */
@@ -110,7 +111,7 @@ export interface FaceKit {
   mouth?: readonly [number, number];
   eye?: EyeStyle;
   mark?: number;
-  far?: 'sliver' | 'none';
+  far?: 'sliver' | 'none' | 'turned';
   lid?: { role: number; r: number };
 }
 

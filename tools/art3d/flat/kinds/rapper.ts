@@ -108,17 +108,20 @@ export const kind: FlatKind = {
   ],
   // The drawn eyes are dark ovals with a glint, narrower than the thick outline's ink, so they are kept as lone round
   // specks (`glint`) and found in the role map. Side on, the far eye is often hard against the beanie's band or lost
-  // in the outline, so the near one is the biggest speck and the far one is set from it.
+  // in the outline, so the near one is the biggest speck and the far one is set from it. The darks of his mouth and
+  // collar, just under the snout, are bigger than an eye: the band stops above them and `area` under them, or the
+  // eye sat on his collar. The design hides his eyes under the band, so its eye is set (`at`) where the poses draw it.
   eyes: {
     role: 'dark',
     from: 'map',
     glint: 0.25,
-    area: [0.05, 0.9],
+    area: [0.05, 0.6],
     gap: [0.8, 3],
-    band: [0.2, 0.55],
+    band: [0.2, 0.42],
     count: 1,
     pair: [1.4, -0.15],
     specks: { dark: 0.6, nose: 0.2 },
+    at: { idle: [0.54, 0.37] },
   },
   wear: {
     on: ['tee'],
