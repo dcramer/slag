@@ -46,6 +46,9 @@ export const kind: FlatKind = {
     min: { dark: 0.1 },
     // The handle's eye and the gaps between the hose limbs (the drawings' cream is kept under the near-white).
     holes: 0.4,
+    // Each hole takes its rim and the ink beside it goes to the figure: at 228 the handle's eye and the gaps
+    // between the legs kept a white sliver of the enamel's colour inside them.
+    white: 150,
   },
   roles: [
     { name: 'white', color: '#f4efe6' },

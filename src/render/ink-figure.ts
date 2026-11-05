@@ -173,15 +173,53 @@ function centroid(pts: readonly P[]): P {
   return mid;
 }
 
-/** The solid ink under a shape: each point pushed out from (cx, cy), further the more it faces away from the light. */
+/** +1 or -1: the sign that turns a tangent's (y, -x) into the outward side of this outline. */
+function winding(pts: readonly P[]): number {
+  let a = 0;
+  for (let i = 0, j = pts.length - 1; i < pts.length; j = i++) a += pts[j].x * pts[i].y - pts[i].x * pts[j].y;
+  return a < 0 ? -1 : 1;
+}
+
+const nrm: P = { x: 0, y: 0 };
+
+/**
+ * Which way point `i` of an outline faces, into `nrm`: out from (cx, cy), the direction a blob's ink grows. Where
+ * the outline runs toward the middle instead of round it (a wedge cut to the centre: a mouth, a notch), that
+ * direction lies along the edge, not across it, and the ink there slid along the edge and lit the wrong side; there
+ * it turns to the edge's own outward normal. Everywhere the two nearly agree it stays exactly the radial one.
+ */
+function facing(pts: readonly P[], i: number, cx: number, cy: number, wind: number): P {
+  const p = pts[i];
+  const d = Math.hypot(p.x - cx, p.y - cy) || 1;
+  const rx = (p.x - cx) / d;
+  const ry = (p.y - cy) / d;
+  const a = pts[(i + pts.length - 1) % pts.length];
+  const b = pts[(i + 1) % pts.length];
+  const t = Math.hypot(b.x - a.x, b.y - a.y);
+  nrm.x = rx;
+  nrm.y = ry;
+  if (!t) return nrm;
+  const ex = ((b.y - a.y) / t) * wind;
+  const ey = (-(b.x - a.x) / t) * wind;
+  const u = Math.max(0, Math.min(1, (rx * ex + ry * ey - 0.3) / 0.4));
+  if (u === 1) return nrm;
+  const w = u * u * (3 - 2 * u);
+  const mx = rx * w + ex * (1 - w);
+  const my = ry * w + ey * (1 - w);
+  const m = Math.hypot(mx, my) || 1;
+  nrm.x = mx / m;
+  nrm.y = my / m;
+  return nrm;
+}
+
+/** The solid ink under a shape: each point pushed out the way it faces (`facing`), further the more it faces away from the light. */
 function mass(s: CanvasRenderingContext2D, pts: readonly P[], ink: string, thin: number, thick: number, cx: number, cy: number) {
   s.fillStyle = ink;
   s.beginPath();
+  const wind = winding(pts);
   for (let i = 0; i < pts.length; i++) {
     const p = pts[i];
-    const d = Math.hypot(p.x - cx, p.y - cy) || 1;
-    const nx = (p.x - cx) / d;
-    const ny = (p.y - cy) / d;
+    const { x: nx, y: ny } = facing(pts, i, cx, cy, wind);
     const k = thin + (thick - thin) * shadeOf(nx, ny);
     if (i) s.lineTo(p.x + nx * k, p.y + ny * k);
     else s.moveTo(p.x + nx * k, p.y + ny * k);
@@ -216,15 +254,15 @@ export function contour(s: CanvasRenderingContext2D, pts: readonly P[], fill: st
     }
   }
   const span = Math.ceil(n / 3);
+  const wind = winding(pts);
   s.fillStyle = ink;
   for (let j = 0; j < 3; j++) {
     let mid = 0;
     let sh = 0;
     for (let i = 0; i <= span; i++) {
-      const p = pts[(lead + j * span + i) % n];
-      const d = Math.hypot(p.x - cx, p.y - cy) || 1;
-      const nx = (p.x - cx) / d;
-      const ny = (p.y - cy) / d;
+      const at = (lead + j * span + i) % n;
+      const p = pts[at];
+      const { x: nx, y: ny } = facing(pts, at, cx, cy, wind);
       const m = (MASS[0] + (MASS[1] - MASS[0]) * shadeOf(nx, ny)) * k;
       // On the mass's outer half: the stroke's inside is hidden under the fill drawn after it.
       const q = penBuf[i] ?? (penBuf[i] = { x: 0, y: 0 });
