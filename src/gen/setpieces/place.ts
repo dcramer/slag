@@ -1,7 +1,7 @@
 import { dcos, dhypot, dpow, dsin } from '../../core/dmath';
 import { type Cell, overlaps, type Rect, rectCircle, type Vec } from '../../core/geom';
 import type { Rng } from '../../core/rng';
-import { DT, PLAYER_H, PLAYER_W, RUN_COUNTDOWN, TILE } from '../../sim/constants';
+import { PLAYER_H, PLAYER_W, RUN_COUNTDOWN, TILE } from '../../sim/constants';
 import { isProtected, type Level, T_EMPTY, T_SOLID, tileAt, type TileRect } from '../../sim/level';
 import {
   AMMO,
@@ -24,13 +24,13 @@ import {
   type Role,
   resolveProp,
   traceRays,
-  TRACED_AMMO,
   traceShot,
   type Trim,
   type Xform,
 } from '../../sim/props';
 import '../../sim/props/modules';
 import { ReachCache } from '../../sim/reach';
+import { gustPeak } from '../../sim/weather';
 import { noFreeRide } from '../level/winnable';
 import { hazardBox, tellFaults, windowFaults } from './contract';
 
@@ -371,35 +371,17 @@ export function finalize(s: Site, piece: Piece, uid: number, key: string): Place
     }
   }
 
-  // Projectiles: a fixed gun fires the same shot every time, so trace one shot's
-  // flight (same integration as RunWorld) and keep it clear of spawn/goal.
+  // Projectiles: a fixed gun fires the same shot every time, so trace one shot through the real
+  // projectile step (bounces, rolls and wobble included) and keep it clear of spawn/goal. A ballistic
+  // copy of the flight stopped at the first wall and missed a rubber ball bouncing into the goal. A gust
+  // carries a shot sideways somewhere between still air and full push, so both bound where it can go.
+  const airs = [...new Set([0, gustPeak(level)])];
   for (const m of r.mods) {
     if (m.type !== 'cannon') continue;
-    const spec = AMMO[m.ammo];
-    const pad = 6 + spec.radius + spec.wobble * 5;
-    if (TRACED_AMMO.has(m.ammo)) {
-      const [mx, my] = cannonMuzzle(m);
-      const path = traceShot(level, { x: mx, y: my, vx: dcos(m.angle) * m.speed, vy: dsin(m.angle) * m.speed, owner: -1, ammo: m.ammo });
-      if (path.some((q) => s.zones.some((z) => rectCircle(z, q.x, q.y, pad)))) return null;
-      continue;
-    }
-    let [x, y] = cannonMuzzle(m);
-    const vx = dcos(m.angle) * m.speed;
-    let vy = dsin(m.angle) * m.speed;
-    for (let f = 0; f < 60 * 8; f++) {
-      vy += spec.gravity * (level.gravity ?? 1) * DT;
-      x += vx * DT;
-      y += vy * DT;
-      if (spec.wobble) {
-        // Same lateral wobble as RunWorld.stepProjectiles (first move happens at age 1).
-        const sp = dhypot(vx, vy) || 1;
-        const w = dsin((f + 1) * 0.25) * spec.wobble;
-        x += (-vy / sp) * w;
-        y += (vx / sp) * w;
-      }
-      if (x < -16 || x > s.w * TILE + 16 || y > s.h * TILE + 16 || y < -200 || s.solid(Math.floor(x / TILE), Math.floor(y / TILE))) break;
-      if (s.zones.some((z) => rectCircle(z, x, y, pad))) return null;
-    }
+    const pad = 6 + AMMO[m.ammo].radius;
+    const [mx, my] = cannonMuzzle(m);
+    const shot = { x: mx, y: my, vx: dcos(m.angle) * m.speed, vy: dsin(m.angle) * m.speed, owner: -1, ammo: m.ammo };
+    for (const air of airs) if (traceShot(level, shot, undefined, air).some((q) => s.zones.some((z) => rectCircle(z, q.x, q.y, pad)))) return null;
   }
 
   // Static solids must not cut the path to the goal.
