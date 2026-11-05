@@ -406,6 +406,7 @@ export class NetSession {
     };
     const host = this.nameOf(this.self);
     if (host) l.host = host;
+    if (this.match.rules.mode !== 'race') l.mode = this.match.rules.mode;
     return l;
   }
 

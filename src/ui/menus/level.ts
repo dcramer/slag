@@ -1,4 +1,5 @@
 import { parseSeed } from '../../core/rng';
+import { MODES } from '../../game/modes';
 import { DIFFICULTY_CHOICES, difficultyLabel, type MatchRules } from '../../game/rules';
 import type { InputManager } from '../../input/input';
 import { icon } from '../../render/hud-kit';
@@ -169,7 +170,11 @@ export class LevelMenu extends CanvasMenu {
       c.fillRect(px, at + ph - band, pw, band);
       const tag = (theme ? THEME_LABELS[theme] : `Any · ${THEME_LABELS[p.shownTheme()]}`).toUpperCase();
       const big = band >= 38;
-      ui.text(tag, px + 12, at + ph - band + (big ? 11 : 9), big ? 9 : 8, theme ? PAL.amber : PAL.ash, 'left', 800);
+      const tagW = ui.text(tag, px + 12, at + ph - band + (big ? 11 : 9), big ? 9 : 8, theme ? PAL.amber : PAL.ash, 'left', 800);
+      // Work in progress: a set that doesn't build this mode's level yet says so (game/modes.ts `builds`).
+      const mode = MODES[rules.mode];
+      if (!mode.builds(theme ?? p.shownTheme()))
+        ui.text(`· ${mode.label.toUpperCase()} WIP`, px + 16 + tagW, at + ph - band + (big ? 11 : 9), big ? 9 : 8, PAL.danger, 'left', 800);
       const ds = Math.max(ui.tap, band - 8);
       ui.text(
         ui.fit(p.name(), pw - 36 - ds, big ? 16 : 13, 400, FONT.display),

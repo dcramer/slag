@@ -57,8 +57,12 @@ export function routeDistance(level: Level, r: Runner): number {
   return Number.POSITIVE_INFINITY;
 }
 
-/** The live, unfinished runner nearest the flag by route; then by straight line, then the lower slot. -1 if nobody's racing. */
+/**
+ * The live, unfinished runner nearest the flag by route; then by straight line, then the lower slot. -1 if nobody's
+ * racing. With slag rising there's no flag to be near: the leader is whoever has climbed highest, laps and all.
+ */
 export function leaderIndex(w: RunWorld): number {
+  if (w.level.tide) return highestIndex(w);
   const g = goalRect(w.level);
   const gx = g.x + g.w / 2;
   const gy = g.y + g.h / 2;
@@ -166,4 +170,20 @@ export function stepShells(w: RunWorld): void {
   const shells = w.items.shells;
   if (!shells.length) return;
   w.items.shells = shells.filter((s) => stepShell(w, s));
+}
+
+/** The live runner whose feet stand highest in climbed coordinates (a loop's laps counted), then the lower slot. */
+function highestIndex(w: RunWorld): number {
+  const lap = (w.level.loop ?? 0) * TILE;
+  let best = -1;
+  let top = Infinity;
+  w.runners.forEach((r, i) => {
+    if (!isActive(r)) return;
+    const feet = r.body.y + r.body.h - r.lap * lap;
+    if (feet < top || (feet === top && r.slot < w.runners[best].slot)) {
+      best = i;
+      top = feet;
+    }
+  });
+  return best;
 }

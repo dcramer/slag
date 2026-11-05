@@ -1,7 +1,8 @@
-import { TILE } from '../sim/constants';
+import { FPS, RUN_COUNTDOWN, TILE } from '../sim/constants';
 import { dirOf, flameCycle, laserCycle, motionOffset, pistonState, swingAngles, swingHeads, teslaCycle } from '../sim/props';
 import type { Level } from '../sim/level';
-import type { RunWorld } from '../sim/run';
+import { feetUp, type RunWorld } from '../sim/run';
+import { leashRows } from '../sim/tide';
 import { gustShown, type WeatherKind } from '../sim/weather';
 import type { SfxName } from './sfx';
 
@@ -21,7 +22,7 @@ import type { SfxName } from './sfx';
  * helpers, so what you hear always matches what the sim does.
  */
 
-export type LoopKind = 'saw' | 'flame' | 'laserCharge' | 'laserFire' | 'tesla' | 'fan' | 'conveyor' | 'slide' | 'gust' | 'rain' | 'snow' | 'mist';
+export type LoopKind = 'saw' | 'flame' | 'laserCharge' | 'laserFire' | 'tesla' | 'fan' | 'conveyor' | 'slide' | 'gust' | 'rain' | 'snow' | 'mist' | 'slag';
 
 export interface Emitter {
   kind: LoopKind;
@@ -58,6 +59,35 @@ export function weatherEmitters(level: Level, f: number, x: number, y: number, o
   const kind = level.weather?.kind ?? 'clear';
   const s = WEATHER_SOUND[kind]?.(level, f);
   if (s && kind !== 'clear') out.push({ kind: kind === 'wind' ? 'gust' : kind, x, y, level: s.level, p: s.p, ambient: true });
+}
+
+/** Rows under the leader the slag's boil fades out by: past this the leader can't hear it coming. */
+const SLAG_HEARD = 24;
+
+/**
+ * Rising Slag's boil (sim/tide.ts): one source on the leader's lap, as far below the listener as the slag is below
+ * the leader, so it swells as it closes. Its `p` is the rush: the slag tearing up after a leader who got more than
+ * the leash ahead hisses, and slag at its floor pace only bubbles. Silent while it boils in place, before it moves.
+ */
+export function slagEmitters(run: RunWorld, f: number, x: number, y: number, out: Emitter[]): void {
+  const tide = run.level.tide;
+  if (!tide || run.slag === null) return;
+  let lead: number | null = null;
+  for (const r of run.runners) if (r.alive && !r.finished) lead = Math.min(lead ?? Infinity, feetUp(run.level, r));
+  if (lead === null) return;
+  const gap = Math.max(0, run.slag - lead) / TILE;
+  const boiling = f < RUN_COUNTDOWN + tide.wait * FPS;
+  const climbed = ((run.level.spawn.ty + 1) * TILE - lead) / TILE;
+  const rush = !boiling && gap > leashRows(tide, climbed, f) + 0.5 ? 1 : 0;
+  out.push({ kind: 'slag', x, y: y + gap * TILE * 0.5, level: Math.max(0, 1 - gap / SLAG_HEARD) * (boiling ? 0.4 : 1), p: rush });
+}
+
+/** The pour: the slag's boil breaking into its rise, crossed between frame f−1 and f. */
+export function slagTransients(run: RunWorld, f: number, x: number, y: number, out: PropCue[]): void {
+  const tide = run.level.tide;
+  if (!tide || run.slag === null) return;
+  const go = RUN_COUNTDOWN + Math.ceil(tide.wait * FPS);
+  if (f === go) out.push({ name: 'flame-ignite', x, y: y + 6 * TILE, pitch: 0.45 });
 }
 
 /** Continuous sources for the race state at frame `f`. */

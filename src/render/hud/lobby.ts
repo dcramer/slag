@@ -10,6 +10,8 @@ import { bay, icon, plate, swatchDot, tag } from '../hud-kit';
 import { blob } from '../ink';
 import { glowDot } from '../kit';
 import type { Hud, NetInfo, NetWatcher } from '../hud';
+import { MODES } from '../../game/modes';
+import { modeEmblem } from '../mode-emblem';
 import { joinButton } from './arrival';
 import { DISPLAY, UI, FOOT_H, MAX_FOOT_SCALE, MIN_BAY_H, MIN_SMALL_BAY_H, PHONE_BAR_W } from './layout';
 
@@ -47,8 +49,11 @@ export function lobby(hud: Hud, m: Match, t: number, dt: number) {
   const me = m.players.find((p) => p.device === hud.mouseDevice);
   const lv = m.level.theme;
   const themeLabel = THEME_LABELS[lv.id].toUpperCase();
-  const lx = 140;
-  const lw = bar.lw;
+  // Desktop: the Mode plate leads, then the level's. Phones have no width for it, so Mode is a button by Rules.
+  const modeW = phone ? 0 : MODE_PLATE_W;
+  if (!phone) modePlate(hud, m, 140, modeW);
+  const lx = 140 + (modeW ? modeW + 8 : 0);
+  const lw = bar.lw - (modeW ? modeW + 8 : 0);
   const refreshW = m.players.length ? (phone ? 40 : 94) : 0;
   // On a phone New Level's icon grows to a thumb's width: the plate's own area stops short of where it grows to.
   const reach = phone && m.players.length ? Math.max(0, (hud.tap - 32) / 2) + 2 : 0;
@@ -68,6 +73,8 @@ export function lobby(hud: Hud, m: Match, t: number, dt: number) {
   done();
   done = hud.begin(barS, phone ? win.safeX1 - 8 - (VIEW_W - 12) * barS : 0, 0);
   if (phone) {
+    hud.btn({ x: VIEW_W - 12 - 34 - 2 * bar.step, y: 13, w: 34, h: 30, action: 'modeMenu' }, '', 'secondary');
+    modeEmblem(c, m.rules.mode, VIEW_W - 12 - 17 - 2 * bar.step, 27, 18);
     hud.btn({ x: VIEW_W - 12 - 34 - bar.step, y: 13, w: 34, h: 30, action: 'rules' }, '', 'secondary', 'flag');
     hud.btn({ x: VIEW_W - 12 - 34, y: 13, w: 34, h: 30, action: 'settings' }, '', 'secondary', 'gear');
   } else {
@@ -136,6 +143,17 @@ export function lobby(hud: Hud, m: Match, t: number, dt: number) {
  * thumb wide even where the icon isn't, so on a narrow window the bar shrinks and the plate gives up width until
  * no two hit areas touch.
  */
+/** Desktop's Mode plate: the mode's emblem and its name, opening the Mode card. */
+const MODE_PLATE_W = 118;
+
+function modePlate(hud: Hud, m: Match, x: number, w: number) {
+  const c = hud.ctx;
+  const over = hud.button({ x, y: 13, w, h: 30, action: 'modeMenu' });
+  plate(c, x, 13, w, 30, { rivets: false, ...(over ? { stroke: PAL.amber } : {}) });
+  modeEmblem(c, m.rules.mode, x + 16, 28, 20);
+  fitText(hud, MODES[m.rules.mode].label, x + 30, 28.5, w - 38, 13, 9, PAL.bone, DISPLAY, 400);
+}
+
 function phoneBar(hud: Hud, safeW: number): { s: number; lw: number; step: number } {
   const tap = hud.tapMin;
   const win = hud.frame;
@@ -144,8 +162,8 @@ function phoneBar(hud: Hud, safeW: number): { s: number; lw: number; step: numbe
     const step = Math.max(40, (Math.max(34 * s, tap) + 2) / s);
     const left = win.safeX0 + 8 - 14 * s;
     const right = win.safeX1 - 8 - (VIEW_W - 12) * s;
-    // Rules' hit area's left edge, and the widest plate whose refresh button stays clear of it.
-    const rules = right + (VIEW_W - 12 - 17 - step) * s - Math.max(17 * s, tap / 2);
+    // Mode's hit area's left edge (the leftmost button by Rules), and the widest plate whose refresh button stays clear of it.
+    const rules = right + (VIEW_W - 12 - 17 - 2 * step) * s - Math.max(17 * s, tap / 2);
     const lw = Math.min(300, (rules - 2 - Math.max(16 * s, tap / 2) - left) / s - 140 + 22);
     best = { s, lw, step };
     if (lw >= 240) break;

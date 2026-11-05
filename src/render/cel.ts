@@ -168,7 +168,8 @@ export class Lettering {
       const pop = age < 0.09 ? 0.45 + (age / 0.09) * 0.85 : age < 0.16 ? 1.3 - ((age - 0.09) / 0.07) * 0.3 : 1;
       const z = pop * (w.life < 0.12 ? w.life / 0.12 : 1);
       if (z <= 0.01) continue;
-      const p = cam.worldToView(w.x, w.y);
+      // Round a loop the word goes on the copy of where it happened that the view shows.
+      const p = cam.worldToView(w.x, cam.nearest(w.y));
       const half = w.size * (0.75 + w.text.length * 0.32);
       const x = Math.max(half, Math.min(VIEW_W - half, p.x));
       const y = Math.max(TOP + w.size, Math.min(VIEW_H - FOOTER - w.size * 1.2, p.y));
