@@ -1,4 +1,5 @@
 import { aimOf, Headway } from './headway';
+import { ItemPlay } from './items';
 import type { StrategyDef } from './types';
 
 /** How much further the route gets at once for a bot to take it as a loop's lap line crossed (route tiles, rounded as `togo` is). */
@@ -6,14 +7,21 @@ const LAP_RESET = 8;
 
 /**
  * Rising Slag: climb. Round a loop the objective is the lap line, and crossing it puts the whole climb ahead again,
- * which is a new lap, not a loss. With no loop the top is somewhere to hold: stand on it. A stuck bot leaps and
- * tries again; it never gives up into the slag.
+ * which is a new lap, not a loss. With no loop the top is somewhere to hold: stand on it. On the way it knocks the
+ * loop's boxes it passes near and uses what they give when that helps. A stuck bot leaps and tries again; it never
+ * gives up into the slag.
  */
 export const slagStrategy: StrategyDef = {
-  make() {
+  make(rng, traits) {
     const way = new Headway();
+    const items = new ItemPlay(rng, traits);
     return {
       think(v, me) {
+        const side = items.think(v, me, way.stalled());
+        if (side) {
+          if (items.away) way.calm();
+          return side;
+        }
         if (Number.isFinite(me.togo) && Number.isFinite(way.best) && me.togo > way.best + LAP_RESET) way.restart(me.togo);
         way.note(me);
         if (me.togo === 0) {

@@ -87,6 +87,9 @@ type Act =
   /** A leap of faith: run at it, jump off the edge or at the wall, hold on until it lands. */
   | { kind: 'leap'; dir: -1 | 1; t: number; jumped: boolean; flown: boolean };
 
+/** Tiles off its column a hop steers back from. */
+const HOP_SLACK = 0.15;
+
 /** Frames a leap may last before the motor lets it go. */
 const LEAP_FRAMES = 200;
 
@@ -182,7 +185,7 @@ export class Motor {
       case 'leap':
         return this.leap(m, p, intent.tx);
       case 'hop':
-        return this.hop(m, p);
+        return this.hop(m, p, intent.tx);
       case 'use':
         // An edge, so never on two frames running; the arrows turn it to face its mark as it lets go.
         if (this.prev.usePressed || m.phase !== 'run') return NO_INPUT;
@@ -190,13 +193,19 @@ export class Motor {
     }
   }
 
-  /** Jump straight up where it stands, holding it while rising, and again each time it lands. */
-  private hop(m: Match, p: Player): InputFrame {
+  /**
+   * Jump straight up in column `tx`, holding it while rising, and again each time it lands. It stops first and
+   * steers back over the column in the air: a box hangs over a perch as often as a floor.
+   */
+  private hop(m: Match, p: Player, tx: number): InputFrame {
     const r = m.phase === 'run' ? m.run?.runners.find((x) => x.slot === p.slot) : undefined;
     if (!r || !r.alive || r.finished) return NO_INPUT;
     const b = r.body;
-    if (b.onGround) return this.prev.jump ? NO_INPUT : { ...NO_INPUT, jump: true, jumpPressed: true };
-    return { ...NO_INPUT, jump: this.prev.jump && b.vy < 0 };
+    const off = (tx * TILE + (TILE - b.w) / 2 - b.x) / TILE;
+    const lean = { left: off < -HOP_SLACK, right: off > HOP_SLACK };
+    if (!b.onGround) return { ...NO_INPUT, ...lean, jump: this.prev.jump && b.vy < 0 };
+    if (Math.abs(b.vx) > BRAKE_TO) return { ...NO_INPUT, left: b.vx > 0, right: b.vx < 0 };
+    return this.prev.jump ? NO_INPUT : { ...NO_INPUT, jump: true, jumpPressed: true };
   }
 
   /** Run toward column `tx` and jump at the first edge or wall: what a player tries with no better idea. */

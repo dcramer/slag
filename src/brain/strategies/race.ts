@@ -1,15 +1,22 @@
 import { aimOf, Headway } from './headway';
+import { ItemPlay } from './items';
 import type { StrategyDef } from './types';
 
 /**
- * Race: run the route to the flag; with no way on, jump for it anyway, and give up when even that gets it nowhere,
- * as a stuck player would.
+ * Race: run the route to the flag, using what it holds when that helps and fetching what's near the way; with no
+ * way on, jump for it anyway, and give up when even that gets it nowhere, as a stuck player would.
  */
 export const raceStrategy: StrategyDef = {
-  make() {
+  make(rng, traits) {
     const way = new Headway();
+    const items = new ItemPlay(rng, traits);
     return {
       think(v, me) {
+        const side = items.think(v, me, way.stalled());
+        if (side) {
+          if (items.away) way.calm();
+          return side;
+        }
         way.note(me);
         const { tx, ty } = aimOf(v.objective);
         const stage = way.stage(me);

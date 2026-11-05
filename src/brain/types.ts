@@ -217,8 +217,8 @@ export type Intent =
   | { do: 'goTo'; tx: number; ty: number }
   /** Race: no proven way on, so run and jump for (tx, ty) anyway, off whatever edge is in the way. */
   | { do: 'leap'; tx: number; ty: number }
-  /** Race: jump straight up where it stands, again whenever it lands: to knock a box overhead. */
-  | { do: 'hop' }
+  /** Race: jump straight up in column `tx`, again whenever it lands, keeping over it: to knock a box overhead. */
+  | { do: 'hop'; tx: number }
   /** Race: press use with the held item, facing `dir` if given, holding up if `up` (a throw aimed high). */
   | { do: 'use'; dir?: -1 | 1; up?: boolean }
   /** Race: hold self-destruct. */
