@@ -46,7 +46,7 @@ const hooked = (ctx: TouchCtx, x: number, y: number): boolean => ctx.blocked({ x
  * browsers without any trig. Letting go leaves on that tangent. Hanging on too
  * long snaps it, which also stops anyone from hogging a rope.
  */
-export const rope = defineModule<'rope'>({
+defineModule<'rope'>({
   type: 'rope',
   resolve: (m, x) => ({ ...m, at: x.P(m.at), length: m.length * x.T }),
   anchors(m) {

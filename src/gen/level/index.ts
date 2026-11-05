@@ -3,7 +3,7 @@ import { BRIDGE_W } from './validate';
 import { deriveSeed, Rng } from '../../core/rng';
 import { type Level, type LevelProfile, LOOP_BAND } from '../../sim/level';
 import { pickThemeId, THEME_IDS, type ThemeId } from '../../themes';
-import { commit, finalize, SET_PIECE_UID, SET_PIECES, Site, tellFaults } from '../setpieces';
+import { commit, finalize, SET_PIECE_UID, SET_PIECES, Site, tellFaults, windowFaults } from '../setpieces';
 import { type Concept, conceptName, fits, type Landmark, landmarkFaults, rollConcept } from '../stage';
 import { generateTheme, type Theme } from '../theme';
 import { ReachCache } from '../../sim/reach';
@@ -23,13 +23,10 @@ import { rideProof, rideSpans } from './ride';
 import { rollWeather } from './weather';
 import { noFreeRide, planHolds } from './winnable';
 
-export type { BridgeHint, SculptCtx, Sculptor, Shape } from './types';
-export { DIFFICULTIES, DIFFICULTY, LAP_TIERS, levelDifficulty, setLevelDifficulty, type Stretch, stretchAt, stretchesOf } from './difficulty';
+export { DIFFICULTIES, DIFFICULTY, setLevelDifficulty, stretchesOf } from './difficulty';
 export { describeProfile, GRAVITY, type GravityClass, gravityClass, type ProfileOverride, rollProfile } from './profile';
 export { BRIDGE_W, type Bridge, canPlaceBridge, isAcceptable, judge, MAX_BRIDGES, withBridges } from './validate';
 export { fieldOf, partsNeeded, planHolds, prove, settled } from './winnable';
-export { WEATHER_WEIGHTS } from './weather';
-export { carrierReach, MIN_DWELL, rideProof, rideSpans } from './ride';
 
 const MAX_ATTEMPTS = 30;
 const LEGACY_ATTEMPTS = 20;
@@ -312,7 +309,7 @@ export function generateLevel(seed: number, themeOverride?: ThemeId, profileOver
 }
 
 /**
- * A landmark's pieces, every one required: each must pass `finalize`, `keep` and, when `free`,
+ * A landmark's pieces, every one required: each must pass `finalize`, `windowFaults`, `keep` and, when `free`,
  * `noFreeRide`, or the landmark doesn't stand (null). Their uids come first among the level's set pieces.
  */
 function placeLandmark(
@@ -330,7 +327,7 @@ function placeLandmark(
   for (const piece of c.pieces(rng, s, l)) {
     if (tellFaults(piece.modules).length) return null;
     const pp = finalize(s, piece, SET_PIECE_UID + out.length, `setpiece:${themeId}:${c.id}`);
-    if (!pp || !keep([...out, pp]) || (free && !noFreeRide(level, pp, out, cache))) return null;
+    if (!pp || windowFaults(level, pp).length || !keep([...out, pp]) || (free && !noFreeRide(level, pp, out, cache))) return null;
     out.push(pp);
     commit(s, pp);
   }

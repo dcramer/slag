@@ -136,17 +136,6 @@ function ways(rects: readonly TileRect[]): Record<string, Vec> {
   return out;
 }
 
-/** A landmark's ways through, read back from its anchors (tests, tools). */
-export function waysOf(l: Landmark): TileRect[] {
-  const out: TileRect[] = [];
-  for (let i = 0; l.anchors[`way${i}`]; i++) {
-    const [x, y] = l.anchors[`way${i}`];
-    const [w, h] = l.anchors[`way${i}s`];
-    out.push({ x, y, w, h });
-  }
-  return out;
-}
-
 /** A list of layout numbers as one signature pair: how many, and a sum weighted by place, so a reorder shows. */
 const listSig = (xs: readonly number[]): Vec => [xs.length, xs.reduce((t, v, i) => t + v * (i + 1), 0)];
 

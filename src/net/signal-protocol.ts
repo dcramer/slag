@@ -45,6 +45,7 @@ export const ROOM_EMPTY_MS = 60_000;
  * The public lobby list. A host's beat writes its room there (unless the room is Private), so a room is listed for as
  * long as its host's liveness would last: one that stops beating falls out on its own, inside ROOM_EMPTY_MS.
  */
+/** @alias */
 export const LIST_TTL_S = PEER_TTL_S;
 /** Rooms a list read returns at most, most recently beaten first. */
 export const MAX_LISTED = 50;

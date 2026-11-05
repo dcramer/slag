@@ -12,7 +12,7 @@ import { ROOFTOPS } from './rooftops';
 import { SPACE } from './space';
 import { VOLCANO } from './volcano';
 
-export { type CannonPose, type CannonSkin, type DecoSkin, type PieceSkin, type RotorSkin, themeOf, type ThemeSkins } from './common';
+export { type PieceSkin, themeOf, type ThemeSkins } from './common';
 
 /**
  * Theme skins for set pieces, one file per theme (./<theme>.ts). A theme reaches some pieces through looks

@@ -11,8 +11,6 @@ import { THEME_IDS, THEME_LABELS, type ThemeId } from '../../themes';
 /** Join: rooms with a seat. Watch: full rooms, which you can only watch (observer mode). */
 export type LobbyFilter = 'join' | 'watch';
 export const LOBBY_FILTERS: readonly LobbyFilter[] = ['join', 'watch'];
-export const FILTER_LABELS: Record<LobbyFilter, string> = { join: 'Join', watch: 'Watch' };
-
 export const isFull = (r: ListedRoom) => r.players >= r.max;
 
 /**

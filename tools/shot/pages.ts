@@ -321,6 +321,20 @@ export const shots: Scenarios = {
     await snap('codex-open');
     await page.keyboard.press('Escape');
     await page.waitForSelector('.cx-modal[hidden]', { state: 'attached', timeout: 5000 });
+    // The cast from the index, and a runner up close mid-move.
+    await page.click('.cx-index [data-sec=cast]');
+    await page.waitForTimeout(800);
+    await snap('codex-cast');
+    // The whole section, scrolled through first so every card has drawn.
+    for (const card of await page.locator('#cast .cx-card').all()) await card.scrollIntoViewIfNeeded();
+    await page.waitForTimeout(400);
+    await page.locator('#cast').screenshot({ path: `${out}/codex-cast-all.png` });
+    console.log(`${out}/codex-cast-all.png`);
+    await page.click('#cast .cx-card');
+    await page.waitForTimeout(1800);
+    await snap('codex-cast-open');
+    await page.keyboard.press('Escape');
+    await page.waitForSelector('.cx-modal[hidden]', { state: 'attached', timeout: 5000 });
     // The maps (`--map <theme>`): its section from the index, its look, a landmark browsed to with the keys, and a hazard.
     const mapTheme = opt('map', 'castle');
     await page.waitForSelector(`.cx-index [data-sec=map-${mapTheme}]`, { timeout: 60_000 });

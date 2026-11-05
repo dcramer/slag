@@ -3,4 +3,4 @@ export { LevelMenu } from './level';
 export { ModeMenu } from './mode';
 export { NamePrompt } from './name';
 export { RulesMenu } from './rules';
-export { loadHaptics, type QualityControl, SettingsMenu } from './settings';
+export { loadHaptics, SettingsMenu } from './settings';

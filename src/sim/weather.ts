@@ -99,6 +99,12 @@ export function gustAir(level: Level, f: number): number {
   return w && w.dir !== 0 ? w.dir * GUST.speed * gustPush(w, f) : 0;
 }
 
+/** Signed air speed of the level's gusts at full push (px/s, + right), or 0 without gusts: the strongest air anything flies through. */
+export function gustPeak(level: Level): number {
+  const w = level.weather;
+  return w && w.dir !== 0 && WEATHER[w.kind].gusts ? w.dir * GUST.speed : 0;
+}
+
 /** How much of a warning shows, as a share of a full gust: one that's coming already looks like one. */
 const WARNED = 0.62;
 

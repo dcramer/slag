@@ -6,8 +6,6 @@ import type { ModuleOf } from '../types';
 
 type Wire = ModuleOf<'wire'>;
 
-/** Segments of a live wire's cycle. */
-export const WIRE_OFF = 0;
 export const WIRE_WARN = 1;
 export const WIRE_RUN = 2;
 
@@ -35,7 +33,7 @@ export function sparkAt(m: Wire, f: number, phase: number, ox = 0, oy = 0): Vec 
  * the other and kills whatever it touches on the way; the cable itself is harmless. Every point along it
  * is dangerous only for the moment the spark passes, so it's crossed by timing (barrier.ts MIN_OPENING).
  */
-export const wire = defineModule<'wire'>({
+defineModule<'wire'>({
   type: 'wire',
   resolve: (m, x) => ({ ...m, a: x.P(m.a), b: x.P(m.b), sag: m.sag * x.T }),
   anchors: (m) => [cellOf(m.a), cellOf(m.b)],

@@ -266,6 +266,8 @@ Every game design decision, preference and direction the owner has given, groupe
   2026-11-04 · `done` · `~/.claude/settings.json` (`tripo.ts image`, `balance`)
 - **The cast grows past twenty with retro picks: the rapping paper puppy (the owner's example), the limbless hero, the worm in a super suit, the little purple dragon and the snouted cube hopper. The weak reads and audit leftovers get fixed in the same push.** "Ok lets continue working through. Something akin to some old timey characters would be good to add to our list too. Parapa the Rapper for example" (asked which to add beside him: all four offered)
   2026-11-04 · `in progress` · CHARACTERS.md → The cast, Roster; `LOOK_CAST` 9
+- **Two more picks past the retro five: the round Slavic warrior from the Polish comic (its big round half; the comic gives "at least some recognizable character") and the white-haired monster slayer. The sneaking soldier already stands for the stealth game's hero.** "add kajko & kokosz to our list - at least some recognizable character from it" · "witcher is another good one, snake from metal gear solid"
+  2026-11-04 · `in progress` · CHARACTERS.md → The cast, Roster; `LOOK_CAST` 10
 - **Set-piece machines that look solid are made solid: guns on ledges, wheel and swing hubs, ladles, carts, signs, posts.** "Make them solid" (asked: make them solid, or draw them as not-ground)
   2026-11-02 · `open` · TODO.md → 21, `pnpm shot fairplay` (`PENDING`)
 - **Tripo output is licensed for the game: the owner pays for Tripo.** "our license here is fine as we pay for tripo"
@@ -606,6 +608,8 @@ Every game design decision, preference and direction the owner has given, groupe
   2026-11-02 · git `cf6c496`, `0464596` · `done` · `src/codex/`
 - **The codex talks about maps too: every theme, its landmarks and its own hazards, pictured by the game's renderer.** "the codex needs to talk about maps"
   2026-11-02 · `done` · DESIGN.md → Discovery, `src/codex/maps.ts`, TODO.md → 28
+- **The codex shows every character: the whole cast, by its sound-alike names, between the parts and the maps.** "make sure our codex shows all the characters"
+  2026-11-04 · `done` · DESIGN.md → Discovery, `src/codex/cast.ts`
 - **The main menu ends with About, after Settings: who made it, its inspiration, credits, the license and a link to the source on GitHub.** "Need an About thing after settings, which includes license, inspiration, github link etc"
   2026-11-02 · `done` · `src/ui/screens/about.ts`, `/about`
 - **About credits Ultimate Chicken Horse by name for the core concept, the one place a real game is named; every credit says what it is (display font, name filter), not just its name. No flavor prose on the page.** "those credits are weak, credit ultimate chicken horse for core concept" / "idk what lilita one etc even are..." / "i dont want ai slop for the description there either"

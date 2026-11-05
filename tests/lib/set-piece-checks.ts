@@ -1,7 +1,7 @@
 import { expect } from 'vitest';
 import { overlaps, type Rect, rectCircle } from '../../src/core/geom';
 import { generateLevel, isAcceptable } from '../../src/gen/level';
-import { SAFE_TILES, SET_PIECE_UID } from '../../src/gen/setpieces';
+import { SAFE_TILES, SET_PIECE_UID, windowFaults } from '../../src/gen/setpieces';
 import { RUN_COUNTDOWN, TILE } from '../../src/sim/constants';
 import { isProtected, type Level, tileAt } from '../../src/sim/level';
 import { type Contrib, footprintCells, type Hazard, moduleSim, motionOffset, newPropState, type PlacedProp, resolveProp } from '../../src/sim/props';
@@ -92,65 +92,10 @@ export function expectClearOfSpawnAndGoal({ theme, seed, level }: ThemedLevel) {
   }
 }
 
-/**
- * No piece is lethal every frame: a hazard leaves a window to get past it. A piece whose blades are always
- * out somewhere (the Great Wheel's saw spokes) has to keep moving them: every cell they cross is clear for
- * longer than that window between passes.
- */
+/** No piece is lethal every frame (`windowFaults`, the contract the pipeline enforces while generating). */
 export function expectSafeWindows({ level }: ThemedLevel) {
   for (const pp of level.setPieces) {
-    const faults = safeWindowFaults(level, pp);
+    const faults = windowFaults(level, pp);
     expect(faults, faults.join('\n')).toEqual([]);
   }
-}
-
-/** `expectSafeWindows` for one piece: every cell that never stays clear long enough, as a fault. */
-export function safeWindowFaults(level: Level, pp: PlacedProp): string[] {
-  const FRAMES = 900;
-  const WINDOW = 60;
-  const r = resolveProp(pp);
-  const state = newPropState();
-  let quiet = 0;
-  let any = false;
-  let first: string | null = null;
-  let still = true;
-  /** Per cell a hazard touched: the frame it was last touched and the longest clear stretch so far. */
-  const cells = new Map<number, [number, number]>();
-  for (let f = RUN_COUNTDOWN; f < RUN_COUNTDOWN + FRAMES; f++) {
-    const out: Contrib = { solids: [], hazards: [], springs: [], winds: [] };
-    // Where the piece's own motion has carried it (a combine on its rail): its hazards ride along.
-    const off = motionOffset(r, f);
-    const prev = motionOffset(r, f - 1);
-    r.mods.forEach((m, mi) => moduleSim(m.type).build?.(m, { level, frame: f, r, off, prev, state, mi, live: true }, out));
-    if (out.hazards.length) any = true;
-    else quiet++;
-    const key = JSON.stringify(out.hazards);
-    if (first === null) first = key;
-    else if (key !== first) still = false;
-    for (const h of out.hazards) {
-      const b = hazardBox(h);
-      for (let y = Math.floor(b.y / TILE); y <= Math.floor((b.y + b.h) / TILE); y++)
-        for (let x = Math.floor(b.x / TILE); x <= Math.floor((b.x + b.w) / TILE); x++) {
-          const k = y * level.w + x;
-          const c = cells.get(k);
-          if (!c) cells.set(k, [f, f - RUN_COUNTDOWN]);
-          else if (c[0] !== f) {
-            c[1] = Math.max(c[1], f - c[0] - 1);
-            c[0] = f;
-          }
-        }
-    }
-  }
-  // Nothing hurts, a long lull, or a hazard that never moves (a spike strip, a broken window's glass): a wall the proof keeps clear of.
-  if (!any || quiet > WINDOW || still) return [];
-  const out: string[] = [];
-  for (const [k, [last, open]] of cells)
-    if (Math.max(open, RUN_COUNTDOWN + FRAMES - 1 - last) <= WINDOW) out.push(`${pp.def.name}: cell ${k} is never clear for more than ${WINDOW} frames`);
-  return out;
-}
-
-function hazardBox(h: Hazard): Rect {
-  if (h.kind === 'rect') return h.r;
-  if (h.kind === 'circle') return { x: h.x - h.r, y: h.y - h.r, w: 2 * h.r, h: 2 * h.r };
-  return { x: Math.min(h.x1, h.x2) - h.r, y: Math.min(h.y1, h.y2) - h.r, w: Math.abs(h.x2 - h.x1) + 2 * h.r, h: Math.abs(h.y2 - h.y1) + 2 * h.r };
 }

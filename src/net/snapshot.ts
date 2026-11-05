@@ -188,12 +188,6 @@ function isPlayedCopy(base: Level, tiles: Uint8Array): boolean {
   return true;
 }
 
-/** Remember a level as pristine (call right after generating it) so restores can skip regeneration. */
-export function rememberPristine(seed: number, theme: ThemeId | undefined, level: Level, profile: ProfileOverride = {}) {
-  const key = pristineKey(seed, theme, profile);
-  if (!pristine.has(key)) pristine.set(key, { ...level, tiles: level.tiles.slice(), setPieces: [...level.setPieces] });
-}
-
 // ---------------------------------------------------------------- snapshot / restore
 
 /**

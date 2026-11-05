@@ -118,11 +118,7 @@ export function setLevelDifficulty(d: Difficulty): void {
   current = d;
 }
 
-export function levelDifficulty(): Difficulty {
-  return current;
-}
-
-/** Run `f` building to difficulty `d`, then back to the level's own: a tower's storeys follow its curve (TOWER_CURVE). */
+/** Run `f` building to difficulty `d`, then back to the level's own: a Rising Slag shaft's connectors are built to its tier. */
 export function withDifficulty<T>(d: Difficulty, f: () => T): T {
   const was = current;
   current = d;
@@ -163,9 +159,4 @@ export function stretchesOf(p: { tide?: boolean; curve?: boolean; difficulty: Di
   const laps: Stretch[] = LAP_TIERS.map((tier, i) => ({ from: i * lap, to: (i + 1) * lap, tier: p.curve ? tier : p.difficulty }));
   laps.push({ from: LAP_TIERS.length * lap, to: Infinity, tier: p.curve ? 'hard' : p.difficulty });
   return laps;
-}
-
-/** The stretch `climbed` rows above the spawn's floor falls in. */
-export function stretchAt(stretches: readonly Stretch[], climbed: number): Stretch {
-  return stretches.find((s) => climbed < s.to) ?? stretches[stretches.length - 1];
 }

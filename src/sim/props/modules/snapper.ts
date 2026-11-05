@@ -59,7 +59,7 @@ function snapperZones(m: Snapper, ctx: SenseCtx): Rect[] {
  * needs a cooldown before it can fire again. Keep moving and you're fine;
  * hesitate on it, or get pushed back onto it, and you're not.
  */
-export const snapper = defineModule<'snapper'>({
+defineModule<'snapper'>({
   type: 'snapper',
   resolve: (m, x) => ({ ...m, cells: x.C(m.cells), angle: m.angle + x.da }),
   anchors: (m) => m.cells.slice(),

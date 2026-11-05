@@ -1,6 +1,6 @@
 # Characters: homages and animals
 
-The runners are a cast of fifteen: eleven homages to famous game characters in our own designs, and four plain animals for contrast. In the lore (DESIGN.md) they're the characters who never made the cut, from stray animals to knock-off heroes who almost got their own game. Each kind is a character design of its own, the way the barnyard party game's animals are: its own outline, its signature props, and a way of moving.
+The runners are a cast of twenty-seven homages to famous game characters, in our own designs. In the lore (DESIGN.md) they're the characters who never made the cut, from stray animals to knock-off heroes who almost got their own game. Each kind is a character design of its own, the way the barnyard party game's animals are: its own outline, its signature props, and a way of moving.
 
 `pnpm shot cast` shoots the sheet: the 8-player lineup at play scale on farm and mine, the race start, deaths, a 3× close-up, the lobby cards, the "is it the homage?" sheet (`cast-recognise.png`), the silhouette test (`cast-silhouettes.png`) and the catalog of every kind (`--only catalog` for the last three). In the console, `slagDebug.cast` has `catalog()`, `silhouettes()`, `recognise()` and `bench()`.
 
@@ -13,7 +13,7 @@ From the owner (logged in [DECISIONS.md](DECISIONS.md) → Characters):
 3. **Homages, never copies.** Each is our own design, read from its silhouette and one or two signature props, never the original's exact design or its real name. Sound-alike names are data (`KIND_NAMES` in `src/gen/character.ts`) and appear nowhere else. Player characters may have faces and personas; parts and machines stay faceless (DESIGN.md → Parody).
 4. **A neutral palette, and the colour is the player's.** Each kind's own colours are neutrals: skin, eyes, hair, metal, wood, bone, cloth greys and the ink. Nearly every coloured part takes the player's colour: the costume in it, every other coloured part in a lighter or darker tone of it (the plumber's cap and overalls, the engineer's hat and shirt). The shape carries the read, not the original's hues. It's that player's HUD color, and with eight different kinds per lobby, eight players stay told apart. (Owner, 2026-11-04; before, a homage kept its iconic hues and the player's colour went on one costume region.)
 5. **Random roll only.** New Look rolls everything, the kind included. A lobby never seats two of the same kind (`Match.looksFree`).
-6. **Saved looks re-roll once** whenever the cast changes what a seed means: `LOOK_CAST` in `src/ui/profile.ts` (now 7).
+6. **Saved looks re-roll once** whenever the cast changes what a seed means: `LOOK_CAST` in `src/ui/profile.ts` (now 9).
 7. **Clean, light, hand-drawn.** A thin pen that varies along the line, in a dark of the body's own color; two or three flat tones per surface; one soft, hard-edged shadow shape; calm color; no glow.
 8. **The roster is the twenty greatest characters to parody**, each with a clear twist of its own, because the homages had looked too much like the originals (Roster).
 9. **Designed at game size, and worn.** The concept sheets were too detailed for our resolution, so a kind is designed to read as a 24 px sprite: one silhouette idea, about three big shapes, four flat colours plus ink, one signature prop, the eyes. Every kind is a little disheveled, because of the lore, and the grunge is worn shape, never grime: a bent and taped ear, a dented head, a sagging, lopsided body, a bent prop, one foot bigger than the other. Colours stay clean and bright, and the line stays the cast's pen. A rough line and colour grime were tested on the zapmouse and lost: the line vanishes at play scale, and dull colour sinks into the darker themes (`shots/styletest/`, 2026-11-02).
@@ -53,17 +53,19 @@ So each kind has: a clear head-to-body ratio, a readable expression, a line of a
 | sneak | the sneaking soldier | side on, a square cardboard box on two crouched legs, his eyes in a slot, a striped bandana's two tails out of a hand-hole behind | costume: the box (its back end, tape, arrow and bandana tones of it) |
 | cuptoon | the cup-headed toon | a white enamel mug for a head, its handle out the back and a straw bent over out of the tea, black rubber-hose limbs, white gloves, high-waisted shorts, big round shoes | costume: the shorts |
 | horse | the barnyard party game's horse | on all four legs, side on: a long neck with the mane standing up along it as a crest, a long blunt head with a pale nose and buck teeth, a long straight tail hanging to the heels, flat hooves; a scarf and a zip (a costume) | costume: the coat, the far legs and the scarf darks of it |
-| rapper | the rapping paper puppy | paper-thin, a flat cut-out with an edge: a tall knit beanie, long floppy ears under it, a round nose, a baggy tee and shorts, big trainers, a microphone | costume: the beanie and tee, the shorts a dark of it |
+| rapper | the rapping paper puppy | side on, a chubby flat card cut-out with its edge down his back: a tall thumb of a knit beanie standing straight up, a long floppy ear hanging behind, a round nose on a snout low on his face, a baggy tee and shorts, big trainers, a cordless mic held out in front | costume: the beanie and tee, the shorts a dark of it |
 | limbless | the limbless hero | no arms or legs: white gloves and big shoes floating clear of a small round body with background all round each, a huge nose, a spiky hair tuft standing up, a neckerchief | costume: the top, the shoes a light tone of it |
-| worm | the worm in the super suit | a bulky suit with huge shoulders, a worm's head on a long bendy neck rising out of the collar with bulging eyes, a big chunky pistol in one hand | costume: the suit, the boots and gloves a dark of it |
+| worm | the worm in the super suit | a bulky suit with huge round shoulders on stocky legs, a thick bare worm rising dead straight up out of the collar as tall as the suit, a blunt head with bulging eyes and a wide grin, a big hair dryer held at the hip like a pistol, barrel forward and down | costume: the suit, the gloves and boots a dark of it, the patches a light |
 | dragon | the little purple dragon | small and low on four stubby legs, side on: a big round head with two long horns swept straight back, stubby umbrella-cloth wings on bent spokes, a pale belly, a ridge of small spines, a tail ending in a taped arrowhead with a firefly jar hanging from it | costume: the scales; the wing cloth a light of it, the far legs a dark |
 | hopper | the snouted cube hopper | a round ball with no arms on two short legs in worn trainers, two big eyes standing up out of its crown, a long tube snout sticking straight out front and flared at its open end, a party blower; hops both feet together | costume: the ball and legs; the snout and the blower's streamer lights of it |
+| warrior | the round Slavic warrior | a huge round belly on short legs, a big drooping moustache, a pointed iron helmet, a belted tunic, thick bare arms, a sword at his belt | costume: the tunic |
+| slayer | the white-haired monster slayer | long white hair tied back, two sword hilts standing up over his shoulders, a wolf medallion on a chain, cat's eyes, a scarred brow, a dark leather coat and boots | costume: the coat |
 
 **Is it the homage?** `cast-recognise.png` puts each kind close up beside "This is ___", in its roster colour. Every sheet waits for the rendered kinds' frames (`slagDebug.sprites.ready()`), so it shows what ships; before 2026-11-02 the catalog, recognise and silhouette sheets drew those kinds hand-drawn, so the reads below were judged on the old bodies. As of this round, every homage reads as its caption to us: the plumber, speedster, elf, mouse, impostor, puffball, jelly and goose at once; the bounty hunter and the engineer a beat slower, because their reads lean on props (the shoulder pads and cannon, the hat and wrench) more than on a silhouette nobody else shares. The silhouette test still separates every kind, though the plumber and the hunter are the closest pair of stout shapes.
 
 ## Roster (all homages)
 
-The cast this is heading to: **twenty kinds, the greatest game characters to parody**, every one a homage, because the lore makes the runners the characters who never made the cut, the knock-off heroes who almost got their own game. The ten homages from round 5 stay, and so do five of the six round-6 picks. The four plain animals (fox, frog, penguin, chicken) go. Round 10 (owner, 2026-11-04) adds five retro picks past the twenty: the rapping paper puppy, the limbless hero, the worm in the super suit, the little purple dragon and the snouted cube hopper.
+The cast this is heading to: **twenty kinds, the greatest game characters to parody**, every one a homage, because the lore makes the runners the characters who never made the cut, the knock-off heroes who almost got their own game. The ten homages from round 5 stay, and so do five of the six round-6 picks. The four plain animals (fox, frog, penguin, chicken) go. Round 10 (owner, 2026-11-04) adds five retro picks past the twenty: the rapping paper puppy, the limbless hero, the worm in the super suit, the little purple dragon and the snouted cube hopper. Round 11 (owner, 2026-11-04) adds a comics hero and a game hero: the round Slavic warrior and the white-haired monster slayer.
 
 This spec feeds the art pipeline (Rendered kinds below): a design at game size, worn in an edit and drawn in each pose, traced flat into the cast's own shapes. Each entry is written to be used as prompt material, so it describes traits only and never names a real character. Every kind is our own design: it must read as the homage from its silhouette and props, never copy the original's exact design, and never carry its name or logo. Sound-alike names stay in data (`KIND_NAMES`). **The nod is the silhouette; the rest is ours.** A concept that looks like the original redrawn is rejected, however good it looks.
 
@@ -425,16 +427,20 @@ What came out of it:
 ### The rapping paper puppy (new)
 - **Kind:** `rapper` · **Name:** Parapper
 - **A stranger should say:** "the rapping dog in the beanie."
-- **Silhouette:** paper-thin: a flat cut-out of a puppy standing on its edge, so a sliver of card shows down his back; a tall knit beanie standing up on top, long floppy ears hanging under it, a round nose out front, a microphone held up to his mouth.
-- **Traits:** a tall knit beanie with a turned-up band; long floppy ears; a round nose on a short snout; a baggy tee, baggy shorts and big trainers; a microphone in one hand; the body flat as card, with an edge.
-- **Palette:** the beanie and the tee in the player's colour, the shorts a dark of it; the fur a neutral cream, the trainers neutral, the mic grey.
+- **Silhouette:** side on, a chubby little puppy cut out of card, a sliver of its edge down his back: a tall thumb of a knit beanie standing straight up on top, round and with no brim, a long floppy ear hanging behind his head, a round nose on a snout low on his face, a round belly in a baggy tee, big trainers, and a microphone held out in front of him at arm's length.
+- **Traits:** a tall knit beanie with a snug ribbed band; a long floppy ear; a round nose on a snout; a baggy tee, baggy shorts and big trainers; a microphone held out; the body flat as card, with an edge.
+- **Palette:** the beanie and the tee in the player's colour, the shorts a dark of it (tone −26); neutrals: fur `#f1dfb8`, nose `#4a3428`, trainers `#9aa0a8` (alts white canvas `#d8d4cc`, black `#4f5359`), mic `#5a5e66`, the card's edge `#b8946a`.
 - **Color slot:** costume.
 - **Gait:** a bouncy strut on the beat, the head bobbing.
-- **The nod:** the tall beanie (the head's outline); the floppy ears (a dog); the flat card body with its edge (the paper look the original is known for); the microphone (the rapper).
-- **Our twist:** he's a cardboard shop standee come loose: a fold crease across his middle, a fold-out easel leg flat against his back, and the mic a karaoke mic on a coiled cord. The beanie is hand-knitted with a dropped stitch.
-- **Swaps:** a sticker on the tee; a sweatband; a plaster on the nose; a price sticker on the card's edge.
-- **Rig:** to draw flat (2026-11-04).
-- **Concept prompt:** A paper-thin cartoon puppy drawn as a flat cardboard cut-out standing on its edge, a sliver of card showing down its back, in a tall knit beanie with a turned-up band, long floppy ears hanging under it, a round nose, a baggy tee, baggy shorts and big trainers, holding a karaoke microphone on a coiled cord up to its mouth; a fold crease across its middle.
+- **The nod:** the tall beanie standing straight up (the head's outline: with a brim, or leaning back to a point, it read as a wizard's or a gnome's hat); the floppy ear (a dog); the flat card body with its edge (the paper look the original is known for); the microphone (the rapper).
+- **Our twist:** he's a cardboard shop standee come loose: the card's edge down his back and a fold crease across his middle. The karaoke mic's coiled cord, the easel leg and the dropped stitch went: hanging below his arm, the cord read as a monkey's curly tail; the easel leg stood out behind his heels; the stitch was a speck.
+- **Swaps:** a plaster on the cheek.
+- **Palette alts:** the trainers in grey, white canvas or black.
+- **Idles and cheers:** the idle from the design, the mic held out; nodding to the beat with a hand on his hip. Both arms thrown up with the mic high; rapping with one knee kicked up and the free arm flung out.
+- **Gait range:** a bounce of 0.2–0.9 px on each step, a lean of up to 0.03.
+- **Wear:** in the drawing, the card's edge and the fold crease; scuffed is a faded patch on the tee, scorched a soot mark there.
+- **Rig:** drawn flat (2026-11-04), side on, eleven poses drawn three to a sheet and cut apart (art/sprites/rapper/design.prompt.txt: six rounds, 77 images). The drawings' outline is a thick black, so `ink` is 15; the eyes are dark ovals with a glint, kept as lone specks (`glint`), the near one found and the far one set from it. Blind reads, two fresh readers a round, never passed. In three-quarter view the beanie, head, ears and mic made one tall pill ("maybe the worm in a super suit, low"; "maybe a monkey with a tail, low"). Side on with a long snout and the band out like a ledge: "a gnome or wizard" twice. The beanie an upright thumb: "cartoon mouse at best, low" and "Mario-style plumber; low", the snout level with the band read as a cap's bill. A round head with the snout low, a chubby body and the mic held out: "monkey with cap and curly tail (low)" twice, the mic's coiled cord. Cordless: "unsure, maybe the rapping puppy (beanie). A pointed or tall headpiece and a fist-pump jump", the first time he was named, and "a small slim figure with a tuft on the head". A wider beanie read as a round head (Bomberman, Mega Man). The shipped drawing, the cordless one with the card's edge put back: "unsure. Small capped figure with big shoes; Mario-like at low confidence" and "unsure. Thin upright figure with an arm forward". In colour, at play scale, he reads as a dog in a tall beanie holding a mic. No reader has paired him with the zapmouse, the horse or the cuptoon; one round's reader paired him with the plumber.
+- **Concept prompt:** A chubby cartoon puppy cut out of cardboard, seen side on, a narrow strip of the card's brown edge down his back, in a very tall round-topped knit beanie standing straight up with a snug ribbed band and no brim, one long floppy ear hanging behind his head, a round dark nose on a snout low on his face, a baggy tee, baggy shorts and big trainers, holding a chunky cordless microphone out in front of him at arm's length; a fold crease across his middle.
 
 ### The limbless hero (new)
 - **Kind:** `limbless` · **Name:** Raymond
@@ -457,16 +463,27 @@ What came out of it:
 ### The worm in the super suit (new)
 - **Kind:** `worm` · **Name:** Earthworm Gym
 - **A stranger should say:** "the earthworm in the space suit."
-- **Silhouette:** a bulky suit with huge shoulders on stocky legs, and out of its collar a worm's head on a long bendy neck, rising and leaning, with two bulging eyes; a big chunky pistol held out in one hand, at the hip, never level at the shoulder like the hunter's cannon.
-- **Traits:** a bulky suit with huge round shoulders; a worm's pink head on a long thin neck out of the collar; bulging eyes and a wide grin; a big chunky pistol in one hand; heavy boots and gloves.
-- **Palette:** the suit in the player's colour, the boots and gloves a dark of it; the worm a neutral pink (a face), the pistol grey metal.
-- **Color slot:** costume.
-- **Gait:** a heavy suit stomp, the worm's neck whipping about over it.
-- **The nod:** the worm on a stalk out of the collar (the read); the huge-shouldered suit; the pistol.
-- **Our twist:** the suit is a second-hand boiler suit stuffed with pillows at the shoulders, and the pistol is a hair dryer with its cord trailing.
-- **Swaps:** a plaster on the worm; a patch on the suit; a pencil behind where an ear would be.
-- **Rig:** to draw flat (2026-11-04).
-- **Concept prompt:** A cartoon earthworm wearing a bulky boiler suit stuffed out into huge round shoulders, its pink worm head on a long thin bendy neck rising out of the collar, with two bulging eyes and a wide grin, heavy boots and gloves, holding a big chunky hair dryer like a pistol at its hip, its cord trailing.
+- **Silhouette:** a bulky suit with two huge round shoulders on stocky legs, and out of its collar the worm itself, a thick bare pink worm body rising dead straight up like a pole, as tall as the suit, its blunt round head pointing forward; a big chunky pistol held at the hip, its barrel forward and down, never level from the shoulder like the hunter's cannon. 25 world px, the hunter's height, but stocky where he is long-legged, and a bare stalk where he has a helmet.
+- **Traits:** a bulky suit with huge round pillow shoulders; a worm's pink body for a neck, ringed, straight up out of the collar; a blunt head with two bulging eyes on its front and a wide toothy grin; a big chunky pistol at the hip; heavy boots and gloves.
+- **Palette:** the suit in the player's colour (`#5f8fb5` on the sheets), the gloves and boots a dark of it (−22), the stitched patches a light (+16); the worm a neutral pink `#f19aa6` (a face), its eye whites `#fbfaf6`; the dryer grey `#9a9aa0`.
+- **Color slot:** costume: the suit.
+- **Palette alts:** the dryer in grey `#9a9aa0`, cream plastic `#d6ccb4` or charcoal `#6e6a66`.
+- **Idles and cheers:** the idle from the design; standing pleased, the head cocked. A fist punched up, the dryer still at the hip; laughing with the head tipped back, eyes shut.
+- **Gait range:** a bounce of 0.2–0.8 px on each step, a lean of up to 0.03.
+- **Wear:** scuffed is a pale scuff on the suit's chest, scorched a soot mark low on it (tones of the suit).
+- **Gait:** a heavy suit stomp, the stalk swaying over it.
+- **The nod:** the worm on a stalk out of the collar (the read: nobody else in the cast is a head on a stalk); the huge-shouldered suit (the super suit the stalk rises out of); the pistol (what he does).
+- **Our twist:** the suit is a second-hand boiler suit stuffed with pillows at the shoulders, patched at the shoulder and the knee, and the pistol is a dented old hair dryer with its cord trailing.
+- **Swaps:** a plaster on the worm's cheek.
+- **Rig:** drawn flat (2026-11-04) in six rounds of design, each a different idea after a failed blind read (art/sprites/worm/design.prompt.txt). The cord trailing along the floor is taken out of every drawing (`art/sprites/worm/prep.py`): traced, it was a dark loop on the floor that read as a tail. The eye whites and teeth are repainted so `holes` cuts only the background, and are what the eyes are found by (`eyes.role: 'eye'`). Only one eye is found, the far one set from it, because the drawn eyes touch and trace as one patch. What each round read as:
+  - **An S-curled neck:** "a big curled head or snout tilted up, maybe a dragon" (unsure and low). Both readers that round took the hunter for this homage ("thin head on a stalk above a suited body, arm out holding a gun").
+  - **The neck straight up and thin:** "worm in a super suit - low-medium… thin wiggly head rising out of a bulky suit body", and "maybe Earthworm Jim, low".
+  - **A big head with the eyes standing on top:** "two knobs on top like ears or antennae" (unsure twice).
+  - **Shipped:** a thick straight stalk, a blunt head with the eyes on its front, the dryer pointed forward and down at the hip. 25 world px; the run at 0.95, the jump at 0.76, the wall slide at 0.86 and the knockout at 0.6, inside the shared box. Four fresh readers named it, all below the bar: "Earthworm Jim-style worm in a suit, low. A tall, thin, wavy neck or head rising from a bulky body"; "Earthworm Jim, medium-low. A suited body with a long thin neck or stalk sticking up, clearest in the run and jump"; and, at 25 px, "Earthworm Jim, low. Bulky suited body with a thin stalk rising from the top" and "Worm in a super suit (Earthworm Jim parody), low". None paired him with another kind.
+  - **The dryer tilted up from the hip, a bigger head:** both readers took him for "Wario, low: chunky and broad, with a cap", and both took the hunter for this homage, so it was dropped.
+
+  In colour at play size he reads at once. In silhouette the pistol never registers, and the stalk carries the read.
+- **Concept prompt:** A cartoon earthworm wearing a bulky patched boiler suit stuffed out into huge round shoulders, a thick pink worm body rising dead straight up out of the collar like a pole, as tall as the suit, its blunt round head pointing forward with two bulging eyes on its front and a wide toothy grin, heavy boots and gloves, holding a big chunky hair dryer like a pistol at its hip, its barrel pointing forward and down, its cord trailing.
 
 ### The little purple dragon (new)
 - **Kind:** `dragon` · **Name:** Spiro
@@ -503,6 +520,34 @@ What came out of it:
 - **Wear:** in the drawing, a dent pushed into the back of the ball (a notch in its outline), a crease kinked into the snout, the near trainer's sole flapping open at the toe and the far one's laces undone; scuffed is a faded patch on the ball, scorched a soot mark there.
 - **Rig:** drawn flat (2026-11-04, art/sprites/hopper/design.prompt.txt): one game-size design side on, worn in one edit, and eleven poses three to a 16:9 image, cut apart. Asked for a stretched leap, the image model drew a stride with a third trainer three times, so the run is a crouch to spring and a landing, both feet together. The eye whites are tinted a step off white in every drawing (whites.py) so `holes` cuts the gap between the legs and never the eyes. His own wall drawing tilts the head back and puts the two eyes too far off level for the face kit, so he slides down a wall in his fall. The cheer is one drawing, centred: the streamer reaches past the box from the feet. Two fresh readers named him from the silhouette alone, both at medium ("Q*bert parody, medium. A tubular snout sticking out sideways from a round head on short legs, hopping in the jump"; "Q*bert, medium. Round head-body with a tube-like snout sticking forward, on short legs, tall in the hop"), and neither paired him with another kind when asked whether any two figures could be the same character.
 - **Concept prompt:** A round orange cartoon ball with no arms, seen from its side, standing on two short orange legs close together in big worn old canvas trainers, two big round white eyes with black pupils high on top, and a long straight paler orange tube snout sticking straight out level from its front, as long as the ball is wide, flared like a trumpet at its dark open end, two pale paper bands round it like a party blower.
+
+### The round Slavic warrior (new)
+- **Kind:** `warrior` · **Name:** Kakosh
+- **A stranger should say:** "the fat warrior from the Polish comic." The nod is the comic's big, round, boastful half of the pair, never his slim partner.
+- **Silhouette:** a huge round belly on short legs, so he's wider than he's tall below the shoulders; a pointed iron helmet on a round head; a big drooping moustache past his chin; thick bare arms.
+- **Traits:** check these against the comic before drawing (the helmet's shape, the moustache, the tunic and belt, what he carries) and keep only what reads at play size. A huge belly; a big drooping moustache; a pointed iron helmet; a short belted tunic; thick bare arms; a short sword at his belt; boastful, lazy and always hungry.
+- **Palette:** the tunic in the player's colour; skin, moustache, helmet iron, belt leather and boots neutral.
+- **Color slot:** costume.
+- **Gait:** a heavy, proud waddle, the belly leading.
+- **The nod:** the round belly under a pointed helmet (the outline); the moustache (the face); the sword at his belt.
+- **Our twist:** the helmet is a dented cooking pot hammered to a point, and he carries a half-eaten roast leg in his other hand like a club.
+- **Swaps:** a plaster on the nose; crumbs in the moustache; a dent in the pot.
+- **Rig:** to draw flat (2026-11-04).
+- **Concept prompt:** (written by the kind's agent, from the traits above checked against the comic).
+
+### The white-haired monster slayer (new)
+- **Kind:** `slayer` · **Name:** Gerald
+- **A stranger should say:** "the white-haired monster hunter with two swords."
+- **Silhouette:** tall and lean, long white hair tied back, two sword hilts standing up over his shoulders in an X, a long dark coat to the knees. Taller and leaner than the merc and the elf, never a hood.
+- **Traits:** long white hair in a ponytail; two swords on his back; a wolf's-head medallion on a chain; cat's eyes, yellow with slit pupils; a scar down over one eye; a dark studded leather coat, gloves and tall boots; a grim mouth.
+- **Palette:** the coat in the player's colour, the gloves and boots a dark of it; the hair white, the skin, the steel and the medallion neutral.
+- **Color slot:** costume.
+- **Gait:** a steady, wary prowl, the hands near the hilts.
+- **The nod:** the white hair and the two hilts over the shoulders (the outline); the medallion; the cat's eyes.
+- **Our twist:** the second sword is a bent umbrella, and the wolf medallion is a bottle cap stamped with a wolf, on a shoelace.
+- **Swaps:** a plaster on the scar; a tangle of hay in the hair; a torn sleeve.
+- **Rig:** to draw flat (2026-11-04).
+- **Concept prompt:** A tall, lean cartoon monster hunter seen from the side, long white hair tied back in a ponytail, two sword hilts standing up over his shoulders in an X (one of them is a bent umbrella), cat's eyes, yellow with slit pupils, a scar down over one eye, a wolf's-head medallion that is a stamped bottle cap on a shoelace, a long dark studded leather coat to the knees, gloves and tall boots.
 
 ### The jellyfish parasite
 - **Kind:** `jelly` · **Name:** Meltroid
@@ -550,6 +595,8 @@ The strongest reads first. **Keyed** marks the non-humanoids, the riskiest: thei
 | 23 | worm | Earthworm Gym | humanoid + head stalk | medium: the neck |
 | 24 | dragon | Spiro | **keyed**, quadruped | medium: wings and tail |
 | 25 | hopper | Kewbert | **keyed**, legs only | low |
+| 26 | warrior | Kakosh | humanoid, round | medium: the belly and helmet against the king and the plumber |
+| 27 | slayer | Gerald | humanoid | medium: the hair and hilts against the merc and the elf |
 
 The hunter and the engineer sit late although they're easy to rig: their hand-drawn versions read a beat slower than the rest, so they gain least from going first.
 
@@ -575,10 +622,18 @@ How a Roster entry becomes a kind the game draws from art. The entry is the one 
 - **Flat, in the drawing's own shapes.** Each drawing is traced at one body size into its own flat colours, every shade folded in, under a light pen with no ink mass or shade sliver (`flat`), plus its long interior lines (`lines`: an arm over the body, the gap between the legs). A shade that carries a shape is a dark of the costume (the plumber's cap shadow and plunger cup).
 - **The cast's face** takes over from the drawing's eyes and mouth, specks at play size: eyes found per pose (a pair, or one and the far one set from it), brows set into the run, wide on a fall, squinting on a cheer, crossed out on a death.
 - **What a 20 px read can't take** is drawn otherwise: anything dark under the face reads as a mouth (the zapmouse's black cord belt is brown), a long line across a ball reads as a mouth (the puffball's seam isn't drawn), a cross beside an eye reads as an eye (the puffball's tape is gone), and a colourway that lands on another role's colour loses the colour block (the plumber's brown-canvas overalls are navy).
+- **What the blind reads taught**, across every kind's rounds (each kind's Rig line has its readers' words). A reader names a silhouette by its outline alone, so:
+  - **Profile beats three-quarter** for a kind read by its snout, jaw, shell, box or four legs: in three-quarter its parts merge into one round mass (the king, the sneak, the rapper; the horse upright read as a fox until it stood on four legs).
+  - **A part inside the outline isn't there.** A prop held across the chest or raised overhead vanishes (the hunter's cannon, the robot's can); held out level with background all round it, it reads. A visor, ear disc or pack that doesn't stand proud of the body is lost (the impostor, the robot).
+  - **Parts that touch become one shape.** A cup above a cap, buoys beside a helmet, a can against a back, a beanie against the head: each pair read as one lobed blob. A gap the read needs must be about 2 world px of background, or the pen closes it (the limbless hero).
+  - **Small shapes read as other features.** A coiled cord or a second wrench jaw by the boots reads as a tail; a brimmed or leaning hat as a gnome's or wizard's; a snout level with a hat's band as its bill; flaps on a box as ears; long bandana tails as an ape's arms (and those just above).
+  - **Some outlines belong to another kind.** Arms flung up overhead read as the ape; spikes all round as the hedgehog; a round helmet over a level cannon on short legs in big boots as the robot boy; a wide brim on a stocky man as the plumber's rival. Check the pair list below before picking a pose.
+  - **Widening a signature part can turn it into the head** (the rapper's beanie): push a part taller or further out before wider.
+  - **Edits that only move the misread** (a gnome, then a mouse, then a monkey) mean the silhouette has no shape nobody else's has; a new design idea is cheaper than a fifth edit (the rapper's seven rounds).
 - **Motion** is a few drawings per clip: a two-frame walk and run, a jump and a fall (the hedgehog's a looping spin ball), a wall slide, two cheers, a second idle, the knocked-out pose; the shared squash and the kind's gait move on top.
 - **Variety** (Rules for every kind → Variety) is data and marks on every pose: a colourway (`alts` on `vary` 6), an accessory (a strip on the crown or the cheek), `idle2` and `cheer2`, a `gait` range, and the `wear` slot: clean, scuffed and scorched, marks on bare surface below the face (one quiet one on a smooth ball, where a ring of blobs reads as a rash).
 - **Out of the light bands.** Every rendered figure marks its shape in the light map's alpha (`Renderer.markFigures`), and the cel pass lights it evenly, dimmed less with the theme than the world (`figAmbient`), with no band or light tint across it: a band's edge cut across a 20 px body and blew light colours (the tin tail) out to white. The world round it still bands. The hand-drawn kinds don't mark, so they still band.
-- **Cost.** About 0.003 ms per runner drawn from the frame-bitmap cache. Frame data is about 80–220 KB per kind, a chunk fetched on first use. No Tripo credits: images are free within the account's allowance, about thirty a kind.
+- **Cost.** About 0.003 ms per runner drawn from the frame-bitmap cache. Frame data is about 80–220 KB per kind, a chunk fetched on first use. Images: tools/art3d/README.md.
 - **Checks:** `tests/sprite-cast.test.ts` (every clip, the shared hitbox box pen and all, at least 18 px tall, every eye on its head, the variety layers), and `pnpm shot sprites --kind K` and `pnpm shot variety --kinds K` (the run cycle, the six-rolls lobby, twelve looks, the draw cost, and `sprites-blind.png`, every kind as a shuffled, unnamed play-scale silhouette for fresh readers).
 
 **Blind reads of the flat kinds** (2026-11-03, two fresh readers, silhouettes only): the plumber, the speedster and the elf are named by both at high confidence (the elf up from medium as a 3D kind); the electric mouse by both, medium-high and high, from the ears and the zigzag tail; the puffball by both at medium. The dot-eater fails: "a plain round ball with a small tuft or bow on top, no mouth wedge visible" (unsure; a low "Ms. Pac-Man-style dot-eater with a bow"), and a low "Jigglypuff". Drawn flat, its mouth was a dark fill inside the figure, so the silhouette was a plain circle, and the tape cross on its crown read as a bow. With the mouth cut out of the figure (`cut`) and the tape moved to its cheek, two more fresh readers name it at high confidence: "a circle with a wedge mouth cut out, and the wedge is still visible in every pose". They read the other five as the first two did.
@@ -602,7 +657,7 @@ How a Roster entry becomes a kind the game draws from art. The entry is the one 
 
 ## Adding a kind
 
-Add the id to `CAST`, its sound-alike name to `KIND_NAMES` and its own colors to `PAINTS` (`src/gen/character.ts`), and a `KindArt` to `KINDS` (`src/render/cast/kinds.ts`): an outline inked as curves facing right, the three or four traits people recognise, a gait, a face, the player's color on the body or a `ring`, and the parts it breaks into. Add its caption to `READS_AS` in `src/render/cast/sheet.ts`. Then run `pnpm shot cast` and look at `cast-recognise.png` and `cast-silhouettes.png`: if a stranger wouldn't name it, or its silhouette could be mistaken for another kind's, it isn't done. A new kind changes which kind every seed rolls, so bump `LOOK_CAST` with it.
+Add the id to `CAST`, its sound-alike name to `KIND_NAMES` and its own colors to `PAINTS` (`src/gen/character.ts`), and a `KindArt` to `KINDS` (`src/render/cast/kinds.ts`): an outline inked as curves facing right, the three or four traits people recognise, a gait, a face, the player's color on the body or a `ring`, and the parts it breaks into. Add its caption to `READS_AS` in `src/render/cast/sheet.ts`. Then run `pnpm shot cast` and look at `cast-recognise.png` and `cast-silhouettes.png`: if a stranger wouldn't name it, or its silhouette could be mistaken for another kind's, it isn't done. A new kind changes which kind every seed rolls, so bump `LOOK_CAST` with it, and update the kinds and paints `tests/gen.test.ts` pins per seed (and the `LOOK_CAST` its comment names). A kind drawn from art goes on through the pipeline in Rendered kinds.
 
 ## History
 

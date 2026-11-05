@@ -36,13 +36,6 @@ function frame(at: TileRect): { G: number; sx: number; ex: number; L: number } {
 
 // ------------------------------------------------------------------------------------------------ tidal pier
 
-/** Columns along a boardwalk where its trestles stand (every few columns from its start): the art draws them there. */
-export function trestles(x0: number, x1: number): number[] {
-  const out: number[] = [];
-  for (let x = x0 + 1; x < x1; x += 4) out.push(x);
-  return out;
-}
-
 function buildPier(g: Grid, rng: Rng, at: TileRect, parts: number): Landmark {
   const { G, sx, ex } = frame(at);
   const H = g.h;
@@ -329,16 +322,6 @@ export const CONTAINER_TERMINAL = defineConcept({
 });
 
 // ----------------------------------------------------------------------------------------- lighthouse rock
-
-/** Where the lighthouse's parts are. */
-export interface Lighthouse {
-  tx: number;
-  tw: number;
-  /** Row of each floor, base first (the rock is the base); the last is the gallery's. */
-  floors: number[];
-  /** The roof's row; the lantern stands on it. */
-  roof: number;
-}
 
 function buildLighthouse(g: Grid, rng: Rng, at: TileRect, parts: number): Landmark {
   const { G, sx, ex, L } = frame(at);
