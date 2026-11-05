@@ -5,12 +5,13 @@ Args: sheet.png out1.png [out2.png ...] [--scale K | --to design.png] [--pad 1.2
 Each figure is what one connected outline closes in: the background is the near-white flooded in from the
 sheet's border (`--white`, the same test as rolemap.py), so a white body, a glint or a gap inside a figure stays
 part of it. Small pieces (a speck, a detached tag) go with the nearest figure, or are dropped when far from all
-of them. Figures that touch are split along the cheapest seam from top to bottom between them, through white
-where it can and ink where they meet, never a coloured fill. Figures are ordered left to right; an out named
-`skip` drops one. Each keeps its drawn scale, or every one takes the same factor: `--scale K`, or `--to`, the
-factor that draws the sheet's figures as big as the design's (by area, the measure `body` sizes poses by), so
-the ink is as thick as the design's and `ink` and `fringe` read every drawing alike. Each is pasted centred on a
-white square `--pad` times its longer side.
+of them; a big piece drawn apart (a floating glove) always goes with the figure nearest it. Figures that touch
+are split along the cheapest seam from top to bottom between them, through white where it can and ink where they
+meet, never a coloured fill. Figures are ordered left to right; an out named `skip` drops one. Each keeps its
+drawn scale, or every one takes the same factor: `--scale K`, or `--to`, the factor that draws the sheet's
+figures as big as the design's (by area, the measure `body` sizes poses by), so the ink is as thick as the
+design's and `ink` and `fringe` read every drawing alike. Each is pasted centred on a white square `--pad` times
+its longer side.
 """
 import sys
 from collections import deque
@@ -144,19 +145,42 @@ while len(big) < N:
     widest = max(big, key=lambda p: box(p, W)[2] - box(p, W)[0])
     big.remove(widest)
     big += split(widest)
-# More than asked for (a big prop drawn apart): the smallest goes with its nearest figure.
-while len(big) > N:
-    big.sort(key=len)
-    p = big.pop(0)
-    near = min(big, key=lambda q: gap(box(p, W), box(q, W)))
-    near += p
+# More than asked for (a glove, a shoe or a prop drawn apart): the N biggest are the figures, and the other big
+# pieces join them nearest pair first, measured between outline pixels, so a shoe can join by way of the glove
+# that joined before it. Measured between boxes, a figure's box grew with every piece it took until it reached
+# over its neighbour's floating glove.
+big.sort(key=len, reverse=True)
+loose = big[N:]
+big = big[:N]
+
+
+def rim(patch, step):
+    """Every `step`th pixel of a patch's outline: what distance to it is measured against."""
+    mine = set(patch)
+    edge = [i for i in patch if i - 1 not in mine or i + 1 not in mine or i - W not in mine or i + W not in mine]
+    return [(i % W, i // W) for i in edge[::step]]
+
+
+def dist(a, b):
+    return min((ax - bx) ** 2 + (ay - by) ** 2 for ax, ay in a for bx, by in b) ** 0.5
+
+
+rims = [rim(p, 3) for p in big]
+parts = [rim(p, max(1, len(p) // 400)) for p in loose]
+todo = list(range(len(loose)))
+while todo:
+    _, j, k = min((dist(parts[j], rims[k]), j, k) for j in todo for k in range(N))
+    big[k] += loose[j]
+    rims[k] += parts[j]
+    todo.remove(j)
+# Specks and scraps within reach of a figure go with the nearest of them; stray marks far from all are dropped.
 boxes = [box(p, W) for p in big]
-# Specks and scraps go with the nearest figure if they're close to it; stray marks far from all are dropped.
 for p in small:
     b = box(p, W)
-    k = min(range(N), key=lambda j: gap(b, boxes[j]))
-    if gap(b, boxes[k]) <= H * 0.04:
-        big[k] += p
+    ks = [k for k in range(N) if gap(b, boxes[k]) <= H * 0.04]
+    if ks:
+        pts = rim(p, max(1, len(p) // 100))
+        big[min((dist(pts, rims[k]), k) for k in ks)[1]] += p
 order = sorted(range(N), key=lambda j: (box(big[j], W)[0] + box(big[j], W)[2]))
 big = [big[j] for j in order]
 
