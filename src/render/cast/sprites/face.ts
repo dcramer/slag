@@ -19,6 +19,8 @@ export type FaceMood = Mood | 'dead';
 const WHITE = '#fbf8f2';
 const GLINT = '#ffffff';
 const INK = '#2a1f1a';
+/** The hot middle of a `glow` eye. */
+const CORE = '#fff4c4';
 /** The rim round a white, toward the light and away from it (world px per world px of eye). */
 const RIM_THIN = 0.16;
 const RIM_THICK = 0.34;
@@ -41,6 +43,8 @@ interface EyeArt {
   under?(s: CanvasRenderingContext2D, r: number, f: number, far: boolean): void;
   /** The drawing keeps its own smile under these eyes: the kit draws a mouth only opened, on a cheer or a fall. */
   smile?: boolean;
+  /** It shines out of a dark face, where ink is lost: its shut eyes, cheer arcs and crosses are drawn in its own colour. */
+  lit?: boolean;
 }
 
 /** How wide a white opens and how tall in each mood: narrowed into the run, wide on a fall. */
@@ -141,6 +145,20 @@ export const EYES: Record<EyeStyle, EyeArt> = {
       const ry = r * 1.25 * (m === 'run' ? 0.8 : m === 'fall' ? 1.12 : 1);
       poly(s, oval(0, 0, rx, ry, 12), INK);
       poly(s, oval(f * r * 0.26, -ry * (m === 'up' ? 0.5 : 0.36), r * 0.24, r * 0.3, 7), GLINT);
+    },
+  },
+  // A glow in a dark face: a round all its own colour (the iris), no white and no pupil, a paler core up toward the
+  // front: the black mage's, whose face is only darkness and two eyes. It acts in its shape: narrowed into the run,
+  // lifted on the way up, wide on a fall; shut, its marks glow too (`lit`).
+  glow: {
+    extent: [1, 1.05],
+    brow: false,
+    lit: true,
+    open(s, r, m, f, iris) {
+      const rx = r * (m === 'fall' ? 1.15 : m === 'run' ? 1.06 : 1);
+      const ry = r * (m === 'fall' ? 1.25 : m === 'run' ? 0.68 : m === 'up' ? 1.12 : 1.05);
+      poly(s, oval(0, 0, rx, ry, 12), iris);
+      poly(s, oval(f * rx * 0.24, -ry * 0.26, rx * 0.42, ry * 0.4, 8), CORE);
     },
   },
   // A tall white with a tall pupil toward the front: the plumber's, the saddled dino's.
@@ -317,6 +335,7 @@ function brow(s: CanvasRenderingContext2D, m: FaceMood, inner: number, r: number
 /** One eye about the origin (the caller has moved to it and turned with the head); `far` is the far one. */
 function eye(s: CanvasRenderingContext2D, face: FaceKit, m: FaceMood, f: number, r: number, blink: boolean, far: boolean, seed: number) {
   const art = EYES[face.eye ?? 'round'];
+  const ink = art.lit ? face.iris : INK;
   if (art.under && m !== 'dead') art.under(s, r, f, far);
   if (m === 'cheer') {
     const arc: P[] = [];
@@ -324,14 +343,14 @@ function eye(s: CanvasRenderingContext2D, face: FaceKit, m: FaceMood, f: number,
       const a = Math.PI * (1.1 + (j / 6) * 0.8);
       arc.push({ x: Math.cos(a) * r, y: 0.4 + Math.sin(a) * r * 0.85 });
     }
-    s.fillStyle = INK;
+    s.fillStyle = ink;
     // A thin arc, with the eye's size: as thick as the eye is wide, the two of a small face merged into one
     // dark bar, a squint; with a high floor, a small eye's arc was a dot.
     stroke(s, arc, { w: Math.max(face.mark ?? 0.35, r * 0.5), seed, taper: [0.2, 0.2], press: 0.1 });
     return;
   }
   if (m === 'dead') {
-    s.fillStyle = INK;
+    s.fillStyle = ink;
     for (const sg of [-1, 1]) {
       cross[0].x = -r * 0.85;
       cross[0].y = -sg * r * 0.85;
@@ -344,7 +363,7 @@ function eye(s: CanvasRenderingContext2D, face: FaceKit, m: FaceMood, f: number,
   if (blink) {
     mark(
       s,
-      INK,
+      ink,
       [
         { x: -r, y: 0 },
         { x: r, y: 0 },

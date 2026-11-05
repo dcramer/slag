@@ -717,6 +717,25 @@ export const BRIEFS: Record<string, Brief> = {
     // stripes and patch, its frayed hem, and the yarn off the needle's knob.
     worn: 'the cloak is an old striped dishcloth: two wide pale pink stripes (#e8a6a6) run across it near the hem, a big square patch of grey cloth (#a8a29a) is sewn on one side with big stitches, and the hem is frayed into a ragged fringe of loose threads; a strand of cream yarn (#e6dcc4) hangs from the round knob of the knitting needle in one short loose loop. The mask, its eye holes and the two horns stay exactly as they are.',
   },
+  mage: {
+    // The nod, each part of the read at race size and each a shape in outline: the huge hat, its brim wider than his
+    // shoulders and its tall crown bent over into a point (the read in black: nobody else in the cast wears a brim
+    // that wide; the elf's cap is a sock with no brim, the king's crown sits on a horned head side on); under it no
+    // face, only darkness and two round glowing eyes (the read in colour: nobody else's face is only eyes); the long
+    // robe flaring to the ankles with wide cuffs over the hands (small and round, never a slim figure in a gown,
+    // which read as a princess); a staff upright beside him.
+    // Ours, and the joke: the hat is a battered straw sun hat folded into its point and held with a clothes peg, the
+    // staff a broom handle with a light bulb taped to its tip.
+    // The palette is neutral (Decisions 4): the robe in the player's colour, its cuffs and belt a dark of it; the
+    // straw, the dark face, the wood and the bulb are their own, the eyes' glow a face mark. The colours lead the brief.
+    design:
+      'The character: a small, shy, round-shouldered cartoon wizard in three-quarter view facing right, in five colours: a blue robe (#3e58a8), a straw hat (#dcb66a), a black face (#1e1a24), glowing yellow eyes (#ffd23c) and a wooden staff (#a87a4a). ' +
+      'His signature: a huge floppy straw sun hat, its round brim much wider than his shoulders, its tall crown bent over at the top into a point flopping back, pinned with a wooden clothes peg. ' +
+      'Under the brim no face at all, only black shadow with two big round glowing yellow eyes. ' +
+      'The robe hangs to his ankles in a wide flared bell, its cuffs flared wide over his hands, a broad dark belt. ' +
+      'He holds a broom handle upright beside him, taller than he is, a light bulb taped to its top.',
+    worn: "a big ragged notch is torn out of the front of the hat's brim, loose straw ends sticking out of it; a big square patch of grey cloth (#a8a29a) is sewn on the robe's side with big stitches; the robe's hem is torn into a ragged notch at the front; a strip of grey tape (#9a9c98) is wrapped round the broom handle where it was snapped and mended. The dark face, its two round glowing yellow eyes and the hat's bent point stay exactly as they are.",
+  },
   raider: {
     // The nod, each part of the read at race size and each a shape in outline: the one long thick braid swinging out
     // behind her head, clear of her back (the read: nobody else in the cast has a rope of hair; one tight rope, never
