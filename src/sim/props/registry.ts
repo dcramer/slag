@@ -156,6 +156,8 @@ export interface RunnerView {
   w: number;
   h: number;
   active: boolean;
+  /** Feet in climbed coordinates (sim/run.ts `feetUp`): who is higher, a loop's laps counted. */
+  up?: number;
 }
 
 export interface ProjectileSpawn {

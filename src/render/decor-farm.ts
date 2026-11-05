@@ -3,6 +3,7 @@ import { hash2 } from '../core/rng';
 import type { Decor, DecorDef } from './decor';
 import { inkFor, line, type P, stroke } from './ink';
 import { ball, barLine, boxPts, dot, glint, ovalPts, part, path, pen, poly, tick } from './ink-props';
+import { hashKnobs, low16 } from './decor-kit';
 
 /**
  * Farm decor, inked: the yard's clutter between the fields. A scarecrow with a sack for a head, a water
@@ -19,8 +20,7 @@ const STONE: HSL = hsl3(30, 8, 56);
 const RUST: HSL = hsl3(18, 52, 36);
 const STRAW: HSL = hsl3(46, 70, 62);
 
-const sd = (d: Decor) => d.seed & 0xffff;
-const k01 = (d: Decor, n: number) => hash2(n, 7, sd(d));
+const knob = hashKnobs(7);
 /** Mirror x about the piece's own centre when it's flipped. */
 const fx = (d: Decor) => (d.flip ? -1 : 1);
 
@@ -57,7 +57,7 @@ export const FARM_DECOR = {
       const k = d.size;
       const x = d.x;
       const y = d.y;
-      const s = sd(d);
+      const s = low16(d.seed);
       const top = y - 27 * k;
       pole(g, x, y + 0.5, x + 0.4, top + 2, 1.6, OLDWOOD, s);
       pole(g, x - 9 * k, top + 8 * k, x + 9 * k, top + 7.5 * k, 1.4, OLDWOOD, s + 2);
@@ -109,9 +109,9 @@ export const FARM_DECOR = {
       const h = 6.5 * k;
       const x0 = d.x - w / 2;
       const y = d.y;
-      for (const lx of [x0 + 2.5, x0 + w - 4.5]) box(g, lx, y - 2.4, 2, 2.6, WOOD, sd(d) + lx, 0.3);
+      for (const lx of [x0 + 2.5, x0 + w - 4.5]) box(g, lx, y - 2.4, 2, 2.6, WOOD, low16(d.seed) + lx, 0.3);
       const body = poly(x0, y - 2 - h, x0 + w, y - 2 - h, x0 + w - 2, y - 2, x0 + 2, y - 2);
-      shape(g, body, d.color, sd(d), 0.8);
+      shape(g, body, d.color, low16(d.seed), 0.8);
       // Water to the brim, a glint on it.
       g.fillStyle = css(hsl3(200, 50, 52));
       g.fillRect(x0 + 1.2, y - 2 - h + 0.6, w - 2.4, 1.4);
@@ -147,9 +147,9 @@ export const FARM_DECOR = {
           x + 3.4 * k,
           y,
         );
-        shape(g, body, d.color, sd(d) + i, 0.9);
+        shape(g, body, d.color, low16(d.seed) + i, 0.9);
         tick(g, x - 3.5 * k, y - h * 0.3, x + 3.5 * k, y - h * 0.3, 0.6, i, css(TIN, -30));
-        shape(g, boxPts(x - 2.2 * k, y - h - 1.4 * k, 4.4 * k, 1.6 * k, 0.5, sd(d) + i + 4), TIN, sd(d) + i + 4, 0.3);
+        shape(g, boxPts(x - 2.2 * k, y - h - 1.4 * k, 4.4 * k, 1.6 * k, 0.5, low16(d.seed) + i + 4), TIN, low16(d.seed) + i + 4, 0.3);
         glint(g, poly(x - 2.4 * k, y - h * 0.55, x - 2.6 * k, y - h * 0.2), 'rgba(255,255,255,0.8)', 0.5);
       }
     },
@@ -163,7 +163,7 @@ export const FARM_DECOR = {
         const lean = (i - (n - 1) / 2) * 0.25;
         const x = d.x + (i - (n - 1) / 2) * 6 * k;
         const y = d.y;
-        const h = (8 + k01(d, i) * 2) * k;
+        const h = (8 + knob(d, i) * 2) * k;
         const sack = poly(
           x - 3.4 * k,
           y,
@@ -178,7 +178,7 @@ export const FARM_DECOR = {
           x + 3.4 * k,
           y,
         );
-        shape(g, sack, hsl3(d.color.h + i * 4, d.color.s - i * 2, d.color.l - i * 4), sd(d) + i, 0.9);
+        shape(g, sack, hsl3(d.color.h + i * 4, d.color.s - i * 2, d.color.l - i * 4), low16(d.seed) + i, 0.9);
         tick(g, x - 1.6 * k + lean * 4, y - h * 0.86, x + 1.8 * k + lean * 4, y - h * 0.86, 0.6, i + 3, css(BURLAP, -44));
         // A stencilled band where the feed's mark goes.
         g.fillStyle = css(hsl3(4, 50, 40), 0, 0.7);
@@ -194,13 +194,13 @@ export const FARM_DECOR = {
       const x = d.x;
       const y = d.y;
       const wx = x + 7 * k * f;
-      pole(g, x - 9 * k * f, y - 6 * k, wx, y - 3.4 * k, 1, OLDWOOD, sd(d));
-      pole(g, x - 4 * k * f, y - 4.4 * k, x - 4.6 * k * f, y, 0.9, OLDWOOD, sd(d) + 2);
+      pole(g, x - 9 * k * f, y - 6 * k, wx, y - 3.4 * k, 1, OLDWOOD, low16(d.seed));
+      pole(g, x - 4 * k * f, y - 4.4 * k, x - 4.6 * k * f, y, 0.9, OLDWOOD, low16(d.seed) + 2);
       const tray = poly(x - 6 * k * f, y - 9 * k, x + 6 * k * f, y - 9.6 * k, x + 4 * k * f, y - 4 * k, x - 3.6 * k * f, y - 4 * k);
-      shape(g, tray, d.color, sd(d) + 3, 0.8);
-      ball(g, wx, y - 3, 2.8 * k, hsl3(30, 10, 30), sd(d) + 5);
+      shape(g, tray, d.color, low16(d.seed) + 3, 0.8);
+      ball(g, wx, y - 3, 2.8 * k, hsl3(30, 10, 30), low16(d.seed) + 5);
       // A spade left in it.
-      pole(g, x - 1 * k * f, y - 8 * k, x + 2 * k * f, y - 17 * k, 0.8, WOOD, sd(d) + 6);
+      pole(g, x - 1 * k * f, y - 8 * k, x + 2 * k * f, y - 17 * k, 0.8, WOOD, low16(d.seed) + 6);
     },
   },
   vane: {
@@ -210,12 +210,12 @@ export const FARM_DECOR = {
       const x = d.x;
       const y = d.y;
       const top = y - 40 * k;
-      pole(g, x, y + 0.5, x, top + 4, 1.4, OLDWOOD, sd(d));
-      pole(g, x, top + 9, x, top, 0.8, d.color, sd(d) + 1);
+      pole(g, x, y + 0.5, x, top + 4, 1.4, OLDWOOD, low16(d.seed));
+      pole(g, x, top + 9, x, top, 0.8, d.color, low16(d.seed) + 1);
       // The points of the compass on their arms, and the arrow over them.
       const ay = top + 7;
-      pole(g, x - 6 * k, ay, x + 6 * k, ay, 0.6, d.color, sd(d) + 2);
-      for (const ex of [-6, 6]) dot(g, x + ex * k, ay, 0.9, sd(d) + ex, undefined, inkFor(d.color));
+      pole(g, x - 6 * k, ay, x + 6 * k, ay, 0.6, d.color, low16(d.seed) + 2);
+      for (const ex of [-6, 6]) dot(g, x + ex * k, ay, 0.9, low16(d.seed) + ex, undefined, inkFor(d.color));
       const f = fx(d);
       const arrow = poly(
         x - 9 * k * f,
@@ -233,9 +233,9 @@ export const FARM_DECOR = {
         x - 9 * k * f,
         top + 3.2,
       );
-      shape(g, arrow, d.color, sd(d) + 3, 0.3);
-      shape(g, poly(x - 9 * k * f, top + 2.4, x - 12 * k * f, top - 2, x - 13 * k * f, top + 7, x - 9 * k * f, top + 3), d.color, sd(d) + 4, 0.3);
-      ball(g, x, top + 2.4, 1.3, hsl3(44, 70, 52), sd(d) + 5);
+      shape(g, arrow, d.color, low16(d.seed) + 3, 0.3);
+      shape(g, poly(x - 9 * k * f, top + 2.4, x - 12 * k * f, top - 2, x - 13 * k * f, top + 7, x - 9 * k * f, top + 3), d.color, low16(d.seed) + 4, 0.3);
+      ball(g, x, top + 2.4, 1.3, hsl3(44, 70, 52), low16(d.seed) + 5);
     },
   },
   stile: {
@@ -245,14 +245,14 @@ export const FARM_DECOR = {
       const x = d.x;
       const y = d.y;
       // A stretch of rail fence, and the steps up and over it.
-      for (const px of [-7, 7]) pole(g, x + px * k, y + 0.5, x + px * k, y - 15 * k, 1.5, d.color, sd(d) + px);
-      for (const ry of [-6, -12]) pole(g, x - 10 * k, y + ry * k, x + 10 * k, y + ry * k + 0.4, 1.1, d.color, sd(d) + ry);
+      for (const px of [-7, 7]) pole(g, x + px * k, y + 0.5, x + px * k, y - 15 * k, 1.5, d.color, low16(d.seed) + px);
+      for (const ry of [-6, -12]) pole(g, x - 10 * k, y + ry * k, x + 10 * k, y + ry * k + 0.4, 1.1, d.color, low16(d.seed) + ry);
       for (const [sy, sw] of [
         [-4, 9],
         [-8.5, 6],
       ] as const) {
-        box(g, x - sw * k, y + sy * k - 1.2, sw * 2 * k, 2.2, WOOD, sd(d) + sy, 0.4);
-        for (const e of [-1, 1]) pole(g, x + e * (sw - 1) * k, y + sy * k + 1, x + e * (sw + 1.5) * k, y, 0.8, WOOD, sd(d) + sy + e);
+        box(g, x - sw * k, y + sy * k - 1.2, sw * 2 * k, 2.2, WOOD, low16(d.seed) + sy, 0.4);
+        for (const e of [-1, 1]) pole(g, x + e * (sw - 1) * k, y + sy * k + 1, x + e * (sw + 1.5) * k, y, 0.8, WOOD, low16(d.seed) + sy + e);
       }
     },
   },
@@ -265,16 +265,16 @@ export const FARM_DECOR = {
       const y = d.y;
       const w = 15 * k;
       const by = y - 6 * k;
-      for (const lx of [-w / 2 + 1.5, w / 2 - 2.5]) pole(g, x + lx, y + 0.5, x + lx, by, 1.1, OLDWOOD, sd(d) + lx);
-      const house = boxPts(x - w / 2, by - 11 * k, w, 11 * k, 0.6, sd(d), 0.12);
-      shape(g, house, d.color, sd(d) + 1, 1);
+      for (const lx of [-w / 2 + 1.5, w / 2 - 2.5]) pole(g, x + lx, y + 0.5, x + lx, by, 1.1, OLDWOOD, low16(d.seed) + lx);
+      const house = boxPts(x - w / 2, by - 11 * k, w, 11 * k, 0.6, low16(d.seed), 0.12);
+      shape(g, house, d.color, low16(d.seed) + 1, 1);
       for (let i = 1; i < 4; i++) tick(g, x - w / 2 + 0.6, by - (11 * k * i) / 4, x + w / 2 - 0.6, by - (11 * k * i) / 4, 0.35, i, css(d.color, -26));
       const roof = poly(x - w / 2 - 2, by - 10.6 * k, x, by - 18 * k, x + w / 2 + 2, by - 10.6 * k);
-      shape(g, roof, hsl3(10, 40, 34), sd(d) + 2, 0.6);
+      shape(g, roof, hsl3(10, 40, 34), low16(d.seed) + 2, 0.6);
       // The little door, and its ramp down to the yard with cleats on it.
-      box(g, x + f * 2 - 2.4, by - 6.4 * k, 4.8, 6.4 * k, hsl3(20, 30, 18), sd(d) + 3, 0.5);
-      pole(g, x + f * 2, by, x + f * (w / 2 + 6), y, 1.2, OLDWOOD, sd(d) + 4);
-      straw(g, x - f * 4, by, Math.PI / 2, 4, sd(d) + 5);
+      box(g, x + f * 2 - 2.4, by - 6.4 * k, 4.8, 6.4 * k, hsl3(20, 30, 18), low16(d.seed) + 3, 0.5);
+      pole(g, x + f * 2, by, x + f * (w / 2 + 6), y, 1.2, OLDWOOD, low16(d.seed) + 4);
+      straw(g, x - f * 4, by, Math.PI / 2, 4, low16(d.seed) + 5);
     },
   },
   hive: {
@@ -284,18 +284,19 @@ export const FARM_DECOR = {
       const x = d.x;
       const y = d.y;
       const w = 10 * k;
-      box(g, x - w / 2 - 1, y - 2, w + 2, 2, OLDWOOD, sd(d), 0.3);
-      for (let i = 0; i < 3; i++) box(g, x - w / 2, y - 2 - (i + 1) * 3.6 * k, w, 3.6 * k, i % 2 ? d.color : { ...d.color, l: d.color.l - 6 }, sd(d) + i, 0.4);
+      box(g, x - w / 2 - 1, y - 2, w + 2, 2, OLDWOOD, low16(d.seed), 0.3);
+      for (let i = 0; i < 3; i++)
+        box(g, x - w / 2, y - 2 - (i + 1) * 3.6 * k, w, 3.6 * k, i % 2 ? d.color : { ...d.color, l: d.color.l - 6 }, low16(d.seed) + i, 0.4);
       shape(
         g,
         poly(x - w / 2 - 1.4, y - 2 - 10.8 * k, x + w / 2 + 1.4, y - 2 - 10.8 * k, x + w / 2, y - 2 - 13 * k, x - w / 2, y - 2 - 13 * k),
         hsl3(20, 20, 40),
-        sd(d) + 5,
+        low16(d.seed) + 5,
         0.3,
       );
       // The entrance slot at the foot.
       g.fillStyle = css(d.color, -38);
-      path(g, boxPts(x - 2 * k, y - 3.5 * k, 4 * k, 1, 0.4, sd(d) + 6, 0.1));
+      path(g, boxPts(x - 2 * k, y - 3.5 * k, 4 * k, 1, 0.4, low16(d.seed) + 6, 0.1));
       g.fill();
     },
   },
@@ -307,22 +308,22 @@ export const FARM_DECOR = {
       const y = d.y;
       // Half sunk in the ground, standing on edge, tread nubs round it.
       const R = 7.5 * k;
-      const ring = ovalPts(x, y - R * 0.55, R, R * 0.92, sd(d), 0.03, 22);
+      const ring = ovalPts(x, y - R * 0.55, R, R * 0.92, low16(d.seed), 0.03, 22);
       g.save();
       g.beginPath();
       g.rect(x - R - 3, y - 2 * R - 3, 2 * R + 6, 2 * R + 3);
       g.clip();
-      shape(g, ring, d.color, sd(d) + 1, 0.8);
+      shape(g, ring, d.color, low16(d.seed) + 1, 0.8);
       g.fillStyle = css(hsl3(30, 30, 30));
-      path(g, ovalPts(x, y - R * 0.55, R * 0.48, R * 0.44, sd(d) + 2, 0.03, 14));
+      path(g, ovalPts(x, y - R * 0.55, R * 0.48, R * 0.44, low16(d.seed) + 2, 0.03, 14));
       g.fill();
-      pen(g, ovalPts(x, y - R * 0.55, R * 0.48, R * 0.44, sd(d) + 2, 0.03, 14), sd(d) + 3, 0.3, 0.7, 3, inkFor(d.color));
+      pen(g, ovalPts(x, y - R * 0.55, R * 0.48, R * 0.44, low16(d.seed) + 2, 0.03, 14), low16(d.seed) + 3, 0.3, 0.7, 3, inkFor(d.color));
       // Tread on the lit shoulder only: a few lifted ticks across it.
       for (let i = 0; i < 4; i++) {
         const a = Math.PI * 1.08 + i * 0.3;
         const cx = x + Math.cos(a) * R * 0.8;
         const cy = y - R * 0.55 + Math.sin(a) * R * 0.74;
-        tick(g, cx - Math.cos(a) * 1.1, cy - Math.sin(a) * 1.1, cx + Math.cos(a) * 1.1, cy + Math.sin(a) * 1.1, 0.5, sd(d) + 6 + i, css(d.color, 16));
+        tick(g, cx - Math.cos(a) * 1.1, cy - Math.sin(a) * 1.1, cx + Math.cos(a) * 1.1, cy + Math.sin(a) * 1.1, 0.5, low16(d.seed) + 6 + i, css(d.color, 16));
       }
       g.restore();
     },
@@ -335,23 +336,23 @@ export const FARM_DECOR = {
       const y = d.y;
       const w = 14 * k;
       // The ring of stones, the posts, the little roof, the windlass and its bucket.
-      for (const px of [-w / 2 + 1, w / 2 - 1]) pole(g, x + px, y - 5, x + px, y - 24 * k, 1.3, OLDWOOD, sd(d) + px);
-      shape(g, poly(x - w / 2 - 3, y - 22 * k, x, y - 29 * k, x + w / 2 + 3, y - 22 * k), hsl3(10, 34, 32), sd(d) + 1, 0.5);
-      pole(g, x - w / 2 + 1, y - 17 * k, x + w / 2 - 1, y - 17 * k, 1.2, WOOD, sd(d) + 2);
+      for (const px of [-w / 2 + 1, w / 2 - 1]) pole(g, x + px, y - 5, x + px, y - 24 * k, 1.3, OLDWOOD, low16(d.seed) + px);
+      shape(g, poly(x - w / 2 - 3, y - 22 * k, x, y - 29 * k, x + w / 2 + 3, y - 22 * k), hsl3(10, 34, 32), low16(d.seed) + 1, 0.5);
+      pole(g, x - w / 2 + 1, y - 17 * k, x + w / 2 - 1, y - 17 * k, 1.2, WOOD, low16(d.seed) + 2);
       barLine(g, x + 1, y - 17 * k, x + 1, y - 10 * k, 0.5, hsl3(36, 30, 52), 3, { rim: 0.2 });
-      box(g, x - 1, y - 10 * k, 4, 3.4, WOOD, sd(d) + 3, 0.4);
-      const ring = boxPts(x - w / 2 - 1, y - 7 * k, w + 2, 7 * k, 1.6, sd(d) + 4, 0.2);
-      shape(g, ring, d.color, sd(d) + 4, 0.9);
+      box(g, x - 1, y - 10 * k, 4, 3.4, WOOD, low16(d.seed) + 3, 0.4);
+      const ring = boxPts(x - w / 2 - 1, y - 7 * k, w + 2, 7 * k, 1.6, low16(d.seed) + 4, 0.2);
+      shape(g, ring, d.color, low16(d.seed) + 4, 0.9);
       g.save();
       path(g, ring);
       g.clip();
       // One course line, lifted halfway, and a few joints off it: the stones, not a grid of them.
       const joint = css(d.color, -28);
-      tick(g, x - w / 2, y - 4.6 * k, x - 1, y - 4.7 * k, 0.4, sd(d) + 5, joint);
-      tick(g, x + 2, y - 4.5 * k, x + w / 2, y - 4.6 * k, 0.4, sd(d) + 6, joint);
+      tick(g, x - w / 2, y - 4.6 * k, x - 1, y - 4.7 * k, 0.4, low16(d.seed) + 5, joint);
+      tick(g, x + 2, y - 4.5 * k, x + w / 2, y - 4.6 * k, 0.4, low16(d.seed) + 6, joint);
       for (const [i, jx] of [-0.3, 0.1, 0.36].entries()) {
         const up = i % 2 ? 0 : 1;
-        tick(g, x + jx * w, y - (up ? 7 : 4.5) * k + 0.4, x + jx * w + 0.2, y - (up ? 4.8 : 2.2) * k, 0.4, sd(d) + 7 + i, joint);
+        tick(g, x + jx * w, y - (up ? 7 : 4.5) * k + 0.4, x + jx * w + 0.2, y - (up ? 4.8 : 2.2) * k, 0.4, low16(d.seed) + 7 + i, joint);
       }
       g.restore();
     },
@@ -364,11 +365,11 @@ export const FARM_DECOR = {
       const x = d.x;
       const y = d.y;
       // A beam, two handles back, and the curved share biting the ground.
-      pole(g, x - 9 * k * f, y - 6 * k, x + 8 * k * f, y - 4 * k, 1.2, OLDWOOD, sd(d));
-      for (const h of [0, 1.6]) pole(g, x - 6 * k * f, y - 5.4 * k, x - (11 + h) * k * f, y - (13 - h) * k, 0.9, OLDWOOD, sd(d) + 1 + h);
+      pole(g, x - 9 * k * f, y - 6 * k, x + 8 * k * f, y - 4 * k, 1.2, OLDWOOD, low16(d.seed));
+      for (const h of [0, 1.6]) pole(g, x - 6 * k * f, y - 5.4 * k, x - (11 + h) * k * f, y - (13 - h) * k, 0.9, OLDWOOD, low16(d.seed) + 1 + h);
       const share = poly(x + 2 * k * f, y - 5 * k, x + 7 * k * f, y - 4.4 * k, x + 9 * k * f, y, x + 2 * k * f, y);
-      shape(g, share, d.color, sd(d) + 3, 0.6);
-      pole(g, x + 6 * k * f, y - 4.4 * k, x + 7 * k * f, y + 0.5, 0.9, d.color, sd(d) + 4);
+      shape(g, share, d.color, low16(d.seed) + 3, 0.6);
+      pole(g, x + 6 * k * f, y - 4.4 * k, x + 7 * k * f, y + 0.5, 0.9, d.color, low16(d.seed) + 4);
       stroke(g, poly(x + 3 * k * f, y - 1, x + 6 * k * f, y - 2.2), { w: 0.4, seed: 5, taper: [0.2, 0.5] });
     },
   },

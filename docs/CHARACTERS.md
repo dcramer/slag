@@ -1,6 +1,6 @@
 # Characters: homages and animals
 
-The runners are a cast of twenty-seven homages to famous game characters, in our own designs. In the lore (DESIGN.md) they're the characters who never made the cut, from stray animals to knock-off heroes who almost got their own game. Each kind is a character design of its own, the way the barnyard party game's animals are: its own outline, its signature props, and a way of moving.
+The runners are a cast of thirty homages to famous game characters, in our own designs. In the lore (DESIGN.md) they're the characters who never made the cut, from stray animals to knock-off heroes who almost got their own game. Each kind is a character design of its own, the way the barnyard party game's animals are: its own outline, its signature props, and a way of moving.
 
 `pnpm shot cast` shoots the sheet: the 8-player lineup at play scale on farm and mine, the race start, deaths, a 3× close-up, the lobby cards, the "is it the homage?" sheet (`cast-recognise.png`), the silhouette test (`cast-silhouettes.png`) and the catalog of every kind (`--only catalog` for the last three). In the console, `slagDebug.cast` has `catalog()`, `silhouettes()`, `recognise()` and `bench()`.
 
@@ -60,12 +60,15 @@ So each kind has: a clear head-to-body ratio, a readable expression, a line of a
 | hopper | the snouted cube hopper | a round ball with no arms on two short legs in worn trainers, two big eyes standing up out of its crown, a long tube snout sticking straight out front and flared at its open end, a party blower; hops both feet together | costume: the ball and legs; the snout and the blower's streamer lights of it |
 | warrior | the round Slavic warrior | a huge round belly on short legs, a big round bald head, a small iron pot of a helmet with a knob on top and its handle out behind, a big round nose over a short bushy moustache, a short belted tunic, thick bare arms, a sword at his belt, a half-eaten roast leg held out like a club | costume: the tunic |
 | slayer | the white-haired monster slayer | broad-shouldered in a wide stance, a short coat over two legs in tall boots, white hair tied tight back, a long sword held low in hand and two hilts side by side above his back shoulder (one an umbrella's), a bottle-cap wolf medallion, yellow cat's eyes, a scar | costume: the coat; the gloves and boots a dark of it |
+| raider | the braided tomb raider | a long single braid swinging behind her head, a tank top and shorts, twin pistols in thigh holsters, a small backpack, boots | costume: the tank top |
+| fighter | the bun-haired street fighter | two round hair buns either side of her head like ox horns, a high-collared qipao with puffed shoulders, spiked bracelets, thick strong legs, a kicking stance | costume: the qipao |
+| stinger | the horned bug with the needle | a small bug with a white mask face and two long curved horns, a red cloak hanging from the shoulders like a bell, thin dark legs, a long needle on a thread | costume: the cloak |
 
 **Is it the homage?** `cast-recognise.png` puts each kind close up beside "This is ___", in its roster colour. Every sheet waits for the rendered kinds' frames (`slagDebug.sprites.ready()`), so it shows what ships; before 2026-11-02 the catalog, recognise and silhouette sheets drew those kinds hand-drawn, so the reads below were judged on the old bodies. As of this round, every homage reads as its caption to us: the plumber, speedster, elf, mouse, impostor, puffball, jelly and goose at once; the bounty hunter and the engineer a beat slower, because their reads lean on props (the shoulder pads and cannon, the hat and wrench) more than on a silhouette nobody else shares. The silhouette test still separates every kind, though the plumber and the hunter are the closest pair of stout shapes.
 
 ## Roster (all homages)
 
-The cast this is heading to: **twenty kinds, the greatest game characters to parody**, every one a homage, because the lore makes the runners the characters who never made the cut, the knock-off heroes who almost got their own game. The ten homages from round 5 stay, and so do five of the six round-6 picks. The four plain animals (fox, frog, penguin, chicken) go. Round 10 (owner, 2026-11-04) adds five retro picks past the twenty: the rapping paper puppy, the limbless hero, the worm in the super suit, the little purple dragon and the snouted cube hopper. Round 11 (owner, 2026-11-04) adds a comics hero and a game hero: the round Slavic warrior and the white-haired monster slayer.
+The cast this is heading to: **twenty kinds, the greatest game characters to parody**, every one a homage, because the lore makes the runners the characters who never made the cut, the knock-off heroes who almost got their own game. The ten homages from round 5 stay, and so do five of the six round-6 picks. The four plain animals (fox, frog, penguin, chicken) go. Round 10 (owner, 2026-11-04) adds five retro picks past the twenty: the rapping paper puppy, the limbless hero, the worm in the super suit, the little purple dragon and the snouted cube hopper. Round 11 (owner, 2026-11-04) adds a comics hero and a game hero: the round Slavic warrior and the white-haired monster slayer. Round 12 (owner, 2026-11-04) adds three iconic heroines from franchises the cast hadn't touched, because it had almost none: the braided tomb raider, the bun-haired street fighter and the horned bug with the needle.
 
 This spec feeds the art pipeline (Rendered kinds below): a design at game size, worn in an edit and drawn in each pose, traced flat into the cast's own shapes. Each entry is written to be used as prompt material, so it describes traits only and never names a real character. Every kind is our own design: it must read as the homage from its silhouette and props, never copy the original's exact design, and never carry its name or logo. Sound-alike names stay in data (`KIND_NAMES`). **The nod is the silhouette; the rest is ours.** A concept that looks like the original redrawn is rejected, however good it looks.
 
@@ -565,6 +568,48 @@ What came out of it:
   - **Not passed.** The misread has moved six times (horns, the elf, a princess, a ranger, a wizard, a rabbit). In black at play size, a swordsman with a white head has no shape nobody else's has: his read is in colour (the white hair, the cat's eyes, the cap).
 - **Concept prompt:** A broad-shouldered cartoon monster hunter in three-quarter view, standing in a wide stance, white hair pulled back tight into a short tail, a long straight silver sword held low in his hand, two straight hilts side by side above his back shoulder (a steel sword's cross-guard and a furled black umbrella's wooden handle), cat's eyes, yellow with slit pupils, a scar down over one eye, a crimped bottle cap pressed with a wolf's head on a shoelace, a short green leather coat to mid-thigh open at the front, dark trousers, gloves and tall brown boots.
 
+### The braided tomb raider (new)
+- **Kind:** `raider` · **Name:** Laura Craft
+- **A stranger should say:** "the tomb raider with the braid and two pistols."
+- **Silhouette:** an athletic woman side on: one long thick braid swinging out behind her head, a pistol in a holster on each thigh (held out, one in each hand, when she's in the air), a small backpack, boots.
+- **Traits:** a long single braid; a fitted tank top; shorts; twin pistols in thigh holsters; a small backpack; fingerless gloves; boots; an athletic build.
+- **Palette:** the tank top in the player's colour; skin, hair, shorts, holsters, boots and the pistols neutral.
+- **Color slot:** costume.
+- **Gait:** a quick, confident athletic run; she vaults and flips in the air.
+- **The nod:** the braid (the outline behind her head); the twin pistols at the thighs; the tank top and shorts.
+- **Our twist:** the pistols are bright plastic water pistols, the backpack a school satchel with a torn strap, and the braid is tied off with a shoelace.
+- **Swaps:** a plaster on the cheek; a compass on the satchel; a torn knee.
+- **Rig:** to draw flat (2026-11-04).
+- **Concept prompt:** An athletic cartoon adventurer woman seen from the side, one long thick braid swinging out behind her head tied off with a shoelace, a fitted tank top, shorts, fingerless gloves and boots, two bright plastic water pistols in holsters strapped to her thighs, and a small school satchel with a torn strap on her back.
+
+### The bun-haired street fighter (new)
+- **Kind:** `fighter` · **Name:** Chun-Lee
+- **A stranger should say:** "the street fighter with the two hair buns."
+- **Silhouette:** two round hair buns standing out either side of her head like ox horns; puffed shoulders; a short high-collared dress over thick, strong legs; spiked bracelets on both wrists; always in a fighting stance or a kick.
+- **Traits:** two hair buns in covers with ribbons; a high-collared qipao with puffed shoulders and a sash; spiked bracelets; thick muscular legs; white boots; a kick for a jump.
+- **Palette:** the qipao in the player's colour, its trim a light of it; skin, hair, bun covers, bracelets, boots neutral.
+- **Color slot:** costume.
+- **Gait:** a bouncing fighter's stance on the spot; she runs low and fast, and jumps into a kick.
+- **The nod:** the two buns (the head's outline: nobody else has them); the puffed shoulders and the spiked bracelets; the kicks.
+- **Our twist:** the bun covers are two rolled-up socks, the spiked bracelets are dog collars, and the sash is a dressing-gown cord.
+- **Swaps:** a plaster on the knee; a sweatband; a ribbon come loose.
+- **Rig:** to draw flat (2026-11-04).
+- **Concept prompt:** A strong cartoon martial-artist woman seen from the side in a fighting stance, two round hair buns standing out either side of her head in covers made from rolled-up socks, a high-collared dress with puffed shoulders tied with a dressing-gown cord, spiked dog collars on both wrists as bracelets, thick muscular legs and white boots.
+
+### The horned bug with the needle (new)
+- **Kind:** `stinger` · **Name:** Hornette
+- **A stranger should say:** "the bug knight with the horned mask and the needle."
+- **Silhouette:** small and slim: a white mask face with two long horns curving up and back off it, a red cloak hanging from her shoulders in a bell to the knees, thin dark legs under it, a long thin needle held out or slung on a thread trailing behind.
+- **Traits:** a white mask with dark eye holes; two long curved horns; a red cloak; thin dark limbs; a long needle on a thread; quick and agile.
+- **Palette:** the cloak in the player's colour; the mask white, the limbs dark, the needle steel, the thread neutral.
+- **Color slot:** costume.
+- **Gait:** quick darting steps; she throws the needle on its thread and dashes after it.
+- **The nod:** the horned white mask (the read); the bell of the red cloak; the needle and thread.
+- **Our twist:** the needle is a knitting needle trailing yarn, and the cloak is a patched dishcloth with a frayed hem.
+- **Swaps:** a chip off one horn; a plaster on the mask; a stray loop of yarn.
+- **Rig:** to draw flat (2026-11-04).
+- **Concept prompt:** A small slim cartoon bug warrior seen from the side, with a white mask face, big dark eye holes and two long horns curving up and back off its top, a red cloak made from a patched dishcloth with a frayed hem hanging from her shoulders to her knees in a bell, thin dark legs, holding a long knitting needle trailing a thread of yarn.
+
 ### The jellyfish parasite
 - **Kind:** `jelly` · **Name:** Meltroid
 - **A stranger should say:** "the floating jellyfish thing from the space game."
@@ -613,6 +658,9 @@ The strongest reads first. **Keyed** marks the non-humanoids, the riskiest: thei
 | 25 | hopper | Kewbert | **keyed**, legs only | low |
 | 26 | warrior | Kakosh | humanoid, round | drawn flat; the blind read fails (the head and helmet close into one mound) |
 | 27 | slayer | Gerald | humanoid | drawn flat, redrawn broad with a sword in hand; the blind read not passed (unpaired, but the two hilts read as rabbit ears) |
+| 28 | raider | Laura Craft | humanoid | medium: the braid against the slayer's tail and the elf's cap |
+| 29 | fighter | Chun-Lee | humanoid | low: the buns |
+| 30 | stinger | Hornette | **keyed**, bug | medium: the horns against the king's and the hedgehog's spikes |
 
 The hunter and the engineer sit late although they're easy to rig: their hand-drawn versions read a beat slower than the rest, so they gain least from going first.
 

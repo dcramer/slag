@@ -4,10 +4,11 @@ import type { TileRect } from '../../sim/level';
 import type { Module, PropStyle } from '../../sim/props';
 import { type Grid, T_EMPTY, T_ONEWAY } from '../level/kit';
 import { type Piece, makeStyle, type Site } from '../setpieces/place';
-import { digMoat, footing, moatMax, structureOf } from './castle-kit';
+import { digMoat, footing, structureOf } from './castle-kit';
 import { BELL_TOWER, BOSS_BRIDGE, GATEHOUSE } from './castle-keep';
 import { defineConcept } from './contract';
 import type { Concept, Landmark } from './types';
+import { oneGap } from './kit';
 
 /**
  * Castle stage concepts (docs/SETPIECES.md, Castle).
@@ -92,7 +93,7 @@ export function manorWithin(L0: number, R0: number, G: number, gm = 0): Manor {
  * reads it back from the box.
  */
 function glassMargin(): number {
-  return moatMax() + 1 + 2 * 2 + 4 + STAIRWELL + shaftW() + BACK <= 30 ? 2 : 1;
+  return oneGap() + 1 + 2 * 2 + 4 + STAIRWELL + shaftW() + BACK <= 30 ? 2 : 1;
 }
 
 /** Columns the stairwell takes beside the shaft. */
@@ -322,7 +323,7 @@ export const HAUNTED_WING: Concept = {
       'Three storeys of plank and plaster, broken glass in every window and a dumbwaiter that still rings for service. Through the hall, or up the stairs and out the top floor’s back door.',
   },
   varies: ['moat width', 'interior width (wide)', 'chimney side', 'window glass', 'cab timing'],
-  box: (k, rng) => ({ w: moatMax() + 1 + 2 * glassMargin() + 4 + manorInterior(k.W > 56, rng), h: MANOR_H }),
+  box: (k, rng) => ({ w: oneGap() + 1 + 2 * glassMargin() + 4 + manorInterior(k.W > 56, rng), h: MANOR_H }),
   build: buildManor,
   pieces: (rng, s, l) => manorPieces(rng, s, l),
 };
@@ -478,7 +479,7 @@ function* throneHallPieces(rng: Rng, s: Site, l: Landmark): Generator<Piece> {
 }
 
 /** A classic level's hall: as long as its middle leaves beside the moat, a column or two shorter by the seed. */
-const classicHall = (rng: Rng) => Math.max(16, Math.min(18, 30 - moatMax() - 1)) - rng.int(0, 2);
+const classicHall = (rng: Rng) => Math.max(16, Math.min(18, 30 - oneGap() - 1)) - rng.int(0, 2);
 
 export const THRONE_HALL = defineConcept({
   id: 'throne-hall',
@@ -492,7 +493,7 @@ export const THRONE_HALL = defineConcept({
     about: 'A long hall between two towers, chandeliers swinging as one and a heavier one over the throne. Under them to the boss door, or over the roof.',
   },
   varies: ['moat width', 'hall length', 'tower heights', 'dais steps and depth', 'roof merlons'],
-  box: (k, rng) => ({ w: moatMax() + 1 + (k.W > 56 ? rng.int(26, 32) : classicHall(rng)), h: HALL_AIR + CEIL + rng.int(2, 3) }),
+  box: (k, rng) => ({ w: oneGap() + 1 + (k.W > 56 ? rng.int(26, 32) : classicHall(rng)), h: HALL_AIR + CEIL + rng.int(2, 3) }),
   build: buildThroneHall,
   pieces: (rng, s, l) => throneHallPieces(rng, s, l),
 });

@@ -6,7 +6,7 @@ import { boxPts, path, pen, poly, sprite, stamp, tick, tone } from '../../ink-pr
 import { glowDot, light } from '../../kit';
 import type { DrawCtx } from '../common';
 import { SHELLS } from '../modules/deco-shells';
-import type { Deco, DecoSkin, ThemeSkins } from './common';
+import { type Deco, type DecoSkin, hazer, type HazeSpec, type ThemeSkins } from './common';
 
 /**
  * Volcano skins: the backdrop shells of its stage concepts (docs/SETPIECES.md, Volcano), drawn as the deco
@@ -24,21 +24,14 @@ import type { Deco, DecoSkin, ThemeSkins } from './common';
  */
 
 const HAZE = 0.3;
-function hz(d: DrawCtx) {
-  const fog = d.o.level?.theme.fog;
-  const k = fog ? `${fog.h | 0},${fog.l | 0}` : '-';
-  const sink = (c: HSL, k: number): HSL => (fog ? { h: c.h, s: c.s * (1 - k), l: c.l + (fog.l - c.l) * k } : c);
-  const hsl = (c: HSL): HSL => sink(c, HAZE);
-  return {
-    k,
-    hsl,
-    c: (b: HSL, dl = 0, a = 1) => css(hsl(b), dl, a),
-    // The landmark's own bones stand nearer than the scenery: barely hazed, so they read as bone, not as grey pipe.
-    near: (b: HSL, dl = 0) => css(sink(b, HAZE * 0.35), dl),
-    ink: (b: HSL) => css({ h: b.h, s: b.s * 0.5, l: Math.max(4, hsl(b).l * 0.3) }),
-  };
+const SHELL: HazeSpec = { haze: HAZE, pen: { dark: 0.3, floor: 4 } };
+
+/** The shells' tones, and `near`: the landmark's own bones stand nearer than the scenery, barely hazed, so they read as bone, not as grey pipe. */
+function bones(d: DrawCtx) {
+  const t = hazer(d, SHELL);
+  return { ...t, near: (b: HSL, dl = 0) => css(t.sink(b, HAZE * 0.35), dl) };
 }
-type Hz = ReturnType<typeof hz>;
+type Bones = ReturnType<typeof bones>;
 
 const ASH: HSL = { h: 14, s: 8, l: 22 };
 const ROCK: HSL = { h: 12, s: 12, l: 16 };
@@ -50,7 +43,7 @@ const lavaOf = (d: DrawCtx): HSL => d.o.level?.theme.liquid.color ?? LAVA;
 // ------------------------------------------------------------------------------------------- caldera
 
 /** The ash column: puffs widening as they climb from the crater's mouth (the box's bottom) to the sky. */
-function ashColumn(m: Deco, t: Hz) {
+function ashColumn(m: Deco, t: Bones) {
   return sprite(`volcano|ash|${m.w}|${m.h}|${m.seed}|${t.k}`, -m.w, -TILE * 4, m.w * 3, m.h + TILE * 4, (g) => {
     const cx = m.w / 2;
     const n = Math.max(6, Math.round(m.h / 9));
@@ -82,7 +75,7 @@ function ashColumn(m: Deco, t: Hz) {
 }
 
 const caldera: DecoSkin = (rc, m, d) => {
-  const t = hz(d);
+  const t = bones(d);
   const x = m.at[0] + d.off[0];
   const y = m.at[1] + d.off[1];
   // The box runs down to the crater's floor; the ash leaves from the rim, the first ground in its edge column.
@@ -107,7 +100,7 @@ const caldera: DecoSkin = (rc, m, d) => {
 // ------------------------------------------------------------------------------------------- organ
 
 /** The back rank of pipes: tall, hazed basalt columns standing behind the terraces and above them. */
-function backRank(m: Deco, t: Hz) {
+function backRank(m: Deco, t: Bones) {
   const rise = TILE * 6;
   return sprite(`volcano|organ|${m.w}|${m.h}|${m.seed}|${t.k}`, -4, -rise - 4, m.w + 8, m.h + rise + 8, (g) => {
     const n = Math.max(3, Math.round(m.w / 11));
@@ -134,14 +127,14 @@ function backRank(m: Deco, t: Hz) {
 }
 
 const organ: DecoSkin = (rc, m, d) => {
-  const t = hz(d);
+  const t = bones(d);
   stamp(rc.s, backRank(m, t), m.at[0] + d.off[0], m.at[1] + d.off[1]);
 };
 
 // ------------------------------------------------------------------------------------------- lava tube
 
 /** The tube's far wall: flowstone in bands with ribs where the flow cooled, and seams for the lava to show through. */
-function tubeWall(m: Deco, t: Hz) {
+function tubeWall(m: Deco, t: Bones) {
   return sprite(`volcano|tube|${m.w}|${m.h}|${m.seed}|${t.k}`, 0, 0, m.w, m.h, (g) => {
     g.fillStyle = t.c(ROCK, -4);
     g.fillRect(0, 0, m.w, m.h);
@@ -178,7 +171,7 @@ function seams(m: Deco): P[][] {
 }
 
 const tube: DecoSkin = (rc, m, d) => {
-  const t = hz(d);
+  const t = bones(d);
   const x = m.at[0] + d.off[0];
   const y = m.at[1] + d.off[1];
   stamp(rc.s, tubeWall(m, t), x, y);
@@ -198,7 +191,7 @@ const tube: DecoSkin = (rc, m, d) => {
 const BONE: HSL = { h: 40, s: 24, l: 72 };
 
 /** A bone along `pts`: a thin rim in a dark of bone, the bone over it, a lit stripe along it. */
-function boneStroke(g: CanvasRenderingContext2D, pts: readonly P[], wd: number, t: Hz, seed: number, dl = 0, rib = false) {
+function boneStroke(g: CanvasRenderingContext2D, pts: readonly P[], wd: number, t: Bones, seed: number, dl = 0, rib = false) {
   // A rib is a bar (it keeps its width down to the ground, as the bone a perch sits on); a horn tapers to its point.
   const [rim, body]: [number, number][] = rib
     ? [
@@ -226,7 +219,7 @@ function boneStroke(g: CanvasRenderingContext2D, pts: readonly P[], wd: number, 
  * spine) is drawn whole behind its perches, curving down to the ground, with its twin on the far side
  * curving the other way. Read from the level's own tiles, so it fits any layout.
  */
-function ribcage(m: Deco, d: DrawCtx, t: Hz) {
+function ribcage(m: Deco, d: DrawCtx, t: Bones) {
   const lv = d.o.level!;
   const x0 = Math.round(m.at[0] / TILE);
   const y0 = Math.round(m.at[1] / TILE);
@@ -258,7 +251,7 @@ function ribcage(m: Deco, d: DrawCtx, t: Hz) {
 }
 
 /** Horns swept back off the skull, behind it. The shell's seed says which way it faces (1: toward the left). */
-function horns(m: Deco, t: Hz) {
+function horns(m: Deco, t: Bones) {
   return sprite(`volcano|horns|${m.w}|${m.h}|${m.seed}|${t.k}`, -TILE * 4, -TILE * 4, m.w + TILE * 8, m.h + TILE * 4, (g) => {
     const back = m.seed === 1 ? 1 : -1;
     const bx = m.seed === 1 ? m.w * 0.7 : m.w * 0.3;
@@ -278,7 +271,7 @@ function horns(m: Deco, t: Hz) {
 
 const ribs: DecoSkin = (rc, m, d) => {
   if (!d.o.level) return;
-  const t = hz(d);
+  const t = bones(d);
   const x = m.at[0] + d.off[0];
   const y = m.at[1] + d.off[1];
   // The skull's shell is its own, narrow box; the cage's spans the whole skeleton.

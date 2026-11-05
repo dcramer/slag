@@ -8,7 +8,7 @@ import { ball, bar, barLine, boxPts, dot, glint, ovalPts, part, path, pen, poly,
 import { bulb, glowDot, light, type RC } from '../../kit';
 import { BACKDROP, beamOf, type DrawCtx } from '../common';
 import { SHELLS } from '../modules/deco-shells';
-import type { Deco, DecoSkin, PieceSkin, ThemeSkins } from './common';
+import { boxOf, type Deco, type DecoSkin, type Haze, hazer, type HazeSpec, type PieceSkin, type ThemeSkins } from './common';
 
 /**
  * Jungle skins (docs/SETPIECES.md, Jungle): the backdrop shells of its stage concepts, drawn as the deco
@@ -31,13 +31,7 @@ import type { Deco, DecoSkin, PieceSkin, ThemeSkins } from './common';
  */
 
 const HAZE = 0.3;
-function hz(d: DrawCtx) {
-  const fog = d.o.level?.theme.fog;
-  const k = fog ? `${fog.h | 0},${fog.l | 0}` : '-';
-  const hsl = (c: HSL): HSL => (fog ? { h: c.h, s: c.s * (1 - HAZE), l: c.l + (fog.l - c.l) * HAZE } : c);
-  return { k, hsl, c: (b: HSL, dl = 0, a = 1) => css(hsl(b), dl, a), ink: (b: HSL) => css({ h: b.h, s: b.s * 0.5, l: Math.max(4, hsl(b).l * 0.3) }) };
-}
-type Hz = ReturnType<typeof hz>;
+const SHELL: HazeSpec = { haze: HAZE, pen: { dark: 0.3, floor: 4 } };
 
 const STONE: HSL = { h: 40, s: 16, l: 46 };
 const BARK: HSL = { h: 26, s: 30, l: 26 };
@@ -57,11 +51,8 @@ function beam(s: CanvasRenderingContext2D, ax: number, ay: number, bx: number, b
   barLine(s, ax, ay, bx, by, w, col, seed, { ink, press: 0.05, lit: 10 });
 }
 
-/** Rows and columns of the shell's box, in tiles. */
-const boxOf = (m: Deco) => ({ x: Math.round(m.at[0] / TILE), y: Math.round(m.at[1] / TILE), w: Math.round(m.w / TILE), h: Math.round(m.h / TILE) });
-
 /** A dark interior (a passage, a hollow, a grotto): flat shadow, a wall of `wall` toned blocks, a lit sill at the floor. */
-function interior(g: CanvasRenderingContext2D, w: number, h: number, wall: HSL, t: Hz, seed: number, blocks = true) {
+function interior(g: CanvasRenderingContext2D, w: number, h: number, wall: HSL, t: Haze, seed: number, blocks = true) {
   // The shadow is a deep shade of the wall, so the blocks read as the same stone in the dark.
   g.fillStyle = t.c(deep(wall));
   g.fillRect(0, 0, w, h);
@@ -80,7 +71,7 @@ function interior(g: CanvasRenderingContext2D, w: number, h: number, wall: HSL, 
 // ------------------------------------------------------------------------------------------- step temple
 
 /** The corridor through the plinth: carved blocks in shadow, glyph bands, and squat pillars every few tiles. */
-function templePassage(m: Deco, t: Hz) {
+function templePassage(m: Deco, t: Haze) {
   return sprite(`jungle|passage|${m.w}|${m.h}|${m.seed}|${t.k}`, 0, 0, m.w, m.h, (g) => {
     interior(g, m.w, m.h, STONE, t, m.seed);
     for (let x = 24 + (m.seed % 17); x < m.w - 10; x += 40 + ((hash2(x, 1, m.seed) * 16) | 0)) {
@@ -97,7 +88,7 @@ function templePassage(m: Deco, t: Hz) {
 }
 
 /** The summit's shrine: two pillars and a lintel under a stepped roof, a dark doorway between, hazed back. */
-function shrine(m: Deco, t: Hz) {
+function shrine(m: Deco, t: Haze) {
   return sprite(`jungle|shrine|${m.w}|${m.h}|${m.seed}|${t.k}`, -4, -TILE * 3, m.w + 8, m.h + TILE * 3, (g) => {
     const w = Math.min(m.w - 4, Math.max(TILE * 3, m.w * 0.6));
     const x0 = (m.w - w) / 2;
@@ -146,7 +137,7 @@ function shrine(m: Deco, t: Hz) {
 function cliffBack(rc: RC, m: Deco, d: DrawCtx) {
   const lv = d.o.level;
   if (!lv) return;
-  const t = hz(d);
+  const t = hazer(d, SHELL);
   const x = m.at[0] + d.off[0];
   const y = m.at[1] + d.off[1];
   // The clifftop: the columns from the lip whose ground is the box's third row (the notch a row under it).
@@ -206,7 +197,7 @@ function trunksOf(lv: Level, m: Deco): { x: number; top: number }[] {
 function village(rc: RC, m: Deco, d: DrawCtx) {
   const lv = d.o.level;
   if (!lv) return;
-  const t = hz(d);
+  const t = hazer(d, SHELL);
   const b = boxOf(m);
   const trunks = trunksOf(lv, m);
   const sp = sprite(`jungle|village|${b.x},${b.y},${b.w},${b.h}|${m.seed}|${t.k}|${lv.version}`, -TILE * 4, -TILE * 2, m.w + TILE * 8, m.h + TILE * 2, (g) => {
@@ -319,7 +310,7 @@ function village(rc: RC, m: Deco, d: DrawCtx) {
  * middle, its halves hanging down the walls from the posts on both lips.
  */
 function gorge(rc: RC, m: Deco, d: DrawCtx) {
-  const t = hz(d);
+  const t = hazer(d, SHELL);
   const sp = sprite(`jungle|gorge|${m.w}|${m.h}|${m.seed}|${t.k}`, -TILE, -TILE * 2, m.w + TILE * 2, m.h + TILE * 2, (g) => {
     const lip = TILE * 2;
     const l = TILE;
@@ -391,7 +382,7 @@ function gorge(rc: RC, m: Deco, d: DrawCtx) {
 }
 
 /** The bramble tunnel's inside: dark, tangled with thorny stems. */
-function brambles(m: Deco, t: Hz) {
+function brambles(m: Deco, t: Haze) {
   return sprite(`jungle|bramble|${m.w}|${m.h}|${m.seed}|${t.k}`, 0, 0, m.w, m.h, (g) => {
     interior(g, m.w, m.h, { h: 110, s: 20, l: 30 }, t, m.seed, false);
     for (let i = 0; i < m.w / 6; i++) {
@@ -413,7 +404,7 @@ function brambles(m: Deco, t: Hz) {
 // ------------------------------------------------------------------------------------------- sun gate
 
 /** The gate's dark, a patch of sun on its floor where the day comes in. */
-function gateInside(m: Deco, t: Hz) {
+function gateInside(m: Deco, t: Haze) {
   return sprite(`jungle|gate|${m.w}|${m.h}|${m.seed}|${t.k}`, 0, 0, m.w, m.h, (g) => {
     interior(g, m.w, m.h, STONE, t, m.seed);
     g.fillStyle = t.c(SUN, -10, 0.35);
@@ -426,7 +417,7 @@ function gateInside(m: Deco, t: Hz) {
 
 const facade: DecoSkin = (rc, m, d) => {
   const concept = d.o.level?.landmark?.concept;
-  const t = hz(d);
+  const t = hazer(d, SHELL);
   const x = m.at[0] + d.off[0];
   const y = m.at[1] + d.off[1];
   const door = m.h <= 3 * TILE + 0.5;
@@ -599,7 +590,7 @@ function logFrame(rc: RC, m: ModuleOf<'swinger'>, d: DrawCtx) {
   const tx = Math.floor(hx / TILE);
   const ty = Math.floor(hy / TILE);
   if (tileAt(lv, tx, ty - 1) === T_SOLID) return;
-  const t = hz(d);
+  const t = hazer(d, SHELL);
   const reach = m.arm * Math.sin(m.swing) + m.radius * 2;
   for (const k of [-1, 1]) {
     const fx = hx + k * reach;

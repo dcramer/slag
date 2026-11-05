@@ -32,7 +32,7 @@ Package manager is **pnpm** (`packageManager` in package.json). Never use npm or
 | `pnpm determinism` | The sim in Chromium, Firefox and WebKit on the same seeds and scripted inputs, every frame's hash compared (~2 min). Run it after touching `src/core/dmath.ts`, or anything numeric the sim or generators share. |
 | `pnpm test:store` | The Upstash REST store path against real Redis behind SRH (needs Docker, starts `compose.store.yml`). `-- --browser pick,run,leave` adds real browsers. In CI, not in `pnpm check`. |
 
-Lint: `oxlint` (type-aware, `.oxlintrc.json`). Warnings are real findings, not noise: `pnpm lint` and CI fail on them like errors. Format: `oxfmt` (`.oxfmtrc.json`: 2 spaces, single quotes, 160 columns). Don't add `oxlint-disable` comments to get green; fix the code or change the rule in `.oxlintrc.json` with a reason.
+Lint: `oxlint` (type-aware, `.oxlintrc.json`; slag's own rules are a JS plugin, `tools/lint/slag-plugin.mjs`). Warnings are real findings, not noise: `pnpm lint` and CI fail on them like errors. Format: `oxfmt` (`.oxfmtrc.json`: 2 spaces, single quotes, 160 columns). Don't add `oxlint-disable` comments to get green; fix the code or change the rule in `.oxlintrc.json` with a reason.
 
 ## Definition of done
 
@@ -78,6 +78,7 @@ Dev URL params (`src/debug.ts`, `src/game-client.ts`): `?seed=abc`, `?theme=farm
 - **Layering.** `sim/`, `gen/`, `game/` never import `render/`, `input/`, `audio/`, `ui/`. `render/` reads sim state and never writes it. Lint enforces the imports.
 - **Client-only game.** Everything in `src/` runs in the browser; Next.js pages are thin shells (see `app/AGENTS.md`). No React or Next imports in `src/` (lint enforces).
 - **Every screen is part of the game.** The main menu, lobby list, lobby, settings, codex, About, 404 and error screens all live in `src/` and are reached from the game's own menus; a URL is just another way in. Move between screens with the `Nav` a screen is given (`nav.go(HOME)`), never `location.assign` or `history.pushState`: lint allows those only in `src/router.ts`. A new screen is a `Route` in `src/routes.ts` and an entry in `SCREENS` in `src/main.ts`, it must be reachable from a menu, and its mount returns an unmount that lets go of everything it took.
+- **Frame budget.** Every peer waits on the slowest step, so nothing inside the fixed step may take long. A level the match changes to comes from the worker that builds ahead: anything that can change the level (a rule, a menu action, the next match) must show up in `Match.upcoming()`, or the whole room stalls while the main thread generates it. Per-frame thinking (bots) gets a time budget rather than finishing a plan on the spot.
 - **Netcode state** (`docs/NETCODE.md`): sim state is plain, snapshot-friendly data (no closures or class instances holding hidden state, no order-dependent `Map` iteration). Inputs are the only per-frame data that crosses the network.
 - **Fairness.** Characters are cosmetic. Every player shares one hitbox and one physics model.
 - **Registries over switches.** Extend a subsystem through its registry, not with a new `switch` elsewhere.

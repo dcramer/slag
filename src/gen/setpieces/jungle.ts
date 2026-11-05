@@ -5,6 +5,7 @@ import { LOG_LEN, LOG_THICK } from '../../sim/props/modules/swinger';
 import { cannons, pendulums, vehicles } from './builders';
 import { defineSetPiece } from './contract';
 import { best, makeStyle, type Piece, type Recipe, SAFE_TILES, type Site } from './place';
+import { DOWN, UP } from '../../core/geom';
 
 /**
  * Jungle: a log swinging on vines to ride, a rolling temple boulder, and three things no other theme has
@@ -16,9 +17,6 @@ import { best, makeStyle, type Piece, type Recipe, SAFE_TILES, type Site } from 
  * - **Log traps**: a spiked log slung level on two ropes from the canopy, battering along its whole
  *   length across a walkway (`swinger`, head `log`).
  */
-
-const DOWN = Math.PI / 2;
-const UP = -Math.PI / 2;
 
 const leafy = (rng: Rng): PropStyle => makeStyle(rng, 'jade', [100, 120, 140], { woodHue: rng.range(20, 32), glowHue: rng.range(80, 130) });
 
