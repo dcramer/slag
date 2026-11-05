@@ -245,6 +245,11 @@ const READS_AS: Record<Kind, string> = {
   sneak: 'the sneaking soldier',
   cuptoon: 'the cup-headed toon',
   horse: "the barnyard party game's horse",
+  rapper: 'the rapping paper puppy',
+  limbless: 'the limbless hero',
+  worm: 'the worm in the super suit',
+  dragon: 'the little purple dragon',
+  hopper: 'the snouted cube hopper',
 };
 
 /**

@@ -53,12 +53,17 @@ So each kind has: a clear head-to-body ratio, a readable expression, a line of a
 | sneak | the sneaking soldier | side on, a square cardboard box on two crouched legs, his eyes in a slot, a striped bandana's two tails out of a hand-hole behind | costume: the box (its back end, tape, arrow and bandana tones of it) |
 | cuptoon | the cup-headed toon | a white enamel mug for a head, its handle out the back and a straw bent over out of the tea, black rubber-hose limbs, white gloves, high-waisted shorts, big round shoes | costume: the shorts |
 | horse | the barnyard party game's horse | on all four legs, side on: a long neck with the mane standing up along it as a crest, a long blunt head with a pale nose and buck teeth, a long straight tail hanging to the heels, flat hooves; a scarf and a zip (a costume) | costume: the coat, the far legs and the scarf darks of it |
+| rapper | the rapping paper puppy | paper-thin, a flat cut-out with an edge: a tall knit beanie, long floppy ears under it, a round nose, a baggy tee and shorts, big trainers, a microphone | costume: the beanie and tee, the shorts a dark of it |
+| limbless | the limbless hero | no arms or legs: white gloves and big shoes floating clear of a small round body, a big nose, a spiky hair tuft standing up, a neckerchief | costume: the top, the shoes a tone of it |
+| worm | the worm in the super suit | a bulky suit with huge shoulders, a worm's head on a long bendy neck rising out of the collar with bulging eyes, a big chunky pistol in one hand | costume: the suit, the boots and gloves a dark of it |
+| dragon | the little purple dragon | small, on four legs: horns swept back, stubby wings, a pale belly, a tail ending in an arrowhead | costume: the scales, the wings a light of it |
+| hopper | the snouted cube hopper | a round ball on two big feet, no arms, big eyes, a long tube snout sticking straight out front; hops | costume: the ball, the snout a tone of it |
 
 **Is it the homage?** `cast-recognise.png` puts each kind close up beside "This is ___", in its roster colour. Every sheet waits for the rendered kinds' frames (`slagDebug.sprites.ready()`), so it shows what ships; before 2026-11-02 the catalog, recognise and silhouette sheets drew those kinds hand-drawn, so the reads below were judged on the old bodies. As of this round, every homage reads as its caption to us: the plumber, speedster, elf, mouse, impostor, puffball, jelly and goose at once; the bounty hunter and the engineer a beat slower, because their reads lean on props (the shoulder pads and cannon, the hat and wrench) more than on a silhouette nobody else shares. The silhouette test still separates every kind, though the plumber and the hunter are the closest pair of stout shapes.
 
 ## Roster (all homages)
 
-The cast this is heading to: **twenty kinds, the greatest game characters to parody**, every one a homage, because the lore makes the runners the characters who never made the cut, the knock-off heroes who almost got their own game. The ten homages from round 5 stay, and so do five of the six round-6 picks. The four plain animals (fox, frog, penguin, chicken) go.
+The cast this is heading to: **twenty kinds, the greatest game characters to parody**, every one a homage, because the lore makes the runners the characters who never made the cut, the knock-off heroes who almost got their own game. The ten homages from round 5 stay, and so do five of the six round-6 picks. The four plain animals (fox, frog, penguin, chicken) go. Round 10 (owner, 2026-11-04) adds five retro picks past the twenty: the rapping paper puppy, the limbless hero, the worm in the super suit, the little purple dragon and the snouted cube hopper.
 
 This spec feeds the art pipeline (Rendered kinds below): a design at game size, worn in an edit and drawn in each pose, traced flat into the cast's own shapes. Each entry is written to be used as prompt material, so it describes traits only and never names a real character. Every kind is our own design: it must read as the homage from its silhouette and props, never copy the original's exact design, and never carry its name or logo. Sound-alike names stay in data (`KIND_NAMES`). **The nod is the silhouette; the rest is ours.** A concept that looks like the original redrawn is rejected, however good it looks.
 
@@ -417,6 +422,76 @@ What came out of it:
 - **Rig:** first drawn flat upright on two legs (2026-11-04): a game-size design with the scarf, zip and patch added in a wear edit (over the prompt's length the image model dropped the scarf) and the head tilted down and the tail narrowed in a second; eleven poses drawn three to a sheet (`art/sprites/horse/design.prompt.txt`). Each drawing's near pupil is repainted solid: drawn, a pupil was a ring of ink round its glint, taken for the line, and the far one sits on the outline. Blind reads (2026-11-04, ten fresh readers over five drawings): never named; read as Fox McCloud or a plain fox ("pointed snout and ears, bushy tail, stands upright on two legs", low) and as the bandicoot ("spiky tuft on the head, lanky", low to medium), as a level head, a shaggy mane, tall ears or a fanned tail made it a canine. In colour it reads as a horse at once. Redrawn on four legs the same day: a new game-size design side on, with the mane a stiff crest along a long neck and a blunt boxy muzzle, the long tail added in an edit (the design drew none) and the scarf, zip and knee patch in the wear edit; eleven poses drawn three to a 16:9 sheet, cut apart and scaled to the design's ink (`art/sprites/horse/cut.py`), every open eye's near pupil inked solid (`pupils.py`). The walk is a trot, the run a gallop stretched out and gathered (drawn at 0.86 of the body size, or its nose and tail leave the box), the air a leap and a buck (0.8: the buck's tail stands up past the box's top), the wall slide rearing against the wall with its front hooves braced on it, the cheers a rear and a buck, the knockout on its side with all four legs stiff in the air. Two fresh readers then named it at once: "Plain horse (maybe Epona), medium-high. Gallops on four legs with a flowing tail and long neck. Stands rearing up in row 1, leaps in row 3"; "Plain horse, medium. Horse head and neck, gallops on four legs in the run frame and rears in the jump. The standing pose looks oddly upright, almost sitting or centaur-like." Neither paired it with another kind when asked whether any two figures could be the same character. The hand-drawn fallback is a horse on four legs too.
 - **Concept prompt:** A goofy cartoon horse standing on all four legs, seen from its side, with a long neck rising steeply from its chest, a short stiff dark mane standing up along the neck in one neat crest, a long blunt boxy head pointing forward and down with a pale cream nose, a big nostril and big flat buck teeth in a grin, a long straight dark tail hanging to its heels and flat dark hooves wider than its legs; it is clearly a cheap costume, with a silver zip down its chest stuck open at the bottom, a grey patch sewn on one knee and a red knitted scarf wound round its neck.
 
+### The rapping paper puppy (new)
+- **Kind:** `rapper` · **Name:** Parapper
+- **A stranger should say:** "the rapping dog in the beanie."
+- **Silhouette:** paper-thin: a flat cut-out of a puppy standing on its edge, so a sliver of card shows down his back; a tall knit beanie standing up on top, long floppy ears hanging under it, a round nose out front, a microphone held up to his mouth.
+- **Traits:** a tall knit beanie with a turned-up band; long floppy ears; a round nose on a short snout; a baggy tee, baggy shorts and big trainers; a microphone in one hand; the body flat as card, with an edge.
+- **Palette:** the beanie and the tee in the player's colour, the shorts a dark of it; the fur a neutral cream, the trainers neutral, the mic grey.
+- **Color slot:** costume.
+- **Gait:** a bouncy strut on the beat, the head bobbing.
+- **The nod:** the tall beanie (the head's outline); the floppy ears (a dog); the flat card body with its edge (the paper look the original is known for); the microphone (the rapper).
+- **Our twist:** he's a cardboard shop standee come loose: a fold crease across his middle, a fold-out easel leg flat against his back, and the mic a karaoke mic on a coiled cord. The beanie is hand-knitted with a dropped stitch.
+- **Swaps:** a sticker on the tee; a sweatband; a plaster on the nose; a price sticker on the card's edge.
+- **Rig:** to draw flat (2026-11-04).
+- **Concept prompt:** A paper-thin cartoon puppy drawn as a flat cardboard cut-out standing on its edge, a sliver of card showing down its back, in a tall knit beanie with a turned-up band, long floppy ears hanging under it, a round nose, a baggy tee, baggy shorts and big trainers, holding a karaoke microphone on a coiled cord up to its mouth; a fold crease across its middle.
+
+### The limbless hero (new)
+- **Kind:** `limbless` · **Name:** Raymond
+- **A stranger should say:** "the hero with no arms or legs."
+- **Silhouette:** a small round body and a big-nosed head with a spiky hair tuft standing up, and nothing joining it to its white gloves and big shoes: each floats clear of the body with background all round it.
+- **Traits:** no arms or legs; big white gloves; big shoes; a big nose; a spiky hair tuft he can spin; a hooded top with a round mark of ours on the chest (never the original's); a neckerchief.
+- **Palette:** the top in the player's colour, the shoes a tone of it; gloves white, skin and hair neutral, the neckerchief a neutral.
+- **Color slot:** costume.
+- **Gait:** the shoes step on their own under him, the gloves swing ahead and behind; in the air the hair tuft spins.
+- **The nod:** the gaps where the limbs should be (the read: nobody else has them); the floating gloves and shoes; the hair tuft standing up; the big nose.
+- **Our twist:** a knock-off: the gloves are yellow washing-up gloves bleached white, one shoe is a size bigger than the other, and a safety pin holds the neckerchief.
+- **Swaps:** a plaster on the nose; a price tag on one glove; a sticker on the top.
+- **Rig:** to draw flat (2026-11-04). Its hands and feet are separate pieces from the body in every drawing: cut sheets so the floating parts stay with their figure.
+- **Concept prompt:** A cartoon hero with no arms and no legs: a small round body in a hooded top with a round badge, a big-nosed head with a spiky tuft of hair standing up, a neckerchief held with a safety pin, and big white rubber gloves and two big mismatched shoes floating clear of the body with space all round them.
+
+### The worm in the super suit (new)
+- **Kind:** `worm` · **Name:** Earthworm Gym
+- **A stranger should say:** "the earthworm in the space suit."
+- **Silhouette:** a bulky suit with huge shoulders on stocky legs, and out of its collar a worm's head on a long bendy neck, rising and leaning, with two bulging eyes; a big chunky pistol held out in one hand, at the hip, never level at the shoulder like the hunter's cannon.
+- **Traits:** a bulky suit with huge round shoulders; a worm's pink head on a long thin neck out of the collar; bulging eyes and a wide grin; a big chunky pistol in one hand; heavy boots and gloves.
+- **Palette:** the suit in the player's colour, the boots and gloves a dark of it; the worm a neutral pink (a face), the pistol grey metal.
+- **Color slot:** costume.
+- **Gait:** a heavy suit stomp, the worm's neck whipping about over it.
+- **The nod:** the worm on a stalk out of the collar (the read); the huge-shouldered suit; the pistol.
+- **Our twist:** the suit is a second-hand boiler suit stuffed with pillows at the shoulders, and the pistol is a hair dryer with its cord trailing.
+- **Swaps:** a plaster on the worm; a patch on the suit; a pencil behind where an ear would be.
+- **Rig:** to draw flat (2026-11-04).
+- **Concept prompt:** A cartoon earthworm wearing a bulky boiler suit stuffed out into huge round shoulders, its pink worm head on a long thin bendy neck rising out of the collar, with two bulging eyes and a wide grin, heavy boots and gloves, holding a big chunky hair dryer like a pistol at its hip, its cord trailing.
+
+### The little purple dragon (new)
+- **Kind:** `dragon` · **Name:** Spiro
+- **A stranger should say:** "the little purple dragon."
+- **Silhouette:** small and low on four legs, seen from the side: horns swept back off the head, stubby wings up off the back, a tail out behind ending in an arrowhead tip. Lower and smaller than the horse, never upright like the dino.
+- **Traits:** horns swept back; a short snout; stubby wings; a pale belly; a ridge of small spines down the back; an arrowhead tail tip; big eyes.
+- **Palette:** the scales in the player's colour, the wings a light of it; the belly, horns and spines neutral bone.
+- **Color slot:** costume.
+- **Gait:** a quick scampering trot, the wings flicking; a glide with the wings out in the air.
+- **The nod:** the swept-back horns and stubby wings (the head and back outline); four legs, small (the build); the arrowhead tail (the tip).
+- **Our twist:** his wings are patched umbrella cloth on bent spokes, and a firefly in a jam jar is tied to his tail.
+- **Swaps:** a plaster on the snout; a chipped horn; soot on the nose.
+- **Rig:** to draw flat (2026-11-04).
+- **Concept prompt:** A small cartoon dragon standing on four legs, seen from its side, with horns swept back off its head, a short snout, big eyes, stubby wings made of patched umbrella cloth on bent spokes, a pale belly, a ridge of small spines down its back, and a tail ending in an arrowhead tip with a firefly in a jam jar tied to it.
+
+### The snouted cube hopper (new)
+- **Kind:** `hopper` · **Name:** Kewbert
+- **A stranger should say:** "the orange ball with the long nose that hops."
+- **Silhouette:** a round ball on two big feet, no arms, and a long tube snout sticking straight out front, wider at its open end; big eyes on top. The snout is what parts it from the puffball.
+- **Traits:** a round furry ball body; a long tube snout with an open end; big eyes; two short legs with big feet; no arms.
+- **Palette:** the ball in the player's colour, the snout a tone of it; the feet neutral.
+- **Color slot:** costume.
+- **Gait:** hops, both feet together, never walks.
+- **The nod:** the tube snout (the read); the ball on two feet with no arms; the hop.
+- **Our twist:** the snout is a party blower that unrolls when he cheers, and the feet are in worn old trainers. When it swears it shows a scribble cloud, never letters.
+- **Swaps:** a plaster on the ball; a party hat; a sticker.
+- **Rig:** to draw flat (2026-11-04).
+- **Concept prompt:** A round furry cartoon ball with no arms, standing on two short legs with big feet in worn old trainers, big eyes on top, and a long tube snout sticking straight out front, wider at its open end, like a party blower.
+
 ### The jellyfish parasite
 - **Kind:** `jelly` · **Name:** Meltroid
 - **A stranger should say:** "the floating jellyfish thing from the space game."
@@ -458,6 +533,11 @@ The strongest reads first. **Keyed** marks the non-humanoids, the riskiest: thei
 | 18 | goose | Honkers | **keyed**, bird | high: wings and neck |
 | 19 | horse | Hoarse | **keyed**, quadruped | done (on four legs) |
 | 20 | jelly | Meltroid | **keyed**, no limbs | high: translucency |
+| 21 | rapper | Parapper | humanoid, flat card | low |
+| 22 | limbless | Raymond | **keyed**, floating hands and feet | medium: parts apart from the body |
+| 23 | worm | Earthworm Gym | humanoid + head stalk | medium: the neck |
+| 24 | dragon | Spiro | **keyed**, quadruped | medium: wings and tail |
+| 25 | hopper | Kewbert | **keyed**, legs only | low |
 
 The hunter and the engineer sit late although they're easy to rig: their hand-drawn versions read a beat slower than the rest, so they gain least from going first.
 

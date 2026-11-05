@@ -10,6 +10,11 @@ import { art as robot } from './art/robot';
 import { art as sneak } from './art/sneak';
 import { art as cuptoon } from './art/cuptoon';
 import { art as horse } from './art/horse';
+import { art as rapper } from './art/rapper';
+import { art as limbless } from './art/limbless';
+import { art as worm } from './art/worm';
+import { art as dragon } from './art/dragon';
+import { art as hopper } from './art/hopper';
 import { type D, type KindArt, line, mark, ORANGE, ORANGE_SH, oval, poly, spot, STEEL, STEEL_SH, toned, tonedOval, Y } from './kit';
 
 /**
@@ -913,4 +918,9 @@ export const KINDS: Record<Kind, KindArt> = {
   sneak,
   cuptoon,
   horse,
+  rapper,
+  limbless,
+  worm,
+  dragon,
+  hopper,
 };

@@ -31,6 +31,11 @@ export const CAST = [
   'sneak',
   'cuptoon',
   'horse',
+  'rapper',
+  'limbless',
+  'worm',
+  'dragon',
+  'hopper',
 ] as const;
 export type Kind = (typeof CAST)[number];
 
@@ -85,6 +90,11 @@ export const KIND_NAMES: Record<Kind, string> = {
   sneak: 'Snek',
   cuptoon: 'Mughead',
   horse: 'Hoarse',
+  rapper: 'Parapper',
+  limbless: 'Raymond',
+  worm: 'Earthworm Gym',
+  dragon: 'Spiro',
+  hopper: 'Kewbert',
 };
 
 /**
@@ -112,6 +122,11 @@ const PAINTS: Record<Kind, readonly HSL[]> = {
   sneak: [hsl3(35, 42, 55)],
   cuptoon: [hsl3(2, 65, 50)],
   horse: [hsl3(25, 50, 40)],
+  rapper: [hsl3(36, 85, 55)],
+  limbless: [hsl3(275, 45, 45)],
+  worm: [hsl3(205, 30, 62)],
+  dragon: [hsl3(285, 50, 50)],
+  hopper: [hsl3(22, 85, 52)],
 };
 
 /** How many `vary` rolls a character has, and how many of them come from the look's main stream. */
