@@ -373,7 +373,8 @@ export function eyesOf(face: FaceKit, eyes: readonly number[]): EyeAt[] {
  * The face on one frame. `eyes` is the frame's x, y, radius triples (eighths of a world px, near eye
  * first) and `head` its head (middle, radius, tilt in degrees), which turns the face with it. `figure` is the
  * frame's outline: the eyes are drawn inside it, so one set near the head's edge never pokes past the line
- * (the brows may stand clear of it, as a cartoon's do).
+ * (the brows may stand clear of it, as a cartoon's do). `lid` is the colour `face.lid` paints over a drawn white when
+ * the eyes shut.
  */
 export function drawFace(
   s: CanvasRenderingContext2D,
@@ -385,12 +386,14 @@ export function drawFace(
   seed: number,
   head?: readonly number[],
   figure?: readonly (readonly P[])[],
+  lid?: string,
 ) {
   const at = eyesOf(face, eyes);
   if (!at.length) return;
   const art = EYES[face.eye ?? 'round'];
   const blink = m === 'idle' && Math.sin(t * 1.3 + seed * 7) > 0.985;
   const tilt = head ? (head[3] * Math.PI) / 180 : 0;
+  const shut = blink || m === 'cheer' || m === 'dead';
   // Back to front, so the near eye overlaps the far one as it would on a turned head.
   for (let k = at.length - 1; k >= 0; k--) {
     const e = at[k];
@@ -402,6 +405,7 @@ export function drawFace(
     s.save();
     if (figure) clipTo(s, figure);
     to();
+    if (shut && lid && face.lid) poly(s, oval(0, 0, e.r * face.lid.r, e.r * face.lid.r * 1.15, 12), lid);
     eye(s, face, m, f, e.r, blink, k > 0, seed + k * 3);
     s.restore();
     if (!art.brow || blink) continue;

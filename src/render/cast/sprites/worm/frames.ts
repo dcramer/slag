@@ -21,7 +21,7 @@ export const sprites: SpriteSet = {
     { name: 'plaster', vary: 1, options: 2 },
     { name: 'wear', vary: 11, options: 3 },
   ],
-  face: { r: 0.7, iris: '#2a1f1a' },
+  face: { r: 0.7, iris: '#2a1f1a', far: 'sliver', lid: { role: 4, r: 2 } },
   gait: { bounce: [0.2, 0.8], lean: [0, 0.03] },
   clips: {
     idle: {
