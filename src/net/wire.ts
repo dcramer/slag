@@ -52,7 +52,9 @@ export const ACTS_PER_BUNDLE = 128;
 export const BUNDLES_PER_MSG = 120;
 /** Local devices one peer's frame names: keyboards, pads, touch, and the bots a host runs. */
 const DEVICES_PER_PEER = 16;
-/** Entries in a table kept per peer, or per peer that ever came by (acks and pings are never pruned on a guest). */
+/** Entries in a table of the room's peers (acks, pings): the session forgets peers that left. */
+const PEER_KEYS = 64;
+/** Entries in a table of replicated session state, which remembers peers that left (parked looks, bans). */
 const STATE_KEYS = 256;
 const ID_CHARS = 64;
 const TEXT_CHARS = 1024;
@@ -121,7 +123,7 @@ const parseEnc: Parse<Enc> = (v) => {
 const parsePeerFrame: Parse<PeerFrame> = (v) => record(v, DEVICES_PER_PEER, parseEnc, localDevice);
 const parseInputs = (v: unknown) => record(v, MAX_PEERS * DEVICES_PER_PEER, parseEnc);
 const parsePair: Parse<[number, number]> = (v) => (Array.isArray(v) && v.length === 2 && num(v[0]) && num(v[1]) ? [v[0], v[1]] : null);
-const parseAcks = (v: unknown) => record(v, STATE_KEYS, parsePair);
+const parseAcks = (v: unknown) => record(v, PEER_KEYS, parsePair);
 
 const hsl = (v: unknown) => isObj(v) && num(v.h) && num(v.s) && num(v.l);
 const kind = oneOf(CAST);
@@ -281,7 +283,7 @@ const MSG_PARSERS: { [K in Msg['t']]: (m: Record<string, unknown>) => Extract<Ms
   ping: (m) => (num(m.ts) ? { t: 'ping', ts: m.ts } : null),
   pong: (m) => (num(m.ts) ? { t: 'pong', ts: m.ts } : null),
   pings: (m) => {
-    const p = record(m.p, STATE_KEYS, ok(num));
+    const p = record(m.p, PEER_KEYS, ok(num));
     return p && { t: 'pings', p };
   },
   kicked: (m) => {

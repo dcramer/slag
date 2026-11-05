@@ -25,7 +25,7 @@ import {
 } from './actions';
 import { CONFIRM_BIT, decode, type Enc, encode, held, heldPeerFrame, mergePeerFrames, type PeerFrame, PRESSED } from './codec';
 import { Predictor } from './predict';
-import type { RoomListing } from './signal-protocol';
+import { MAX_PEERS, type RoomListing } from './signal-protocol';
 import { hashMatch, hashSnap, type MatchSnap, restoreMatch, snapshotMatch } from './snapshot';
 import type { LinkStatus, Member, Transport } from './transport';
 import { ACTS_PER_BUNDLE, ACTS_PER_MSG, type Bundle, BUNDLES_PER_MSG, FRAMES_PER_MSG, type Msg, parseMsg } from './wire';
@@ -83,6 +83,13 @@ const CORRECTION_MAX_STEPS = 4;
  * From there the idle rules (game/match.ts) decide when the room stops waiting on it.
  */
 const SOFT_TICKS = 60;
+/**
+ * Requests one guest gets sequenced per host tick; the rest wait in its next message, unacked. A guest flooding
+ * requests (or messages) only ever gets this many, so nobody else's wait on the host grows with it.
+ */
+export const ACTS_PER_TICK = 4;
+/** Ack entries a guest keeps before forgetting peers no longer here (the host forgets them as they go). */
+const ACKS_KEEP = 2 * MAX_PEERS;
 /** An observer ahead of a player in join order waits this long, then moves to the back (see maybeReorder). */
 const REORDER_AFTER_MS = 2000;
 const REORDER_EVERY_MS = 10_000;
@@ -164,6 +171,8 @@ interface RemoteQueue {
   last: PeerFrame;
   /** Host ticks in a row with nothing queued. */
   dry: number;
+  /** Requests sequenced from this peer since the host's last tick (see ACTS_PER_TICK). */
+  took: number;
 }
 
 export class NetSession {
@@ -626,6 +635,8 @@ export class NetSession {
       this.queues.delete(id);
       this.sentK.delete(id);
     }
+    // A peer that comes back says hello and is measured again.
+    for (const map of [this.rtt, this.heard, this.clients]) for (const id of map.keys()) if (!present.has(id)) map.delete(id);
     if (host !== this.hostId) this.changeHost(host);
     else if (this.role === 'host' && !this.resumed && list.length === 1) this.tryResume();
     if (this.collecting && this.role !== 'host') this.collecting = null;
@@ -695,7 +706,7 @@ export class NetSession {
       const k = this.acks[m.id] ?? [0, 0];
       const last: PeerFrame = {};
       for (const [dev, e] of Object.entries(this.lastInputs)) if (peerOf(dev) === m.id) last[localOf(dev)] = e;
-      this.queues.set(m.id, { frames: [], consumed: k[0], actN: k[1], ackN: k[1], last: heldPeerFrame(last), dry: 0 });
+      this.queues.set(m.id, { frames: [], consumed: k[0], actN: k[1], ackN: k[1], last: heldPeerFrame(last), dry: 0, took: 0 });
     }
   }
 
@@ -878,7 +889,7 @@ export class NetSession {
   private queue(peer: string): RemoteQueue {
     let q = this.queues.get(peer);
     if (!q) {
-      q = { frames: [], consumed: 0, actN: 0, ackN: 0, last: {}, dry: 0 };
+      q = { frames: [], consumed: 0, actN: 0, ackN: 0, last: {}, dry: 0, took: 0 };
       this.queues.set(peer, q);
     }
     return q;
@@ -894,6 +905,9 @@ export class NetSession {
     }
     for (const [n, a] of msg.a ?? []) {
       if (n <= q.actN) continue;
+      // Unacked, so the guest sends it again: its requests stay in order, only later.
+      if (q.took >= ACTS_PER_TICK) break;
+      q.took++;
       q.actN = n;
       if (a.t === 'join') {
         if (peerOf(a.dev) === from) this.wants.add(a.dev); // seated by reconcile() between rounds
@@ -950,6 +964,7 @@ export class NetSession {
     const k: Record<string, [number, number]> = {};
     for (const [peer, q] of this.queues) {
       q.ackN = q.actN; // every action sequenced so far goes out in this bundle
+      q.took = 0;
       const sig = `${q.consumed},${q.actN}`;
       if (this.sentK.get(peer) !== sig) {
         this.sentK.set(peer, sig);
@@ -1231,6 +1246,12 @@ export class NetSession {
     this.lastInputs = b.i ?? {};
     if (b.k) {
       for (const [p, v] of Object.entries(b.k)) this.acks[p] = v;
+      // Only a member's acks seed a new host's queues (rebuildQueues). Kept until the table grows, so a peer that
+      // drops out of our list for a moment keeps its place.
+      if (Object.keys(this.acks).length > ACKS_KEEP) {
+        const present = new Set(this.members.map((x) => x.id));
+        for (const p of Object.keys(this.acks)) if (!present.has(p)) delete this.acks[p];
+      }
       const mine = b.k[this.self];
       if (mine) this.prune(mine);
     }
