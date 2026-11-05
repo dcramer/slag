@@ -27,7 +27,8 @@ const BRIGHT_FS = `#version 300 es
 precision highp float; in vec2 uv; out vec4 o;
 uniform sampler2D uGlow;
 void main(){
-  vec3 c = texture(uGlow, uv).rgb;
+  // The glow layer is uploaded top row first (see Layer), so read it flipped: the bloom targets come out in GL space.
+  vec3 c = texture(uGlow, vec2(uv.x, 1.0 - uv.y)).rgb;
   float m = max(c.r, max(c.g, c.b));
   o = vec4(c * smoothstep(${BLOOM_KNEE[0]}, ${BLOOM_KNEE[1]}, m) * 0.7, dot(c, vec3(0.299, 0.587, 0.114)) * 0.7);
 }`;
@@ -58,6 +59,18 @@ export interface PostParams {
   ambient: number;
   /** Mist: a small canvas whose alpha is how thick the air is, or null for clear air (render/weather.ts). */
   mist?: HTMLCanvasElement | null;
+}
+
+/**
+ * A canvas layer's texture. Storage is allocated once per size (`texStorage2D`) and each frame only writes into
+ * it (`texSubImage2D`): redefining a full-screen texture every frame, four times, made the GPU process find room
+ * for it again each time. The canvas goes up as it is, top row first; the shaders read it through a flip
+ * (`T` in cel-shader.ts), which costs nothing there, where a flipped upload may be a copy on some browsers.
+ */
+interface Layer {
+  tex: WebGLTexture;
+  w: number;
+  h: number;
 }
 
 interface Target {
@@ -111,12 +124,12 @@ class GLCompositor implements Compositor {
   private progBright!: WebGLProgram;
   private progBlur!: WebGLProgram;
   private progCel!: WebGLProgram;
-  private texScene!: WebGLTexture;
-  private texFg!: WebGLTexture;
-  private texLight!: WebGLTexture;
-  private texGlow!: WebGLTexture;
+  private texScene!: Layer;
+  private texFg!: Layer;
+  private texLight!: Layer;
+  private texGlow!: Layer;
   private texNoise!: WebGLTexture;
-  private texMist!: WebGLTexture;
+  private texMist!: Layer;
   private hasMist = false;
   private half: [Target, Target] | null = null;
   private quarter!: [Target, Target];
@@ -174,15 +187,17 @@ class GLCompositor implements Compositor {
       gl.enableVertexAttribArray(a);
       gl.vertexAttribPointer(a, 2, gl.FLOAT, false, 0, 0);
     }
-    this.texScene = this.tex();
-    this.texFg = this.tex();
-    this.texLight = this.tex();
-    this.texGlow = this.tex();
+    // Canvas pixels are premultiplied internally; ask for that so faint additive glow stays faint.
+    gl.pixelStorei(gl.UNPACK_PREMULTIPLY_ALPHA_WEBGL, true);
+    this.texScene = this.layer();
+    this.texFg = this.layer();
+    this.texLight = this.layer();
+    this.texGlow = this.layer();
     this.texNoise = this.tex();
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.REPEAT);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.REPEAT);
     gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA8, NOISE_SIZE, NOISE_SIZE, 0, gl.RGBA, gl.UNSIGNED_BYTE, celNoise());
-    this.texMist = this.tex();
+    this.texMist = this.layer();
     this.clearMist();
     this.targets();
   }
@@ -211,8 +226,8 @@ class GLCompositor implements Compositor {
   /** One clear texel, so a clear level pays for neither an upload nor a branch in the frame loop. */
   private clearMist() {
     const gl = this.gl;
-    gl.bindTexture(gl.TEXTURE_2D, this.texMist);
-    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA8, 1, 1, 0, gl.RGBA, gl.UNSIGNED_BYTE, new Uint8Array(4));
+    this.fit(this.texMist, 1, 1);
+    gl.texSubImage2D(gl.TEXTURE_2D, 0, 0, 0, 1, 1, gl.RGBA, gl.UNSIGNED_BYTE, new Uint8Array(4));
   }
 
   private shader(type: number, src: string): WebGLShader {
@@ -244,6 +259,27 @@ class GLCompositor implements Compositor {
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
     return t;
+  }
+
+  private layer(): Layer {
+    return { tex: this.tex(), w: 0, h: 0 };
+  }
+
+  /**
+   * Bind a layer's texture with storage for w×h. Immutable storage can't change size, so a new size (a resize,
+   * the mist's size changing) takes a new texture.
+   */
+  private fit(l: Layer, w: number, h: number) {
+    const gl = this.gl;
+    if (l.w === w && l.h === h) {
+      gl.bindTexture(gl.TEXTURE_2D, l.tex);
+      return;
+    }
+    gl.deleteTexture(l.tex);
+    l.tex = this.tex();
+    gl.texStorage2D(gl.TEXTURE_2D, 1, gl.RGBA8, w, h);
+    l.w = w;
+    l.h = h;
   }
 
   private target(w: number, h: number): Target {
@@ -286,11 +322,11 @@ class GLCompositor implements Compositor {
     return names.get(name)!;
   }
 
-  private upload(t: WebGLTexture, src: HTMLCanvasElement, unit: number) {
+  private upload(l: Layer, src: HTMLCanvasElement, unit: number) {
     const gl = this.gl;
     gl.activeTexture(gl.TEXTURE0 + unit);
-    gl.bindTexture(gl.TEXTURE_2D, t);
-    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, src);
+    this.fit(l, Math.max(1, src.width), Math.max(1, src.height));
+    gl.texSubImage2D(gl.TEXTURE_2D, 0, 0, 0, gl.RGBA, gl.UNSIGNED_BYTE, src);
   }
 
   private bindTex(t: WebGLTexture, unit: number) {
@@ -322,9 +358,6 @@ class GLCompositor implements Compositor {
     if (this.stand) return this.stand.comp.render(scene, fg, light, glow, p);
     const gl = this.gl;
     const half = this.half!;
-    gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true);
-    // Canvas pixels are premultiplied internally; ask for that so faint additive glow stays faint.
-    gl.pixelStorei(gl.UNPACK_PREMULTIPLY_ALPHA_WEBGL, true);
     this.upload(this.texScene, scene, 0);
     this.upload(this.texLight, light, 1);
     this.upload(this.texGlow, glow, 2);
@@ -359,12 +392,12 @@ class GLCompositor implements Compositor {
     gl.bindFramebuffer(gl.FRAMEBUFFER, null);
     gl.viewport(0, 0, this.w, this.h);
     gl.useProgram(f);
-    this.bindTex(this.texScene, 0);
-    this.bindTex(this.texLight, 1);
-    this.bindTex(this.texGlow, 2);
+    this.bindTex(this.texScene.tex, 0);
+    this.bindTex(this.texLight.tex, 1);
+    this.bindTex(this.texGlow.tex, 2);
     this.bindTex(half[0].tex, 3);
     this.bindTex(this.quarter[0].tex, 4);
-    this.bindTex(this.texMist, 6);
+    this.bindTex(this.texMist.tex, 6);
     gl.uniform1i(this.u(f, 'uScene'), 0);
     gl.uniform1i(this.u(f, 'uLight'), 1);
     gl.uniform1i(this.u(f, 'uGlow'), 2);

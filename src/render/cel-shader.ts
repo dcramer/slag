@@ -142,6 +142,9 @@ uniform vec3 uView; uniform sampler2D uNoise;
 const vec3 INK = vec3(0.0706, 0.0431, 0.0314);
 const vec3 BONE = vec3(0.9647, 0.9176, 0.8471);
 const vec2 RING[8] = vec2[8](vec2(-1, 1), vec2(0, 1.41), vec2(1, 1), vec2(-1.41, 0), vec2(1.41, 0), vec2(-1, -1), vec2(0, -1.41), vec2(1, -1));
+// The layers go up as the canvases hold them, top row first (no flip on upload, post.ts): read one at the
+// GL-space point p through T(p). The bloom targets are drawn in GL space and are read at p itself.
+vec2 T(vec2 p){ return vec2(p.x, 1.0 - p.y); }
 float luma(vec3 c){ return dot(c, vec3(0.299, 0.587, 0.114)); }
 vec3 sat(vec3 c, float s){ return mix(vec3(luma(c)), c, s); }
 // 'v' snapped to 'n' flat steps. Only the edge between two steps is antialiased, so it stays one crisp line.
@@ -161,9 +164,9 @@ void main(){
 
   // Light bands, from the real light map. Its alpha marks the rendered figures (Renderer.markFigures), and
   // the upload premultiplied the light by it.
-  vec4 lm = texture(uLight, uv);
+  vec4 lm = texture(uLight, T(uv));
   vec3 L = lm.rgb / max(lm.a, 0.05) * 2.0 * uExposure;
-  float fig = clamp((1.0 - texture(uLight, fuv).a) * 2.0, 0.0, 1.0);
+  float fig = clamp((1.0 - texture(uLight, T(fuv)).a) * 2.0, 0.0, 1.0);
   float ll = max(luma(L), 1e-3);
   float rel = ll / max(uAmbient, 0.05);
   float aa = fwidth(rel) * 0.75 + 0.004;
@@ -175,15 +178,15 @@ void main(){
 
   // Backdrop: smooth, dimmed, and only partly banded.
   float bgLit = min(1.0, ${f(K.bgBands)} * (1.0 - uAmbient));
-  vec3 c = texture(uScene, uv).rgb;
+  vec3 c = texture(uScene, T(uv)).rgb;
   c *= mix(base * ${f(K.bgExposure)}, 1.0, smoothstep(0.6, 0.95, luma(c)) * ${f(K.bgHigh)}) * mix(1.0, band, bgLit) * mix(vec3(1.0), tint, bgLit);
   c = sat(c, ${f(K.bgSat)});
 
   // Hard shadow from every foreground shape.
-  c *= mix(1.0, ${f(K.shadow)}, smoothstep(0.45, 0.6, texture(uFg, fuv + uShadow).a));
+  c *= mix(1.0, ${f(K.shadow)}, smoothstep(0.45, 0.6, texture(uFg, T(fuv + uShadow)).a));
 
   // Foreground: premultiplied, so undo it to get the flat color back.
-  vec4 fg = texture(uFg, fuv);
+  vec4 fg = texture(uFg, T(fuv));
   float a = fg.a;
   if (a > 0.003) {
     vec3 alb = fg.rgb / a;
@@ -199,7 +202,7 @@ void main(){
   }
 
   // Emissives: a soft halo, then hot shapes as opaque color, white only at the very core.
-  vec3 raw = texture(uGlow, uv).rgb;
+  vec3 raw = texture(uGlow, T(uv)).rgb;
   vec4 bloom = texture(uBloomA, uv);
   vec3 G = raw + bloom.rgb * ${f(K.bloom[0])} + texture(uBloomB, uv).rgb * ${f(K.bloom[1])};
   float gm = max(G.r, max(G.g, G.b));
@@ -221,15 +224,15 @@ void main(){
   for (int i = 0; i < 8; i++) {
     vec2 dir = RING[i];
     float lean = 1.0 + ${f(K.lean)} * dot(normalize(dir), vec2(-0.55, 0.83)) * 1.4;
-    vec4 t = texture(uFg, fuv + px * dir * lean);
+    vec4 t = texture(uFg, T(fuv + px * dir * lean));
     ring = max(ring, t.a);
     near += t.rgb;
     nearA += t.a;
   }
   float line = smoothstep(0.4, 0.62, ring) * (1.0 - smoothstep(0.25, 0.7, a));
   vec2 fp = ${f(K.fine)} * k / uRes;
-  vec3 ga = sqrt(texture(uFg, fuv + fp).rgb) - sqrt(texture(uFg, fuv - fp).rgb);
-  vec3 gb = sqrt(texture(uFg, fuv + vec2(fp.x, -fp.y)).rgb) - sqrt(texture(uFg, fuv + vec2(-fp.x, fp.y)).rgb);
+  vec3 ga = sqrt(texture(uFg, T(fuv + fp)).rgb) - sqrt(texture(uFg, T(fuv - fp)).rgb);
+  vec3 gb = sqrt(texture(uFg, T(fuv + vec2(fp.x, -fp.y))).rgb) - sqrt(texture(uFg, T(fuv + vec2(-fp.x, fp.y))).rgb);
   float e = sqrt(dot(ga * ga + gb * gb, vec3(0.3, 0.5, 0.2)));
   line = max(line, smoothstep(${f(K.edge[0])}, ${f(K.edge[1])}, e) * smoothstep(0.6, 0.95, a) * ${f(K.fineInk)} * (0.45 + 0.55 * press));
   // Tinted line: a dark version of what it outlines, not one black.
@@ -239,15 +242,15 @@ void main(){
   // Hot glow casing: ink around the whole shape of a beam or flame.
   float hot = smoothstep(${f(K.hot)}, ${f(K.hot + 0.18)}, rawL);
   vec2 gp = px * 1.15;
-  float nearGlow = max(max(luma(texture(uGlow, uv + gp).rgb), luma(texture(uGlow, uv - gp).rgb)),
-                   max(luma(texture(uGlow, uv + vec2(gp.x, -gp.y)).rgb), luma(texture(uGlow, uv + vec2(-gp.x, gp.y)).rgb)));
+  float nearGlow = max(max(luma(texture(uGlow, T(uv + gp)).rgb), luma(texture(uGlow, T(uv - gp)).rgb)),
+                   max(luma(texture(uGlow, T(uv + vec2(gp.x, -gp.y))).rgb), luma(texture(uGlow, T(uv + vec2(-gp.x, gp.y))).rgb)));
   float big = smoothstep(${f(K.hotSize)}, ${f(K.hotSize + 0.12)}, bloom.a);
   float casing = smoothstep(${f(K.hot)}, ${f(K.hot + 0.18)}, nearGlow) * big;
   c = mix(c, lineCol, line * (1.0 - hot) * ${f(K.lineAlpha)});
   c = mix(c, INK, casing * (1.0 - hot));
 
   // Mist: the small canvas's alpha, cut into flat bands.
-  vec4 mist = texture(uMist, uv);
+  vec4 mist = texture(uMist, T(uv));
   if (mist.a > 0.003) c = mix(c, mist.rgb / mist.a, hard(mist.a, 3.0) * ${f(MIST_MAX)});
 
   o = vec4(mix(clamp(c, 0.0, 1.0), BONE, uFlash), 1.0);

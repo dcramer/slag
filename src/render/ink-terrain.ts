@@ -927,11 +927,20 @@ export function makeTufts(loops: readonly EdgeP[][], seed: number, keepClear: re
 }
 
 /** Grass stands still in still air (`flutter`), and parts around anyone walking through it. */
-export function drawTufts(rc: RC, s: CanvasRenderingContext2D, tufts: readonly Tuft[], level: Level, capColor: HSL, pushers: readonly P[]) {
+export function drawTufts(
+  rc: RC,
+  s: CanvasRenderingContext2D,
+  tufts: readonly Tuft[],
+  level: Level,
+  capColor: HSL,
+  pushers: readonly P[],
+  near: (x: number, y: number) => boolean = () => true,
+) {
+  if (!tufts.length) return;
   const tones = [css(capColor, -4, 1, 4), css(capColor, 10), css(capColor, -14, 1, 6)];
   const ink = css({ h: capColor.h + 25, s: Math.min(80, capColor.s + 15), l: 9 });
   for (const tf of tufts) {
-    if (!tileAt(level, tf.tx, tf.ty) || tileAt(level, tf.tx, tf.ty) === T_ONEWAY) continue;
+    if (!near(tf.x, tf.y) || !tileAt(level, tf.tx, tf.ty) || tileAt(level, tf.tx, tf.ty) === T_ONEWAY) continue;
     let sway = flutter(rc, 2.1, tf.x * 0.15) * 0.3;
     for (const p of pushers) {
       const dx = tf.x - p.x;
