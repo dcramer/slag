@@ -6,8 +6,6 @@ import type { ModuleOf } from '../types';
 
 type Neon = ModuleOf<'neon'>;
 
-/** Segments of one letter's cycle. */
-export const NEON_OFF = 0;
 export const NEON_WARN = 1;
 export const NEON_ON = 2;
 
@@ -27,7 +25,7 @@ export const neonCycle = (m: Neon, c: Cell, f: number, phase: number) => cycle(f
  * column at a time, so crossing them is a matter of keeping to the dark ones. A lit letter kills whatever
  * stands on it or brushes it; the letter itself is the `body` beside this module, solid all the time.
  */
-export const neon = defineModule<'neon'>({
+defineModule<'neon'>({
   type: 'neon',
   resolve: (m, x) => ({ ...m, cells: x.C(m.cells) }),
   anchors: (m) => m.cells,

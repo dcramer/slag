@@ -65,7 +65,7 @@ An entry in `RULES` in `decor/index.ts` (`defineDecor`): `place` (`top` grows on
 
 ### Add a part
 
-A recipe in `RECIPES` (`props.ts`, `definePart`), keyed by a new `Archetype`, with its weight in `ARCHETYPE_WEIGHTS`, module art in `render/props/modules/` and a codex entry. Conformance: the same part from the same seed; `sized` only scales (same modules and motion, the same identity, the name changed only by its size word, never fewer cells as it grows); art and a codex entry for every module; no prop art draws a runner's eyes or mouth.
+A recipe in `RECIPES` (`props.ts`), keyed by a new `Archetype`, with its weight in `ARCHETYPE_WEIGHTS`, module art in `render/props/modules/` and a codex entry. Conformance: the same part from the same seed; `sized` only scales (same modules and motion, the same identity, the name changed only by its size word, never fewer cells as it grows); art and a codex entry for every module; no prop art draws a runner's eyes or mouth.
 
 ### Level shapes
 

@@ -52,7 +52,7 @@ export function lobSegs(m: Lob, f: number, phase: number): LobSeg[] {
  * shadow grows on the spot it lands), then each segment kills where it is. It's in the air only for its
  * flight, so a route under it is passable by timing (barrier.ts MIN_OPENING).
  */
-export const lob = defineModule<'lob'>({
+defineModule<'lob'>({
   type: 'lob',
   resolve: (m, x) => ({ ...m, from: x.P(m.from), to: x.P(m.to), apex: m.apex * x.T, radius: m.radius * x.T }),
   // Where it lands: the spot its shadow falls on.

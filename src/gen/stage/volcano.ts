@@ -160,13 +160,6 @@ export function waysOf(l: Landmark): TileRect[] {
   return out;
 }
 
-/** The structural numbers a landmark's seed rolled (`sig{i}` anchors), flattened. */
-export function signatureOf(l: Landmark): number[] {
-  const out: number[] = [];
-  for (let i = 0; l.anchors[`sig${i}`]; i++) out.push(...l.anchors[`sig${i}`]);
-  return out;
-}
-
 /** A list of layout numbers as one signature pair: how many, and a sum weighted by place, so a reorder shows. */
 const listSig = (xs: readonly number[]): Vec => [xs.length, xs.reduce((t, v, i) => t + v * (i + 1), 0)];
 

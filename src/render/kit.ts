@@ -75,14 +75,6 @@ export function bulb(g: CanvasRenderingContext2D, x: number, y: number, r: numbe
   circle(g, x, y, r);
 }
 
-/** Vertical two-stop gradient from `c0` at y0 to `c1` at y1. */
-export function vgrad(g: CanvasRenderingContext2D, y0: number, y1: number, c0: string, c1: string): CanvasGradient {
-  const gr = g.createLinearGradient(0, y0, 0, y1);
-  gr.addColorStop(0, c0);
-  gr.addColorStop(1, c1);
-  return gr;
-}
-
 export function circle(ctx: CanvasRenderingContext2D, x: number, y: number, r: number) {
   ctx.beginPath();
   ctx.arc(x, y, Math.max(0, r), 0, Math.PI * 2);
@@ -117,13 +109,6 @@ export const METALS: Record<MetalStyle, MetalPalette> = {
   jade: { base: { h: 150, s: 40, l: 42 }, dark: { h: 160, s: 45, l: 18 }, light: { h: 145, s: 45, l: 65 }, spec: { h: 140, s: 60, l: 90 } },
   gold: { base: { h: 46, s: 85, l: 52 }, dark: { h: 36, s: 80, l: 24 }, light: { h: 50, s: 95, l: 74 }, spec: { h: 55, s: 100, l: 94 } },
 };
-
-export function rivet(ctx: CanvasRenderingContext2D, x: number, y: number, m: MetalPalette, r = 1.1) {
-  ctx.fillStyle = css(m.dark);
-  circle(ctx, x + 0.3, y + 0.4, r);
-  ctx.fillStyle = css(m.light);
-  circle(ctx, x - 0.2, y - 0.2, r * 0.8);
-}
 
 /** A tiny wobbly jagged polyline (lightning). Cosmetic randomness is fine here. */
 export function lightning(ctx: CanvasRenderingContext2D, x1: number, y1: number, x2: number, y2: number, jag: number, segs = 10) {
@@ -266,14 +251,4 @@ export function pxRect(g: CanvasRenderingContext2D, a: { x0: number; y0: number;
   const x1 = Math.min(g.canvas.width, Math.ceil(Math.max(a.x0 * m.a + m.e, a.x1 * m.a + m.e)) + 1);
   const y1 = Math.min(g.canvas.height, Math.ceil(Math.max(a.y0 * m.d + m.f, a.y1 * m.d + m.f)) + 1);
   return { x, y, w: Math.max(0, x1 - x), h: Math.max(0, y1 - y) };
-}
-
-/** Fresh offscreen canvas with a 2D context pre-scaled by `k`. */
-export function offscreen(w: number, h: number, k = 1): [HTMLCanvasElement, CanvasRenderingContext2D] {
-  const c = document.createElement('canvas');
-  c.width = Math.max(1, Math.ceil(w * k));
-  c.height = Math.max(1, Math.ceil(h * k));
-  const g = c.getContext('2d')!;
-  g.scale(k, k);
-  return [c, g];
 }

@@ -22,13 +22,10 @@ import { rideProof, rideSpans } from './ride';
 import { rollWeather } from './weather';
 import { noFreeRide, planHolds } from './winnable';
 
-export type { BridgeHint, SculptCtx, Sculptor, Shape } from './types';
-export { DIFFICULTIES, DIFFICULTY, levelDifficulty, setLevelDifficulty } from './difficulty';
+export { DIFFICULTIES, DIFFICULTY, setLevelDifficulty } from './difficulty';
 export { describeProfile, GRAVITY, type GravityClass, gravityClass, type ProfileOverride, rollProfile } from './profile';
 export { BRIDGE_W, type Bridge, canPlaceBridge, isAcceptable, judge, MAX_BRIDGES, withBridges } from './validate';
 export { fieldOf, partsNeeded, planHolds, prove, settled } from './winnable';
-export { WEATHER_WEIGHTS } from './weather';
-export { carrierReach, MIN_DWELL, rideProof, rideSpans } from './ride';
 
 const MAX_ATTEMPTS = 30;
 const LEGACY_ATTEMPTS = 20;

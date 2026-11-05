@@ -79,7 +79,7 @@ export function launchFrom(b: Body, start: Vec, v: Vec): void {
 }
 
 /** Launch pad; RunWorld applies the impulse (or a Launch Plate's set throw) when a runner overlaps the trigger. */
-export const spring = defineModule<'spring'>({
+defineModule<'spring'>({
   type: 'spring',
   resolve(m, x) {
     if (!m.exact || !m.arc) return { ...m, at: x.P(m.at), angle: m.angle + x.da };

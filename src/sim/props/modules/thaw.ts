@@ -6,8 +6,6 @@ import type { ModuleOf, PropState } from '../types';
 
 type Thaw = ModuleOf<'thaw'>;
 
-/** Segments of thin ice's cycle. */
-export const THAW_FROZEN = 0;
 export const THAW_WARN = 1;
 export const THAW_OPEN = 2;
 
@@ -46,7 +44,7 @@ export function thawWater(m: Thaw): { x: number; y: number; w: number; h: number
  * a runner. The plan never stands on it: the ice is a timed solid and the water a timed hazard, so the
  * proof hops the hole, and an ice sheet parked over a crossing is a free ride `noFreeRide` refuses.
  */
-export const thaw = defineModule<'thaw'>({
+defineModule<'thaw'>({
   type: 'thaw',
   resolve: (m, x) => ({ ...m, cells: x.C(m.cells) }),
   anchors: (m) => m.cells.slice(),

@@ -7,11 +7,8 @@ import { type Crossing, hopGap, jumpCrossing, jumpGap, reachMin, rollChallenges,
 import { LEVEL_H, LEVEL_W } from '../src/sim/constants';
 import { type Level, T_ONEWAY, T_SOLID } from '../src/sim/level';
 import { analyzeReach } from '../src/sim/reach';
-import { THEME_IDS } from '../src/themes';
-import { expectOpenLevel } from './lib/level-checks';
 
 const seedAt = (i: number) => (i * 2654435761 + 4242) >>> 0;
-const SEEDS = 2;
 
 /** A flat floor from pocket to pocket; `build` adds to it. */
 function floorLevel(build: (tiles: Uint8Array, row: number) => void = () => {}): Level {
@@ -87,9 +84,7 @@ describe('route analysis', () => {
 });
 
 describe('levels are mostly open', () => {
-  it('every theme, size and gravity keeps a second route, re-measured from the final level', { timeout: 120_000 }, () => {
-    for (const theme of THEME_IDS) for (let i = 0; i < SEEDS; i++) expectOpenLevel(theme, seedAt(i));
-  });
+  // Every theme's levels are held to it in tests/conformance/levels (classic, wide and tall) and over many seeds in tests/stats/open-routes.
 
   it('isAcceptable enforces it on a real level', { timeout: 60_000 }, () => {
     const l = generateLevel(seedAt(1), 'farm');

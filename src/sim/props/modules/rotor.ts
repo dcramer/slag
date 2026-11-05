@@ -52,7 +52,7 @@ export function rotorPlatform(m: Rotor, p: { x: number; y: number }): Rect {
 }
 
 /** Wheels and pendulums carrying level platforms (windmill sails, chandeliers, crane hooks). */
-export const rotor = defineModule<'rotor'>({
+defineModule<'rotor'>({
   type: 'rotor',
   resolve: (m, x) => ({
     ...m,

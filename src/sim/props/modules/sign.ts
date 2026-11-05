@@ -5,8 +5,6 @@ import type { ModuleOf } from '../types';
 
 type Sign = ModuleOf<'sign'>;
 
-/** Segments of a falling sign's cycle. */
-export const SIGN_HANG = 0;
 export const SIGN_WARN = 1;
 export const SIGN_FALL = 2;
 export const SIGN_LIVE = 3;
@@ -42,7 +40,7 @@ export function signRect(m: Sign, f: number, phase: number, ox = 0, oy = 0): Rec
  * back up. Nothing about it is solid, so nobody rides it, and the floor under it is only dangerous while
  * it's falling and lying there, so a route under it is passable by timing (barrier.ts MIN_OPENING).
  */
-export const sign = defineModule<'sign'>({
+defineModule<'sign'>({
   type: 'sign',
   resolve: (m, x) => ({ ...m, at: x.P(m.at), w: m.w * x.T, h: m.h * x.T, drop: m.drop * x.T }),
   // Where it lands: the floor's middle, under where it hangs.

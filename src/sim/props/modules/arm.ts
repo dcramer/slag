@@ -69,7 +69,7 @@ export const armHot = (m: Arm, f: number, phase: number) => {
  * it strikes and welds, so the floor in front is passable by timing (barrier.ts MIN_OPENING). The pedestal
  * is its piece's own block; nothing of the arm is solid.
  */
-export const arm = defineModule<'arm'>({
+defineModule<'arm'>({
   type: 'arm',
   resolve: (m, x) => ({ ...m, at: x.P(m.at), reach: m.reach * x.T }),
   // The shoulder's cell, on top of the pedestal.

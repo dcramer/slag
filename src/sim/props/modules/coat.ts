@@ -46,7 +46,7 @@ export function faceRect(cx: number, cy: number, angle: number, depth: number, i
 }
 
 /** Spike strips and ice/slime/boost coats mounted on faces of existing solids. */
-export const coat = defineModule<'coat'>({
+defineModule<'coat'>({
   type: 'coat',
   resolve: (m, x) => ({ ...m, cells: x.C(m.cells), angle: m.angle + x.da }),
   anchors: (m) => m.cells.slice(),

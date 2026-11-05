@@ -67,7 +67,7 @@ function heldShare(m: Flood, depth: number): number {
  * with. The plan keeps clear of the rows it holds for most of its cycle
  * (`holds`); worldgen keeps `high` below the proven route (gen/stage/flood.ts).
  */
-export const flood = defineModule<'flood'>({
+defineModule<'flood'>({
   type: 'flood',
   resolve: (m, x) => ({ ...m, at: x.P(m.at), w: m.w * x.T, low: m.low * x.T, high: m.high * x.T }),
   anchors: (m) => {

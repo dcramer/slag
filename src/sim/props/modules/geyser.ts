@@ -71,7 +71,7 @@ export function geyserWind(m: Geyser, col: Column): Wind {
  * (windSpeed(strength)) that only blows while erupting (segment 2, ramped by
  * k), carrying runners up to float at the plume's tip until it collapses.
  */
-export const geyser = defineModule<'geyser'>({
+defineModule<'geyser'>({
   type: 'geyser',
   resolve: (m, x) => ({ ...m, at: x.P(m.at), angle: m.angle + x.da, width: m.width * x.T, length: m.length * x.T }),
   // The first cell the column passes through (the vent sits on the ground surface).

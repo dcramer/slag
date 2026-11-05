@@ -31,7 +31,7 @@ export function cannonMuzzle(m: Cannon, ox = 0, oy = 0): [number, number] {
 }
 
 /** Big fixed guns (castle cannons, dart totems, magma spitters). Shots on a fixed rhythm leave safe windows. */
-export const cannon = defineModule<'cannon'>({
+defineModule<'cannon'>({
   type: 'cannon',
   resolve: (m, x) => ({ ...m, at: x.P(m.at), angle: m.angle + x.da, length: m.length * x.T }),
   anchors: (m) => [cellOf(m.at)],

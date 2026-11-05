@@ -118,10 +118,6 @@ export function setLevelDifficulty(d: Difficulty): void {
   current = d;
 }
 
-export function levelDifficulty(): Difficulty {
-  return current;
-}
-
 export function difficultyKnobs(d: Difficulty = current): DifficultyKnobs {
   return DIFFICULTY[d];
 }
