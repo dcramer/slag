@@ -1,5 +1,5 @@
-import { deriveSeed } from '../../core/rng';
-import { CAST, type CharacterDef, generateCharacter, type Kind, PLAYER_COLORS, withColor } from '../../gen/character';
+import { deriveSeed, Rng } from '../../core/rng';
+import { CAST, CAST_ORDER, type CharacterDef, generateCharacter, type Kind, PLAYER_COLORS, withColor } from '../../gen/character';
 import { Rig } from '../character';
 import { drawInkAccessory, drawInkRunner, ropeAnchor, ropeOf, type RunnerPose } from '../ink-character';
 import { STRIDE } from '../ink-figure';
@@ -22,7 +22,7 @@ const POSES: [string, Partial<RunnerPose>][] = [
   ['cheer', { grounded: true, celebrate: true }],
 ];
 
-const def = (i: number, salt: string, kind = CAST[i % CAST.length]): CharacterDef => generateCharacter(deriveSeed(0x5ca7, `${salt}:${i}`), kind);
+const def = (i: number, salt: string, kind = CAST_ORDER[i % CAST_ORDER.length]): CharacterDef => generateCharacter(deriveSeed(0x5ca7, `${salt}:${i}`), kind);
 
 /** Stride phase for a mid-run pose: every gait is well into its stride here, none at rest. */
 const MID_RUN = 2.4 * STRIDE;
@@ -77,7 +77,7 @@ export function castCatalog(t = 0.4): HTMLCanvasElement {
     s.fillText(txt, x, y);
   };
   label(`The cast: ${CAST.length} kinds, two seeds each`, W / 2, 30, 20, '#f6ead8');
-  CAST.forEach((name, i) => {
+  CAST_ORDER.forEach((name, i) => {
     const cx = 20 + (i % cols) * cell + cell / 2;
     const cy = 50 + Math.floor(i / cols) * 200;
     for (let j = 0; j < 2; j++)
@@ -98,7 +98,7 @@ export function castCatalog(t = 0.4): HTMLCanvasElement {
   s.fillStyle = '#d9cbb2';
   s.fillRect(W / 2, qy, W / 2, 120);
   const step = (W / 2 - 60) / CAST.length;
-  CAST.forEach((name, i) => {
+  CAST_ORDER.forEach((name, i) => {
     const c = def(i * 2, 'cat', name);
     runner(s, c, 60 + step * (i + 0.5), qy + 80, { grounded: true }, 2.5, 1, t);
     runner(s, c, W / 2 + 30 + step * (i + 0.5), qy + 80, { grounded: true }, 2.5, 1, t);
@@ -133,7 +133,7 @@ export function castColors(t = 0.4): HTMLCanvasElement {
     s.fillStyle = `hsl(${c.h} ${c.s}% ${c.l}%)`;
     s.fillRect(140 + i * cell + 26, 12, cell - 52, 22);
   });
-  CAST.forEach((kind, r) => {
+  CAST_ORDER.forEach((kind, r) => {
     const y = 50 + r * rowH;
     s.fillStyle = '#c9b8a3';
     s.textAlign = 'left';
@@ -150,7 +150,7 @@ export function castColors(t = 0.4): HTMLCanvasElement {
       s.fillRect(0, y, W, stripH);
       const per = Math.ceil(CAST.length / 2);
       for (let j = 0; j < per * 2; j++) {
-        const kind = CAST[(k * per + (j % per)) % CAST.length];
+        const kind = CAST_ORDER[(k * per + (j % per)) % CAST_ORDER.length];
         const i = j % n;
         runner(s, withColor(def(j, 'strip', kind), i), 30 + j * ((W - 60) / (per * 2)), y + stripH - 8, { grounded: true }, 2.5, 1, t);
       }
@@ -208,17 +208,17 @@ export function castSilhouettes(t = 0.4): HTMLCanvasElement {
   label(`The silhouette test: ${n} kinds`, W / 2, 24, 20, '#120b08');
   for (const [name, y, pose, scale, stride] of rows) {
     label(name, 110, y - (scale > 1 ? 70 : 34), 13);
-    CAST.forEach((kind, i) => solid(def(i * 2, 'cat', kind), 20 + cell * (i + 0.5), y, scale, pose, stride));
+    CAST_ORDER.forEach((kind, i) => solid(def(i * 2, 'cat', kind), 20 + cell * (i + 0.5), y, scale, pose, stride));
   }
-  CAST.forEach((kind, i) => label(kind, 20 + cell * (i + 0.5), 476));
+  CAST_ORDER.forEach((kind, i) => label(kind, 20 + cell * (i + 0.5), 476));
   // Mid-run, in color, on light ground and on dark.
   label('Mid-run, in color, play scale', 110, 520, 13);
-  CAST.forEach((kind, i) => runner(s, def(i * 2, 'cat', kind), 20 + cell * (i + 0.5), 640, { grounded: true, vx: 260 }, 2.5, 1, t, MID_RUN));
-  CAST.forEach((kind, i) => {
+  CAST_ORDER.forEach((kind, i) => runner(s, def(i * 2, 'cat', kind), 20 + cell * (i + 0.5), 640, { grounded: true, vx: 260 }, 2.5, 1, t, MID_RUN));
+  CAST_ORDER.forEach((kind, i) => {
     const x = (W / 2 / n) * (i + 0.5);
     runner(s, def(i * 2, 'cat', kind), x, 820, { grounded: true, vx: 260 }, 2.5, 1, t, MID_RUN);
   });
-  CAST.forEach((kind, i) => runner(s, def(i * 2, 'cat', kind), W / 2 + (W / 2 / n) * (i + 0.5), 820, { grounded: true, vx: 260 }, 2.5, 1, t, MID_RUN));
+  CAST_ORDER.forEach((kind, i) => runner(s, def(i * 2, 'cat', kind), W / 2 + (W / 2 / n) * (i + 0.5), 820, { grounded: true, vx: 260 }, 2.5, 1, t, MID_RUN));
   document.body.appendChild(cv);
   return cv;
 }
@@ -285,7 +285,7 @@ export function castRecognise(t = 0.4): HTMLCanvasElement {
   s.fillStyle = '#120b08';
   s.textAlign = 'center';
   s.fillText('Is it the homage?', W / 2, 34);
-  CAST.forEach((kind, i) => {
+  CAST_ORDER.forEach((kind, i) => {
     const x = 10 + (i % cols) * cw;
     const y = 50 + Math.floor(i / cols) * ch;
     s.fillStyle = '#d9cbb2';
@@ -328,10 +328,7 @@ export function castBench(n = 200, kinds?: Kind[]): number {
  * the cast and ask what each one parodies: the answer has to come from the silhouette alone.
  */
 export function castBlind(t = 0.4): HTMLCanvasElement {
-  // A fixed shuffle, so the sheet is the same every time and the order gives nothing away.
-  const order = CAST.map((k, i) => [k, (i * 5 + 3) % CAST.length] as const)
-    .sort((a, b) => a[1] - b[1])
-    .map(([k]) => k);
+  const order = blindOrder();
   // Each cell is as wide as a runner reaches (40 world px at 2.5): narrower, a prop held out front (the worm's
   // pistol, the rapper's mic) was cut off and never part of the read. The kinds wrap onto as many bands as
   // keep a band under 1440 px.
@@ -377,11 +374,11 @@ export function castBlind(t = 0.4): HTMLCanvasElement {
   return cv;
 }
 
-/** The blind sheet's order, for checking the answers: number → kind. */
-export const blindOrder = (): string[] =>
-  CAST.map((k, i) => [k, (i * 5 + 3) % CAST.length] as const)
-    .sort((a, b) => a[1] - b[1])
-    .map(([k]) => k);
+/**
+ * The blind sheet's order, for checking the answers: number → kind. A fixed shuffle of its own, unlike
+ * `CAST_ORDER`, so the sheet is the same every time and its order gives nothing away.
+ */
+export const blindOrder = (): Kind[] => new Rng(deriveSeed(CAST.length, 'blind order')).shuffle([...CAST]);
 
 /**
  * One rendered kind's curated variety (docs/CHARACTERS.md → Variety), drawn in game: twelve looks in

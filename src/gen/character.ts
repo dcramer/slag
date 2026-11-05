@@ -49,6 +49,12 @@ export const CAST = [
 export type Kind = (typeof CAST)[number];
 
 /**
+ * The cast in the order it's shown (the codex, the cast sheets): shuffled by the cast's size, so a batch
+ * of new kinds lands among the rest instead of always last, and the order holds until the cast grows.
+ */
+export const CAST_ORDER: readonly Kind[] = new Rng(deriveSeed(CAST.length, 'cast order')).shuffle([...CAST]);
+
+/**
  * A procedurally generated character. Purely cosmetic: every character uses the same hitbox and
  * physics so the competitive game stays fair. Its face is its kind's, never rolled: every plumber has
  * the plumber's eyes (`KINDS` in src/render/cast/kinds.ts, `face` in a rendered kind's sprite.json).
