@@ -923,6 +923,26 @@ export const BRIEFS: Record<string, Brief> = {
     // stands up like the zapmouse's), the papers sliding out of a broken clipboard, a dented bell. Nothing on the face.
     worn: "her front hand now holds the clipboard out in front of her at arm's length, level, clear of her body with white background all round it, its top corner cracked and patched with grey tape, three loose white papers sliding out of it; the near floppy ear is folded inside out at its tip, its pale inside (#f8e4a8) showing, still hanging down; the silver bell has a big dent in its side; the short skirt flares out wider, its hem torn into a big ragged notch. Her face, the tall tuft and the bell stay exactly where they are.",
   },
+  succubus: {
+    // The nod, each part of the read at race size and each a shape in outline: the two bat wings off the sides of
+    // her head, spread up and out like a crest, wide, with ribs fanning to points and a scalloped edge between them,
+    // and background between each wing and her hair (the read: touching the head they turn into ears, the zapmouse's
+    // or the hopper's; drawn narrow they turn into the stinger's crescent horns); the second pair at her back, smaller
+    // than the head pair (big, they're the dragon's umbrella wings); the big dark hair in a wave down her back and the
+    // long slim legs (a tall woman, hatless, so never the vampire); a hand on her hip, cocky.
+    // Ours, and the joke: a party-shop costume. The back wings are felt on bent wire coat hangers, one drooping, a
+    // hanger's hook poking up; the head wings a hair-clip set; fuzzy slippers instead of boots, the front one a bunny.
+    // The palette is neutral (Decisions 4): the bodysuit in the player's colour, the wings a dark of it; the hair,
+    // skin, tights and slippers neutrals. The colours lead the brief: the image model drops what comes last.
+    design:
+      'The character: a slim, long-legged cartoon woman in a party-shop costume, three-quarter view facing right, standing tall and cocky, one hand on her hip. Colours: a purple bodysuit (#7a3a8c), dark purple wings (#45204f), dark charcoal hair (#2e2a34), pale skin (#f4d6c4), black tights (#2a2630), cream fuzzy slippers (#f0e8dc). ' +
+      'Her signature, big and bold: two big bat wings sprout from the sides of her head and spread wide up and out like a crest, each as tall as her head, three bony ribs fanning out to points with a scalloped edge between them, white background between each wing and her hair. ' +
+      'Big long wavy hair falls down her back to her waist. A smaller second pair of bat wings on her back, felt on bent wire coat hangers. ' +
+      'A strapless bodysuit with a heart-shaped cut at the chest, long thin legs in black tights, cream fuzzy slippers instead of boots. A cocky smile.',
+    // The edit carries the rest of the twist with the wear: the drooping back wing, a hanger's hook, the bunny
+    // slipper. Nothing on the face, and the head wings stay as drawn.
+    worn: "one of the felt back wings droops down limp off its bent wire hanger; a coat hanger's wire hook pokes up above her back shoulder; the front slipper is now a fuzzy bunny slipper with two long floppy ears and a round face; the back wing's felt has a big ragged tear. Her face, the two bat wings on her head and the gap between them and her hair stay exactly as they are.",
+  },
   archer: {
     // The nod, each part of the read at race size and each a shape in outline: the bow drawn and held out level at
     // arm's length ahead of her, as tall as she is, with background all round it (the read: nobody else in the cast
