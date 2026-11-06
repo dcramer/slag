@@ -1,42 +1,44 @@
 import type { FlatKind } from '../kinds';
 
 export const kind: FlatKind = {
-  body: 279,
-  // Its seam traced as one long stroke across the ball and its pale highlight as a strip, a mouth at play
-  // size; its tape cross beside the eyes read as a third eye: no interior lines, and tape and highlight are the ball.
+  body: 263,
+  // A long line across a ball reads as a mouth at play size (the vinyl toy's seam did): no interior lines.
   map: {
     roles: ['pink', 'red', 'sole', 'white', 'dark'],
+    // Sampled from the design (the googly-eyed knock-off, 2026-11-06). The crown's gloss and the blush fold into the
+    // ball: the face kit draws the blush, one pink on any ball.
     families: [
-      ['pink', [244, 154, 179]],
+      ['pink', [242, 146, 173]],
+      ['pink', [213, 92, 127]],
+      ['pink', [234, 116, 151]],
+      ['pink', [227, 156, 177]],
+      ['pink', [183, 98, 123]],
+      ['pink', [220, 97, 132]],
+      ['pink', [252, 196, 212]],
       ['pink', [203, 98, 122]],
-      ['pink', [222, 112, 142]],
-      ['pink', [179, 105, 124]],
-      ['red', [190, 64, 57]],
-      ['red', [149, 43, 47]],
-      // The shade at the tip of a worn toe: as the ball's shade it tipped the shoe in the player's colour.
-      ['red', [194, 126, 134]],
-      ['pink', [184, 176, 178]],
-      // The seam's highlight, and the worn-through toe of a shoe, which as pink was the player's colour on the shoe.
-      ['pink', [252, 190, 206]],
-      ['sole', [211, 168, 180]],
-      ['sole', [222, 186, 186]],
-      // The squeaker valve's cream and its shade, folded into the ball: as the eyes' glint, white went to the
-      // ink, and the valve was a dark knot on the crown; in a role of its own, joined to the rim by its thin
-      // stem, it traced as a stray outlined blob beside the head. As the ball it's the one bump on its outline.
-      ['pink', [244, 239, 229]],
-      ['pink', [218, 201, 195]],
-      ['dark', [71, 20, 40]],
-      ['dark', [33, 4, 15]],
-      ['dark', [255, 255, 255]],
+      ['red', [185, 56, 51]],
+      ['red', [173, 43, 45]],
+      ['red', [124, 28, 41]],
+      ['red', [169, 61, 59]],
+      ['red', [150, 37, 45]],
+      // The googly eyes' whites and the toe scuffed pale are one pale in the drawing. The eyes' go as specks under
+      // the kit's own, so what's left is the toe, a tone between the shoe and the ball (in cream it read as a hole).
+      ['sole', [224, 207, 209]],
+      ['sole', [246, 244, 243]],
+      ['sole', [199, 166, 181]],
+      // The knocked-out drawing's discs, painted a white of their own round an ink cross (eyes.py).
+      ['white', [200, 230, 240]],
+      ['dark', [52, 13, 32]],
+      ['dark', [50, 5, 25]],
+      ['dark', [55, 31, 47]],
+      ['dark', [128, 120, 126]],
     ],
     line: 'dark',
     thin: ['pink', 'red', 'sole', 'white'],
     fringe: 5,
     stroke: 99,
     feet: ['red'],
-    // The tape cross's ink left four specks round its eye (0.25 to 0.55 world px²): a second face at play size.
-    // The open mouth's tongue (0.8 to 1.2 world px², the feet 18 and up) is red too: kept, it was a speck of the
-    // feet's colourway inside the mouth.
+    // The open mouth's tongue is red: kept, it was a speck of the feet's colourway inside the mouth.
     min: { dark: 0.6, sole: 0.4, red: 2 },
   },
   roles: [
@@ -58,17 +60,18 @@ export const kind: FlatKind = {
     { name: 'plaster', vary: 0, options: 2 },
     { name: 'wear', vary: 11, options: 3 },
   ],
-  eyes: { role: 'dark', area: [0.2, 6], gap: [1.5, 5.5], specks: { dark: 6 } },
+  // The drawn pupils are painted out and a dot set in each disc's middle (eyes.py): rolled two ways, they sat at two
+  // heights, which the finder never pairs. The discs go as specks; the kit draws its own googly eyes there.
+  eyes: { role: 'dark', area: [0.2, 6], gap: [3, 8], specks: { dark: 8, sole: 30 } },
   wear: {
     on: ['pink'],
     chin: 3.5,
     marks: [[['scuff', 0.68, 0.78, 1.0]], [['scorch', 0.7, 0.75, 1.1]]],
   },
-  // Across the cheek: on a ball's crown a cross read as bumps on top, and the ball as another character.
-  // Above the blush: in the usual place the blush, drawn over it, made a muddy cream-on-pink patch. Out
-  // toward the side as well, 0.6 clear of both: nearer, it touched the near eye, a tan-and-black lump.
-  accessories: [{ slot: 'plaster', role: 'plaster', at: 'cheek', size: [2.2, 0.85], offset: [-1.2, -1.3] }],
-  face: { r: 1, iris: '#2a1f1a', mouth: [2, 2.6], eye: 'tall' },
+  // Low on the side behind the near eye: on a ball's crown a cross read as bumps on top, and the ball as another
+  // character; beside the googly eye it was a brow.
+  accessories: [{ slot: 'plaster', role: 'plaster', at: 'cheek', size: [2.2, 0.85], offset: [-2.6, 1.8] }],
+  face: { r: 1.35, iris: '#2a1f1a', mouth: [2, 2.6], eye: 'googly' },
   gait: { bounce: [0.1, 0.8], lean: [0, 0.03] },
   clips: {
     idle: { frames: ['idle'], loop: true, fps: 1 },
@@ -76,7 +79,7 @@ export const kind: FlatKind = {
     walk: { frames: ['walk-1', 'walk-2'], loop: true, stride: 26 },
     run: { frames: ['run-1', 'run-2'], loop: true, stride: 40 },
     air: { frames: ['air-1', 'air-2'], loop: false, vy: [-200, 200] },
-    wall: { frames: ['wall'], loop: true, fps: 1 },
+    wall: { frames: ['wall'], loop: true, fps: 1, centre: 'box', scale: 0.92 },
     cheer: { frames: ['cheer', 'idle'], loop: true, holds: [0.5, 0.25] },
     cheer2: { frames: ['cheer2', 'idle'], loop: true, holds: [0.7, 0.3] },
     death: { frames: ['death'], loop: false, fps: 1, eyes: false, centre: 'box' },

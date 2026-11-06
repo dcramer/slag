@@ -30,11 +30,13 @@ const IRIS_MIN = 0.45;
 const SLIVER = 0.5;
 /** A three-quarter face's far eye (`far: 'turned'`): this narrow, where it was drawn. */
 const TURNED = 0.7;
+/** A googly eye's far one against the near (with the kit's own 0.85 for the far eye's size): the pair mismatched. */
+const GOOGLY_FAR = 2.3;
 
 /** One style of eye (`EyeStyle`), drawn about the origin, already turned with the head. */
 interface EyeArt {
-  /** The open eye, `r` its size, `f` the way it looks (±1). */
-  open(s: CanvasRenderingContext2D, r: number, m: FaceMood, f: number, iris: string): void;
+  /** The open eye, `r` its size, `f` the way it looks (±1), `far` the far one (the googly eye's pupils sit askew). */
+  open(s: CanvasRenderingContext2D, r: number, m: FaceMood, f: number, iris: string, far: boolean): void;
   /** Its half width and height at rest, in `r`: how much of the head it takes. */
   extent: readonly [number, number];
   /** The kit's brows act over it; a style without draws its act in the eye alone. */
@@ -45,6 +47,8 @@ interface EyeArt {
   smile?: boolean;
   /** It shines out of a dark face, where ink is lost: its shut eyes, cheer arcs and crosses are drawn in its own colour. */
   lit?: boolean;
+  /** It never shuts (a stuck-on googly eye): no blink, and `open` draws the cheer and the death too. */
+  stuck?: boolean;
 }
 
 /** How wide a white opens and how tall in each mood: narrowed into the run, wide on a fall. */
@@ -302,6 +306,40 @@ export const EYES: Record<EyeStyle, EyeArt> = {
       poly(s, box(x0, -ry + Math.max(0, lift), x1, ry + lift), dark);
     },
   },
+  // A stuck-on craft eye: a flat white disc round a loose pupil, the puffball's, a knock-off's in place of the
+  // original's tall black ovals. The pupils roll the way a googly eye's do, so the face acts by falling about:
+  // askew at rest (the near one sunk to the bottom, the far one up in its corner), flung back into the run,
+  // dropped on the way up and floated to the top on a fall. A plastic glint sits over the pupil.
+  googly: {
+    extent: [1, 1],
+    brow: false,
+    smile: true,
+    stuck: true,
+    under: googlyBlush,
+    open(s, r, m, f, _iris, far) {
+      // Mismatched, as a cheap pair glued on: the far eye, toward the front, a size bigger than the near one.
+      const k = (m === 'fall' ? 1.08 : 1) * (far ? GOOGLY_FAR : 1);
+      const pts = oval(0, 0, r * k, r * k, 14);
+      inked(s, pts, WHITE, INK, r * 0.14, r * 0.22);
+      const [px, py] = googlyAt(m, far);
+      const rr = r * k;
+      const pr = rr * 0.5;
+      if (m === 'dead') {
+        // A cross scratched on each disc: the eye can't shut.
+        s.fillStyle = INK;
+        for (const sg of [-1, 1]) {
+          cross[0].x = -rr * 0.55;
+          cross[0].y = -sg * rr * 0.55;
+          cross[1].x = rr * 0.55;
+          cross[1].y = sg * rr * 0.55;
+          stroke(s, cross, { w: Math.max(0.5, rr * 0.3), seed: 5 + sg, taper: [0.2, 0.2], press: 0.1 });
+        }
+        return;
+      }
+      within(s, pts, () => poly(s, oval(f * px * rr, py * rr, pr, pr, 10), INK));
+      glint(s, -f * rr * 0.42, -rr * 0.44, rr * 0.17);
+    },
+  },
   // A hole cut through the figure, the level showing in it: the box creeper's square eyes, which are its frame's own
   // holes (`map.holes`), since in black his outline alone is a post. Open, the kit draws nothing over the hole; it
   // acts in the brows, and shuts the hole with the body's colour (`face.lid`) under the blink, the cheer's arcs and
@@ -359,6 +397,7 @@ function eye(s: CanvasRenderingContext2D, face: FaceKit, m: FaceMood, f: number,
   const art = EYES[face.eye ?? 'round'];
   const ink = art.lit ? face.iris : INK;
   if (art.under && m !== 'dead') art.under(s, r, f, far);
+  if (art.stuck) return art.open(s, r, m, f, face.iris, far);
   if (m === 'cheer') {
     const arc: P[] = [];
     for (let j = 0; j <= 6; j++) {
@@ -397,7 +436,7 @@ function eye(s: CanvasRenderingContext2D, face: FaceKit, m: FaceMood, f: number,
     );
     return;
   }
-  art.open(s, r, m, f, face.iris);
+  art.open(s, r, m, f, face.iris, far);
 }
 
 /** Clips to the figure's outlines. */
@@ -530,6 +569,21 @@ const BLUSH = '#ec7a94';
 /** A soft blush under a tall eye toward its cheek; the far one nearer the front, foreshortened. */
 function blush(s: CanvasRenderingContext2D, r: number, f: number, far: boolean) {
   poly(s, oval(f * (far ? 1.1 : -1.9) * r, 2.5 * r, (far ? 0.75 : 1.25) * r, 0.6 * r, 8), BLUSH);
+}
+
+/** Where a googly eye's pupil has rolled to (in `r`, x toward the way it looks): never the same in both eyes. */
+function googlyAt(m: FaceMood, far: boolean): readonly [number, number] {
+  if (m === 'run') return far ? [-0.4, -0.12] : [-0.36, 0.18];
+  if (m === 'up') return far ? [0.12, 0.38] : [-0.08, 0.4];
+  if (m === 'fall') return far ? [0.16, -0.42] : [-0.2, -0.38];
+  if (m === 'wall') return far ? [0.4, 0.1] : [0.38, -0.16];
+  if (m === 'cheer') return far ? [0.2, -0.4] : [-0.3, -0.3];
+  return far ? [0.3, -0.3] : [-0.06, 0.4];
+}
+
+/** The googly eye's blush, just under its disc toward the cheek: one pink on any ball, as the tall eye's. */
+function googlyBlush(s: CanvasRenderingContext2D, r: number, f: number, far: boolean) {
+  poly(s, oval(f * (far ? 0.55 : -0.7) * r, 1.25 * r, (far ? 0.45 : 0.72) * r, 0.36 * r, 8), BLUSH);
 }
 
 /** A wide open grin, lopsided toward the front. */

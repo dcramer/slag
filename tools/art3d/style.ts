@@ -107,29 +107,34 @@ export const BRIEFS: Record<string, Brief> = {
       'standing idle with his chest puffed out; mid-run stride leaning forward with arms pumping and one knee high; crouched low before a jump, knees bent, arms swung back; jumping up with one fist punched high overhead and the other arm down, legs tucked; falling with both arms flailing up and legs reaching down; sliding down a wall on his right with one gauntlet flat against it and both boots braced; cheering with both fists in the air; knocked flat on his back with stars circling',
   },
   hedgehog: {
-    // The nod, each part of the read at race size: long cobalt quills swept straight back (the whole
-    // silhouette), big red sneakers (the second thing anyone names), a peach muzzle and belly, green eyes
-    // and a cocky grin; the run leaning hard forward and the jump curled into a spinning ball.
-    // Ours, and the joke: a stubby scrapyard speedster who runs so fast his quill tips are scorched black;
-    // two separate eyes under heavy brows instead of the joined eye shape, a chipped tooth, a
-    // hazard-striped neckerchief, leather fingerless gloves, and red work high-tops with steel toecaps.
+    // The nod, each part of the read at race size: cobalt quills swept straight back (the whole silhouette), big
+    // red shoes (the second thing anyone names), a peach muzzle and belly, green eyes and a cocky grin; the run
+    // leaning hard forward and the jump curled into a spinning ball.
+    // Ours, and the joke: the fastest thing alive is an old pressed-tin wind-up toy, and he has to be wound up.
+    // Two big changes that each read alone: a big wind-up key sticks out of his hip (the outline and a big grey
+    // block, in every pose: it turns round the spin ball and stands up out of him when he's run down), and his head
+    // is a pressed-tin box, two halves with a wide grey flange round the seam, the snout a square block with a
+    // screw for a nose (round, a reader saw the original with a key added). Three fat tin quills with a pale folded
+    // edge (long thin ones rhymed with the dragon's horns); boxy tin shoes on grey soles.
     character:
-      'Character: a small, stubby, round blue hedgehog with a very big round head, a small round body and short stubby legs, like a chunky toy. ' +
-      'Cobalt-blue quills (#2f5bd0) in four thick spikes swept straight back from the head, their tips scorched soot-black, and two short spikes on the back. ' +
-      'A peach muzzle and belly (#f0c99c), two separate big round eyes with green irises and a white glint under heavy dark-blue brows, a small black nose, a cocky one-sided grin with one chipped tooth. ' +
-      'A snug neckerchief of yellow-and-black hazard-striped cloth knotted at his throat. ' +
-      'Big brown fingerless leather gloves. Huge red high-top work sneakers (#d8382f) with grey steel toecaps and a hazard-yellow strap across each. Confident and fast.',
-    // Designed at game size: the quills swept back, the big red shoes, the peach muzzle and belly, the eyes,
-    // and the scrapyard twist as big shapes (soot-black quill tips, the hazard neckerchief, steel toecaps).
+      'Character: a small blue hedgehog built as an old pressed-tin wind-up toy. ' +
+      'A big grey wind-up key sticks straight out of his hip behind him, its huge flat figure-eight bow standing clear of him. ' +
+      'His head is a boxy pressed-tin cube of two halves with a wide grey flange round the seam, a flat top and square corners; a square peach snout block with a screw for a nose; two printed eyes with green irises, a cocky one-sided printed grin. ' +
+      'Three fat cobalt-blue quills (#2f5bd0) of bent tin with a pale folded edge swept straight back from his head. ' +
+      'A small round tin body on riveted seams, a peach tin belly and mitten hands (#f0c99c). Huge boxy red tin shoes (#d8382f) on thick grey soles. Confident and fast.',
+    // Designed as edits of the scrapyard design (scrapyard/), since without a reference the image model draws the
+    // original: the key, tin strips and boxy shoes; the key drawn bigger and moved to the hip by hand; then the box
+    // head, the fat quills and the wear (art/sprites/hedgehog/design.prompt.txt).
     design:
-      'The character: a small, stubby blue hedgehog (#2f5bd0) built like a chunky wind-up toy: a big round head on a round barrel body as wide as the head, short thick legs. ' +
-      'Four thick quills swept straight back from the head, their tips soot-black. A peach muzzle and belly (#f0c99c). His two eyes are apart, each its own round white with a green iris, with blue fur between them and heavy blue brows over them; a cocky grin. ' +
-      'Huge red high-top sneakers (#d8382f) with grey steel toecaps, a yellow-and-black hazard-striped neckerchief (#e8c24a) knotted at the throat, brown fingerless gloves.',
-    worn: 'one quill is snapped off short and its stump wrapped in grey tape; the sole of the front sneaker is coming loose and flaps open at the toe; the neckerchief is torn ragged at one end; one tooth is chipped.',
-    views: 'a front view, a side profile facing right, a back view showing the swept quills, and a three-quarter view facing right',
-    pose: 'The quills sweep straight back from the head, clear of the shoulders and arms. The neckerchief is snug at the throat, nowhere near the arms.',
+      'The same tin wind-up toy hedgehog as in the reference image, the same pose, three-quarter view facing right, thin dark line and flat white background. ' +
+      'His head is a big hard tin cube, a box with flat sides, a flat top and sharp square corners, a thick grey tin flange round its seam sticking far out all round like a wide square rim; his snout is a square block printed peach, with a big round bolt for a nose. Two separate printed eyes with green irises, and a cocky one-sided printed grin. ' +
+      'Just four big fat quills, broad flat strips of bent blue tin, each a short thick triangle swept straight back, each with its pale folded edge. ' +
+      'A big grey wind-up key sticks straight out of his hip, its big figure-eight bow standing clear of him. Peach tin hands and belly, huge boxy red tin shoes on thick grey soles.',
+    worn: "a big dent is pushed into the top front corner of his tin head box; the lowest quill is bent down at a sharp kink; the front shoe's grey sole has come loose and gapes open at the toe.",
+    views: 'a front view, a side profile facing right, a back view showing the swept quills and the wind-up key, and a three-quarter view facing right',
+    pose: 'His head is a square tin box with a grey flange. The quills sweep straight back from the head, clear of the shoulders and arms. The wind-up key sticks straight out of his hip behind him, its bow clear of his body and quills.',
     poses:
-      'standing idle with one foot tapping; mid-run leaning hard forward with legs a blur; crouched low before a jump; curled into a tight spinning ball in mid-air, quills outward, no limbs showing; falling with arms out and legs reaching down; sliding down a wall on his right with one glove flat against it and both sneakers braced; cheering with one fist up; knocked flat on his back with stars circling',
+      'standing idle with one foot tapping; mid-run leaning hard forward with legs a blur; curled into a tight spinning ball in mid-air, quills outward, the key sticking out of it; sliding down a wall on his right with one hand flat against it and both shoes braced; cheering with one fist up; run down flat on his back with the key standing up out of him',
   },
   elf: {
     // The nod, each part of the read at race size: the long green cap flopping back behind the head like a
@@ -204,12 +209,16 @@ export const BRIEFS: Record<string, Brief> = {
       'The joke: it is a cheap vinyl squeeze toy. A raised moulding seam ridge runs right round its middle like an equator, plainly visible across its front, sides and back, the two halves a hair out of line. ' +
       "A white plastic squeaker valve (#f4efe6), a short stubby nozzle with a round cap, sticks straight out of the middle of its back and breaks the ball's round outline in the side view. " +
       'A mould number is stamped on the sole of one foot. Soft matte vinyl, cheerful and squishy.',
-    // Designed at game size: the ball, the big oval feet, the stubby arms, the tall oval eyes and the blush,
-    // and the twist as big shapes (the moulding seam round its middle, the squeaker valve on its back).
+    // Designed at game size (the second twist, 2026-11-06: the vinyl toy's seam and valve were cut as misreads, and
+    // what was left was the original's own shape and face). The nod: the ball, the big feet darker than it, a sweet
+    // face (blush, a small smile). Ours, and the joke: a cheap knock-off with stuck-on googly craft eyes, white
+    // discs of two sizes whose loose pupils roll two ways, in place of the original's tall ovals. A keyring on its
+    // crown was drawn first and cut before the poses: in silhouette, tall it read as the floating-ball pet and
+    // small as a bomb's fuse; the ball's outline stays the original's.
     design:
-      'The character: a round pink puffball (#f2a0bc), a near-perfect ball for a body with no neck or legs, two stubby round arms, two big red oval feet (#c9473f), two tall black oval eyes with a white shine at the top, pink blush under them, a small smile. ' +
-      'It is a cheap vinyl squeeze toy: a clear moulding seam runs right round its middle, and a white squeaker valve (#f4efe6) pokes out high on its back, the one bump on the ball.',
-    worn: 'a big cross of grey tape patches a puncture on its side; the toe of the front foot is scuffed flat and pale; the squeaker valve is bent over to one side; one stubby arm has a bite mark nibbled out of it.',
+      'The character: a cheap knock-off of a round pink puffball (#f2a0bc), a near-perfect ball for a body with no neck or legs, two stubby round arms, two big red oval feet (#c9473f), pink blush, a small smile. ' +
+      'Its eyes are two big stuck-on googly craft eyes, side by side and almost touching, mismatched, the one on the left plainly smaller than the one on the right: round flat white plastic discs with a dark rim, each with a loose round black pupil, the pupils rolled two different ways, one slid down to the bottom of its disc and the other up into the top corner.',
+    worn: 'the toe of the front foot is scuffed flat and pale; one stubby arm has a big bite mark nibbled out of it. The googly eyes, their pupils and the keyring stay exactly as they are.',
     views: 'a front view, a side profile facing right, a back view showing the squeaker valve and the seam, and a three-quarter view facing right',
     pose: 'The arms are short nubs held straight out to the sides, clear of the ball. The squeaker valve sticks straight out of its back.',
     poses:
@@ -314,6 +323,33 @@ export const BRIEFS: Record<string, Brief> = {
       'A tiny light-blue body (#7fc4f0) with short thin arms and legs; a blue mitten (#2a5fc4) on the free hand.',
     worn: 'a big round dent is knocked into the side of the helmet, behind the ridge; the tin-can cannon is dented in at its middle and its muzzle rim crumpled; the far boot has been repainted a lighter blue and is a little bigger than the near one. The face, the eyes, the ridge and the ear discs stay as they are.',
   },
+  mech: {
+    // The nod, each part of the read at race size and each a shape in outline: the squat round mech body much wider
+    // than tall (the silhouette: nobody else in the cast is a wide egg on legs); the two thick stubby cannons jutting
+    // level out ahead of it with background between them (two, short, on a body, where the robot boy and the hunter
+    // each hold one long one on an arm); the long backward-bending bird legs (the mech, not a creature's feet); the
+    // pilot's small head in big headphones peeking over its top (somebody's in there, and it's her).
+    // Ours, and the joke: the mech is a front-loading washing machine on stilts. The porthole door on its front is
+    // the cockpit glass with laundry tumbling behind it, the cannons are two lengths of dryer duct, the bunny an
+    // iron-on patch, and a sock is stuck in the door seal.
+    // The palette is neutral (Decisions 4): the shell in the player's colour, its panels a light of it; the legs,
+    // ducts and the porthole's rim metal greys, the pilot's hair dark, the bunny white. The first design, drawn
+    // round-bodied with its ducts curling in at its sides, traced at 22 px as a round blob on stubs: the ducts were
+    // inside the outline. So the body is a flattened egg and the ducts reach far out ahead, straight and level. Black at
+    // blind-sheet size that one was a round body with a barrel out front on spindly legs, so an edit before the wear
+    // (art/sprites/mech/design.prompt.txt) made the legs thick armoured mech legs and her head twice as big, with long
+    // hair and big headphone cups, and a later one made the body half again as wide and the ducts twice as long and far
+    // apart: a rider on a vehicle with a gun sticking forward.
+    design:
+      'A walking washing machine: a squat rounded pink body (#e86aa8, pale pink panels #f6b8d4), much wider than tall, like a fat flattened egg on its side, a round porthole door on its front with a grey metal rim and laundry behind the glass. ' +
+      "Two long grey metal ostrich legs, the knees bending backward like a bird's, big clawed feet, white space between the legs. " +
+      'From each side two thick straight grey dryer-duct tubes stick far out forward, level, past the front of the body, with white space between them. ' +
+      "A white bunny patch on its side. Peeking over its top edge, a small young woman's head with brown hair and big white headphones, dot eyes.",
+    // Off her face: the feed hoses across its side gone (they read as two more ducts), a dent in the drum, a sock caught
+    // in the door seal, the upper duct's end crumpled and its clip undone. The legs' backward knee was asked for here
+    // too and not drawn.
+    worn: "the two grey hoses running back across the pink body's side are gone, leaving plain pink panels; both thick grey mech legs bend sharply backward at the knee like a bird's, the knee joint pointing behind; a big round dent is knocked into the top back of the pink body; a long white sock hangs out of the porthole door's seal, dangling down the front; the upper duct cannon's open end is crumpled and its metal clip hangs undone. The woman's head, her headphones and hair, the porthole and the bunny patch stay as they are.",
+  },
   engineer: {
     // The nod, each part of the read at race size: the kit, carried low and clear of the body (the read in
     // silhouette, so it leads the brief): a hard rectangular toolbox hanging from one hand (a box with square
@@ -368,23 +404,24 @@ export const BRIEFS: Record<string, Brief> = {
     worn: 'a round hand-hole is torn ragged high on the back half of the box, and out of it the two long tails of his bandana stream straight back behind the box, each as long as the box is wide: dark navy cloth (#3a4a5c) with two broad white stripes across each near its tip, like a tea towel, one tail frayed at its end; two big crossed strips of pale packing tape (#e6d6a6) are stuck over a split in the lower back corner of the box; a big printed arrow on the back half of the box, below the hand-hole, points down, in a darker brown. The box keeps its crisp straight edges and square corners, and the eye slot and the eyes stay as they are.',
   },
   cuptoon: {
-    // The nod, each part of the read at race size: the mug for a head with its loop handle (the one head
-    // nobody else in the cast has, and the whole silhouette: a squat cylinder wider than the body under it);
-    // the straw standing up out of it (it breaks the top of the outline, where every other kind is round or
-    // capped); the black rubber-hose limbs, big white gloves and big round shoes (the 1930s cartoon read,
-    // which is half the joke); the high-waisted shorts (the toon costume, and the costume block in the
-    // player's colour).
-    // Ours, and the joke: a camping mug, not fine china. White enamel with a thick rim, a chip knocked out of
-    // the rim at the back, a paper straw gone soggy and flopped over, and a tea-bag's string hung over the rim
-    // with its paper tag dangling by the handle.
+    // The nod, each part of the read at race size: a cup for a head with a loop handle out the back (the one
+    // head nobody else in the cast has); the straw standing up out of it (it breaks the top of the outline,
+    // where every other kind is round or capped); the black rubber-hose limbs, big white gloves and big round
+    // shoes (the 1930s cartoon read, which is half the joke); the high-waisted shorts (the toon costume, and
+    // the costume block in the player's colour).
+    // Ours, and the joke: no china, a takeaway coffee cup. A paper cup wider at the top, a plastic lid with a
+    // lip proud of the cup, a cardboard sleeve (a light of the player's colour) under the smile, and a mug's
+    // loop handle taped onto the back of the paper cup, because the knock-off couldn't afford a real one.
+    // Without the handle the silhouette read as a box with an antenna (design reads, 2026-11-06).
     design:
-      'The character: a small 1930s rubber-hose cartoon toon whose whole head is a big white enamel camping mug (#f4efe6), a squat round cylinder wider than it is tall and wider than the body under it, ' +
-      'with a thick blue enamel rim (#3a5a8c) round its top and one big round loop handle sticking out from the back of the mug; its open top is tipped toward us a little so dark brown tea (#8a5a3a) shows inside the rim. ' +
-      'Standing straight up out of the tea, a tall red-and-white striped paper straw (#d8382f), as tall as the mug. ' +
-      'On the front of the mug, two big black pie-cut cartoon eyes and a small round red nose, a wide happy smile. ' +
-      'Under the mug a tiny body: big baggy high-waisted red shorts (#c9473f), thin black rubber-hose arms and legs that bend in smooth curves with no elbows or knees, ' +
+      'The character: a small 1930s rubber-hose cartoon toon whose whole head is a big white paper takeaway coffee cup (#f6f3ee), wider at the top than at the bottom and wider than the body under it, ' +
+      'with a dark grey plastic lid (#5c5a62) whose thick lip sticks out past the cup all round, and a wide pale salmon cardboard sleeve (#e0806a) round the bottom of the cup; ' +
+      "a big round loop handle like a teacup's is stuck onto the back of the paper cup with two wide strips of grey tape (#a6a6a6). " +
+      'Standing straight up out of a hole in the lid, a thick tall red-and-white striped straw (#d8382f), as tall as the cup, bent once near its top. ' +
+      'On the front of the cup above the sleeve, two big black pie-cut cartoon eyes and a small round red nose, a wide happy smile. ' +
+      'Under the cup a tiny body: big baggy high-waisted red shorts (#c9473f), thin black rubber-hose arms and legs that bend in smooth curves with no elbows or knees, ' +
       'big puffy white cartoon gloves (#fbf6ee) and big round brown cartoon shoes (#6b4a35).',
-    worn: 'a big chip is broken out of the blue rim at the back of the mug, a jagged notch in its outline, and a black chip of enamel is knocked off the side of the mug just under the handle; the paper straw has gone soggy and flops over at the top in a big droop; a tea-bag string hangs over the back of the rim with a big yellow paper tag (#e8c24a) dangling from it beside the handle; the sole of one shoe has come loose and flaps open at the toe. The front of the mug and the face stay clean.',
+    worn: 'the grey plastic lid has been knocked crooked and has popped up off the cup at the back, tilted, with brown coffee (#5c3a26) showing under its back edge; a big crumpled dent is pushed into the back edge of the paper cup, a notch in its outline; the straw is chewed flat at the top and kinked; the sole of one shoe has come loose and flaps open at the toe. The front of the cup and the face stay clean.',
   },
   jelly: {
     // The nod, each part of the read at race size: the green dome (the whole silhouette, and the only see-through
@@ -1004,6 +1041,47 @@ export const BRIEFS: Record<string, Brief> = {
     // in the belly's slot, the fur torn open at a joint with the metal showing, the hat dented. The hose stays short:
     // a cord coiled by the feet reads as a tail.
     worn: 'a big coin slot is set in the middle of his belly with a large silver coin jammed half into it; the fur on his near forearm is torn open at the elbow joint, a grey metal rod showing through; the fur on his far knee is split open showing a grey metal joint; the bow tie hangs crooked; the top hat has a big dent in its side. The top hat stays exactly where it is, small and upright on top of his head with white gaps between it and both round ears, and the shower head and its short hose stay held up in front of his mouth. His face stays as it is.',
+  },
+  mushroom: {
+    // The nod, each part of the read at race size and each a shape in outline: the huge round cap, a smooth dome
+    // with a thick lip rolled under at its rim, much wider than him and sitting low over his face (the read in black:
+    // a dome with a lip, never a beret, a helmet, the mage's brim with its bent point or the assistant's tuft); the
+    // small round face under the rim (the cap is a cap, not his head); a short stubby body in a vest over puffy
+    // trousers on two little feet (small and upright, never the puffball's one ball on big feet).
+    // Ours, and the joke: he's from the pit crew. The cap is a polka-dot lampshade, its fringe trimmed off and a bit of
+    // its wire frame showing at the rim; he waves a chequered flag on a sawn-off broom handle, held out ahead and
+    // never upright beside him (upright, it's the mage's staff); a race plate is pinned crooked on his vest.
+    // The palette is neutral (Decisions 4): the spots and the vest in the player's colour, the vest's trim a dark of
+    // it; the cap's dome white, the skin, the trousers, the flag and the wood neutrals. The colours lead the brief.
+    design:
+      'The character: a small stubby cartoon mushroom man, two caps tall. Colours: a white cap (#f4f0e8) with big round red spots (#c9473f), a red vest (#c9473f) with dark red trim (#7a2620), pale peach skin (#f6d2b0), white puffy trousers (#f0ece4), a black and white chequered flag on a wooden handle (#a87a4a). ' +
+      'His signature, big and bold: a huge round mushroom cap, a smooth wide dome like half a ball, with a thick rounded lip rolled under all round its rim, the rim much wider than his body and sitting low over a small round face, three or four big round spots on the dome. ' +
+      'It is a polka-dot lampshade: a bent wire of its frame pokes out from under the rim. ' +
+      'A short vest over a round belly, puffy short trousers, two little feet. ' +
+      'His front hand waves a small chequered flag on a short broom handle held out forward and up, the flag flying out in front of him clear of the cap.',
+    // The edit carries the rest of the twist with the wear, all off the face (the kit draws the eyes) and off the
+    // dome's outline (the read): the race plate pinned crooked, a spot that's a sewn-on patch, the flag torn and its
+    // handle taped where it snapped. The flag is held out level below the rim: raised, it joined the dome in black.
+    worn: "a white square race plate with one big black ring on it is pinned on his vest crooked, tilted far over, with a big safety pin; the nearest red spot on the cap is a round cloth patch sewn on with big white stitches; the chequered flag has a big ragged tear across its corner and its broom handle is bound with grey tape (#9a9c98) where it snapped; his front arm holds the flag's handle out ahead of him level at waist height, pointing forward, the flag hanging off its far end in front of him, well below the cap's rim, with white background all round it and between it and the cap. The cap's dome, its rolled lip and its width stay exactly as they are, and so does his face under it.",
+  },
+  boxer: {
+    // The nod, each part of the read at race size and each a shape in outline: the two huge round gloves, each about
+    // as big as his head, held up in a high guard out in front of his face with background between them and it (the
+    // read: parts that touch the head become the head, so the gloves stand clear; the ape's big fists hang at the
+    // floor, these are up at the chin); tiny and wiry next to them (the smallest fighter, not the plumber's or the
+    // engineer's stout men); upright and bouncing on his toes, never a low wide stance (the fighter's, and a lunge
+    // reads as a ninja: the slayer's lesson); the tank top and baggy shorts to the knee; the towel round his neck.
+    // Ours, and the joke: a kitchen-table contender who trains by jogging after the bus. The gloves are two stuffed
+    // oven mitts taped at the wrist, the towel a checked tea towel, and one mitt is scorched.
+    // The palette is neutral (Decisions 4): the gloves in the player's colour, the tape round their cuffs a dark of it;
+    // the tank top and shorts dark greys, the tea towel pale, the hair dark, skin and boots neutrals.
+    // Side on: the guard is a profile, the gloves out ahead of the face.
+    design:
+      'A tiny wiry young boxer seen side on, standing upright on his toes, bouncing, in a high guard: two huge round green boxing gloves (#4caf50) made from stuffed quilted oven mitts, each as big as his head, held up out in front of his chin with white background between them and his face, grey tape (#9a9c98) wrapped round each wrist. ' +
+      'A black tank top (#2a2a30), baggy black shorts to the knee, thin bare legs, small grey boxing boots. A pale checked tea towel (#efe8d8) round his neck, its ends hanging down his chest. Short spiky black hair, tan skin, dot eyes, a determined look.',
+    // Off the face and off the gloves' round outline: the scorch on the near mitt, a tape end flapping loose, the tea
+    // towel's corner frayed, a boot's lace trailing.
+    worn: "the near oven-mitt glove has a big dark brown scorch mark on its side; the grey tape on the near wrist has come loose and one end flaps out; one corner of the tea towel is frayed ragged; the back boot's lace has come undone and trails. Both gloves stay big and round, held up in front of his chin with white background between them and his face. His face stays as it is.",
   },
 };
 
