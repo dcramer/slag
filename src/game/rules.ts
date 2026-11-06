@@ -7,7 +7,7 @@
  */
 import { DEFAULT_VARIETY, type PartVariety } from '../gen/props';
 import type { Difficulty } from '../sim/level';
-import { MODE_IDS, type ModeId } from './modes';
+import { MODE_IDS, MODES, type ModeId } from './modes';
 
 export { PART_VARIETIES, type PartVariety } from '../gen/props';
 export interface MatchRules {
@@ -19,6 +19,12 @@ export interface MatchRules {
    * targetScore, so this is what guarantees a match ends: there is no "off".
    */
   maxRounds: number;
+  /**
+   * Bouts per placement: fights in a row on the same level and the same parts before pick and place come round again.
+   * Each bout is a round of its own (it scores, and counts toward maxRounds), so a match still always ends. Choosing a
+   * mode sets it to the mode's own (`ModeDef.bouts`, `withMode`).
+   */
+  bouts: number;
   /** Pick phase limit; stragglers get a random leftover. */
   pickSeconds: number;
   /** Place phase limit; unplaced props are forfeited. */
@@ -81,6 +87,7 @@ export const DEFAULT_RULES: MatchRules = {
   mode: 'race',
   targetScore: NORMAL.targetScore,
   maxRounds: NORMAL.maxRounds,
+  bouts: 1,
   pickSeconds: 15,
   placeSeconds: 15,
   raceSeconds: 0,
@@ -101,6 +108,16 @@ export const RULE_CHOICES: Record<TimerRule, number[]> = {
   placeSeconds: [0, 15, 20, 30, 45],
   raceSeconds: [0, 30, 45, 60, 90],
 };
+
+export const BOUT_CHOICES: readonly number[] = [1, 2, 3, 5];
+
+/** A mode's own bouts per placement: one, unless it says otherwise. */
+export const modeBouts = (mode: ModeId): number => MODES[mode].bouts ?? 1;
+
+/** The rules with `mode` chosen: its bouts come with it, as the mode plays best, and the menu can change them after. */
+export function withMode(r: MatchRules, mode: ModeId): MatchRules {
+  return { ...r, mode, bouts: modeBouts(mode) };
+}
 
 export const GRAVITY_CHOICES: readonly GravityRule[] = ['auto', 'low', 'normal', 'high'];
 
@@ -134,10 +151,12 @@ export function nearestLength(targetScore: number): MatchLength {
 
 /**
  * Rules from a host's saved preferences (src/ui/rule-prefs.ts): the length snapped to one on offer, a mode from
- * another build played as a race, and Private off, since every lobby starts public.
+ * another build played as a race, bouts the mode's own when the save has none on offer, and Private off, since every
+ * lobby starts public.
  */
 export function restoreRules(saved: Partial<MatchRules>): MatchRules {
   const { targetScore, maxRounds } = nearestLength(saved.targetScore ?? NORMAL.targetScore);
   const mode = saved.mode && MODE_IDS.includes(saved.mode) ? saved.mode : DEFAULT_RULES.mode;
-  return { ...DEFAULT_RULES, ...saved, mode, targetScore, maxRounds, private: false };
+  const bouts = saved.bouts !== undefined && BOUT_CHOICES.includes(saved.bouts) ? saved.bouts : modeBouts(mode);
+  return { ...DEFAULT_RULES, ...saved, mode, targetScore, maxRounds, bouts, private: false };
 }

@@ -86,7 +86,7 @@ Next: nothing for catch-up itself. Whether a gate that splits the pack that ofte
 
 ## Brawl: the party brawler (Duck Game), killing by knockback into the level as the crossover brawler does (Smash)
 
-What we borrow: short rounds, last one standing, items from boxes knocked from below, a draw scores nothing. What's ours: nothing kills on its own (items knock, bodies shove, on the race's physics), the level does: its hazards, the parts placed in it every round (so the arena gets nastier through a match), the drop, and late in a round slag pouring in from below.
+What we borrow: short rounds, last one standing, items from boxes knocked from below, a draw scores nothing. What's ours: nothing kills on its own (items knock, bodies shove, on the race's physics), the level does: its hazards, the parts placed in it every three bouts (so the arena gets nastier through a match), the drop, and late in a round slag pouring in from below.
 
 | Attribute | Reference | Ours | Target |
 | --- | --- | --- | --- |
@@ -95,7 +95,8 @@ What we borrow: short rounds, last one standing, items from boxes knocked from b
 | Round won by | last standing, who must stay alive a moment; a draw scores nothing [DG-mp] | last standing (10), and a kill credited by a bonk (2); a draw (everyone out at once, or the time out) scores nothing | the same |
 | Round length | 8–10 s, rarely more (a review); under a minute (another) [DG-reviews] | 30.1 s on average with bots on the bare arena, 28.1 s with parts placed (from 39.6 and 38.1): 32 of 48 bare rounds land in 20–40 s, 46 of 64 with parts placed; 60 s at most | 20–40 s |
 | Draws | rare (not documented) | 13% of bot rounds on the bare arena, 16% with parts placed (7% and 15% over twice the seeds; from 63% and 59%): the slag takes the last ones together | rare |
-| Match won by | 10 wins by default, checked at intermission every 10 rounds [DG-mp] | 50 points (Normal): 5 wins | the same |
+| Match won by | 10 wins by default, checked at intermission every 10 rounds [DG-mp] | 50 points (Normal): 5 wins, checked after every bout; 15 bouts at most | the same |
+| Rounds between intermissions | an intermission every 10 rounds [DG-mp] | 3 bouts on each placement (Bouts per Pick: 1, 2, 3 or 5), then pick and place: four Normal bots fight 80% of a match (68% at one bout a placement), picking and placing 9% (22%; about 9 s each time), 5.6 min a match (6.3), 9 rounds either way | most of a match spent fighting |
 | Weapons | spawners on a timer, boxes bumped from below, a mystery gun at the start [DG-spawns] | 3 boxes in every arena, handing over what they deal | the same |
 | Item frequency | crossover brawler: one every 8–13 s on medium [Smash-items] | boxes refill every 5 s | one every 5–10 s |
 | Catch-up | none found | none | none at first (the crossover brawler has an optional underdog boost [Smash-rules]) |
@@ -130,6 +131,7 @@ What it needs from us: Race's "everyone finished scores nothing" flipped, team s
 | Early leader wins | Rising Slag | `tests/stats/slag-catch-up.test.ts`; `LEAD_HOLDS` |
 | Round and match length, rounds that score, finishers per round | all | not yet a suite: measured once with a probe for this page |
 | Draws, round length, deaths knocked into the level | Brawl | `tests/stats/brawl.test.ts`; `BRAWL_ROUNDS` |
+| Share of a match spent fighting, by bouts per placement | Brawl | `tests/stats/brawl-bouts.test.ts` |
 | Team clear rate | Gauntlet | to come with the mode |
 
 ## Sources

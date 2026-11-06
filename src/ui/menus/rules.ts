@@ -1,5 +1,6 @@
 import {
   BLOOD_CHOICES,
+  BOUT_CHOICES,
   GRAVITY_CHOICES,
   gravityLabel,
   MATCH_LENGTHS,
@@ -34,7 +35,7 @@ interface Group {
 }
 
 /**
- * Match rules. Timers, length and Secret Parts apply from the next match; gravity and weather rebuild the lobby level
+ * Match rules. Timers, length, bouts and Secret Parts apply from the next match; gravity and weather rebuild the lobby level
  * at once. Online (`listed`), the lobby's own row: Public or Private, which takes it off the lobby list at once.
  */
 export class RulesMenu extends CanvasMenu {
@@ -94,11 +95,17 @@ export class RulesMenu extends CanvasMenu {
         RULE_CHOICES[k].map((v) => ({ label: v === 0 ? 'Off' : `${v}s`, on: d[k] === v, apply: () => (d[k] = v) })),
       ),
     );
+    // Every mode shows it: choosing a mode sets it to the mode's own (rules.ts `withMode`), and any of them plays.
+    const bouts = group(
+      'bouts',
+      'Bouts per Pick',
+      BOUT_CHOICES.map((v) => ({ label: `${v}`, on: d.bouts === v, apply: () => (d.bouts = v) })),
+    );
     return [
       lobby ? [length, lobby] : [length],
-      // Pick and place share a row, so Parts fits on the card with no scrolling at 720p.
+      // Pick and place share a row, so Parts fits on the card with no scrolling at 720p; the race and its bouts another.
       [timers[0], timers[1]],
-      ...timers.slice(2).map((t) => [t]),
+      [timers[2], bouts],
       [
         group(
           'gravity',
