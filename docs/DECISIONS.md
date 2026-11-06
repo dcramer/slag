@@ -292,6 +292,8 @@ Every game design decision, preference and direction the owner has given, groupe
   2026-11-06 · `done` · CHARACTERS.md → Decisions 4, TODO.md → 31
 - **The blind read that decides whether a kind ships is the clean colour read: two fresh readers outside the repository, the cast in colour at play scale, both naming the homage and one at medium, no pairs. The black sheet stays as a diagnostic.** "Clean colour read" (asked after the clean audit: about 20 of 46 kinds named in black, about 33 in colour, the plumber's homage not named in black)
   2026-11-06 · `done` · tools/art3d/CHECKLIST.md, CHARACTERS.md → Rendered kinds, TODO.md → 31 · Changed: the black-silhouette read was the bar, read by subagents who could see the commit log.
+- **Junior's yellow head and arms are its skin, so they stay yellow under the player-colour rule: skin is a neutral, and the hoodie carries the player's colour.** "yellow is fine here its just the skin"
+  2026-11-06 · `done` · docs/characters/junior.md → Palette
 - **Junior, Sentry's robot (the owner's team made it), joins the cast as an easter egg: its own name and look, rolled for about one look in a hundred, never forced onto anyone.** "can you also add this robot from sentry (we made it) as a kind of easter egg character https://junior.sentry.dev/junior-character.png"
   2026-11-06 · `in progress` · docs/characters/junior.md, `EGGS` in `src/gen/character.ts`, public/ASSETS.md
 - **A drawn kind must not look like the original redrawn: its twist has to show at play size, the face included (the puffball, whose seam and tape were dropped as misreads, was left with the original's exact face).** "kirby looks.. too much like kirby right now"

@@ -63,7 +63,7 @@ export const kind: FlatKind = {
     // The antennae a light steel: in the headphones' grey they joined them, and a reader comparing the sprite with the
     // reference saw dog bones beside the head; in the cap's tone (the reference's purple) they joined the cap in a splat.
     { name: 'antenna', color: '#aaa6b4' },
-    // Junior's own yellow: the read needs it (docs/characters/junior.md → Palette).
+    // Junior's own yellow is its skin, a neutral like any skin (docs/characters/junior.md → Palette).
     { name: 'yellow', color: '#fab214' },
     // A colourway is the legs, joints and headphones: a purple-grey, a steel or a warm grey. Neutrals only.
     { name: 'grey', color: '#4e445c', alts: ['#454b56', '#55493f'], vary: 6 },
