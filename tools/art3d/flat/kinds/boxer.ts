@@ -1,14 +1,15 @@
 import type { FlatKind } from '../kinds';
 
-// Every pose keeps the shapes that carry him (art/sprites/boxer/design.prompt.txt): the two huge round oven-mitt
-// gloves held out in front of his face, one above the other, with background between them and his face (a glove
-// touching the face traces into the head, and the guard is gone: the first walks and run, sheets A and B); upright
-// and bouncing on his toes, never a low wide stance (the fighter's); the tank top and baggy shorts, the tea towel.
+// Every pose keeps the shapes that carry him (art/sprites/boxer/design.prompt.txt): the two huge oven-mitt gloves, each
+// bigger than his head, held far apart, the upper one out ahead of his face and the lower one ahead of his belly, with
+// background between the gloves, his face and his body (head-sized gloves held close traced into his head, and two
+// blind reads named a boxer only at low); upright and bouncing on his toes, never a low wide stance (the fighter's);
+// the tank top and baggy shorts, the tea towel.
 const KEEP =
-  'his arms pushed forward exactly as in the reference, the two huge round green oven-mitt gloves held well out in front of his face, one above the other, with a wide white gap between the gloves and his face, the grey tape at both wrists, the checked tea towel round his neck, the black tank top and baggy black shorts, the grey boots';
+  'his arms reaching out exactly as in the reference, the two huge green oven-mitt gloves, each bigger than his head, held far apart: the upper one out ahead of his face at eye height, the lower one out ahead of his belly, with wide white gaps between the two gloves, between the upper glove and his face and between the lower glove and his body; the grey tape at both wrists, the checked tea towel, the black tank top and baggy black shorts, the grey boots';
 
 export const kind: FlatKind = {
-  body: 171,
+  body: 207,
   map: {
     roles: ['glove', 'burn', 'skin', 'towel', 'black', 'grey', 'eye', 'dark'],
     // Sampled from the design (art/sprites/boxer/design.png, `swatch.py` and by region).
@@ -102,9 +103,10 @@ export const kind: FlatKind = {
     // The jab, out of the bounce.
     idle2: { frames: ['idle2', 'idle'], loop: true, holds: [0.4, 1.6] },
     walk: { frames: ['walk-1', 'walk-2'], loop: true, stride: 22 },
-    run: { frames: ['run-1', 'run-2'], loop: true, stride: 34 },
+    // Smaller on the run: the gloves held out reach past the box's side.
+    run: { frames: ['run-1', 'run-2'], loop: true, stride: 34, scale: 0.94 },
     // Rising, the uppercut (his special); falling, the arms flung out.
-    air: { frames: ['air-1', 'air-2'], loop: false, vy: [-200, 200], scale: 0.9 },
+    air: { frames: ['air-1', 'air-2'], loop: false, vy: [-200, 200], centre: 'box', scale: 0.85 },
     wall: { frames: ['wall'], loop: true, fps: 1, centre: 'box', scale: 0.9 },
     // The double fist pump.
     cheer: { frames: ['cheer', 'idle'], loop: true, holds: [0.5, 0.3] },
@@ -115,22 +117,26 @@ export const kind: FlatKind = {
   // art/sprites/boxer/design.prompt.txt. These are each pose alone, for a redraw.
   poses: {
     idle2: {
-      pose: `bouncing on his toes, both heels lifted, throwing a quick straight jab, the front glove punched out level ahead, the back glove up by his chin, ${KEEP}.`,
+      pose: `bouncing on his toes, the upper glove punched straight out level far ahead in a jab, ${KEEP}.`,
     },
     'walk-1': { pose: `walking to the right, upright, mid-step, the near boot forward and the far boot back, ${KEEP}.` },
     'walk-2': { pose: `walking to the right, upright, the legs passing under him, one boot planted and the other lifted behind, ${KEEP}.` },
     'run-1': { pose: `jogging fast to the right, the near knee raised high in front and the far leg pushing off behind, ${KEEP}.` },
     'run-2': { pose: `jogging to the right mid-stride, both boots off the ground, the legs apart front and back, ${KEEP}.` },
     'air-1': {
-      pose: 'a rising jumping uppercut, the front glove punched up high above and ahead of his head, the other glove out in front of his chest, the near knee raised and the far leg hanging straight, both huge round green oven-mitt gloves with a wide white gap between each glove and his head, the grey tape at both wrists, the checked tea towel, the black tank top and baggy black shorts, the grey boots.',
+      pose: 'a rising jumping uppercut, the upper glove punched straight up high above and ahead of his head, the lower glove out ahead of his belly, the near knee raised, the two huge green oven-mitt gloves, each bigger than his head, with wide white gaps between the two gloves, between each glove and his head and between each glove and his body; the grey tape at both wrists, the checked tea towel, the black tank top and baggy black shorts, the grey boots.',
     },
-    'air-2': { pose: `falling, both boots reaching down and apart, both gloves thrown out to the sides for balance, eyes wide, ${KEEP}.` },
+    'air-2': { pose: `falling, both boots reaching down and apart, both gloves thrown out wide to the sides for balance, eyes wide, the two huge green oven-mitt gloves, each bigger than his head, with a wide white gap between each glove and his head.` },
     wall: {
       pose: 'seen from his side, facing right: he is sliding down a tall wall on the right edge of his space (do not draw the wall), one glove and both boots braced flat against it, knees bent, his other glove held out to the left, his head turned to look back at us, his eyes open.',
       far: true,
     },
-    cheer: { pose: `a double fist pump, both elbows bent and both gloves pulled down hard beside his chest, a big open grin, eyes open, ${KEEP}.` },
-    cheer2: { pose: `standing proudly, the front glove raised high in victory, the other glove at his side, a cocky grin, eyes open, ${KEEP}.` },
+    cheer: {
+      pose: 'a double fist pump, both elbows bent and both gloves pulled down hard beside his chest, a big open grin, eyes open, the two huge green oven-mitt gloves, each bigger than his head, with a wide white gap between each glove and his head.',
+    },
+    cheer2: {
+      pose: 'standing proudly, the front glove raised high in victory above his head, the other glove at his side, a cocky grin, eyes open, the two huge green oven-mitt gloves, each bigger than his head, with a wide white gap between each glove and his head.',
+    },
     death: {
       pose: 'he has been knocked out and lies flat on his back on the floor, the whole body horizontal, his head on the left and his boots on the right, arms and legs splayed limp, the gloves still on, his eyes shut.',
       far: true,

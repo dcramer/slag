@@ -4,7 +4,8 @@ import { line } from '../../ink';
 
 /**
  * The tiny boxer (docs/characters/boxer.md): side on, small and wiry, upright on his toes, two huge round oven-mitt
- * gloves held out ahead of his face in a high guard, one above the other, with background between them and his face;
+ * gloves, each bigger than his head, held far apart, one out ahead of his face and one ahead of his belly, with
+ * background between them, his face and his body;
  * spiky dark hair, a tank top and baggy shorts, a tea towel round his neck. The gloves are the player's colour; the
  * hair, top and shorts a charcoal, the tape grey, the towel pale. A rendered kind draws from its frames
  * (src/render/cast/sprites/boxer/); this is what shows before they load, and on the hand-drawn sheets.
@@ -52,14 +53,14 @@ function costume(d: D) {
   poly(d.s, oval(x(-0.12), Y(d, 0.6), d.W * 0.16, d.H * 0.035, 10), TOWEL);
 }
 
-/** The two gloves out ahead of his face, one above the other, each on a short arm taped at the wrist. */
+/** The two gloves held far apart, one ahead of his face and one ahead of his belly, each on a forearm taped at the wrist. */
 function gloves(d: D) {
   const x = (u: number) => d.f * d.W * u;
-  const r = d.H * 0.13;
+  const r = d.H * 0.15;
   const sh = { x: x(-0.02), y: Y(d, 0.56) };
   for (const [u, v, k] of [
-    [0.38, 0.56, 1],
-    [0.42, 0.8, 0],
+    [0.4, 0.4, 1],
+    [0.46, 0.8, 0],
   ] as const) {
     const g = { x: x(u), y: Y(d, v) };
     const wr = { x: g.x - d.f * r * 0.9, y: g.y + r * 0.2 };
