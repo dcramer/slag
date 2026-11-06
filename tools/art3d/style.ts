@@ -597,7 +597,7 @@ export const BRIEFS: Record<string, Brief> = {
       'His signature: a very tall knitted beanie (#e8922e) standing straight up on his head like a thumb, round on top, with a snug ribbed band, no brim and no pompom. ' +
       'An exaggerated long dog snout juts far forward from the lower half of his face, a big round dark brown nose (#4a3428) on its tip; his mouth is wide open, rapping. ' +
       'One short floppy cream ear (#f1dfb8) hangs straight down from the back of his head to his shoulder, with white space between it and his neck. ' +
-      "He holds a chunky black cordless microphone out in front of him in his fist, below the snout. An orange tee (#e8922e), dark orange shorts, thin legs, big grey trainers (#9aa0a8). " +
+      'He holds a chunky black cordless microphone out in front of him in his fist, below the snout. An orange tee (#e8922e), dark orange shorts, thin legs, big grey trainers (#9aa0a8). ' +
       'A narrow strip of plain brown cardboard edge (#b8946a) shows round his outline, the thickness of the cut-out.',
     worn: "he is a cardboard shop standee come loose: a narrow strip of plain brown cardboard edge shows along the back of his outline; a crisp fold crease runs straight across him, the card kinked a little there; a torn bite is missing from the card at his shorts, showing the rough brown card inside. The beanie, the ear, the snout, the nose, the open mouth and the mic don't change.",
   },
