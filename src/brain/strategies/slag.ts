@@ -3,7 +3,7 @@ import { floorAt, tile } from '../tactics';
 import { T_ONEWAY, T_SOLID } from '../../sim/level';
 import type { BrainView, Cell, Intent, SelfSense } from '../types';
 import { aimOf, Headway } from './headway';
-import { ItemPlay } from './items';
+import { ERRANDS, ItemPlay } from './items';
 import type { StrategyDef } from './types';
 
 /** How much further the route gets at once for a bot to take it as a loop's lap line crossed (route tiles, rounded as `togo` is). */
@@ -32,6 +32,12 @@ function bump(v: BrainView, me: SelfSense): Intent | null {
   return null;
 }
 
+/**
+ * Tiles of route it goes out of its way for a box or an item: little, since the slag is on the leader's leash and a
+ * detour is climb lost. A box on the way it still knocks.
+ */
+const ERRAND = { ...ERRANDS, detour: 3 };
+
 /** Columns off each wall a lane keeps: the shaft's walls and the spawn pocket under the lap line. */
 const LANE_EDGE = 3;
 
@@ -56,7 +62,7 @@ function laneOf(v: BrainView, rng: Rng, line: Cell): Cell {
 export const slagStrategy: StrategyDef = {
   make(rng, traits) {
     const way = new Headway();
-    const items = new ItemPlay(rng, traits);
+    const items = new ItemPlay(rng, traits, ERRAND);
     let lane: Cell | null = null;
     return {
       think(v, me) {
@@ -74,7 +80,8 @@ export const slagStrategy: StrategyDef = {
           way.calm();
           return { do: 'wait' };
         }
-        const hit = rng.chance(traits.knack) ? bump(v, me) : null;
+        // A bump is a move, not an item: whether it goes for one is its taste for getting in the way (`block`).
+        const hit = rng.chance(traits.block) ? bump(v, me) : null;
         if (hit) return hit;
         if (way.leapt(me)) way.calm();
         const o = v.objective;

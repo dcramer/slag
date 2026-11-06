@@ -1,6 +1,8 @@
+import { DT, PHYS, PLAYER_H, TILE } from '../sim/constants';
+import { BAT, GLOVE, PUCK, SWORD } from '../sim/items/roster';
 import type { ItemKind } from '../sim/items/types';
 import { T_ONEWAY, T_SOLID } from '../sim/level';
-import type { BrainView, Intent, RunnerSense, SelfSense } from './types';
+import type { BrainView, Intent, PropSense, RunnerSense, SelfSense } from './types';
 
 /**
  * When each held item is worth using, as a player would judge it from the screen: one entry per item, so a new item
@@ -175,3 +177,110 @@ export const ITEM_TACTICS: Record<ItemKind, ItemTactic> = {
   // The Tremor Brick bonks every rival standing on something when it comes down.
   tremor: { when: ({ v }) => (rivals(v).some((r) => r.grounded) ? { do: 'use' } : null) },
 };
+
+// ---------------------------------------------------------------- brawl: knocking someone into something
+
+/**
+ * What a hit from each knocking item throws its victim at, px/s across and up (sim/items/roster.ts, the shots'
+ * share of their speed in sim/props/ammo.ts): what a brawl lines its rival up by. The bat's is its full charge, the
+ * swing a bot lets go by itself.
+ */
+export const KNOCKS: Partial<Record<ItemKind, { vx: number; vy: number }>> = {
+  sword: { vx: SWORD.knockVx, vy: SWORD.knockVy },
+  bat: { vx: SWORD.knockVx * BAT.full, vy: SWORD.knockVy * BAT.lift },
+  glove: { vx: SWORD.knockVx * GLOVE.power, vy: SWORD.knockVy * GLOVE.lift },
+  puck: { vx: PUCK.speed * 0.9, vy: 220 },
+  boomerang: { vx: 300, vy: 220 },
+};
+
+/** A shove: a walk's worth off whatever edge it ends at. */
+const SHOVE = { vx: PHYS.walkSpeed * 0.6, vy: 0 } as const;
+
+/** Frames a knocked body is followed through the air before it counts as having come down safe. */
+const FLIGHT = 90;
+
+/** Cells (y * w + x) the parts and set pieces keep a route out of, one mask per view's parts: what a knock throws someone into. */
+const noGoMasks = new WeakMap<readonly PropSense[], Uint8Array>();
+function noGoMask(v: BrainView): Uint8Array {
+  let m = noGoMasks.get(v.props);
+  if (!m) {
+    m = new Uint8Array(v.level.w * v.level.h);
+    for (const p of v.props) for (const c of p.noGo) m[c] = 1;
+    noGoMasks.set(v.props, m);
+  }
+  return m;
+}
+
+/** Whether a part or a set piece hurts at cell (x, y) of `mask`; a mystery box is one too, and only pops an item when it's hit. */
+const harms = (v: BrainView, mask: Uint8Array, x: number, y: number) => mask[y * v.level.w + x] === 1 && !v.boxes.some((b) => b.tx === x && b.ty === y);
+
+/** Whether stand cell (tx, ty) is in a part's or a set piece's way: what hurts, pushes or moves there. */
+export function hurtsAt(v: BrainView, tx: number, ty: number): boolean {
+  const { w, h } = v.level;
+  if (tx < 0 || tx >= w) return false;
+  const mask = noGoMask(v);
+  return (ty >= 0 && ty < h && harms(v, mask, tx, ty)) || (ty >= 1 && ty <= h && harms(v, mask, tx, ty - 1));
+}
+
+/** The slag's row as `me` sees it (rows down from its feet), or Infinity with none. */
+export const slagRow = (me: SelfSense): number => (me.slag === null ? Infinity : me.y + me.slag);
+
+/**
+ * Whether a body with its feet at (x, y) tiles, thrown at (vx, vy) px/s (up positive) with nobody at its controls,
+ * the way a dazed one flies, meets something that kills before it comes down on a floor: a part or a set piece that
+ * hurts, a side of the map, the pit or the slag at row `slag`. A sketch of the body's flight, not the sim's: its
+ * middle column, the dazed body's gravity and air drag, and a wall it meets stopping it dead.
+ */
+export function knockKills(v: BrainView, x: number, y: number, vx: number, vy: number, slag: number): boolean {
+  const { w, h } = v.level;
+  const mask = noGoMask(v);
+  let px = x * TILE;
+  let py = y * TILE;
+  let sx = vx;
+  let sy = -vy;
+  for (let f = 0; f < FLIGHT; f++) {
+    sx = sx > 0 ? Math.max(0, sx - PHYS.airDecel * DT) : Math.min(0, sx + PHYS.airDecel * DT);
+    sy = Math.min(PHYS.maxFall, sy + PHYS.gravity * (sy > 0 ? PHYS.fallGravityMult : 1) * DT);
+    let nx = px + sx * DT;
+    let ny = py + sy * DT;
+    let cx = Math.floor(nx / TILE);
+    if (cx < 0 || cx >= w) return true;
+    const top = Math.floor((ny - PLAYER_H) / TILE);
+    const bottom = Math.floor((ny - 1) / TILE);
+    // A wall across stops it dead, and it drops from there; a ceiling stops its rise.
+    if (cx !== Math.floor(px / TILE) && (tile(v, cx, top) === T_SOLID || tile(v, cx, bottom) === T_SOLID)) {
+      sx = 0;
+      nx = px;
+      cx = Math.floor(px / TILE);
+    }
+    if (sy < 0 && tile(v, cx, top) === T_SOLID) {
+      sy = 0;
+      ny = py;
+    }
+    if (ny >= h * TILE || ny / TILE > slag) return true;
+    for (let ty = Math.max(0, top); ty <= Math.min(h - 1, bottom); ty++) if (harms(v, mask, cx, ty)) return true;
+    // Coming down onto a floor: it's down, and safe.
+    const row = Math.floor(ny / TILE);
+    if (sy > 0 && py <= row * TILE && floorAt(v, cx, row)) return false;
+    px = nx;
+    py = ny;
+  }
+  return false;
+}
+
+/** Whether a hit from `kind` (or a shove, with none) toward `dir` throws `r` into something that kills, as `me` reads the level. */
+export function knockedInto(v: BrainView, me: SelfSense, r: RunnerSense, dir: -1 | 1, kind: ItemKind | null): boolean {
+  const k = (kind && KNOCKS[kind]) || SHOVE;
+  if (k !== SHOVE) return knockKills(v, r.x, r.y, dir * k.vx, k.vy, slagRow(me));
+  // A shove only matters at an edge or a hazard a step or two away.
+  const mask = noGoMask(v);
+  const ty = Math.round(r.y) - 1;
+  for (let i = 1; i <= 2; i++) {
+    const x = Math.floor(r.x) + dir * i;
+    if (x < 0 || x >= v.level.w) return true;
+    if (tile(v, x, ty) === T_SOLID) return false;
+    if (ty >= 0 && harms(v, mask, x, ty)) return true;
+    if (!floorAt(v, x, ty + 1)) return knockKills(v, x + 0.5, r.y, dir * SHOVE.vx, 0, slagRow(me));
+  }
+  return false;
+}

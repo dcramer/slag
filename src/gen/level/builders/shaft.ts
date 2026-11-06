@@ -1,7 +1,7 @@
 import type { Rng } from '../../../core/rng';
 import { LOOP_BAND, LOOP_SPAWN } from '../../../sim/level';
 import { withDifficulty } from '../difficulty';
-import { finish, Grid, POCKET, T_SOLID } from '../kit';
+import { finish, Grid, POCKET, T_EMPTY, T_SOLID } from '../kit';
 import { easyRise, knobs, LAST_RESORT } from '../sculptors/common';
 import type { Storey, TallKit } from '../sculptors/tall';
 import type { SculptCtx, Shape } from '../types';
@@ -31,6 +31,9 @@ const BRICKS = {
 /** Columns a chimney keeps clear beside its wall, and the share of the lap it runs. */
 const CHIMNEY_W = 3;
 const CHIMNEY_SHARE = 0.5;
+
+/** Spawn cells along the shaft's floor, the pocket's included: a field starts spread out, each under a line of its own. */
+const START_LINE = 4;
 
 /** One row of ledges: stand row `row`, ledges as inclusive column spans. */
 interface Course {
@@ -114,7 +117,27 @@ export function sculptShaft(ctx: SculptCtx, kit: TallKit): Shape {
   for (const c of courses) for (const [a, b] of c.ledges) g.clear(a, c.row - 1, b, c.row);
 
   kit.shell?.(g, rng, [spawn, goal], k);
-  return closeLoop(finish(g, { row: bottom }, { row: top, depth: 2 }, `${kit.style}:shaft`), loop);
+  const shape = closeLoop(finish(g, { row: bottom }, { row: top, depth: 2 }, `${kit.style}:shaft`), loop);
+  return { ...shape, spawns: startLine(shape) };
+}
+
+/**
+ * The start line: START_LINE cells spread evenly along the spawn storey's floor, the pocket first, then the far end,
+ * then the ones between, so two runners start apart and four each under a line of their own. Each is the open cell
+ * over the floor nearest its mark; the band is protected, so every one is in the safe zone. The level keeps only those
+ * a lap is proven from (gen/level/index.ts).
+ */
+function startLine(shape: Shape): { tx: number; ty: number }[] {
+  const { w, tiles, spawn } = shape;
+  const at = (x: number, y: number) => tiles[y * w + x];
+  const row = spawn.ty;
+  const open = (x: number) => x > 0 && x < w - 1 && at(x, row) === T_EMPTY && at(x, row - 1) === T_EMPTY && at(x, row + 1) !== T_EMPTY;
+  const lo = spawn.tx;
+  const hi = w - 1 - spawn.tx;
+  const xs = Array.from({ length: START_LINE }, (_, i) => Math.round(lo + ((hi - lo) * i) / (START_LINE - 1)));
+  const near = (x: number) => [0, 1, -1, 2, -2, 3, -3].map((d) => x + d).find(open);
+  const cells = [xs[xs.length - 1], ...xs.slice(1, -1)].map(near).filter((x): x is number => x !== undefined && x !== lo);
+  return [...new Set(cells)].map((tx) => ({ tx, ty: row }));
 }
 
 /**
