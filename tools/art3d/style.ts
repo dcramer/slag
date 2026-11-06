@@ -441,6 +441,27 @@ export const BRIEFS: Record<string, Brief> = {
       'A sleeveless knit top (#4a5ab0), baggy trousers in a much darker shade of the same blue (#283266), two brown belts (#6b4a35) crossed at the hip, heavy brown boots. On one shoulder a single big round shoulder piece: a grey car hubcap (#9aa0a8).',
     worn: 'the tip of every hair spike is singed black; the hubcap has a big dent knocked into it and a crack across it; two teeth are snapped out of the middle of the knife edge, leaving a big notch; one trouser leg is torn off ragged at the shin.',
   },
+  pyramid: {
+    // The nod, each part of the read at race size and each a shape in outline: the head one huge fat wedge, a
+    // right-angled triangle wider than his shoulders, its point sticking out past his front shoulder with background
+    // above and below it (the read: nobody else in the cast has a triangle for a head; the stinger's horns, the king's
+    // crown and the warrior's pot all sit on a head, this is the head); a hulking body with thick bare arms and two
+    // thick legs apart (the brute; with the blade across his legs his base flared into a robe and the wedge read as a
+    // wizard's hat, the mage's read); the giant flat blade dragged behind him, a long diagonal from his fist to the
+    // floor (a smooth paddle with a slot through it, never the merc's serrated knife standing beside him).
+    // Ours, and the joke: the helmet is a rusty roof-vent cowl, rivets and a dent; the blade an enormous cheese
+    // slicer; the smock a butcher's apron with a cartoon pig on it (the wear edit). A toy, slapstick: no blood.
+    // The palette is neutral (Decisions 4): the apron in the player's colour, the pig a light of it; the rust, the
+    // grey skin, the steel and the boots all their own. The slicer leads the brief: the model drops what comes last,
+    // and asked for last it came back small and in front of him. This is the fourth round's brief, the one kept
+    // (art/sprites/pyramid/design.prompt.txt).
+    design:
+      'The character: a big hulking cartoon toy brute, in five colours: a blue apron (#4f7fae), a rusty orange metal helmet (#b8683e), pale grey skin (#bdb8b2), a steel blade (#c4c8ce), dark brown boots (#4a3e38). ' +
+      'He drags a giant flat steel cheese slicer as long as he is tall behind him: his back arm reaches back, and its broad paddle blade, as wide as his head, with a slot across it, slants from his fist down to the ground far behind him on the left. ' +
+      'His head is a huge metal wedge, a right-angled triangle: a tall upright back edge, a long flat level bottom edge on his shoulders sticking far out to the right, half his width again past his front shoulder, and a straight slope between them. No brim. A slot in its front. ' +
+      'Thick bare grey arms, a knee-length apron, two thick legs apart, big boots.',
+    worn: "the helmet is an old rusty roof-vent cowl: a row of big round rivets along its bottom edge and a big dent knocked into its sloping top face; a big cartoon pig face in pink (#e8a0a8), round with a snout and two ears, is printed on the front of the apron; the apron hem is torn into a ragged notch at one side; a big chip is knocked out of the cheese slicer blade edge. The helmet's wedge shape, its point and the slot stay exactly as they are.",
+  },
   ape: {
     // The nod, each part of the read at race size: the hunched gorilla shape with arms longer than its legs
     // and huge shoulders over a small low head (the brute, from across the screen, and the line between him
@@ -717,6 +738,25 @@ export const BRIEFS: Record<string, Brief> = {
     // stripes and patch, its frayed hem, and the yarn off the needle's knob.
     worn: 'the cloak is an old striped dishcloth: two wide pale pink stripes (#e8a6a6) run across it near the hem, a big square patch of grey cloth (#a8a29a) is sewn on one side with big stitches, and the hem is frayed into a ragged fringe of loose threads; a strand of cream yarn (#e6dcc4) hangs from the round knob of the knitting needle in one short loose loop. The mask, its eye holes and the two horns stay exactly as they are.',
   },
+  mage: {
+    // The nod, each part of the read at race size and each a shape in outline: the huge hat, its brim wider than his
+    // shoulders and its tall crown bent over into a point (the read in black: nobody else in the cast wears a brim
+    // that wide; the elf's cap is a sock with no brim, the king's crown sits on a horned head side on); under it no
+    // face, only darkness and two round glowing eyes (the read in colour: nobody else's face is only eyes); the long
+    // robe flaring to the ankles with wide cuffs over the hands (small and round, never a slim figure in a gown,
+    // which read as a princess); a staff upright beside him.
+    // Ours, and the joke: the hat is a battered straw sun hat folded into its point and held with a clothes peg, the
+    // staff a broom handle with a light bulb taped to its tip.
+    // The palette is neutral (Decisions 4): the robe in the player's colour, its cuffs and belt a dark of it; the
+    // straw, the dark face, the wood and the bulb are their own, the eyes' glow a face mark. The colours lead the brief.
+    design:
+      'The character: a small, shy, round-shouldered cartoon wizard in three-quarter view facing right, in five colours: a blue robe (#3e58a8), a straw hat (#dcb66a), a black face (#1e1a24), glowing yellow eyes (#ffd23c) and a wooden staff (#a87a4a). ' +
+      'His signature: a huge floppy straw sun hat, its round brim much wider than his shoulders, its tall crown bent over at the top into a point flopping back, pinned with a wooden clothes peg. ' +
+      'Under the brim no face at all, only black shadow with two big round glowing yellow eyes. ' +
+      'The robe hangs to his ankles in a wide flared bell, its cuffs flared wide over his hands, a broad dark belt. ' +
+      'He holds a broom handle upright beside him, taller than he is, a light bulb taped to its top.',
+    worn: "a big ragged notch is torn out of the front of the hat's brim, loose straw ends sticking out of it; a big square patch of grey cloth (#a8a29a) is sewn on the robe's side with big stitches; the robe's hem is torn into a ragged notch at the front; a strip of grey tape (#9a9c98) is wrapped round the broom handle where it was snapped and mended. The dark face, its two round glowing yellow eyes and the hat's bent point stay exactly as they are.",
+  },
   raider: {
     // The nod, each part of the read at race size and each a shape in outline: the one long thick braid swinging out
     // behind her head, clear of her back (the read: nobody else in the cast has a rope of hair; one tight rope, never
@@ -734,6 +774,56 @@ export const BRIEFS: Record<string, Brief> = {
       'On each thigh a holster holds a chunky orange toy water pistol (#e8823a) with a round tank on top, its grip sticking out. ' +
       'A small tan school satchel (#b8925e) at her back hip on a strap across her chest. Bare arms and legs, big chunky boots.',
     worn: "the satchel's strap is torn and tied back together in a big knot, its flap hanging open; a strip of grey tape (#9a9c98) is wrapped round the near water pistol's cracked tank; one knee of her shorts' hem is torn into a ragged notch; one boot's sole is flapping loose at the toe. Her face, the braid and its shoelace bow stay as they are.",
+  },
+  creeper: {
+    // The nod, each part of the read at race size and each a shape in outline: the tall upright block body with a
+    // square block head exactly as wide on top and no neck (the outline: taller than wide, so not the sneak's box on
+    // legs, and the head no wider than the body, so not the miner's cube head over arms); four stubby block legs, two
+    // at the front and two at the back with background between the pairs (a block on four legs, so not the
+    // impostor's bean or the hopper's ball on two); no arms at all (nobody else in the cast stands armless on four);
+    // the frowning face of square holes (the face, the homage's own: two square eyes over a stepped frown).
+    // Ours, and the joke: he's a cardboard box painted in squares, a birthday candle stuck on his head for a fuse, lit.
+    // The palette is neutral (Decisions 4): the body in the player's colour, its painted squares a light and a dark of
+    // it; the face holes, the candle and its flame neutrals. The colours lead the brief: the image model drops a
+    // prompt's tail.
+    // The design read (black silhouettes) named nothing but "a thin tall slab with an antenna": the outline alone is a
+    // post. With the face's four holes cut through it, as the game cuts them (`holes`), a reader named him; so the
+    // face is holes through the box, the level showing through, and the kit only shuts and acts them. A second brief,
+    // a big overhanging head on splayed cube legs (art/sprites/creeper/drafts/r2-*), read as "a creeper or a bomb mix"
+    // where this one read as the creeper.
+    design:
+      'The character: a tall narrow cartoon creature made from cardboard boxes, seen in three-quarter view facing right. ' +
+      'Colours: green cardboard (#5aa846) painted in a patchwork of lighter (#8cd06a) and darker (#3c7a34) green squares, the face holes near-black (#1e2a1e), a white wax candle (#f2eee4) with a yellow flame (#f6c443). ' +
+      'Its body is one tall upright box, twice as tall as it is wide. On top sits a square box head exactly as wide as the body, no neck. ' +
+      'Under the body four short square block legs, two at the front and two at the back, with white background between the front pair and the back pair. No arms at all. ' +
+      'On the front of the head a face of four square black holes: two square eyes and a frowning mouth under them. ' +
+      'A short birthday candle stands on top of the head, its flame lit.',
+    // The design came back as the original redrawn with a candle on, so the edit carries the twist with the wear: the
+    // packing tape, the torn corner's corrugated brown, the crooked candle. Nothing on the face, which is the read. A
+    // second edit burnt the candle down to a stub, on the design and on every pose sheet: tall, it read blind as an
+    // antenna, a fuse and a mage's pointed hat (art/sprites/creeper/design.prompt.txt).
+    worn: 'he is an old painted cardboard box: a wide strip of brown packing tape (#c49a5a) is stuck across a big split in the front of his body; the top back corner of his head is dented in, a big notch in its outline; the bottom front corner of his body is torn open, the brown corrugated cardboard (#b8925e) showing; the birthday candle is stuck in crooked, leaning back, wax dripping down it, its flame big. The four square face holes stay exactly as they are.',
+  },
+  tophat: {
+    // The nod, each part of the read at race size and each a shape in outline: the top hat as tall as the rest of
+    // her, a clean cylinder standing straight up off a small girl's head with a brim (the read: nobody else in the
+    // cast wears one; the plumber's cap and the elf's are low and soft, the robot's helmet a round dome); the short
+    // cape flaring off her shoulders with its high collar (the time-travelling girl's other shape); the small size,
+    // a little girl's big head on short legs. The ponytail stays short, so the hat is the outline, not the hair
+    // (long hair behind a slim girl paired the raider with the puppy).
+    // Ours, and the joke: the hat is a stovepipe made from a tin can, its band a fat hair tie, and the umbrella is a
+    // paper cocktail umbrella grown huge.
+    // The palette is neutral (Decisions 4): the hat and cape in the player's colour, the band and the cape's lining a
+    // light of it; the skin, hair, shorts, socks, boots and umbrella neutrals. The colours lead the brief: the image
+    // model drops what comes last.
+    design:
+      'The character: a tiny cheeky cartoon girl, three-quarter view facing right. Colours: a plum (#963c8f) hat and cape, a pale lilac (#e0b0dc) hat band and cape lining, peach skin (#f2cba8), brown hair (#7a4a2a), dark grey shorts (#4a4650), a cream paper umbrella (#f2e8cc). ' +
+      'Her signature: a huge stovepipe top hat as tall as the rest of her, standing straight up off her head, a tall plain plum tin can with ridged rims on a flat brim, a fat lilac hair tie round its base for a band. ' +
+      'A short plum cape with a high stiff collar flares out off her shoulders. A short brown ponytail out the back under the brim. Big round eyes, a wide cheeky grin. ' +
+      'Shorts, grey-and-white striped socks, little dark boots. Her front hand holds out a huge open paper cocktail umbrella on a wooden toothpick stick, low and clear of her body.',
+    // The design came back close to the original redrawn (a plain top hat with a band), so the edit carries the
+    // twist with the wear: the tin can's ridges and dent, the hair tie, the umbrella grown huge.
+    worn: "the top hat is now clearly an old tin can: two raised ridged rings run round it near its top and its bottom, and a big dent is knocked into its side, its brim still wide and flat and the hat still straight up; its band is a fat lilac hair tie (#e0b0dc) knotted at the side; the umbrella grows huge: an open paper cocktail umbrella as wide as she is, on a long wooden toothpick stick, held out at arm's length in front of her, with white background all round it; the hem of the cape is torn into a big ragged notch; one striped sock has slipped down round her boot. Her face and the ponytail stay as they are.",
   },
 };
 

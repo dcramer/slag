@@ -1,0 +1,17 @@
+How design.png and the pose drawings were made (2026-11-05). Every image was 2 credits (no free images left).
+
+1. Design (`node tools/art3d/style.ts design mage`, 4 drawn, drafts/design-1..4). All four drew the twist (the clothes peg, the broom handle, the taped bulb); design-4 kept: the widest brim, the fattest bent point, the feet showing.
+   Design read, design-4 and design-3 as black silhouettes 24 px tall beside the elf, king, stinger, slayer, plumber and raider designs, two fresh readers: "Black Mage (Final Fantasy), medium. A tall pointed wizard hat with a wide brim, a staff held upright on the right and a flared robe"; "black mage or generic wizard, high for "wizard" and medium for the black mage specifically. A wide-brimmed pointed hat, a robe that flares at the bottom, and a staff held upright on the right." Each paired only the two candidates.
+
+2. The wear (`node tools/art3d/style.ts worn mage`, --ref drafts/design-4.png, 3 drawn; drafts/worn-1 kept as design.png: it kept the peg, worn-2 lost it, worn-3's straw fringe would trace as flecks).
+
+3. Poses, three to a 16:9 image with design.png as the reference, each sheet drawn twice (sheets/), cut with `build.ts cut mage SHEET … --design`. Each prompt is the template below with the kind's KEEP (tools/art3d/flat/kinds/mage.ts) and three poses:
+The same character exactly as in the reference image: the same design, proportions, colours, wear and tear, line and flat white background, in the same three-quarter view facing right. Draw him three times side by side in one row: three separate figures of the same size, with very wide white space between them, none touching or overlapping, each in its own pose, KEEP. Left: … Middle: … Right: … Nothing else changes: no ground, no shadow on the ground, no motion lines, no text, no other figures.
+   - sheetA (walk-1, walk-2, idle2 holding the broom in front of him): A-1 -> flat/walk-1, walk-2, idle2.
+   - sheetB (two runs, a hop with the broom held up): B-2 -> flat/run-1 (the broom upright; B-1's was held low across him); B-1 -> flat/run-2, air-1 (B-2's hop flung both arms up, the ape's outline).
+   - sheetC (falling, a cheer with the broom thrust up, a shy bow holding the brim): C-2 -> flat/air-2 (C-1's fall lifted the hat clear of his head); C-1 -> flat/cheer, cheer2.
+   - sheetD, the far template ("The same character as in the reference image … drawn at the same size", two figures: the wall slide side on, knocked out on his back): D-1, its drawn wall line whitened by art/sprites/fighter/r2/nowall.py (sheetD-1-clean.png) -> flat/wall, death.
+
+4. nobroom.py on flat/death.png (`python3 -I art/sprites/mage/nobroom.py art/sprites/mage/flat/death.png 610 1050`), once, on a fresh cut: the dropped broom lying below him reached past the cast's box and its tape's tail took the pen under the floor.
+
+Images: 4 designs, 3 wear edits, 8 sheets: 15 images, 30 credits. The blind read passed on the first sheet (docs/characters/mage.md → Rig).
