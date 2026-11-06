@@ -23,8 +23,11 @@ const fidget: Script = (_s, f) => ({ kb1: press({ pointer: { x: 100 + (f % 9), y
 const player: Script = (s, f) => {
   const m = s.match;
   const me = m.players.find((p) => p.device === s.globalDevice('kb1'));
-  if (m.phase === 'lobby')
+  if (m.phase === 'lobby') {
+    // The host presses Start once everyone is ready, as its screen would.
+    if (s.isHost && m.canStart()) s.act({ t: 'start' });
     return me && !me.ready && m.players.filter((p) => !p.afk).length >= 2 && f % 20 === 0 ? { kb1: press({ confirmPressed: true }) } : {};
+  }
   if (m.phase === 'pick') {
     const card = m.crate.find((c) => c.claimedBy < 0);
     return card ? { kb1: press({ pointer: { x: card.rect.x + 8, y: card.rect.y + 8 }, confirmPressed: f % 15 === 0 }) } : {};

@@ -36,6 +36,7 @@ import {
 import { RunWorld } from '../sim/run';
 import { type GameEvent, type InputFrame, NO_INPUT } from '../sim/types';
 import type { ThemeId } from '../themes';
+import { isBotDevice } from './device';
 import { DEFAULT_RULES, type MatchRules } from './rules';
 import { overview, viewToWorld, worldToView } from './view';
 import { MODE_IDS, MODES, minPlayersOf } from './modes';
@@ -445,9 +446,23 @@ export class Match {
       if (inp.downPressed) this.pickLevel(deriveSeed(this.seed, 'reroll'), this.themeOverride);
     }
     for (const p of this.players) if (!p.ready && this.idleFrames(p) >= LOBBY_IDLE_FRAMES) p.afk = true;
-    // Someone has to be here and ready, and as many as the mode needs; someone who isn't here doesn't hold the rest up.
+    // Someone presses Start (`start`, a host action online). With no person here to press it, the bots go by themselves.
+    if (this.canStart() && !this.players.some((p) => !p.afk && !isBotDevice(p.device))) this.startMatch();
+  }
+
+  /**
+   * The lobby's start conditions, when Start shows: someone here and ready, everyone else ready too, and as many
+   * as the mode needs. Someone who isn't here (AFK) doesn't hold the rest up.
+   */
+  canStart(): boolean {
+    if (this.phase !== 'lobby') return false;
     const here = this.players.filter((p) => !p.afk);
-    if (here.some((p) => p.ready) && here.length >= minPlayersOf(this.rules.mode) && this.players.every((p) => p.ready || p.afk)) this.startMatch();
+    return here.some((p) => p.ready) && here.length >= minPlayersOf(this.rules.mode) && this.players.every((p) => p.ready || p.afk);
+  }
+
+  /** Start pressed: the match starts if it can, and nothing happens if it can't (someone un-readied as it was pressed). */
+  start() {
+    if (this.canStart()) this.startMatch();
   }
 
   /**
@@ -489,7 +504,6 @@ export class Match {
     return p;
   }
 
-  /** Leave the lobby and start round 1 (normally triggered by everyone readying up). */
   /**
    * Per-match randomness rolled by the host when a match starts (an input, so
    * online peers share it). Crate CONTENTS stay tied to the level seed; the
@@ -498,6 +512,7 @@ export class Match {
   nextSalt = 0;
   salt = 0;
 
+  /** Leave the lobby and start round 1, ready or not: the lobby's own way in is `start`; tools and tests come straight here. */
   startMatch() {
     this.salt = this.nextSalt;
     this.round = 0;

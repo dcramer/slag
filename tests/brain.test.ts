@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { BotSeats } from '../src/brain/bots';
 import { rollPersonality } from '../src/brain/personality';
-import { botDevice, isBotDevice } from '../src/brain/device';
+import { botDevice, isBotDevice } from '../src/game/device';
 import { Match } from '../src/game/match';
 import { Motor } from '../src/brain/motor';
 import { Rng } from '../src/core/rng';

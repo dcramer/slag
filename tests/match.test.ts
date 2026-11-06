@@ -18,6 +18,7 @@ function playMatch(seed: number, devices: string[], maxFrames = 60 * 60 * 6) {
   const tick = (fn: (d: string) => InputFrame) => m.step(Object.fromEntries(devices.map((d) => [d, fn(d)])));
   tick(() => press({ confirmPressed: true })); // join
   tick(() => press({ confirmPressed: true })); // ready
+  m.start(); // Start, pressed
   let f = 0;
   const searched = new Set<number>();
   while (m.phase !== 'victory' && f++ < maxFrames) {
@@ -72,6 +73,7 @@ describe('match flow', () => {
     const m = new Match(77);
     m.step({ kb1: press({ confirmPressed: true }) });
     m.step({ kb1: press({ confirmPressed: true }) });
+    m.start();
     expect(m.phase).toBe('pick');
     m.players[0].score = 49;
     // Force a finish by teleporting the runner onto the flag once the race starts.
@@ -183,6 +185,8 @@ describe('match end', () => {
     while (m.phase === 'victory') m.step({ p0: press({ confirmPressed: true }) });
     expect(m.phase).toBe('lobby');
     m.step({ p0: press({ confirmPressed: true }), p1: press({ confirmPressed: true }) });
+    expect(m.phase).toBe('lobby');
+    m.start();
     expect(m.phase).toBe('pick');
     expect(m.round).toBe(1);
     expect(m.winners).toEqual([]);
@@ -467,8 +471,67 @@ describe('lobby', () => {
     expect(m.phase).toBe('lobby');
     m.step({ kb2: press({ confirmPressed: true }) });
     m.step({ kb2: press({ confirmPressed: true }) });
-    for (let i = 0; i < 600 && m.phase === 'lobby'; i++) m.step({ kb1: NO_INPUT, kb2: NO_INPUT });
+    expect(m.canStart()).toBe(true);
+    m.start();
     expect(m.phase).not.toBe('lobby');
+  });
+});
+
+describe('Start', () => {
+  /** Two people seated and ready (join, then ready, on their confirms). */
+  function readied(): Match {
+    const m = new Match(3);
+    m.step({ kb1: press({ confirmPressed: true }), kb2: press({ confirmPressed: true }) });
+    m.step({ kb1: press({ confirmPressed: true }), kb2: press({ confirmPressed: true }) });
+    return m;
+  }
+
+  it('everyone ready waits on Start, and Start starts', () => {
+    const m = readied();
+    expect(m.players.every((p) => p.ready)).toBe(true);
+    for (let i = 0; i < 300; i++) m.step({});
+    expect(m.phase).toBe('lobby');
+    expect(m.canStart()).toBe(true);
+    m.start();
+    expect(m.phase).toBe('pick');
+    expect(m.round).toBe(1);
+  });
+
+  it('is ignored until everyone here is ready', () => {
+    const m = new Match(3);
+    m.start();
+    expect(m.phase).toBe('lobby'); // nobody seated
+    m.step({ kb1: press({ confirmPressed: true }), kb2: press({ confirmPressed: true }) });
+    m.step({ kb1: press({ confirmPressed: true }) });
+    expect(m.canStart()).toBe(false);
+    m.start();
+    expect(m.phase).toBe('lobby');
+  });
+
+  it('goes away when someone un-readies', () => {
+    const m = readied();
+    expect(m.canStart()).toBe(true);
+    m.step({ kb2: press({ confirmPressed: true }) });
+    expect(m.players[1].ready).toBe(false);
+    expect(m.canStart()).toBe(false);
+    m.start();
+    expect(m.phase).toBe('lobby');
+  });
+
+  it('a lobby of nothing but bots starts by itself, and one person in it waits on Start', () => {
+    const bots = new Match(3);
+    bots.join('bot1');
+    bots.join('peer:bot2');
+    bots.players.forEach((p) => (p.ready = true));
+    bots.step({});
+    expect(bots.phase).toBe('pick');
+
+    const mixed = new Match(3);
+    mixed.join('bot1');
+    mixed.join('kb1');
+    mixed.players.forEach((p) => (p.ready = true));
+    for (let i = 0; i < 60; i++) mixed.step({});
+    expect(mixed.phase).toBe('lobby');
   });
 });
 
@@ -477,7 +540,7 @@ describe('controller cursor', () => {
     const m = new Match(1);
     m.step({ pad: press({ confirmPressed: true }) });
     m.step({ pad: press({ confirmPressed: true }) });
-    for (let i = 0; i < 600 && m.phase !== 'pick'; i++) m.step({ pad: NO_INPUT });
+    m.start();
     expect(m.phase).toBe('pick');
     return m;
   };

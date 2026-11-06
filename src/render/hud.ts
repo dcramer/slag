@@ -29,6 +29,8 @@ import type { CharacterDef } from '../gen/character';
 export type HudAction =
   | 'join'
   | 'ready'
+  /** The lobby's Start, once everyone is ready: offline any seat here, online the host. */
+  | 'start'
   | 'look'
   | 'name'
   | 'level'
@@ -178,6 +180,8 @@ export class Hud {
   mouseDevice = 'kb1';
   /** This machine may seat a bot: the lobby's host (or offline), seated itself, with a seat free. */
   canAddBots = false;
+  /** This screen may press Start: the lobby can start and this is its host (or an offline game) with a seat here. */
+  canStart = false;
   /** Is this device a bot this machine runs (its card gets Remove)? */
   ownsBot: (device: string) => boolean = () => false;
   /** Latest pointer position in view coords, for hover highlights. */

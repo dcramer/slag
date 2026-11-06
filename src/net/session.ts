@@ -1,4 +1,4 @@
-import { botDevice, isBotDevice } from '../brain/device';
+import { botDevice, isBotDevice } from '../game/device';
 import { IDLE_ROUNDS, type Match } from '../game/match';
 import { DT, MAX_PLAYERS } from '../sim/constants';
 import { addBreadcrumb, reportEvent, reportLog } from '../telemetry';

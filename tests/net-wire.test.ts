@@ -23,6 +23,7 @@ const SAMPLES: { [K in NetAction['t']]: Extract<NetAction, { t: K }> } = {
   bot: { t: 'bot', dev: 'aaaa:bot1', level: 'hard' },
   adopt: { t: 'adopt', dev: 'aaaa:bot1', to: deviceId('gggg', 'bot1') },
   salt: { t: 'salt', salt: 12345 },
+  start: { t: 'start' },
   rules: { t: 'rules', rules: { ...DEFAULT_RULES, pickSeconds: 20 } },
   level: { t: 'level', seed: 777, theme: 'glacier' },
   kick: { t: 'kick', peer: 'aaaa', client: 'c1', until: 600 },

@@ -74,7 +74,8 @@ function footerItems(hud: Hud, m: Match): { items: FooterItem[]; left: string; a
       if (!primary) {
         if (!hud.net?.stranded) items.push({ action: 'confirm', label: 'Join', hud: 'join', device: hud.mouseDevice });
       } else {
-        items.push({ action: 'confirm', label: primary.ready ? 'Not Ready' : 'Ready Up', hud: 'ready', device: primary.device });
+        if (hud.canStart && primary.ready) items.push({ action: 'confirm', label: 'Start', hud: 'start' });
+        else items.push({ action: 'confirm', label: primary.ready ? 'Not Ready' : 'Ready Up', hud: 'ready', device: primary.device });
         items.push({ action: 'alt', label: 'New Look', hud: 'look', device: primary.device });
         // Run opens the name screen: a pad's only way to the name and color its card shows.
         items.push({ action: 'run', label: 'Name', hud: 'name', device: primary.device });

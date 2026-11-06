@@ -1,4 +1,4 @@
-import { isBotDevice } from '../brain/device';
+import { isBotDevice } from '../game/device';
 import { tidyName } from '../core/name';
 import { nameBlocked } from '../core/name-filter';
 import { type CharacterDef, generateCharacter } from '../gen/character';
@@ -46,6 +46,8 @@ export type NetAction =
   | { t: 'adopt'; dev: string; to: DeviceId }
   /** Host only: the per-match salt (crate order) for the next match start. */
   | { t: 'salt'; salt: number }
+  /** Host only, lobby only: Start pressed. Ignored unless the lobby can start (`Match.canStart`) as it applies. */
+  | { t: 'start' }
   /** Host only, lobby only. */
   | { t: 'rules'; rules: MatchRules }
   /** Host only, lobby only: the lobby's level by seed, in `theme` or (null) the one the seed picks. */
@@ -189,6 +191,7 @@ export const ACTION_AUTH: { [K in NetAction['t']]: Extract<NetAction, { t: K }> 
   bot: 'self',
   adopt: 'host',
   salt: 'host',
+  start: 'host',
   rules: 'host',
   level: 'host',
   kick: 'host',
@@ -344,6 +347,9 @@ export function applyAction(m: Match, ns: NetState, a: NetAction): void {
     }
     case 'salt':
       m.nextSalt = a.salt >>> 0;
+      return;
+    case 'start':
+      m.start();
       return;
     case 'rules':
       if (m.phase === 'lobby') m.setRules(sanitizeRules(a.rules));
