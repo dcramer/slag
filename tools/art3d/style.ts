@@ -984,6 +984,25 @@ export const BRIEFS: Record<string, Brief> = {
     // a cord coiled by the feet reads as a tail.
     worn: 'a big coin slot is set in the middle of his belly with a large silver coin jammed half into it; the fur on his near forearm is torn open at the elbow joint, a grey metal rod showing through; the fur on his far knee is split open showing a grey metal joint; the bow tie hangs crooked; the top hat has a big dent in its side. The top hat stays exactly where it is, small and upright on top of his head with white gaps between it and both round ears, and the shower head and its short hose stay held up in front of his mouth. His face stays as it is.',
   },
+  boxer: {
+    // The nod, each part of the read at race size and each a shape in outline: the two huge round gloves, each about
+    // as big as his head, held up in a high guard out in front of his face with background between them and it (the
+    // read: parts that touch the head become the head, so the gloves stand clear; the ape's big fists hang at the
+    // floor, these are up at the chin); tiny and wiry next to them (the smallest fighter, not the plumber's or the
+    // engineer's stout men); upright and bouncing on his toes, never a low wide stance (the fighter's, and a lunge
+    // reads as a ninja: the slayer's lesson); the tank top and baggy shorts to the knee; the towel round his neck.
+    // Ours, and the joke: a kitchen-table contender who trains by jogging after the bus. The gloves are two stuffed
+    // oven mitts taped at the wrist, the towel a checked tea towel, and one mitt is scorched.
+    // The palette is neutral (Decisions 4): the gloves in the player's colour, the tape round their cuffs a dark of it;
+    // the tank top and shorts dark greys, the tea towel pale, the hair dark, skin and boots neutrals.
+    // Side on: the guard is a profile, the gloves out ahead of the face.
+    design:
+      'A tiny wiry young boxer seen side on, standing upright on his toes, bouncing, in a high guard: two huge round green boxing gloves (#4caf50) made from stuffed quilted oven mitts, each as big as his head, held up out in front of his chin with white background between them and his face, grey tape (#9a9c98) wrapped round each wrist. ' +
+      'A black tank top (#2a2a30), baggy black shorts to the knee, thin bare legs, small grey boxing boots. A pale checked tea towel (#efe8d8) round his neck, its ends hanging down his chest. Short spiky black hair, tan skin, dot eyes, a determined look.',
+    // Off the face and off the gloves' round outline: the scorch on the near mitt, a tape end flapping loose, the tea
+    // towel's corner frayed, a boot's lace trailing.
+    worn: "the near oven-mitt glove has a big dark brown scorch mark on its side; the grey tape on the near wrist has come loose and one end flaps out; one corner of the tea towel is frayed ragged; the back boot's lace has come undone and trails. Both gloves stay big and round, held up in front of his chin with white background between them and his face. His face stays as it is.",
+  },
 };
 
 function brief(kind: string): Brief {

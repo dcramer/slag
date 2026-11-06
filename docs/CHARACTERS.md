@@ -80,7 +80,7 @@ Each kind's entry is its own file in [characters/](characters/): what a stranger
 | [mech](characters/mech.md) | the girl gamer in the pink mech with the bunny on it | a squat round mech wider than tall on backward-bending legs, two stubby arm cannons forward, a bunny decal, the pilot's headphones over the top | costume: the mech shell; its panels a light of it |
 | [genie](characters/genie.md) | the half-genie who whips her long ponytail | a slim dancer, a ponytail as long as she is whipped out level from her crown, a tiara, harem trousers, hoop earrings | costume: the top and trousers; the sash a dark of it |
 | [mushroom](characters/mushroom.md) | the little mushroom retainer in the spotted cap | small and stubby under a huge round spotted cap wider than him, a vest, puffy trousers | costume: the spots and the vest |
-| [boxer](characters/boxer.md) | the tiny boxer with the huge green gloves | small and wiry in a high guard, two huge round gloves up, a tank top, baggy shorts, a towel round his neck | costume: the gloves; their cuffs a dark of it |
+| [boxer](characters/boxer.md) | the tiny boxer with the huge green gloves | small and wiry in a high guard, two huge round gloves held out ahead of his face with background round each, a tank top, baggy shorts, a tea towel round his neck; jumps in a rising uppercut | costume: the gloves; the scorch a dark of it |
 
 **Reserves**, if a kind won't read: the spinning bandicoot (its tuft and grin rhyme with the speedster), the shovel-wielding knight, the red-haired mountain climber, the falling-block party bean (rhymes with the crewmate). The space marine in green armour reads as a generic soldier at 20 px; the plumber's tall brother, the ape's red-capped nephew and the king's turtle foot soldiers rhyme with kinds already in.
 
@@ -161,7 +161,7 @@ The strongest reads first. **Keyed** marks the non-humanoids, the riskiest to dr
 | 43 | mech | D.Wash | **keyed**, mech on legs | medium: the round mech on bird legs; the robot boy's and the hunter's cannons to watch |
 | 44 | genie | Shampootae | humanoid, side on | medium: the ponytail out level; the raider and the archer to watch |
 | 45 | mushroom | Toadmund | humanoid, small, capped | high: the spotted cap; the assistant dog and the puffball to watch |
-| 46 | boxer | Little Smack | humanoid, small | medium: the gloves held up; the fighter and the ape to watch |
+| 46 | boxer | Little Smack | humanoid, small | drawn flat, side on; the blind read not passed (two rounds named a boxer from the gloves, never above low: "Little Mac, low", "Little Mac-style boxer, low"; one reader gave the name to the bounty hunter's fist instead); the design read alone named him at medium and medium-high |
 
 **What to check.** No two kinds may rhyme. Watch these pairs:
 
