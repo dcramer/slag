@@ -294,6 +294,12 @@ export function generateLevel(seed: number, themeOverride?: ThemeId, profileOver
         if (!level.rides.length) delete level.rides;
       }
       if (live && landmark) level.theme = { ...theme, name: conceptName(seed, live, theme.name) };
+      // A loop's start line (builders/shaft.ts) keeps the cells that get to the spawn, so a lap is proven from each: a
+      // search from the cell that stops at the spawn, a few cells along the same floor.
+      if (profile.loop && level.spawns) {
+        level.spawns = level.spawns.filter((c) => cache.analyze({ ...level, spawn: c, goal: level.spawn }).goalReached);
+        if (!level.spawns.length) delete level.spawns;
+      }
       return level;
     }
     lastGenAttempts = MAX_ATTEMPTS + LEGACY_ATTEMPTS;
@@ -357,7 +363,7 @@ function toLevel(seed: number, s: Shape, theme: Theme, profile: LevelProfile): L
     version: 0,
     setPieces: [],
     ...(profile.tide ? { tide: slagTide(profile, s.tiles, s.w, s.h) } : {}),
-    ...(profile.ends ? { spawns: [{ ...s.goal }] } : {}),
+    ...(s.spawns ? { spawns: s.spawns } : profile.ends ? { spawns: [{ ...s.goal }] } : {}),
     ...(profile.loop && profile.size === 'tall' ? { loop: profile.h - LOOP_BAND } : {}),
   };
 }

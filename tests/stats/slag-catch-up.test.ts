@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { Personality } from '../../src/brain/personality';
-import { LEAD_HOLDS } from '../../src/game/expectations';
+import { LEAD_HOLDS, SLAG_ROUNDS } from '../../src/game/expectations';
 import { botRound } from '../lib/bot-race';
 
 /**
@@ -8,13 +8,18 @@ import { botRound } from '../lib/bot-race';
  * leads 15 s after GO wins the round, four Normal bots on a bare loop. Three ways: the loop's boxes as built; the
  * boxes' deal reaching every empty hand every 5 s, used by the bots' item tactics (src/brain/tactics.ts); and the
  * same deal never used (`knack` 0). Rounds over by 15 s, or ending in a tie, aren't counted. Catch-up itself isn't
- * there yet (`LEAD_HOLDS`), so nothing here asserts it; the bands hold what's measured.
+ * there yet (`LEAD_HOLDS`), so nothing here asserts it; the bands hold what's measured. The boxes' runs also say how
+ * long a round lasts (`SLAG_ROUNDS`).
  */
 const SEEDS = Array.from({ length: 128 }, (_, i) => i + 1);
 const DEAL = 5 * 60;
 const bare = (p: Personality): Personality => ({ ...p, knack: 0 });
 /** Uses per item kind in the `items` runs: catch-up needs the pack to use what it's dealt. */
 const itemUses: Record<string, number> = {};
+/** Seconds each round of the `boxes` runs lasted, from GO: the game as built. */
+const lengths: number[] = [];
+
+const median = (xs: readonly number[]) => [...xs].sort((a, b) => a - b)[xs.length >> 1];
 
 function holds(name: string, opts: Parameters<typeof botRound>[1]): number {
   let held = 0;
@@ -26,6 +31,7 @@ function holds(name: string, opts: Parameters<typeof botRound>[1]): number {
   for (const seed of SEEDS) {
     const r = botRound(seed, { ...opts, at: LEAD_HOLDS.at, limit: 3 * 60 * 60 });
     if (r.leader < 0) early++;
+    if (name === 'boxes') lengths.push(r.frames / 60);
     leads += r.leads;
     bumps += r.bumps;
     if (r.leader >= 0 && r.winner >= 0) {
@@ -38,8 +44,9 @@ function holds(name: string, opts: Parameters<typeof botRound>[1]): number {
     }
   }
   const rate = held / judged;
+  const secs = name === 'boxes' ? `, median round ${median(lengths).toFixed(1)} s` : '';
   console.log(
-    `${name}: the 15 s leader won ${held} of ${judged} (${Math.round(rate * 100)}%), ${early} over by then; ${(leads / SEEDS.length).toFixed(1)} lead changes and ${(bumps / SEEDS.length).toFixed(1)} bumps a round; used ${JSON.stringify(used)}`,
+    `${name}: the 15 s leader won ${held} of ${judged} (${Math.round(rate * 100)}%), ${early} over by then${secs}; ${(leads / SEEDS.length).toFixed(1)} lead changes and ${(bumps / SEEDS.length).toFixed(1)} bumps a round; used ${JSON.stringify(used)}`,
   );
   return rate;
 }
@@ -61,6 +68,13 @@ describe('Rising Slag catch-up', () => {
       expect(rate(k)).toBeGreaterThanOrEqual(lo);
       expect(rate(k)).toBeLessThanOrEqual(hi);
     });
+
+  it('rounds last: few are over by 15 s, and the median is a short round', { timeout: 600_000 }, () => {
+    rate('boxes');
+    expect(lengths.filter((t) => t < LEAD_HOLDS.at / 60).length / SEEDS.length).toBeLessThanOrEqual(SLAG_ROUNDS.early);
+    expect(median(lengths)).toBeGreaterThanOrEqual(SLAG_ROUNDS.median[0]);
+    expect(median(lengths)).toBeLessThanOrEqual(SLAG_ROUNDS.median[1]);
+  });
 
   it('bots use the items they hold', { timeout: 600_000 }, () => {
     rate('items');

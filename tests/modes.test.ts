@@ -15,7 +15,7 @@ import { isProtected, lapShift, type Level, LOOP_BAND, LOOP_SPAWN } from '../src
 import { moduleSim, newPropState } from '../src/sim/props';
 import { bodyAtCell } from '../src/sim/physics';
 import { RunWorld } from '../src/sim/run';
-import { leashRows, stepTide, type Tide } from '../src/sim/tide';
+import { firstOut, leashRows, stepTide, type Tide } from '../src/sim/tide';
 import { type InputFrame, NO_INPUT } from '../src/sim/types';
 import { THEME_IDS } from '../src/themes';
 
@@ -83,6 +83,16 @@ describe('Rising Slag levels', () => {
     const rows = lv.tide!.leash.map((l) => l.rows);
     expect(rows[0]).toBeGreaterThan(rows[2]);
     expect(lv.tide!.leash[1].from).toBe(LOOP_ROWS);
+    // A start line across the spawn storey's floor, each cell open over a floor and in the safe zone.
+    const starts = [lv.spawn, ...(lv.spawns ?? [])];
+    expect(starts.length).toBeGreaterThanOrEqual(3);
+    expect(Math.max(...starts.map((c) => c.tx)) - Math.min(...starts.map((c) => c.tx))).toBeGreaterThan(lv.w / 2);
+    for (const c of starts) {
+      expect(c.ty).toBe(lv.spawn.ty);
+      expect([lv.tiles[c.ty * lv.w + c.tx], lv.tiles[(c.ty - 1) * lv.w + c.tx]]).toEqual([0, 0]);
+      expect(lv.tiles[(c.ty + 1) * lv.w + c.tx]).not.toBe(0);
+      expect(isProtected(lv, c.tx, c.ty)).toBe(true);
+    }
     // Mystery boxes of its own, a few up the shaft, never on the seam's band, each dealing by rank.
     const boxes = lv.setPieces.filter((p) => p.def.key === 'loop-box');
     expect(boxes.length).toBeGreaterThanOrEqual(2);
@@ -129,6 +139,28 @@ describe('the slag', () => {
     expect(leashRows(LEASHED, 0, RUN_COUNTDOWN + FPS)).toBe(5);
     expect(leashRows(LEASHED, 0, RUN_COUNTDOWN + 4 * FPS)).toBe(3);
     expect(leashRows(LEASHED, 0, RUN_COUNTDOWN + 60 * FPS)).toBe(2);
+  });
+
+  it('starts the leash long while a field untangles, and squeezes from the first one out', () => {
+    const tide: Tide = { ...LEASHED, squeeze: { after: 30, rate: 1, min: 2, out: 1 }, open: { rows: 10, seconds: 5 } };
+    // At GO it's the opening's rows longer, fading to the lap's leash.
+    expect(leashRows(tide, 0, RUN_COUNTDOWN)).toBe(15);
+    expect(leashRows(tide, 0, RUN_COUNTDOWN + 2.5 * FPS)).toBe(10);
+    expect(leashRows(tide, 0, RUN_COUNTDOWN + 5 * FPS)).toBe(5);
+    // Nobody out: no squeeze before `after`. Someone out at 6 s: it starts a second later, a row a second.
+    expect(leashRows(tide, 0, RUN_COUNTDOWN + 10 * FPS)).toBe(5);
+    const out = RUN_COUNTDOWN + 6 * FPS;
+    expect(leashRows(tide, 0, RUN_COUNTDOWN + 7 * FPS, out)).toBe(5);
+    expect(leashRows(tide, 0, RUN_COUNTDOWN + 9 * FPS, out)).toBe(3);
+    // The run counts the first one out from its runners.
+    expect(firstOut([{ alive: true, deathFrame: -1 }])).toBe(-1);
+    expect(
+      firstOut([
+        { alive: false, deathFrame: 400 },
+        { alive: false, deathFrame: 300 },
+        { alive: true, deathFrame: -1 },
+      ]),
+    ).toBe(300);
   });
 
   it('credits the bonk that knocked someone in', () => {

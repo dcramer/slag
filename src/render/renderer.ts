@@ -9,7 +9,7 @@ import type { Solid } from '../sim/physics';
 import type { Cell, Rect } from '../core/geom';
 import { type Beam, footprint, motionOffset, placeFaults, previewProps, type Resolved, resolveProp } from '../sim/props';
 import { feetUp, type RunWorld } from '../sim/run';
-import { leashRows } from '../sim/tide';
+import { firstOut, leashRows } from '../sim/tide';
 import type { GameEvent } from '../sim/types';
 import { Backdrop } from './background';
 import { drawBlood } from './blood';
@@ -814,7 +814,7 @@ export class Renderer {
     for (const r of run.runners) if (r.alive && !r.finished) lead = Math.min(lead ?? Infinity, feetUp(run.level, r));
     if (lead === null || run.slag === null) return false;
     const climbed = ((run.level.spawn.ty + 1) * TILE - lead) / TILE;
-    return run.slag - lead > (leashRows(tide, climbed, run.frame) + 0.5) * TILE;
+    return run.slag - lead > (leashRows(tide, climbed, run.frame, firstOut(run.runners)) + 0.5) * TILE;
   }
 
   private ageFallen(dt: number) {

@@ -38,7 +38,7 @@ const RACE_MAX_ZOOM = 1.45;
 const RACE_PAD = 120;
 /** A frame that follows the leader: rows shown over it, the most shown below it (about Rising Slag's longest leash), and a tighter pad. */
 const LEAD_LOOK_UP = 4;
-const LEAD_VIEW_DOWN = 20;
+const LEAD_VIEW_DOWN = 25;
 const LEAD_PAD = 40;
 
 /** Look-ahead at full run speed, as a share of the visible width. */

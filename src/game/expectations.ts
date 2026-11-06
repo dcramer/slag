@@ -31,15 +31,15 @@ export const PASS_BANDS: Partial<Record<ModeId, Record<BotLevel, Record<Difficul
     normal: { gentle: [0.8, 1], medium: [0.55, 0.82], hard: [0.5, 0.8] },
     hard: { gentle: [0.88, 1], medium: [0.68, 0.92], hard: [0.7, 0.95] },
   },
-  // Measured lap by lap round the open shaft (seeds 1–32; gen/level/builders/shaft.ts): Easy 88 75 86, Normal 88 93 88,
-  // Hard 100 84 96, the slag a racer's-camera gap behind the leader (4.5, 3.75 and 3 s of climb, squeezing from 30 s;
-  // gen/level/tide.ts). Every tier passes above its targets: a bot rarely slips on ledges, and one that does lands a
-  // row down, so it's the squeeze that ends a lone climb. Tightening the leash to 4, 2.75 and 2 s moved no lap more
-  // than 7 points. Laps that harden for a lone climber are open (docs/TODO.md → 31).
+  // Measured lap by lap round the open shaft (seeds 1–32; gen/level/builders/shaft.ts): Easy 91 86 80, Normal 94 83 100,
+  // Hard 100 84 96, the slag 4.5, 3.5 and 2.5 s of climb behind the leader (gen/level/tide.ts). Every tier passes above
+  // its target: a Normal bot falls a rise or more about once in four laps on bricks (a medium shaft) and twice in three
+  // (a hard one), seldom further than the hard lap's 14 rows, so it's the squeeze that ends a lone climb. A few seeds
+  // swing a lap 20 points. Laps that cost a slip as the targets ask are open (docs/TODO.md → 31).
   slag: {
-    easy: { gentle: [0.74, 1], medium: [0.58, 0.9], hard: [0.68, 1] },
-    normal: { gentle: [0.74, 1], medium: [0.78, 1], hard: [0.72, 1] },
-    hard: { gentle: [0.86, 1], medium: [0.7, 0.98], hard: [0.82, 1] },
+    easy: { gentle: [0.76, 1], medium: [0.7, 1], hard: [0.62, 0.98] },
+    normal: { gentle: [0.8, 1], medium: [0.68, 0.98], hard: [0.78, 1] },
+    hard: { gentle: [0.86, 1], medium: [0.7, 0.98], hard: [0.8, 1] },
   },
 };
 
@@ -47,17 +47,23 @@ export const PASS_BANDS: Partial<Record<ModeId, Record<BotLevel, Record<Difficul
  * Catch-up in Rising Slag: the share of rounds the runner highest 15 s after GO (`at`, frames) goes on to win, four
  * Normal bots on a bare loop (seeds 1–128, the rounds where both are known; tests/stats/slag-catch-up.test.ts).
  * `boxes`: the loop's own boxes as built. `items` and `bare`: what those boxes deal by rank put in every empty hand
- * every 5 s, then used by the bots' item tactics, or never used. Measured in the open shaft 66, 50 and 69 (in
- * storeys 60, 59 and 55), bots spread over the shaft each on a lane of its own, the loop's boxes handing over what
- * they deal, and a jump up into anyone's feet bumping them (about 3 bumps a round). About 80 rounds are judged in
- * each, so ±5. The lead changes hands under twice a round. The target, from the lead-camera racer, is the early leader winning about
- * half the time (docs/MODES.md); these bands only catch a regression.
+ * every 5 s, then used by the bots' item tactics, or never used. Measured 56, 57 and 64 (512 seeds: 64, 59, 66), from
+ * 66, 50 and 69 when a third of rounds were over by 15 s (512 seeds: 69, 58, 66). About 115 rounds are judged in each,
+ * so ±5. The lead changes hands about 1.5 times a round (2 with items in every hand). The target, from the lead-camera
+ * racer, is the early leader winning about half the time (docs/MODES.md); these bands only catch a regression.
  */
 export const LEAD_HOLDS = {
   at: 15 * 60,
   bands: {
-    boxes: [0.54, 0.8],
-    items: [0.44, 0.7],
-    bare: [0.56, 0.82],
+    boxes: [0.44, 0.68],
+    items: [0.45, 0.69],
+    bare: [0.52, 0.76],
   },
 } as const satisfies { at: number; bands: Record<string, readonly [number, number]> };
+
+/**
+ * How long a Rising Slag round lasts, the same four bots and loop's boxes (tests/stats/slag-catch-up.test.ts): at most
+ * `early` of rounds over by 15 s after GO, and the median round inside `median` seconds, the lead-camera racer's short
+ * round. Measured 8% and 25.5 s (from 41% and 16 s, before the leash opened long and the field started spread out).
+ */
+export const SLAG_ROUNDS = { early: 0.15, median: [20, 40] } as const;

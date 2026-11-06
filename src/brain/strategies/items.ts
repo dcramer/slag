@@ -48,9 +48,11 @@ export class ItemPlay {
   /** Spots it priced and turned down (a box by its cell, negated; a loose item by where it lay), to the frame it may look again. */
   private readonly passed = new Map<number, number>();
 
+  /** `detour`: tiles of route it will go out of its way for an item (DETOUR unless a mode's strategy says less). */
   constructor(
     private readonly rng: Rng,
     private readonly traits: Personality,
+    private readonly detour = DETOUR,
   ) {}
 
   /** Off on an errand: its strategy shouldn't count the detour as being stuck. */
@@ -127,9 +129,9 @@ export class ItemPlay {
     return null;
   }
 
-  /** Tiles of route it will go out of its way: DETOUR, less as the slag closes in. */
+  /** Tiles of route it will go out of its way: its `detour`, less as the slag closes in. */
   private budget(me: SelfSense): number {
-    return me.slag === null ? DETOUR : Math.min(DETOUR, me.slag - ERRAND_SLAG);
+    return me.slag === null ? this.detour : Math.min(this.detour, me.slag - ERRAND_SLAG);
   }
 
   /** A spot a short way off its route, and for a box, one where what it pops can be got at. */

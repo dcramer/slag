@@ -42,38 +42,42 @@ What we borrow: the camera that follows the leader, out when you fall off it; th
 | Attribute | Reference | Ours | Target |
 | --- | --- | --- | --- |
 | Players | 4 [SR-steam] | 1–8 | 2–8 |
-| Out when | off the leader's screen [SR-wiki] | the slag's leash below the leader: 4.5, 3.75, 3 s of climb by lap | a screen behind, about 3–4 s (estimate) |
+| Out when | off the leader's screen [SR-wiki] | the slag's leash below the leader: 4.5, 3.5, 2.5 s of climb by lap (25, 19, 14 rows), 16 rows longer at GO, fading over 25 s | a screen behind, about 3–4 s (estimate) |
 | Round won by | last standing [SR-wiki] | last standing (10), then 6 and 3 for outlasting | keep the places: they pay more than the winner, as a race does |
 | Match won by | first to 3 round wins (4 in teams) [SR-wiki] | 50 points (Normal): 7 rounds (4–8) | 5–7 rounds |
-| Round length | not documented | race 20 s median; 30 s pick to score | 20–40 s (estimate: "short") |
-| Late squeeze | after the first elimination, or after a set time with none [SR-wiki] (time not documented) | from 30 s, 0.4 rows a second | from the first elimination, or 30 s |
+| Start | side by side on a start line | a start line across the shaft's floor, four cells apart | keep |
+| Round length | not documented | four Normal bots: 25 s median, 8% over by 15 s (was 16 s and 41%) | 20–40 s (estimate: "short") |
+| Late squeeze | after the first elimination, or after a set time with none [SR-wiki] (time not documented) | from the first one out, or 30 s, 0.3 rows a second | keep |
 | No weapons at the start | first 1.5 s [SR-patch] | the slag boils 3 s; items come from boxes later | keep |
 | Items | 8 kinds, from orbs on the track [SR-pickups] | 10 kinds, from the loop's boxes and placed boxes | rethink for a climb (below) |
 | How boxes deal | weighted random [SR-patch]; players say by rank: drills to the back, crates to the front [SR-odds] | by rank: catch-up to the pack, defence to the leader (Rising Slag's `boxes` table, `src/game/modes.ts`) | by rank |
 | Strongest catch-up | Golden Hook: swap places with the runner ahead [SR-pickups] | Queue Jumper: trade places with the runner just above | keep |
 | Movement tools | grapple at 45° onto white ceilings; a boost meter [SR-controls] | walk, run, jumps, wall jumps; no grapple or boost | a grapple item |
-| Early leader wins (leader at 15 s) | not documented | open shaft, bumping from below in the air too: 66% as built, 50% with items in every hand, 69% with none (storeys: 60, 59, 55; 128 seeds, about 80 judged each, so ±5) | about half (estimate) |
-| Lone bot gets through a lap (laps 1–3) | n/a | Easy 63/75/53, Normal 88/75/43, Hard 84/74/75 (32 seeds) | `PASS_TARGETS` |
+| Early leader wins (leader at 15 s) | not documented | 56% as built, 57% with items in every hand, 64% with none (128 seeds, about 115 judged each, so ±5; 512 seeds: 64, 59, 66). Was 66, 50, 69 (512: 69, 58, 66) with a third of rounds over by 15 s | about half (estimate) |
+| Lone bot gets through a lap (laps 1–3) | n/a | Easy 91/86/80, Normal 94/83/100, Hard 100/84/96 (32 seeds; was 81/81/76, 91/86/92, 100/81/92): a bot seldom falls further than a rise on bricks, short of even the hard lap's leash | `PASS_TARGETS` |
 
 ### Why catch-up isn't working yet: level design and mechanics
 
 | | The lead-camera racer | Rising Slag today |
 | --- | --- | --- |
 | Track | handmade horizontal loops, everyone on the same line at about the same speed, with high and low routes (grapple ceilings over the ground) | a vertical shaft, generated per match: open air, ledges staggered like bricks with several lines up every height, a wall-jump chimney up one side (until 2026-11-05: storeys with two ways up each) |
-| Pace | running speed; a lap is a stretch of screens | climbing, about 4 rows a second; a 48-row lap is about 12 s |
-| Overtaking | constant: shortcuts, boosts and stuns reorder the pack | rare with bots: about 1.8 lead changes a round (leader on top a second straight) in storeys, 1.2–1.7 in the open shaft with bots on lanes of their own |
+| Pace | running speed; a lap is a stretch of screens | climbing, about 5 rows a second; a 48-row lap is about 10 s |
+| Overtaking | constant: shortcuts, boosts and stuns reorder the pack | rare with bots: about 1.5 lead changes a round (leader on top a second straight), 2 with items in every hand |
 | Where the leader is | ahead, on your line | above you; most of our items fire or swing sideways |
 | What a hit costs | a stun: seconds of position | a bonk; on a perch, a storey, which is strong but only if you can reach the leader |
 | Catch-up items | the Golden Hook swaps you with the one ahead; missiles, crates and freeze aim ahead | the Queue Jumper swaps you with the one above, the Upper Hand punches up through floors, the winged shell hunts the leader |
 
-So the shape works against catch-up. The leader is out of reach above you, and the loop's boxes deal items the pack can't aim upward. Bots also hardly ever collect what a box pops: 2 uses in 128 rounds.
+So the shape works against catch-up: a lead holds even between equals. Four bots with the same hands and no items still keep the 15 s leader on top 62% of the time (512 seeds); a lead of under 3 rows at 15 s wins 41%, 6–8 rows 71%, 12 or more 86–88%. A longer leash, so rounds last longer after 15 s, is what moved it most.
 
-What would close it, in the order to try it:
+Tried, in order:
 
-1. **Items that work upward** (built: the Queue Jumper and the Upper Hand). In every hand they moved the early leader's wins from 62% to 59%, with 99 swaps and 338 punches in 128 rounds: in single file, trading places with one rival or punching one down doesn't reorder the pack. The level is the bigger lever (owner, 2026-11-05).
-2. **Passing room**: wider storeys with three ways up on early laps, and a high and low route on some storeys, so a lap has more than one line.
-3. **The squeeze from the first elimination**, as the reference does, so a lead built early gets tested sooner.
-4. **Bots that collect what a box pops**, so the measurement sees the boxes at all.
+1. **Items that work upward** (built: the Queue Jumper and the Upper Hand). In every hand they move the early leader's wins about 5 points: trading places with one rival or punching one down rarely reorders the pack.
+2. **The squeeze from the first elimination** (built): as the reference does. It shortens rounds, so the leash opens long at GO (built) to keep them at 20–40 s.
+3. **Bots that get what a box deals** (built): braking at a walk, their hop under a box turned back and forth every frame and never jumped. Box uses doubled; errands are now short (3 tiles), since a detour behind the leader is climb lost.
+4. **A start line** (built): four bots in one pocket jammed for seconds.
+5. No effect, or worse, at 512 seeds: twice the boxes, solid floors with holes every fourth row, narrower ledges and more wells, no chimney, a lead deal of only Bubble Wrap, bots holding the Queue Jumper for the swap into the lead, bots climbing under whoever is just above (more bumps), lanes near a bot's own column (70%: the pack stops crossing).
+
+Next: something in the level that pulls a pack back together (a lift or a gate on a cycle, which the leader waits for), or items that cost the leader seconds, not a bonk. Both are owner calls.
 
 ---
 

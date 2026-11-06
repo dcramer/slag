@@ -118,6 +118,9 @@ export class Motor {
   private strays = false;
   private last = -1;
   private prev: InputFrame = NO_INPUT;
+  /** The match frame being driven, and the frame and way it last braked (brake). */
+  private now = -1;
+  private braked = { frame: -2, dir: 0 };
   /** Frame of the last confirm or alt press: a press is an edge, so never on two frames running. */
   private pressed = -2;
   /** No time to pick a move this frame (see drive). */
@@ -139,6 +142,7 @@ export class Motor {
    */
   drive(m: Match, p: Player, intent: Intent, rushed = false): InputFrame {
     this.rushed = rushed;
+    this.now = m.frame;
     const out = this.frame(m, p, intent);
     if (out.confirmPressed || out.altPressed) this.pressed = m.frame;
     this.prev = out;
@@ -212,7 +216,7 @@ export class Motor {
     const off = (tx * TILE + (TILE - b.w) / 2 - b.x) / TILE;
     const lean = { left: off < -HOP_SLACK, right: off > HOP_SLACK };
     if (!b.onGround) return { ...NO_INPUT, ...lean, jump: this.prev.jump && b.vy < 0 };
-    if (Math.abs(b.vx) > BRAKE_TO) return { ...NO_INPUT, left: b.vx > 0, right: b.vx < 0 };
+    if (Math.abs(b.vx) > BRAKE_TO) return this.brake(b);
     return this.prev.jump ? NO_INPUT : { ...NO_INPUT, jump: true, jumpPressed: true };
   }
 
@@ -297,8 +301,7 @@ export class Motor {
     // In the air there's no time to stand and look: it steers at once.
     if (this.hesitate > 0 && b.onGround && !hurtsStill(map, this.fore, run.frame, b, shotsAhead(run, map), this.traits.margin)) {
       this.hesitate--;
-      if (Math.abs(b.vx) <= BRAKE_TO || this.gust() !== 0) return this.still(b);
-      return this.press({ left: b.vx > 0, right: b.vx < 0, jump: false, jumpPressed: false });
+      return Math.abs(b.vx) <= BRAKE_TO || this.gust() !== 0 ? this.still(b) : this.brake(b);
     }
     this.hesitate = 0;
     this.act = this.choose(map, run, b, ty * map.field.w + tx);
@@ -340,10 +343,21 @@ export class Motor {
     }
   }
 
+  /**
+   * Stop on the ground by pressing back, as a player does. At a walk a turn is instant, so a press back that turned it
+   * round would press back again the other way next frame, and on, never stopping (or hopping): having just pressed
+   * back the other way, it lets go instead, which stops it within a frame or two.
+   */
+  private brake(b: Body): InputFrame {
+    const dir = b.vx > 0 ? -1 : 1;
+    const turned = this.braked.frame === this.now - 1 && this.braked.dir === -dir;
+    this.braked = { frame: this.now, dir: turned ? 0 : dir };
+    return this.press({ left: !turned && dir < 0, right: !turned && dir > 0, jump: false, jumpPressed: false });
+  }
+
   /** Rushed with nothing under way: brake on the ground, keep the held buttons in the air (a jump not cut short). */
   private coast(b: Body): InputFrame {
-    if (b.onGround)
-      return Math.abs(b.vx) <= BRAKE_TO || this.gust() !== 0 ? this.still(b) : this.press({ left: b.vx > 0, right: b.vx < 0, jump: false, jumpPressed: false });
+    if (b.onGround) return Math.abs(b.vx) <= BRAKE_TO || this.gust() !== 0 ? this.still(b) : this.brake(b);
     const { left, right, jump, run, down } = this.prev;
     return { ...NO_INPUT, left, right, jump, run, down };
   }
