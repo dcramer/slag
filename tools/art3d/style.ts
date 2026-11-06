@@ -804,6 +804,25 @@ export const BRIEFS: Record<string, Brief> = {
     // antenna, a fuse and a mage's pointed hat (art/sprites/creeper/design.prompt.txt).
     worn: 'he is an old painted cardboard box: a wide strip of brown packing tape (#c49a5a) is stuck across a big split in the front of his body; the top back corner of his head is dented in, a big notch in its outline; the bottom front corner of his body is torn open, the brown corrugated cardboard (#b8925e) showing; the birthday candle is stuck in crooked, leaning back, wax dripping down it, its flame big. The four square face holes stay exactly as they are.',
   },
+  invader: {
+    // The nod, each part of the read at race size and each a shape in outline: the crab cut from big square pixels,
+    // its outline stepping square by square all round (the read: nobody else in the cast is made of square steps; the
+    // creeper's box is smooth-sided and tall, the miner's cube a head on a body); wider than tall, so never a block
+    // standing up; the two antennae up from its top corners and the two claws raised off its sides (the crab, and
+    // what keeps it off the crewmate's bean on legs); a row of stubby square legs under it.
+    // Ours, and the joke: a pixel has fallen out of its back and been taped back on, crooked, and one antenna is bent
+    // over at the tip. The palette is neutral (Decisions 4): the body in the player's colour, the eye holes, the tape
+    // neutrals. The colours lead the brief: the image model drops a prompt's tail.
+    design:
+      'The character: a flat cartoon space crab built from big chunky square pixel tiles, seen straight from the front, flat like a paper cut-out, much wider than it is tall. ' +
+      'Colours: a lavender (#9a7ad8) body, near-black (#1e1a2a) eye holes. ' +
+      'Its outline steps square by square all the way round, every edge a staircase of square tiles, no curves at all. ' +
+      'Two antennae, each a short column of square tiles, stand up from its top corners. ' +
+      'A short stepped arm sticks out of each side and bends straight upward like a raised claw. ' +
+      'Under its body a row of four stubby square legs, the outer two splayed out. ' +
+      'Two square black eye holes side by side in its face, no mouth.',
+    worn: 'one square pixel tile on the top edge of its body, beside an antenna, has fallen out, leaving a square notch, and is stuck back on crooked, tilted at an angle and sticking up out of the outline, a strip of grey tape (#a4a8ac) across it; the near antenna is bent over sideways at its tip, its top tile hanging off at an angle. The two square eye holes, the raised claws and the legs stay exactly as they are.',
+  },
   tophat: {
     // The nod, each part of the read at race size and each a shape in outline: the top hat as tall as the rest of
     // her, a clean cylinder standing straight up off a small girl's head with a brim (the read: nobody else in the
