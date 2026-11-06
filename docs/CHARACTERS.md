@@ -35,7 +35,7 @@ Each kind's entry is its own file in [characters/](characters/): what a stranger
 
 | Kind | Homage (what a stranger should say) | Signature traits | Player's color |
 |---|---|---|---|
-| [plumber](characters/plumber.md) | the mustached plumber | a cap with its bill out front and a round badge (our own mark, a little wrench, never the letter), big round nose, thick mustache, bib overalls over the shirt with two buttons, gauntlets, boots; big head, stout | costume: cap and shirt; overalls and plunger cup a dark of it |
+| [plumber](characters/plumber.md) | the mustached plumber | a cap with its bill out front and big welding goggles on it, big round nose, thick mustache, patched bib overalls over the shirt, tan foundry gauntlets, boots; big head, stout; a plunger as long as he is on his shoulder like a greatsword, its cup out behind his head | costume: cap and shirt; overalls and plunger cup a dark of it, the patches a light of the overalls |
 | [hedgehog](characters/hedgehog.md) | the blue speedster | spikes swept straight back, joined eyes with green irises, peach muzzle and belly, a one-sided grin, big sneakers with a pale strap; runs leaning hard, spins in the air | costume: the quills; sneakers and neckerchief darks of it |
 | [elf](characters/elf.md) | the green-tunic elf hero | long cap flopping back, pointed ear, blond fringe, flared tunic with a belt, a shield and a sword hilt on the back | costume: cap and tunic; the darned toe a light of it |
 | [hunter](characters/hunter.md) | the armored bounty hunter | tall and long-legged, huge round shoulder pads wider than anything else, a helmet with a wide visor band, the forearm a cannon held straight out from the shoulder; tucks into a ball | costume: the suit, the buoys a dark of it, the cannon a light |
@@ -116,7 +116,7 @@ The strongest reads first. **Keyed** marks the non-humanoids, the riskiest to dr
 
 | # | Kind | Name | Rig | Status or risk |
 |---|---|---|---|---|
-| 1 | plumber | Plumbo | humanoid | drawn flat |
+| 1 | plumber | Plumbo | humanoid | drawn flat; the twist redrawn (2026-11-06): the plunger on his shoulder like a greatsword, its cup far out behind his head. The twist read passes (both readers: a parody with its own twist); the scripted blind read does not (both unsure in black, as were the shipped first-twist frames), named at medium and high only standing, in a design read |
 | 2 | hedgehog | Zoomic | humanoid, spin keyed | drawn flat |
 | 3 | chomper | Snack-Man | generated, no limbs | drawn flat |
 | 4 | zapmouse | Kilowatchu | **keyed**, quadruped | drawn flat |
@@ -171,7 +171,7 @@ The strongest reads first. **Keyed** marks the non-humanoids, the riskiest to dr
 - **The speedster and the robot boy:** the two blue originals. Quills swept back against a round helmet.
 - **The miner and the sneaking soldier:** both boxy. A cube head on a body with arms against one box on two legs.
 - **The ape and the turtle king:** the two brutes. Hunched and long-armed against upright, side on under a smooth shell dome with three big spikes, horned, the jaw open.
-- **The mercenary and the plumber:** both carry a huge prop. The plunger is strapped to the plumber's back; the blade is always in the mercenary's hand, trailing low or leaning on the floor.
+- **The mercenary and the plumber:** both carry a huge prop. The plunger rests on the plumber's shoulder, its cup out behind his head; the blade is always in the mercenary's hand, trailing low or leaning on the floor.
 - **The mercenary and the elf:** both carry a blade, but a poker on the elf's back against a blade bigger than the mercenary.
 - **The crewmate and the sneaking soldier:** both a body on two stubby legs. A rounded bean with a visor against a square box with an eye slot.
 

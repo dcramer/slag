@@ -84,9 +84,9 @@ export const BRIEFS: Record<string, Brief> = {
     // The nod, each part of the read at race size: the red cap with its bill sticking out (the first thing
     // the silhouette shows), the big round nose breaking the profile, the thick dark mustache, blue bib
     // overalls over a red shirt (the colour block everyone knows), and a stout big-headed build.
-    // Ours, and the joke: a foundry plumber whose plunger is absurdly big, strapped across his back like a
-    // greatsword with its cup above his head; welding goggles on the cap, a riveted brass badge with a
-    // wrench, steel hex bolts for buttons, big leather gauntlets and steel-toe boots.
+    // Ours, and the joke: a foundry plumber whose plunger is absurdly big, carried on his shoulder like a
+    // greatsword, its cup far out behind his head; big welding goggles on the cap, big tan foundry gauntlets,
+    // patched overalls.
     character:
       'Character: a short, stout foundry plumber with a huge round head, an egg-shaped round belly and short legs. ' +
       'A big round red nose that breaks his profile, a thick bushy dark-brown mustache under it, two big black oval eyes with a white glint, bushy brows, dark-brown hair at the sides. ' +
@@ -94,15 +94,21 @@ export const BRIEFS: Record<string, Brief> = {
       'Blue bib overalls (#3f62b4) fastened with two big steel hex bolts instead of buttons, a square patch on one knee, over a red shirt (#c9473f) with the sleeves rolled up. ' +
       'Huge tan leather work gauntlets with wide cuffs, huge brown steel-toe work boots with grey steel toecaps. ' +
       'The joke: an absurdly oversized rubber sink plunger, as long as he is tall, strapped diagonally across his back like a greatsword, its big dark rubber cup sticking up high above his head behind one shoulder and its copper-pipe handle poking out below the other hip. Cheerful, jaunty and proud of his plunger.',
-    // Designed at game size: the cap and bill, the nose, the mustache, red over blue, and the plunger slung
-    // low (its cup behind the shoulder, under the cap: Decisions), as big shapes only.
+    // Designed at game size: the cap and bill, the nose, the mustache, the bib over the shirt and the stout
+    // big-headed build, as big shapes only. The twist (2026-11-06), so he is ours and not the original redrawn:
+    // the plunger as long as he is, carried on his shoulder like a greatsword, its cup a shape of its own far
+    // out behind his head with a wide gap round it (slung low on his back, it was lost behind him; above his head,
+    // the cup and the cap were one shape; close behind his head, the head read as big hair with a hammer); big
+    // welding goggles on the cap; tan foundry gauntlets with flared
+    // cuffs for the white gloves; two big pale patches on the overalls. The design was made as edits of the
+    // first (art/sprites/plumber/design.prompt.txt).
     design:
-      'The character: a short, stout plumber, about half of him a huge round head: a soft red cap (#c9473f) with a big bill sticking straight out front, a huge round nose, a thick dark-brown mustache (#4d3426) under it, two big black oval eyes. ' +
-      'Blue bib overalls (#3f62b4) over a red shirt (#c9473f), big tan work gloves, big dark-brown boots (#4d3426). ' +
-      'The joke: a huge rubber sink plunger slung low across his back like a greatsword, its big dark-red rubber cup (#8e2f2a) behind one shoulder, below the cap, and its copper handle (#c27a45) sticking out past the other hip.',
-    worn: 'a pair of big round dark welding goggles is strapped round the cap, pushed up on its crown; the cap bill is cracked and bent down at one corner; one overall strap is broken and tied in a big knot; a big square patch is sewn on one knee; the plunger handle is bent in the middle and wrapped with grey tape.',
+      'His signature prop, the joke: a huge rubber sink plunger as long as he is tall, carried on his near shoulder like a greatsword, his gauntlet gripping its long straight copper handle (#c27a45) in front of his chest, the handle running far back over his shoulder, and the big dark-red rubber cup (#8e2f2a) far out behind his head at its end, a wide gap of white background between the cup and his head. ' +
+      'The character: a short, stout plumber, about half of him a huge round head: a soft red cap (#c9473f) with a big bill sticking straight out front, a pair of huge round dark welding goggles in thick grey rims (#8e8a84) pushed up on it, a huge round nose, a thick dark-brown mustache (#4d3426) under it, two big black oval eyes. ' +
+      'Blue bib overalls (#3f62b4) with two big pale square patches sewn on, over a red shirt (#c9473f), huge tan leather foundry gauntlets (#b08454) with wide flared cuffs, big dark-brown boots (#4d3426).',
+    worn: 'the cap bill is cracked and bent down at its front corner; the copper plunger handle has a wide band of grey tape wrapped round it just behind his shoulder; the cuff of the gauntlet on the left of the picture is torn, with a big ragged notch in its rim. Keep the two big pale patches on the overalls. The face, the eyes, the nose and the mustache stay exactly as they are.',
     views: 'a front view, a side profile facing right, a back view showing the plunger strapped on, and a three-quarter view facing right',
-    pose: 'The plunger stays strapped on his back, its cup high above his right shoulder, clear of the arms and head.',
+    pose: 'The plunger stays on his shoulder like a greatsword, its cup far out behind his head, clear of the cap.',
     poses:
       'standing idle with his chest puffed out; mid-run stride leaning forward with arms pumping and one knee high; crouched low before a jump, knees bent, arms swung back; jumping up with one fist punched high overhead and the other arm down, legs tucked; falling with both arms flailing up and legs reaching down; sliding down a wall on his right with one gauntlet flat against it and both boots braced; cheering with both fists in the air; knocked flat on his back with stars circling',
   },
