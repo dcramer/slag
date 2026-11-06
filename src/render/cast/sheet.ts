@@ -271,6 +271,7 @@ const READS_AS: Record<Kind, string> = {
   genie: 'the half-genie who whips her long ponytail',
   mushroom: 'the little mushroom retainer in the spotted cap',
   boxer: 'the tiny boxer with the huge green gloves',
+  junior: 'Junior, the one-eyed robot in the backwards cap',
 };
 
 /**

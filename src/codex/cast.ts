@@ -58,6 +58,7 @@ export const CAST_NOTES: Record<Kind, string> = {
   genie: 'Never had a bad hair day. Gave several.',
   mushroom: 'Sure the princess is in the next one.',
   boxer: 'Punches up. Always up.',
+  junior: 'Found the bug. Assigned it to you.',
 };
 
 export interface CastEntry {

@@ -1,5 +1,5 @@
 import 'client-only';
-import { type CharacterDef, generateCharacter, CAST } from '../gen/character';
+import { type CharacterDef, generateCharacter, ROLLED } from '../gen/character';
 import { Rig } from '../render/character';
 import { drawInkAccessory, drawInkRunner, ropeAnchor, ropeOf } from '../render/ink-character';
 import { buildScene, drawSplash, drawStream, paintCrane, paintHeap, type Scene } from './home-scene';
@@ -39,7 +39,7 @@ export function mountStage(canvas: HTMLCanvasElement): () => void {
   let rolls = 0;
   // Each one a different kind: a new roll takes one nobody on the heap has.
   const roll = (taken: readonly CharacterDef[] = []) => {
-    const free = CAST.filter((t) => !taken.some((c) => c.kind === t));
+    const free = ROLLED.filter((t) => !taken.some((c) => c.kind === t));
     return generateCharacter((seed0 + rolls++ * 7919) >>> 0, free[Math.floor(Math.random() * free.length)]);
   };
   const guys: Guy[] = [];

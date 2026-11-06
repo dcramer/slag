@@ -1,6 +1,6 @@
 # Characters
 
-The runners are a cast of forty-six homages to famous game characters, in our own designs. In the lore (DESIGN.md) they're the knock-off heroes who almost got their own game. Each kind is a character design of its own, the way the barnyard party game's animals are: its own outline, its signature props, and a way of moving.
+The runners are a cast of forty-six homages and one easter egg (Junior, Sentry's own robot) to famous game characters, in our own designs. In the lore (DESIGN.md) they're the knock-off heroes who almost got their own game. Each kind is a character design of its own, the way the barnyard party game's animals are: its own outline, its signature props, and a way of moving.
 
 `pnpm shot cast` shoots the sheet: the 8-player lineup at play scale on farm and mine, the race start, deaths, a 3× close-up, the lobby cards, the "is it the homage?" sheet (`cast-recognise.png`: each kind close up beside "This is ___"), the silhouette test (`cast-silhouettes.png`) and the catalog of every kind (`--only catalog` for the last three). Every sheet waits for the rendered kinds' frames (`slagDebug.sprites.ready()`), so it shows what ships. In the console, `slagDebug.cast` has `catalog()`, `silhouettes()`, `recognise()` and `bench()`.
 
@@ -81,6 +81,7 @@ Each kind's entry is its own file in [characters/](characters/): what a stranger
 | [genie](characters/genie.md) | the half-genie who whips her long ponytail | a chunky little dancer, a ponytail as long as she is springing up from her crown and falling back like a fountain, a tiara, two balloon harem trousers apart, arms out | costume: the top and trousers; the sash a dark of it |
 | [mushroom](characters/mushroom.md) | the little mushroom retainer in the spotted cap | small and stubby under a huge round spotted lampshade cap wider than him, a dome with a rolled lip, a vest with a crooked race plate, puffy trousers, a chequered flag on a taped broom handle held out ahead | costume: the spots and the vest; the vest's trim a dark of it |
 | [boxer](characters/boxer.md) | the tiny boxer with the huge green gloves | small and wiry, two huge round gloves each bigger than his head held far apart ahead of him, one at his face and one at his belly, with background round each, a tank top, baggy shorts, a tea towel round his neck; jumps in a rising uppercut | costume: the gloves; the scorch a dark of it |
+| [junior](characters/junior.md) | Junior, the one-eyed robot in the backwards cap (Sentry's own robot, an easter egg, no homage) | a yellow box head with one huge eye and a grin, a backwards cap, zigzag antennae, a pink hoodie, a claw hand, a phone, roller skates | costume: the hoodie; the cap and shoes a dark of it |
 
 **Reserves**, if a kind won't read: the spinning bandicoot (its tuft and grin rhyme with the speedster), the shovel-wielding knight, the red-haired mountain climber, the falling-block party bean (rhymes with the crewmate). The space marine in green armour reads as a generic soldier at 20 px; the plumber's tall brother, the ape's red-capped nephew and the king's turtle foot soldiers rhyme with kinds already in.
 
@@ -162,6 +163,7 @@ The strongest reads first. **Keyed** marks the non-humanoids, the riskiest to dr
 | 44 | genie | Shampootae | humanoid, side on | drawn flat; the blind read fails three times: a plume swept back read as a squirrel's tail, a level rope as a bazooka, a fountain from the crown as a hook or a hat, each on a body the box leaves small beside a ponytail as long as she is |
 | 45 | mushroom | Toadmund | humanoid, small, capped | drawn flat; the blind read passes (named by both readers, at medium and medium-high, unpaired: the huge dome cap over a small body) |
 | 46 | boxer | Little Smack | humanoid, small | drawn flat, side on, redrawn with bigger gloves held far apart; the blind read not passed (fresh readers outside the repository: "unsure – round head with a big puffy hand or arm", "unsure; figure with something big and round on its back or arm"; the first design, "a small figure with a big hairdo"); round gloves on thin arms read as balloons; the design read alone named him at medium and medium-high |
+| 47 | junior | Junior | humanoid, robot; an egg (about 1 look in 100) | to draw from the reference; no blind read (the owner checks it) |
 
 **What to check.** No two kinds may rhyme. Watch these pairs:
 

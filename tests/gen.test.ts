@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { Rng } from '../src/core/rng';
-import { generateCharacter, VARY_FIRST, VARY_ROLLS } from '../src/gen/character';
+import { EGGS, generateCharacter, VARY_FIRST, VARY_ROLLS } from '../src/gen/character';
 import { ARCHETYPE_WEIGHTS, generateCrate, generateProp, polyomino } from '../src/gen/props';
 import { footprint } from '../src/sim/props';
 
@@ -77,6 +77,14 @@ describe('props', () => {
 });
 
 describe('characters', () => {
+  it('turn up as an egg kind only through its own rare roll, which moves no other roll', () => {
+    const seeds = Array.from({ length: 2000 }, (_, i) => i);
+    const eggs = seeds.filter((s) => EGGS.includes(generateCharacter(s).kind));
+    expect(eggs.length).toBeGreaterThan(0);
+    expect(eggs.length).toBeLessThan(60);
+    for (const s of eggs.slice(0, 5)) expect(generateCharacter(s, 'plumber').name).toBe(generateCharacter(s).name);
+  });
+
   it('are deterministic and varied', () => {
     expect(generateCharacter(3)).toEqual(generateCharacter(3));
     const names = new Set(Array.from({ length: 50 }, (_, i) => generateCharacter(i).name));

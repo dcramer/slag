@@ -3,7 +3,7 @@ import { deriveSeed, Rng } from '../core/rng';
 import {
   type CharacterDef,
   generateCharacter,
-  CAST,
+  ROLLED,
   hueApart,
   keepColor,
   type Kind,
@@ -363,7 +363,7 @@ export class Match {
       if (!this.kindTaken(c.kind, owner) && (!best || this.hueGap(c, owner) > this.hueGap(best, owner))) best = c;
     }
     if (best) return best;
-    const free = CAST.find((t) => !this.kindTaken(t, owner)) ?? any.kind;
+    const free = ROLLED.find((t) => !this.kindTaken(t, owner)) ?? any.kind;
     return { ...keepColor(generateCharacter(any.seed, free), any), name: any.name };
   }
 

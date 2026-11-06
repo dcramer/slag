@@ -36,6 +36,7 @@ import { art as mech } from './art/mech';
 import { art as genie } from './art/genie';
 import { art as mushroom } from './art/mushroom';
 import { art as boxer } from './art/boxer';
+import { art as junior } from './art/junior';
 import { type D, type KindArt, line, mark, ORANGE, ORANGE_SH, oval, poly, spot, STEEL, STEEL_SH, toned, tonedOval, Y } from './kit';
 
 /**
@@ -985,4 +986,5 @@ export const KINDS: Record<Kind, KindArt> = {
   genie,
   mushroom,
   boxer,
+  junior,
 };

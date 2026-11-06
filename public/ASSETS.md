@@ -51,6 +51,7 @@ game loads none of it.
 | `art/sprites/<kind>/concept.png`, `poses.png`, `tpose.png`, `view-*.jpeg` | Tripo Studio image generation (`nano-banana-2`, the app's default image model) and Tripo's multi-view, from our prompts (`*.prompt.txt`) | https://studio.tripo3d.ai | Generated art, above: ours to ship |
 | `art/sprites/<kind>/model.glb` | Tripo Studio image-to-3D (`h3.1`), auto-rig (Unreal skeleton), preset and generated animations | https://studio.tripo3d.ai, projects `555485dc-b205-42f1-84dc-18bd55b5b531` (plumber), `6f61cc17-5f3e-4594-9853-50d505cf2e7b` (speedster), both private | as above |
 | `src/render/cast/sprites/<kind>/frames.ts` | Traced by `tools/art3d` from `model.glb` | this repository | ours |
+| `art/sprites/junior/reference.png` | Junior, Sentry's robot character, the reference the `junior` kind is drawn from (source art, not shipped) | https://junior.sentry.dev/junior-character.png | Sentry's own character, used at the owner's request (2026-11-06); the owner works there |
 
 Three.js (MIT, https://github.com/mrdoob/three.js) renders them; it is a devDependency of the tool and is not in the game.
 

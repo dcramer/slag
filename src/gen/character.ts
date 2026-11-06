@@ -57,6 +57,7 @@ export const CAST = [
   'genie',
   'mushroom',
   'boxer',
+  'junior',
 ] as const;
 export type Kind = (typeof CAST)[number];
 
@@ -64,6 +65,16 @@ export type Kind = (typeof CAST)[number];
  * The cast in the order it's shown (the codex, the cast sheets): shuffled by the cast's size, so a batch
  * of new kinds lands among the rest instead of always last, and the order holds until the cast grows.
  */
+/**
+ * Kinds the look roll never lands on by itself: each turns up only through its own rare roll
+ * (`EGG_CHANCE`), so seating one moves no other seed's kind. Junior is the owner's own robot (from
+ * Sentry), the one kind that is no homage (docs/characters/junior.md).
+ */
+export const EGGS: readonly Kind[] = ['junior'];
+/** The kinds a look rolls from, every one alike. */
+export const ROLLED: readonly Kind[] = CAST.filter((k) => !EGGS.includes(k));
+const EGG_CHANCE = 1 / 100;
+
 export const CAST_ORDER: readonly Kind[] = new Rng(deriveSeed(CAST.length, 'cast order')).shuffle([...CAST]);
 
 /**
@@ -144,6 +155,7 @@ export const KIND_NAMES: Record<Kind, string> = {
   genie: 'Shampootae',
   mushroom: 'Toadmund',
   boxer: 'Little Smack',
+  junior: 'Junior',
 };
 
 /**
@@ -197,6 +209,7 @@ const PAINTS: Record<Kind, readonly HSL[]> = {
   genie: [hsl3(345, 58, 50)],
   mushroom: [hsl3(5, 72, 52)],
   boxer: [hsl3(125, 55, 42)],
+  junior: [hsl3(330, 70, 58)],
 };
 
 /** How many `vary` rolls a character has, and how many of them come from the look's main stream. */
@@ -211,7 +224,10 @@ export function generateCharacter(seed: number, kind?: Kind): CharacterDef {
   const rng = new Rng(seed);
   const hue = rng.range(0, 360);
   const sat = rng.range(55, 78);
-  const rolled = CAST[Math.floor(rng.next() * CAST.length)];
+  const common = ROLLED[Math.floor(rng.next() * ROLLED.length)];
+  // The egg rolls on a stream of its own, after the common draw, so every other roll keeps its place.
+  const egg = new Rng(deriveSeed(seed, 'egg'));
+  const rolled = egg.next() < EGG_CHANCE ? EGGS[Math.floor(egg.next() * EGGS.length)] : common;
   const k = kind ?? rolled;
   const paints = PAINTS[k];
   const paint = paints[Math.floor(rng.next() * paints.length)];
