@@ -37,7 +37,7 @@ import { art as genie } from './art/genie';
 import { art as mushroom } from './art/mushroom';
 import { art as boxer } from './art/boxer';
 import { art as junior } from './art/junior';
-import { type D, type KindArt, line, mark, ORANGE, ORANGE_SH, oval, poly, spot, STEEL, STEEL_SH, toned, tonedOval, Y } from './kit';
+import { band, type D, type KindArt, line, mark, ORANGE, ORANGE_SH, oval, poly, spot, STEEL, STEEL_SH, toned, tonedOval, Y } from './kit';
 
 /**
  * The cast, one hand-designed character per kind (docs/CHARACTERS.md): homages to famous game
@@ -60,6 +60,8 @@ const BONE = '#efe6d2';
 const BONE_SH = '#c8bba0';
 const BROWN = '#6b4a35';
 const BROWN_SH = '#4d3426';
+// The electric mouse's tin tail, the frames' grey.
+const ZAP_TIN = '#a9afb7';
 const BLUE = '#3f62b4';
 const BLUE_SH = '#2e4a8c';
 const RED = '#c9473f';
@@ -490,8 +492,8 @@ export const KINDS: Record<Kind, KindArt> = {
     parts: ['shard', 'shard', 'bolt'],
   },
 
-  // The yellow electric mouse: chubby, long ears with black tips, red cheeks, a lightning-bolt tail,
-  // brown stripes across the back. Scampers; ears and tail sway.
+  // The electric mouse: chubby, its fur the player's colour, two long ears with black tips standing in a V,
+  // big red cheeks, a lightning-bolt tail of grey tin. Scampers; ears and tail sway.
   zapmouse: {
     size: [0.9, 0.84],
     outline:
@@ -500,8 +502,7 @@ export const KINDS: Record<Kind, KindArt> = {
     feet: 'paw',
     arms: 'mitten',
     hands: 'body',
-    fill: 'paint',
-    ring: true,
+    fill: 'player',
     faceX: 0.08,
     gait: (g) => (g.moving ? { hop: abs(S(g.ph * 1.4)) * 1, rot: S(g.ph * 1.4) * 0.04, pivot: 0, bend: 0.05 } : {}),
     paintFace: (d) => {
@@ -514,22 +515,10 @@ export const KINDS: Record<Kind, KindArt> = {
       brows(d, [-d.W * 0.16 + d.f * 0.6, d.W * 0.16 + d.f * 0.6], y, 1);
       mouthMark(d, d.f * 0.6, y + 2.6, 1.6, 'smile');
     },
-    print: (d) => {
-      for (const u of [0.42, 0.58])
-        mark(
-          d.s,
-          BROWN,
-          [
-            { x: -d.f * d.W * 0.5, y: Y(d, u) },
-            { x: -d.f * d.W * 0.22, y: Y(d, u + 0.03) },
-          ],
-          1.4,
-          u * 10,
-          [0.1, 0.5],
-        );
-    },
+    // The power cord knotted round its middle as a belt.
+    print: (d) => band(d, 0.34, 0.41, '#7a5236'),
     back: (d) => {
-      // The lightning-bolt tail, brown at the root.
+      // The lightning-bolt tail, cut from grey tin, riveted on at the root.
       const sw = d.wob * 0.4;
       const x = -d.f * d.W * 0.44;
       const y = Y(d, 0.3);
@@ -546,17 +535,8 @@ export const KINDS: Record<Kind, KindArt> = {
         { x: x - d.f * 2.2, y: y - 4.2 },
         { x: x + d.f * 0.6, y: y - 1.4 },
       ];
-      toned(d.s, pts, d.lk.paint, d.lk.paintShade, d.lk.ink, 0.35, 0.7 * d.k, 0.5);
-      poly(
-        d.s,
-        [
-          { x, y },
-          { x: x - d.f * 2.2, y: y - 2.4 },
-          { x: x - d.f * 1.2, y: y - 3.2 },
-          { x: x + d.f * 0.6, y: y - 1.4 },
-        ],
-        BROWN,
-      );
+      toned(d.s, pts, ZAP_TIN, STEEL, d.lk.ink, 0.35, 0.7 * d.k, 0.5);
+      poly(d.s, oval(x - d.f * 0.9, y - 1.3, 0.55, 0.55, 6), STEEL_SH);
     },
     front: (d) => {
       // Long ears, black at the tips, splayed and swaying.
@@ -572,8 +552,8 @@ export const KINDS: Record<Kind, KindArt> = {
             { x: tx, y: ty },
             { x: x0 + 1.6, y: d.top + 2 },
           ],
-          d.lk.paint,
-          d.lk.paintShade,
+          d.lk.player,
+          d.lk.playerShade,
           d.lk.ink,
           0.35,
           0.7 * d.k,
