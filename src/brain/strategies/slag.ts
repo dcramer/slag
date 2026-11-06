@@ -1,12 +1,36 @@
 import type { Rng } from '../../core/rng';
 import { floorAt, tile } from '../tactics';
-import type { BrainView, Cell } from '../types';
+import { T_ONEWAY, T_SOLID } from '../../sim/level';
+import type { BrainView, Cell, Intent, SelfSense } from '../types';
 import { aimOf, Headway } from './headway';
 import { ItemPlay } from './items';
 import type { StrategyDef } from './types';
 
 /** How much further the route gets at once for a bot to take it as a loop's lap line crossed (route tiles, rounded as `togo` is). */
 const LAP_RESET = 8;
+
+/** Rows up, and tiles across, a rival on a board can be for a hop to bump them: a jump's reach, about under them. */
+const BUMP_ROWS = [0.9, 3.2] as const;
+const BUMP_ACROSS = 0.75;
+
+/**
+ * Whoever is behind bumps a rival standing on a board just over its head: a hop up through the board knocks them off
+ * (sim/collide.ts `BUMP`). Only through a board, which it can jump up through, with nothing solid in between.
+ */
+function bump(v: BrainView, me: SelfSense): Intent | null {
+  if (me.rank === 0 || !me.grounded) return null;
+  for (const r of v.runners) {
+    const up = me.y - r.y;
+    if (!r.alive || r.finished || !r.grounded || up < BUMP_ROWS[0] || up > BUMP_ROWS[1] || Math.abs(r.x - me.x) > BUMP_ACROSS) continue;
+    const tx = Math.floor(r.x);
+    const floor = Math.round(r.y);
+    if (tile(v, tx, floor) !== T_ONEWAY) continue;
+    let clear = true;
+    for (let y = floor + 1; y < me.ty; y++) if (tile(v, tx, y) === T_SOLID || tile(v, me.tx, y) === T_SOLID) clear = false;
+    if (clear) return { do: 'hop', tx };
+  }
+  return null;
+}
 
 /** Columns off each wall a lane keeps: the shaft's walls and the spawn pocket under the lap line. */
 const LANE_EDGE = 3;
@@ -50,6 +74,8 @@ export const slagStrategy: StrategyDef = {
           way.calm();
           return { do: 'wait' };
         }
+        const hit = rng.chance(traits.knack) ? bump(v, me) : null;
+        if (hit) return hit;
         if (way.leapt(me)) way.calm();
         const o = v.objective;
         if (o.kind === 'climb' && o.loop && !lane) lane = laneOf(v, rng, o.lapLine);

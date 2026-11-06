@@ -748,6 +748,13 @@ const KIND_FX: Record<string, (fx: Fx, e: ItemEvent, shake: (k: number) => void)
     fx.burst('debris', e.x, e.y, 10, 90, [DIRT, TURF], 1.1, 0.7, 60);
     fx.burst('dust', e.x, e.y, 6, 50, [{ h: 28, s: 20, l: 60 }], 1.6, 0.6);
   },
+  // A bump from below: a pop of stars and dust at the feet that were knocked off.
+  'hit:bump'(fx, e, shake) {
+    fx.add('ring', e.x, e.y, 0, 0, GOLD, 14, 0.22);
+    fx.burst('spark', e.x, e.y, 8, 140, [GOLD, WHITE], 0.9, 0.3);
+    fx.burst('dust', e.x, e.y, 5, 50, [{ h: 30, s: 12, l: 78 }], 1.2, 0.4);
+    shake(2);
+  },
   // Two runners trade places: a puff of velvet and brass where the one ahead stood.
   'hit:hook'(fx, e, shake) {
     fx.add('ring', e.x, e.y, 0, 0, ITEM_HUE.hook, 22, 0.3);

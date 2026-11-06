@@ -16,6 +16,9 @@ import type { Runner } from './run';
  *    down, so a stack of any height settles in one sweep, and the upper body
  *    always yields: a rising runner never stops on someone's feet. Only a
  *    ceiling can stop that, and then the riser bonks instead.
+ *  - **A bump from below** (`BUMP`). Come up under the feet of someone standing on the level (a board you
+ *    jump up through, say) and they're bonked and knocked off sideways, and you carry on up through them. Only
+ *    someone already riding a head gets carried up by it instead.
  *  - **A perch is not ground** (`PERCH`). Nobody carries a rider sideways: it
  *    keeps its own momentum on a slick, rounded top, slides off the side it's on,
  *    and is thrown off when its base jumps, moves out from under it, or simply
@@ -78,6 +81,19 @@ export const PERCH = {
   hop: 150,
 } as const;
 
+/** A bump from below: the sideways knock (px/s) and the hop (px/s up) it gives whoever stood there, who then sees stars. */
+export const BUMP = {
+  kick: 220,
+  hop: 180,
+} as const;
+
+/** Someone bumped from below this frame, and by whom, by slot; `side` is the way they're knocked. */
+export interface Bump {
+  victim: number;
+  by: number;
+  side: -1 | 1;
+}
+
 /** The float slack of `overlaps`: bodies closer than this are touching, not overlapping. */
 const EPS = 1e-4;
 /** Feet this far above a head still count as on it. */
@@ -89,11 +105,18 @@ export interface RunnerStart {
   y: number;
   /** Slot of the runner it stood on, or -1. */
   rode: number;
+  /** Standing on the level itself (not a head). */
+  stood: boolean;
 }
 
 /** Call before anyone steps. */
 export function contactStart(runners: readonly Runner[]): RunnerStart[] {
-  return runners.map(({ body: b, ride }) => ({ x: b.x, y: b.y, rode: b.onGround && b.groundRef === TILE_ONEWAY_ID ? ride : -1 }));
+  return runners.map(({ body: b, ride }) => ({
+    x: b.x,
+    y: b.y,
+    rode: b.onGround && b.groundRef === TILE_ONEWAY_ID ? ride : -1,
+    stood: b.onGround && ride < 0,
+  }));
 }
 
 interface Mover {
@@ -106,6 +129,9 @@ interface Mover {
   /** Who it stood on at the start of the frame, and at the end of it. */
   rode: Mover | null;
   base: Mover | null;
+  /** Stood on the level at the start of the frame; and who bumped it from below this frame, if anyone. */
+  stood: boolean;
+  bumpedBy: Mover | null;
   /** Sideways motion of its own step. Nobody carries anyone, so that's all it moves before side contact. */
   own: number;
   /** Direction it's slipping through bodies this frame (±1), or 0. */
@@ -127,7 +153,7 @@ interface Mover {
  * Settle one frame of runner contact. Runners that are dead, finished or held by
  * a prop aren't touched and touch nobody. `safe` is the spawn zone.
  */
-export function collideRunners(runners: readonly Runner[], start: readonly RunnerStart[], world: CollisionWorld, safe: (r: Runner) => boolean): void {
+export function collideRunners(runners: readonly Runner[], start: readonly RunnerStart[], world: CollisionWorld, safe: (r: Runner) => boolean): Bump[] {
   const ms: Mover[] = [];
   runners.forEach((r, i) => {
     if (r.alive && !r.finished && !r.attach.grip) ms.push(mover(r, start[i], safe(r)));
@@ -147,7 +173,11 @@ export function collideRunners(runners: readonly Runner[], start: readonly Runne
   settleSides(order, world);
   catchMissed(order, world);
   for (const m of order) finish(m);
+  return order.flatMap((m) => (m.bumpedBy ? [{ victim: m.r.slot, by: m.bumpedBy.r.slot, side: bumpSide(m, m.bumpedBy) }] : []));
 }
+
+/** Which way a bump knocks `m`: away from the one under it, else the way it faces. */
+const bumpSide = (m: Mover, p: Mover): -1 | 1 => (m.b.x > p.b.x ? 1 : m.b.x < p.b.x ? -1 : m.b.facing);
 
 function mover(r: Runner, s: RunnerStart, safe: boolean): Mover {
   const b = r.body;
@@ -159,6 +189,8 @@ function mover(r: Runner, s: RunnerStart, safe: boolean): Mover {
     safe,
     rode: null,
     base: null,
+    stood: s.stood,
+    bumpedBy: null,
     own,
     slip: r.press >= COLLIDE.slipFrames ? Math.sign(own) : 0,
     slipped: false,
@@ -188,7 +220,8 @@ function settleVertical(order: readonly Mover[], world: CollisionWorld): void {
     else if (p) moveY(m.b, p.b.y - p.start.y, world); // Up and down with the head, never sideways.
     let best: Mover | null = null;
     for (let j = 0; j < i; j++) if (solid(m, order[j]) && landsOn(m, order[j]) && better(m, order[j], best)) best = order[j];
-    if (best) rest(m, best, world);
+    if (best && bumps(m, best)) m.bumpedBy = best;
+    else if (best) rest(m, best, world);
   }
 }
 
@@ -208,6 +241,14 @@ function landsOn(m: Mover, p: Mover): boolean {
   if (closing <= 0) return false;
   const t = (Math.abs(rx) - reach) / closing;
   return t <= 1 && g0 + (g1 - g0) * t <= COLLIDE.lip;
+}
+
+/**
+ * `p` came up under the feet of `m`, who was standing on the level and still is: a bump, not a lift. The pair
+ * overlaps from here, so they pass through each other until they've come apart.
+ */
+function bumps(m: Mover, p: Mover): boolean {
+  return m.stood && m.b.onGround && p.b.vy < 0 && p.b.y < p.start.y - EPS && m.start.y + m.b.h - p.start.y < -TOUCH;
 }
 
 const sideOverlap = (m: Mover, p: Mover) => m.b.w - Math.abs(m.start.x + m.own - p.start.x - p.own);
@@ -381,7 +422,7 @@ function free(b: Body, dir: -1 | 1, dist: number, world: CollisionWorld): number
 function catchMissed(order: readonly Mover[], world: CollisionWorld): void {
   for (let i = 0; i < order.length; i++) {
     const m = order[i];
-    if (m.base || m.b.dropFrames > 0) continue;
+    if (m.base || m.bumpedBy || m.b.dropFrames > 0) continue;
     for (let j = 0; j < i; j++) {
       const p = order[j];
       if (solid(m, p) && overlaps(m.b, p.b) && m.start.y + m.b.h - p.start.y <= COLLIDE.lip) {

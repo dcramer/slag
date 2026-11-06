@@ -152,6 +152,8 @@ export interface BotRound {
   frames: number;
   /** Times the lead changed hands after GO: someone else on top for a second straight. */
   leads: number;
+  /** Runners bumped from below (sim/collide.ts `BUMP`). */
+  bumps: number;
 }
 
 /**
@@ -188,6 +190,7 @@ export function botRound(
   const uses: Record<string, number> = {};
   let pickups = 0;
   let pops = 0;
+  let bumps = 0;
   const top = () => {
     let best = -1;
     let feet = Infinity;
@@ -227,6 +230,7 @@ export function botRound(
       if (e.type === 'item' && e.what === 'use') uses[e.kind] = (uses[e.kind] ?? 0) + 1;
       else if (e.type === 'item' && e.what === 'pickup') pickups++;
       else if (e.type === 'item' && e.what === 'pop') pops++;
+      else if (e.type === 'item' && e.what === 'hit' && e.kind === 'bump') bumps++;
   }
   const alive = run.runners.filter((r) => r.alive && !r.finished);
   let winner = alive.length === 1 ? alive[0].slot : -1;
@@ -235,5 +239,5 @@ export function botRound(
     const at = run.runners.filter((r) => r.deathFrame === last);
     if (at.length === 1) winner = at[0].slot;
   }
-  return { leader, winner, uses, pickups, pops, frames: run.frame - RUN_COUNTDOWN, leads };
+  return { leader, winner, uses, pickups, pops, frames: run.frame - RUN_COUNTDOWN, leads, bumps };
 }

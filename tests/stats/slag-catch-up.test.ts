@@ -21,11 +21,13 @@ function holds(name: string, opts: Parameters<typeof botRound>[1]): number {
   let judged = 0;
   let early = 0;
   let leads = 0;
+  let bumps = 0;
   const used: Record<string, number> = {};
   for (const seed of SEEDS) {
     const r = botRound(seed, { ...opts, at: LEAD_HOLDS.at, limit: 3 * 60 * 60 });
     if (r.leader < 0) early++;
     leads += r.leads;
+    bumps += r.bumps;
     if (r.leader >= 0 && r.winner >= 0) {
       judged++;
       if (r.leader === r.winner) held++;
@@ -37,7 +39,7 @@ function holds(name: string, opts: Parameters<typeof botRound>[1]): number {
   }
   const rate = held / judged;
   console.log(
-    `${name}: the 15 s leader won ${held} of ${judged} (${Math.round(rate * 100)}%), ${early} over by then; ${(leads / SEEDS.length).toFixed(1)} lead changes a round; used ${JSON.stringify(used)}`,
+    `${name}: the 15 s leader won ${held} of ${judged} (${Math.round(rate * 100)}%), ${early} over by then; ${(leads / SEEDS.length).toFixed(1)} lead changes and ${(bumps / SEEDS.length).toFixed(1)} bumps a round; used ${JSON.stringify(used)}`,
   );
   return rate;
 }
