@@ -66,8 +66,8 @@ export const LEAD_HOLDS = {
  * before any part, seeds 1–48) and through the first four rounds of a match as the parts pile up (seeds 1–16).
  * `draws`: the share of rounds nobody wins (the last ones out on one frame, or the time out). `seconds`: a round's
  * mean length from GO. `knocked`: the share of deaths with a rival's knock still credited (sim/items/common.ts
- * `BONK_CREDIT`), thrown or bumped into the level. Measured bare 6%, 27.5 s and 35%; placed 6%, 28.5 s and 22%
- * (from 63%, 39.6 s, 11% and 59%, 38.1 s, 9% before bots lined rivals up and fetched boxes from anywhere). Placed parts
+ * `BONK_CREDIT`), thrown or bumped into the level. Measured bare 6%, 29.6 s and 31%; placed 17%, 27.4 s and 24%
+ * (from 63%, 39.6 s, 11% and 59%, 38.1 s, 9% before bots lined rivals up and fetched boxes from anywhere; placed draws were 6% before the motor stopped flip-flopping when it brakes at a walk). Placed parts
  * take more of the deaths on their own: a bot walking into one isn't knocked. Earlier or faster pours shortened rounds
  * and added draws. The targets are the owner's, from the party brawler: draws rare, rounds of 20–40 s. The bands
  * only catch a regression.
