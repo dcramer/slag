@@ -357,25 +357,24 @@ export const BRIEFS: Record<string, Brief> = {
     worn: "the two grey hoses running back across the pink body's side are gone, leaving plain pink panels; both thick grey mech legs bend sharply backward at the knee like a bird's, the knee joint pointing behind; a big round dent is knocked into the top back of the pink body; a long white sock hangs out of the porthole door's seal, dangling down the front; the upper duct cannon's open end is crumpled and its metal clip hangs undone. The woman's head, her headphones and hair, the porthole and the bunny patch stay as they are.",
   },
   engineer: {
-    // The nod, each part of the read at race size: the kit, carried low and clear of the body (the read in
-    // silhouette, so it leads the brief): a hard rectangular toolbox hanging from one hand (a box with square
-    // corners, which no other kind carries) and one huge wrench held low in the other, its open jaw out in
-    // front; the dome hard hat with a rim all round and the goggles on it (the head shape and the trade: a dome
-    // with a rim both sides, where the plumber's cap has a bill out front only); the tall, broad, square build
-    // with a small head for it and the square jaw (the gruff builder, and never the plumber's big head on a
-    // stout body); the work shirt over khakis (the colour block).
-    // Ours, and the joke: a backyard engineer. The hard hat is a battered bowl of a helmet, the goggles are
-    // swimming goggles, the wrench one giant spanner, the toolbox a dented tin one.
-    // Blind reads (2026-11-03 and 11-04): carried up by his shoulder, the spanner's jaw read as ears or as spikes
-    // off the hat; a wide brim on a short man read as the plumber's rival; short and stocky with the kit low,
-    // he was named only at low confidence, and an audit paired him with the plumber at play scale. So he is
-    // drawn tall, with the hat a dome and the toolbox a crisp box (art/sprites/engineer/design.prompt.txt).
+    // The nod, each part of the read at race size: the little gun turret he builds, carried low by its handle
+    // (the read nobody else has: a round body, a long barrel out back, three thin legs); big dark welding goggles
+    // down over his eyes, so no eye shows; one robot hand, a big steel gauntlet; a hard hat with a rim all round,
+    // never a cap's bill; the square clean-shaven jaw, no moustache; the huge wrench held low; the tall, broad,
+    // square build with a small head (never the plumber's big head on a stout body).
+    // Ours, and the joke: a backyard engineer. The hard hat is a plain steel bowl, the turret a dented tin pot on
+    // spider legs with a taped pipe for a barrel, the wrench one giant spanner. A dent in the dome's side hid the
+    // back of its rim, and the hat read as a cap: the wear stays off the hat.
+    // Blind reads: carried up by his shoulder, the spanner's jaw read as ears; a wide brim on a short man read as
+    // the plumber's rival. The clean colour audit (2026-11-06) took the toolbox, the cap-coloured hat and the
+    // drawn eyes for a Mario-style workman; the turret, the goggles down and the steel hand made him the
+    // engineer (art/sprites/engineer/design.prompt.txt).
     design:
-      'The character: a tall, broad, square-built handyman, long-legged, a big square slab of a chest on long sturdy legs, his head small for his body, head and hat a quarter of his height. ' +
-      'His kit is carried low, clear of his body. In his hand on the left of the picture a big hard rectangular metal toolbox (#3f7f5a), a crisp box longer than it is tall with straight edges, square corners and a flat lid, hanging by a small handle beside his knee, clear of his leg. In his gloved hand on the right of the picture one giant grey spanner (#8e8a84) held low, slanting forward and down, its single big open C jaw out in front of his knees. Nothing beside or above his head. ' +
-      'On his head a round yellow hard hat (#e9b730): a tall smooth dome with a narrow rim sticking out evenly all the way round, front, sides and back, no bill, no peak; a dark goggle strap (#3a4246) round the dome as a band. ' +
-      'A square clean-shaven jaw, peach skin (#efc9a4), two small black eyes. A red work shirt (#b8433c), khaki trousers (#8c7a58), tan work gloves (#a8794a), chunky brown boots.',
-    worn: "a big dent is knocked into the side of the hard hat's dome, its rim still running all round; one top corner of the toolbox is crumpled in, its straight edges and square corners otherwise kept; the spanner's handle is bent a little; the hole in the trouser knee is gone, the trousers whole.",
+      'The character: a tall, broad, square-built engineer, long-legged, a big square slab of a chest on long sturdy legs, his head small for his body, head and hat a quarter of his height. ' +
+      'His kit is carried low, clear of his body. His hand on the left of the picture is a big chunky steel robot hand with three thick metal fingers and a steel wrist, and from it hangs by a small handle, beside his knee and clear of his leg, a little gun turret robot (#7a2a26): a squat round dark red metal body, one long thick grey gun barrel sticking straight out of it away from him, three thin grey legs splayed under it. In his gloved hand on the right of the picture one giant grey spanner (#8e8a84) held low, slanting forward and down, its single big open C jaw out in front of his knees. Nothing beside or above his head. ' +
+      'Big round welding goggles with thick light grey rims and dark lenses pulled down over his eyes, strapped round his head under the hat, so no eyes show. On his head a plain pale steel hard hat (#c9c5bc): a smooth dome with a narrow rim sticking out evenly all the way round, no bill, no peak. ' +
+      'A square clean-shaven jaw, no moustache, peach skin (#efc9a4). A red work shirt (#b8433c), khaki trousers (#8c7a58), one tan work glove (#a8794a), chunky brown boots.',
+    worn: "a wide band of pale grey tape is wrapped round the middle of the turret's gun barrel; the turret's round red body has a big dent in its top; the spanner's handle is bent a little; the steel hard hat stays smooth, its rim running all round.",
   },
   goose: {
     // The nod, each part of the read at race size: the S of a neck (a goose, not a duck or a chicken), white
