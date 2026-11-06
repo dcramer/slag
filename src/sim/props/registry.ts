@@ -1,6 +1,6 @@
 import { dhypot } from '../../core/dmath';
 import { type Cell, overlaps, type Rect, rectCircle, type Vec } from '../../core/geom';
-import type { ItemSpawn } from '../items/types';
+import type { ItemKind, ItemSpawn } from '../items/types';
 import type { Level } from '../level';
 import type { Body, Solid } from '../physics';
 import type { GameEvent, InputFrame } from '../types';
@@ -181,6 +181,8 @@ export interface TickCtx extends PropCtx {
   emit(e: GameEvent): void;
   /** Drop a loose held item into the run (mystery crates). Optional so headless callers can omit it. */
   spawnItem?(s: ItemSpawn): void;
+  /** Put an item straight into runner `i`'s hands (a loop's boxes); false, and nothing given, if they hold one already. */
+  handItem?(i: number, kind: ItemKind): boolean;
   /** Seed of this race's item rolls: differs per round, so a crate that survives a round doesn't repeat itself. */
   itemSeed?: number;
   /** This frame's solids, for anything that looks or moves through the world. Optional so headless callers can omit them. */

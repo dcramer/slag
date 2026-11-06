@@ -87,13 +87,18 @@ defineModule<'mystery'>({
     for (const [cx, cy] of m.cells) {
       const x = cx * TILE + ctx.off[0];
       const y = cy * TILE + ctx.off[1];
-      const hitter = ctx.runners.find((r) => r.active && touches(r, x, y));
-      if (!hitter) continue;
+      const hi = ctx.runners.findIndex((r) => r.active && touches(r, x, y));
+      if (hi < 0) continue;
+      const hitter = ctx.runners[hi];
       const pool = m.catchUp ? (leads(hitter, ctx.runners) ? CATCH_UP.lead : CATCH_UP.chase) : m.pool;
       const kind = rollItem(pool, ctx.itemSeed ?? ctx.level.seed, ctx.r.pp.uid, ctx.mi, st.pops);
-      // Out of the top, so whoever hit it has to hop up for it, or a rival snatches it. Under a low roof it drops out of the bottom instead.
-      const roofed = tileAt(ctx.level, Math.floor((x + TILE / 2) / TILE), Math.floor((y - 1) / TILE)) === T_SOLID;
-      ctx.spawnItem?.({ kind, x: x + TILE / 2, y: roofed ? y + TILE + 6 : y - 6, vx: 0, vy: roofed ? 60 : -190, grace: 14 });
+      // A loop's box hands it over, as a racer's item box does: a climb has no time to hop about after a pop, and its
+      // boxes hang in open air. Any other box (or full hands) pops it out of the top, so whoever hit it has to hop up
+      // for it, or a rival snatches it; under a low roof it drops out of the bottom instead.
+      if (!(m.catchUp && ctx.handItem?.(hi, kind))) {
+        const roofed = tileAt(ctx.level, Math.floor((x + TILE / 2) / TILE), Math.floor((y - 1) / TILE)) === T_SOLID;
+        ctx.spawnItem?.({ kind, x: x + TILE / 2, y: roofed ? y + TILE + 6 : y - 6, vx: 0, vy: roofed ? 60 : -190, grace: 14 });
+      }
       ctx.state.vars.set(key(ctx.mi, 'pops'), st.pops + 1);
       ctx.state.vars.set(key(ctx.mi, 'ready'), ctx.frame + m.refill);
       ctx.state.vars.set(key(ctx.mi, 'popAt'), ctx.frame);

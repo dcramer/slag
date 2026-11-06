@@ -565,6 +565,21 @@ describe('mystery crate', () => {
     expect(run.items.drops[0]?.y).toBeGreaterThan((FLOOR - 3) * TILE);
   });
 
+  it("a loop's box hands what it deals straight to empty hands, and pops it for full ones", () => {
+    const def = mysteryDef(0, 20);
+    const m = def.modules[0] as Extract<Module, { type: 'mystery' }>;
+    const loopBox: PropDef = { ...def, modules: [{ ...m, catchUp: true }] };
+    const run = race([10], [crateAt(loopBox, 10, FLOOR - 4)]);
+    const hop = (n: number) => steps(run, n, (f) => press({ jump: f % 50 < 25, jumpPressed: f % 50 === 0 }));
+    hop(30);
+    expect(mysteryState(run.propState.get(9), 0).pops).toBe(1);
+    expect(run.runners[0].items.held).not.toBeNull();
+    expect(run.items.drops).toHaveLength(0);
+    hop(40);
+    expect(mysteryState(run.propState.get(9), 0).pops).toBe(2);
+    expect(run.items.drops).toHaveLength(1);
+  });
+
   it('standing on top never pops it', () => {
     const def = mysteryDef(0, 60);
     const run = race([10], [crateAt(def, 10, FLOOR - 3)]);
