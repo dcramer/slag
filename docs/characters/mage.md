@@ -2,7 +2,7 @@
 
 A kind of the cast: [CHARACTERS.md](../CHARACTERS.md) has the rules every kind follows.
 
-- **Kind:** `mage` · **Name:** Vivvy
+- **Kind:** `mage` · **Name:** Dimmy
 - **A stranger should say:** "the little black mage with the big pointed hat and the glowing eyes."
 - **Silhouette:** small and round-shouldered: a huge straw hat, its brim wider than his shoulders and its tall crown folded over into a bent point, and under the brim no face at all, only darkness with two round glowing eyes; a long robe to the ankles, its cuffs flared over his hands; a staff held upright beside him.
 - **Traits:** the wide hat with the bent point; the dark face with two glowing yellow eyes; a robe with wide cuffs and a broad belt; a staff; small and shy.

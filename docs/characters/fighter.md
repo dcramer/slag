@@ -2,7 +2,7 @@
 
 A kind of the cast: [CHARACTERS.md](../CHARACTERS.md) has the rules every kind follows.
 
-- **Kind:** `fighter` · **Name:** Chun-Lee
+- **Kind:** `fighter` · **Name:** Bun-Li
 - **A stranger should say:** "the street fighter with the two hair buns."
 - **Silhouette:** always in a deep, wide fighting stance (or a kick), knees bent far apart over thick, strong thighs; huge round puffed shoulders wider than her small head; a short high-collared dress, its skirt flaring out over the thighs; two round hair buns up and out on the top corners of her head, her round crown showing between them; spiked bracelets on both wrists.
 - **Traits:** the wide fighting stance; a high-collared qipao with huge puffed shoulders, a flared skirt and a sash; two hair buns in covers; spiked bracelets; thick muscular legs; white boots; a kick for a jump, a high kick for a cheer.

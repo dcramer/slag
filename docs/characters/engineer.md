@@ -1,6 +1,6 @@
 # The team shooter's engineer
 
-- **Kind:** `engineer` · **Name:** Engie
+- **Kind:** `engineer` · **Name:** Wrenchie
 - **A stranger should say:** "the engineer with the hard hat, the toolbox and the wrench."
 - **Silhouette:** as tall as the other grown men (the miner, the hunter, the merc), broad and square, a slab of a chest on long legs, and a small head for his body (about a quarter of his height with the hat, where the plumber's is near half). The head is a dome hard hat with a narrow rim sticking out all round it, front and back alike, never a cap's bill out front. His kit is carried low and clear of the head: a hard rectangular toolbox with square corners hanging by its handle beside his back knee, to the side of his legs, and one huge open-jawed wrench held low in the other hand, slanting forward, its jaw out in front of his knees.
 - **Traits:** a dome hard hat with a rim all round; goggles strapped round it as a band; a clean-shaven square jaw, jutting forward; a work shirt; khaki trousers with a belt; leather work gloves; a toolbox, a crisp box no other kind carries; a huge wrench with one big open jaw. Not a lantern jaw as wide as the dome: on a small head it makes the head big again.

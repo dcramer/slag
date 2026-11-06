@@ -2,7 +2,7 @@
 
 A kind of the cast: [CHARACTERS.md](../CHARACTERS.md) has the rules every kind follows.
 
-- **Kind:** `invader` · **Name:** Invayda
+- **Kind:** `invader` · **Name:** Space Evader
 - **A stranger should say:** "the space invader, the pixel crab from the arcade."
 - **Silhouette:** wider than tall, cut from square pixels with stepped edges: two antennae up from the top corners, a short arm out of each side bent up like a raised claw, a row of stubby legs under it that spread and pinch in turn. No neck, no head apart from the body.
 - **Traits:** the stepped pixel edge all round; the two antennae; the raised side claws; two square eye holes; the two-step shuffle.

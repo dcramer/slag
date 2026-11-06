@@ -2,7 +2,7 @@
 
 A kind of the cast: [CHARACTERS.md](../CHARACTERS.md) has the rules every kind follows.
 
-- **Kind:** `stinger` · **Name:** Hornette
+- **Kind:** `stinger` · **Name:** Hornknit
 - **A stranger should say:** "the bug knight with the horned mask and the needle."
 - **Silhouette:** small and slim: a white mask face with two long horns off its top, sharp crescents hooking back with background between them, a red cloak hanging from her shoulders in a short bell to the knees, thin dark legs clearly under it, and a thick knitting needle held level, sticking out past her on both sides.
 - **Traits:** a white mask with dark eye holes; two long crescent horns; a red cloak; thin dark limbs; a long needle with yarn off it; quick and agile.

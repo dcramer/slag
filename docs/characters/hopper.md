@@ -1,6 +1,6 @@
 # The snouted cube hopper
 
-- **Kind:** `hopper` · **Name:** Kewbert
+- **Kind:** `hopper` · **Name:** Tootbert
 - **A stranger should say:** "the orange ball with the long nose that hops."
 - **Silhouette:** a round ball with no arms on two short legs close together, two big eyes standing up out of its crown as two bumps, and a long tube snout sticking straight out level from the middle of its front, as long as the ball is wide, flared like a trumpet at its open end. The snout is what parts it from the puffball.
 - **Traits:** a round ball body; the long tube snout with its dark open end; big round eyes with whites; two short legs with big trainers; no arms.

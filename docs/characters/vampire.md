@@ -2,7 +2,7 @@
 
 A kind of the cast: [CHARACTERS.md](../CHARACTERS.md) has the rules every kind follows.
 
-- **Kind:** `vampire` · **Name:** Lady Dimitreskew
+- **Kind:** `vampire` · **Name:** Lady Dimistretch
 - **A stranger should say:** "the giant vampire lady from the castle, in the big white dress and the huge hat."
 - **Silhouette:** the tallest the shared box allows and slim: a wide flat-crowned sun hat over a small head, a long gown flaring to the floor, one hand raised with five long claws, a string of pearls. Tall and straight, never round.
 - **Traits:** the wide flat-crowned hat; the long gown to the floor; the long claw nails; pearls; pale skin and red lips; looking down at everyone.

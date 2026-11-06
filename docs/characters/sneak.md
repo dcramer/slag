@@ -1,6 +1,6 @@
 # The sneaking soldier
 
-- **Kind:** `sneak` · **Name:** Snek
+- **Kind:** `sneak` · **Name:** Soggy Snake
 - **A stranger should say:** "the soldier hiding in a cardboard box."
 - **Silhouette:** side on, a crisp square-cornered cardboard box worn over him to the knees, level along the bottom, on two short crouched legs with a gap between them; a striped bandana's two long tails stream out of a torn hand-hole behind. His eyes peer out of a slot near the front. On the laugh his head pops out of the top, bandana and all.
 - **Traits:** a cardboard box worn over the body; a dark bandana with long tails; a grey sneaking suit; boots; on the laugh, a gruff stubble jaw.

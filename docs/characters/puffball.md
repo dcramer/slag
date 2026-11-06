@@ -1,6 +1,6 @@
 # The pink puffball
 
-- **Kind:** `puffball` · **Name:** Kurby
+- **Kind:** `puffball` · **Name:** Squirby
 - **A stranger should say:** "the little pink puffball."
 - **Silhouette:** a near-perfect ball on two big oval feet, with stubby round arms.
 - **Traits:** tall oval eyes with a shine at the top; blush marks; a tiny mouth; big feet.

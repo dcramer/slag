@@ -2,7 +2,7 @@
 
 A kind of the cast: [CHARACTERS.md](../CHARACTERS.md) has the rules every kind follows.
 
-- **Kind:** `raider` · **Name:** Laura Craft
+- **Kind:** `raider` · **Name:** Clara Loft
 - **A stranger should say:** "the tomb raider with the braid and two pistols."
 - **Silhouette:** an athletic woman, legs apart in shorts: one long thick braid streaming out behind her head, clear of her back, a pistol in each hand (held out, one each side, when she stands and aims, and both forward when she leaps), a small satchel at her hip, boots.
 - **Traits:** a long single braid; a fitted tank top; shorts; twin pistols in thigh holsters; a small satchel; fingerless gloves; boots; an athletic build.
