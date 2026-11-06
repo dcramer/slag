@@ -47,7 +47,7 @@ Every game design decision, preference and direction the owner has given, groupe
 ## Match flow and rules
 
 - **A match starts from a Start button, not by itself: once everyone is ready and the mode has enough players, Start appears and someone presses it.** "i think when everyones ready, there should still be a start button (when conditions are met) somehow"
-  2026-11-06 · `planned` · DESIGN.md → Lobby · Replaced: the match starting the moment everyone is ready.
+  2026-11-06 · `done` (a host-only `start` action online, anyone seated offline; a lobby of bots alone still starts itself; `SNAP_VERSION` 59) · DESIGN.md → Lobby, NETCODE.md · Replaced: the match starting the moment everyone is ready.
 - **A round is lobby, pick, place, race, score; parts stay for the whole match, so levels get more dangerous every round.**
   2026-11-01 · git `dfa1697` · `done` · DESIGN.md → Core loop
 - **Matches take 1–8 players.**
