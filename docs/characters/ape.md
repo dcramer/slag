@@ -1,6 +1,6 @@
 # The necktie ape
 
-- **Kind:** `ape` · **Name:** Dankey Kang
+- **Kind:** `ape` · **Name:** Clonkey Kang
 - **A stranger should say:** "the big ape with the red tie."
 - **Silhouette:** hunched, with huge shoulders and long arms, a small head low and forward, and a protruding muzzle.
 - **Traits:** brown fur; a tan face, muzzle and chest; a red necktie; big knuckles.

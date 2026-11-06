@@ -1,6 +1,6 @@
 # The green-tunic elf hero
 
-- **Kind:** `elf` · **Name:** Lonk
+- **Kind:** `elf` · **Name:** Sir Clinkalot
 - **A stranger should say:** "the elf hero with the green cap."
 - **Silhouette:** slim. A long green cap flopping back like a tail, a pointed ear sticking out, a tunic flared at the hem, and a round shield on the back.
 - **Traits:** a long floppy green cap; blond fringe; a long pointed ear; a green tunic with a brown belt; a shield and a sword hilt on the back; brown boots.

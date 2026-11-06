@@ -2,7 +2,7 @@
 
 A kind of the cast: [CHARACTERS.md](../CHARACTERS.md) has the rules every kind follows.
 
-- **Kind:** `tophat` · **Name:** Hat Kidd
+- **Kind:** `tophat` · **Name:** Can Kid
 - **A stranger should say:** "the little girl with the huge top hat and the cape."
 - **Silhouette:** a small girl, half of her height a tall top hat with a wide band, standing straight up off her head; a short cape flaring off her shoulders; a little umbrella held out; a long hair tuft or ponytail out of the back under the hat.
 - **Traits:** a top hat taller than her head with a band round it; a short cape with a high collar; a long ponytail out of the back; shorts and striped socks; a little umbrella; a big grin.

@@ -1,6 +1,6 @@
 # The yellow electric mouse
 
-- **Kind:** `zapmouse` · **Name:** Pikachew
+- **Kind:** `zapmouse` · **Name:** Kilowatchu
 - **A stranger should say:** "the yellow electric mouse."
 - **Silhouette:** chubby and round, with two long pointed ears and a zigzag tail that breaks the outline behind.
 - **Traits:** yellow; long ears tipped black; round red cheeks; a lightning-bolt tail; small black eyes with a white glint.

@@ -1,6 +1,6 @@
 # The blue speedster
 
-- **Kind:** `hedgehog` · **Name:** Sanic
+- **Kind:** `hedgehog` · **Name:** Zoomic
 - **A stranger should say:** "the fast blue hedgehog."
 - **Silhouette:** a big head with three or four long spikes swept straight back, a small body, thin legs, big shoes.
 - **Traits:** cobalt quills swept back; green eyes; a peach muzzle and belly; a cocky one-sided grin; big red shoes with a strap.

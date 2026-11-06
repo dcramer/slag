@@ -1,6 +1,6 @@
 # The spiky-haired mercenary
 
-- **Kind:** `merc` · **Name:** Clod
+- **Kind:** `merc` · **Name:** Crumbcloud
 - **A stranger should say:** "the spiky-haired guy with the giant sword."
 - **Silhouette:** a crown of big blond spikes and a blade as tall as he is, held low and trailing behind at a run, its point on the floor at idle as he leans on it. Slim, one big shoulder piece. The blade is always in hand, never strapped to his back (the plumber's plunger owns that).
 - **Traits:** spiky blond hair; a sleeveless dark knit top; baggy dark trousers; two belts crossed at the hip; one metal shoulder piece; heavy boots; a huge, broad blade.

@@ -1,6 +1,6 @@
 # The worm in the super suit
 
-- **Kind:** `worm` · **Name:** Earthworm Gym
+- **Kind:** `worm` · **Name:** Mudworm Slim
 - **A stranger should say:** "the earthworm in the space suit."
 - **Silhouette:** side on, a super suit with a hero's build: two big round shoulder pads over a broad chest, a narrow belted waist, slim legs and big boots. Out of its collar rises a thin bare pink worm neck, arcing forward once at the top, and on its end a head clearly wider than the neck, with two huge eyes standing up out of it and a wide grin. A small chunky pistol is held out at arm's length in one hand, angled a little down, clear of the body. It's a gun in the hand, never a cannon worn on the forearm and never level from the shoulder, which is the hunter's and the robot boy's outline.
 - **Traits:** a suit with big round shoulder pads, a narrow belted waist and big boots; a thin pink worm neck out of the collar; a head wider than the neck, huge bulging eyes and a wide toothy grin; a raygun held out in one hand; dark gloves.

@@ -10,7 +10,7 @@ From the owner (logged in [DECISIONS.md](DECISIONS.md) → Characters):
 
 1. **Every character is a homage**, because the lore makes the runners the knock-off heroes who almost got their own game.
 2. **Recognisability comes first.** A stranger should name each homage at a glance. For each one we list the three or four traits people actually know it by and make every one of them unmistakable at play scale.
-3. **Homages, never copies.** Each is our own design, read from its silhouette and one or two signature props, never the original's exact design or its real name. Sound-alike names are data (`KIND_NAMES` in `src/gen/character.ts`) and appear nowhere else. Player characters may have faces and personas; parts and machines stay faceless (DESIGN.md → Parody).
+3. **Homages, never copies.** Each is our own design, read from its silhouette and one or two signature props, never the original's exact design or its real name, nor a respelling of it (one letter off, or the same sound): the name is a looser sound-alike, ideally with the kind's own joke in it (Kilowatchu, Clara Loft). Sound-alike names are data (`KIND_NAMES` in `src/gen/character.ts`) and appear nowhere else. Player characters may have faces and personas; parts and machines stay faceless (DESIGN.md → Parody).
 4. **A neutral palette, and the colour is the player's.** Each kind's own colours are neutrals: skin, eyes, hair, metal, wood, bone, cloth greys and the ink. Nearly every coloured part takes the player's colour: the costume in it, every other coloured part in a lighter or darker tone of it (the plumber's cap and overalls, the engineer's hat and shirt). The shape carries the read, not the original's hues. It's that player's HUD color, and with eight different kinds per lobby, eight players stay told apart.
 5. **Random roll only.** New Look rolls everything, the kind included. A lobby never seats two of the same kind (`Match.looksFree`).
 6. **Saved looks re-roll once** whenever the cast changes what a seed means: bump `LOOK_CAST` in `src/ui/profile.ts`.
@@ -109,41 +109,41 @@ The strongest reads first. **Keyed** marks the non-humanoids, the riskiest to dr
 | # | Kind | Name | Rig | Status or risk |
 |---|---|---|---|---|
 | 1 | plumber | Plumbo | humanoid | drawn flat |
-| 2 | hedgehog | Sanic | humanoid, spin keyed | drawn flat |
+| 2 | hedgehog | Zoomic | humanoid, spin keyed | drawn flat |
 | 3 | chomper | Snack-Man | generated, no limbs | drawn flat |
-| 4 | zapmouse | Pikachew | **keyed**, quadruped | drawn flat |
-| 5 | elf | Lonk | humanoid | drawn flat |
-| 6 | puffball | Kurby | **keyed**, ball and feet | drawn flat |
-| 7 | miner | Stove | humanoid, stiff | drawn flat |
+| 4 | zapmouse | Kilowatchu | **keyed**, quadruped | drawn flat |
+| 5 | elf | Sir Clinkalot | humanoid | drawn flat |
+| 6 | puffball | Squirby | **keyed**, ball and feet | drawn flat |
+| 7 | miner | Treeve | humanoid, stiff | drawn flat |
 | 8 | impostor | Sussy | **keyed**, legs only | drawn flat |
-| 9 | ape | Dankey Kang | humanoid, gallop keyed | drawn flat |
-| 10 | merc | Clod | humanoid + blade prop | drawn flat |
-| 11 | king | Browser | humanoid + shell prop | drawn flat |
-| 12 | dino | Yoshee | humanoid + tail | drawn flat |
+| 9 | ape | Clonkey Kang | humanoid, gallop keyed | drawn flat |
+| 10 | merc | Crumbcloud | humanoid + blade prop | drawn flat |
+| 11 | king | Grouser | humanoid + shell prop | drawn flat |
+| 12 | dino | Noshasaurus | humanoid + tail | drawn flat |
 | 13 | robot | Meh Man | humanoid + can prop | drawn flat |
-| 14 | sneak | Snek | humanoid + box prop, keyed | drawn flat |
+| 14 | sneak | Soggy Snake | humanoid + box prop, keyed | drawn flat |
 | 15 | cuptoon | Mughead | humanoid, rubber hose keyed | drawn flat |
-| 16 | hunter | Sammus | humanoid, ball tuck keyed | drawn flat |
-| 17 | engineer | Engie | humanoid | drawn flat |
+| 16 | hunter | Samosa | humanoid, ball tuck keyed | drawn flat |
+| 17 | engineer | Wrenchie | humanoid | drawn flat |
 | 18 | goose | Honkers | **keyed**, bird | drawn flat |
 | 19 | horse | Hoarse | **keyed**, quadruped | drawn flat |
-| 20 | jelly | Meltroid | **keyed**, no limbs | drawn flat |
-| 21 | rapper | Parapper | humanoid, flat card | drawn flat |
+| 20 | jelly | Wobbletroid | **keyed**, no limbs | drawn flat |
+| 21 | rapper | Paperappa | humanoid, flat card | drawn flat |
 | 22 | limbless | Raymond | **keyed**, floating hands and feet | drawn flat |
-| 23 | worm | Earthworm Gym | humanoid + head stalk | drawn flat |
-| 24 | dragon | Spiro | **keyed**, quadruped | drawn flat |
-| 25 | hopper | Kewbert | **keyed**, legs only | drawn flat |
+| 23 | worm | Mudworm Slim | humanoid + head stalk | drawn flat |
+| 24 | dragon | Spyrella | **keyed**, quadruped | drawn flat |
+| 25 | hopper | Tootbert | **keyed**, legs only | drawn flat |
 | 26 | warrior | Kakosh | humanoid, round | drawn flat side on (round 5, the sword out level); the blind read fails: "a stout knight in a pointed helmet", no name and no pairs |
 | 27 | slayer | Gerald | humanoid | drawn flat, redrawn a third time crouched side on with the sword level out ahead; the blind read not passed (unpaired, read as a ninja: the hilts above his shoulders read as horns or a headband's tails) |
-| 28 | raider | Laura Craft | humanoid | drawn flat; named by both blind readers at medium, one still pairing her with the puppy (long hair behind a slim figure) |
-| 29 | fighter | Chun-Lee | humanoid | drawn flat, redrawn in a deep wide stance with a small head; the blind read passes (both readers named her at medium, unpaired, once the buns stood up and out with her crown round between them: snug on its corners, head and buns were a headband, and readers saw the other fighter) |
-| 30 | stinger | Hornette | humanoid, cloaked | drawn flat; the blind read passes (straight horns read as rabbit ears until they curved into crescents) |
-| 31 | mage | Vivvy | humanoid, robed | drawn flat; the blind read passes (both readers named him at medium, unpaired) |
-| 32 | creeper | Creepah | **keyed**, four legs, no arms | drawn flat; the blind read passes (named at medium by both once the face was cut through him and the candle burnt to a stub) |
-| 33 | tophat | Hat Kidd | humanoid, small | drawn flat; the blind read passes (the hat, a clean tin cylinder on a wide brim, with the umbrella held out low, clear of it) |
-| 34 | pyramid | Pyramid Ted | humanoid, big + blade | drawn flat, no face; the blind read passes (both readers named him at medium once the wedge, a brim over his shoulders and the mage's hat, became an upright pyramid on them, the slicer long and steep behind him) |
-| 35 | invader | Invayda | **keyed**, legs only, pixel edge | drawn flat, front on, the eye holes cut through; the blind read passes (both readers named it at high, unpaired) |
-| 36 | vampire | Lady Dimitreskew | humanoid, tall, gowned | drawn flat; the blind read passes (named at medium by both on the first sheet: the height under the wide flat hat, the gown to the floor) |
+| 28 | raider | Clara Loft | humanoid | drawn flat; named by both blind readers at medium, one still pairing her with the puppy (long hair behind a slim figure) |
+| 29 | fighter | Bun-Li | humanoid | drawn flat, redrawn in a deep wide stance with a small head; the blind read passes (both readers named her at medium, unpaired, once the buns stood up and out with her crown round between them: snug on its corners, head and buns were a headband, and readers saw the other fighter) |
+| 30 | stinger | Hornknit | humanoid, cloaked | drawn flat; the blind read passes (straight horns read as rabbit ears until they curved into crescents) |
+| 31 | mage | Dimmy | humanoid, robed | drawn flat; the blind read passes (both readers named him at medium, unpaired) |
+| 32 | creeper | Creepbox | **keyed**, four legs, no arms | drawn flat; the blind read passes (named at medium by both once the face was cut through him and the candle burnt to a stub) |
+| 33 | tophat | Can Kid | humanoid, small | drawn flat; the blind read passes (the hat, a clean tin cylinder on a wide brim, with the umbrella held out low, clear of it) |
+| 34 | pyramid | Pyramid Fred | humanoid, big + blade | drawn flat, no face; the blind read passes (both readers named him at medium once the wedge, a brim over his shoulders and the mage's hat, became an upright pyramid on them, the slicer long and steep behind him) |
+| 35 | invader | Space Evader | **keyed**, legs only, pixel edge | drawn flat, front on, the eye holes cut through; the blind read passes (both readers named it at high, unpaired) |
+| 36 | vampire | Lady Dimistretch | humanoid, tall, gowned | drawn flat; the blind read passes (named at medium by both on the first sheet: the height under the wide flat hat, the gown to the floor) |
 | 37 | assistant | Izzabelle | humanoid, small, dog | drawn flat; the blind read not passed (unpaired as "Pikmin" while the tuft stood on a stalk, then a nameless small figure with a tuft or hat; a side-on redraw with a snout, round 3, read the same and worse in colour, not shipped): in black her head is a hat |
 | 38 | sim | Bella Gauche | humanoid + floating diamond | drawn flat; the blind read passes (both readers named her at high once the diamond's points survived the tracer: rounded, it was a Pikmin's leaf) |
 

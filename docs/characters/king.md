@@ -1,6 +1,6 @@
 # The spiked turtle king
 
-- **Kind:** `king` · **Name:** Browser
+- **Kind:** `king` · **Name:** Grouser
 - **A stranger should say:** "the big spiky turtle king."
 - **Silhouette:** the bulkiest kind, seen side on and carried by two shapes: behind, a smooth shell dome from his shoulders to his hips with its cream rim standing out at the bottom and only three big spikes along its top (one bent); in front, a big horned head reaching forward on a thick neck, its long blunt snout out past his fists and its heavy jaw open, so the jaw is a notch in the outline. A thick tail and wide-planted legs under the dome. Spikes all round, a tufted mane, studded cuffs, a spiked tail and a many-pointed crown each broke the outline, and readers saw a porcupine; in a three-quarter view the head sat inside one round mass with the shell.
 - **Traits:** a smooth shell dome with a cream rim and three big cream spikes; skin the player's colour; a pale banded belly; two long cream horns; a mane and brows swept back; an open jaw with white fangs; clawed feet; a thick tail.
