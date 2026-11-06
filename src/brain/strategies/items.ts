@@ -21,18 +21,23 @@ const SEE_ACROSS = 10;
 const SEE_ROWS = 8;
 /** Rows a box may hang over the floor it's knocked from: a full jump's head room. */
 const BOX_HANG = 3;
-/** Rows of slag under its feet it wants before it goes out of its way for anything. */
-const ERRAND_SLAG = 10;
+/**
+ * Rows of slag under its feet it keeps whatever it's fetching: past these, every row more is a tile of detour it
+ * will take, up to DETOUR. Chasers ride the slag's leash a few rows up, so a box on the way is still worth a knock.
+ */
+const ERRAND_SLAG = 4;
 /** Frames it keeps at an errand before giving it up. */
 const ERRAND_FRAMES = 4 * 60;
 /** Frames it hops under a box before giving up on it. */
 const HOP_FRAMES = 90;
+/** Frames a spot it turned down stays turned down: round a loop it comes past again, and its boxes refill. */
+const PASS_FRAMES = 3 * 60;
 
 /** Where it's going for something: a stand cell, and the box over it to knock, if any. */
 interface Errand {
   tx: number;
   ty: number;
-  box: { tx: number; ty: number } | null;
+  box: { tx: number; ty: number; hands: boolean } | null;
   until: number;
   hops: number;
 }
@@ -40,8 +45,8 @@ interface Errand {
 export class ItemPlay {
   private errand: Errand | null = null;
   private frame = 0;
-  /** Spots it priced and turned down this race (a box by its cell, negated; a loose item by where it lay). */
-  private readonly passed = new Set<number>();
+  /** Spots it priced and turned down (a box by its cell, negated; a loose item by where it lay), to the frame it may look again. */
+  private readonly passed = new Map<number, number>();
 
   constructor(
     private readonly rng: Rng,
@@ -64,8 +69,9 @@ export class ItemPlay {
     }
     if (me.held) return (this.errand = null);
     // The slag is close enough that any detour could cost it the climb: no time for errands.
-    if (me.slag !== null && me.slag < ERRAND_SLAG) return (this.errand = null);
-    if (!this.errand && (this.frame + v.slot) % SCAN_EVERY === 0) this.errand = this.scan(v, me);
+    if (this.budget(me) <= 0) return (this.errand = null);
+    // It weighs a detour from where it stands: in the air its own cell has no route yet.
+    if (!this.errand && me.grounded && (this.frame + v.slot) % SCAN_EVERY === 0) this.errand = this.scan(v, me);
     return this.errand ? this.run(v, me, this.errand) : null;
   }
 
@@ -105,28 +111,34 @@ export class ItemPlay {
         const y = b.ty + k;
         if (tile(v, b.tx, y) !== 0) break;
         if (floorAt(v, b.tx, y + 1)) {
-          if (near(b.tx, y)) spots.push({ tx: b.tx, ty: y, box: { tx: b.tx, ty: b.ty } });
+          if (near(b.tx, y)) spots.push({ tx: b.tx, ty: y, box: { tx: b.tx, ty: b.ty, hands: b.hands } });
           break;
         }
       }
     }
     // Each new spot priced costs the route a field (tens of ms), so it prices one a look, nearest first, and
     // remembers the ones it turned down.
-    const fresh = spots.filter((s) => !this.passed.has(key(s, v.level.w)));
+    const fresh = spots.filter((s) => (this.passed.get(key(s, v.level.w)) ?? 0) <= this.frame);
     fresh.sort((a, b) => Math.abs(a.tx - me.tx) + Math.abs(a.ty - me.ty) - (Math.abs(b.tx - me.tx) + Math.abs(b.ty - me.ty)));
     const s = fresh[0];
     if (!s) return null;
     if (this.worth(v, me, s)) return { ...s, until: this.frame + ERRAND_FRAMES, hops: 0 };
-    this.passed.add(key(s, v.level.w));
+    this.passed.set(key(s, v.level.w), this.frame + PASS_FRAMES);
     return null;
+  }
+
+  /** Tiles of route it will go out of its way: DETOUR, less as the slag closes in. */
+  private budget(me: SelfSense): number {
+    return me.slag === null ? DETOUR : Math.min(DETOUR, me.slag - ERRAND_SLAG);
   }
 
   /** A spot a short way off its route, and for a box, one where what it pops can be got at. */
   private worth(v: BrainView, me: SelfSense, s: Spot): boolean {
     const d = s.tx === me.tx && s.ty === me.ty ? 0 : v.detour(s.tx, s.ty);
-    if (d > DETOUR) return false;
-    // What a box pops comes out of the top (out of the bottom under a roof): only worth knocking if it can get there.
-    return !s.box || tile(v, s.box.tx, s.box.ty - 1) === T_SOLID || Number.isFinite(v.detour(s.box.tx, s.box.ty - 1));
+    if (d > this.budget(me)) return false;
+    // What a box pops comes out of the top (out of the bottom under a roof): only worth knocking if it can get there,
+    // or if the box hands it over.
+    return !s.box || s.box.hands || tile(v, s.box.tx, s.box.ty - 1) === T_SOLID || Number.isFinite(v.detour(s.box.tx, s.box.ty - 1));
   }
 }
 

@@ -30,14 +30,15 @@ export const PASS_BANDS: Record<ModeId, Record<BotLevel, Record<Difficulty, read
     normal: { gentle: [0.8, 1], medium: [0.55, 0.82], hard: [0.5, 0.8] },
     hard: { gentle: [0.88, 1], medium: [0.68, 0.92], hard: [0.7, 0.95] },
   },
-  // Measured lap by lap round the loop (seeds 1–32): Easy 63 75 53, Normal 88 75 43, Hard 84 74 75, the slag a
-  // racer's-camera gap behind the leader (4.5, 3.75 and 3 s of climb, squeezing from 30 s; gen/level/tide.ts).
-  // Normal sits within 7 points of its targets. Easy's later laps read high because only the Easy runs that got
-  // through the first are counted there, and those are its good ones.
+  // Measured lap by lap round the open shaft (seeds 1–32; gen/level/builders/shaft.ts): Easy 88 75 86, Normal 88 93 88,
+  // Hard 100 84 96, the slag a racer's-camera gap behind the leader (4.5, 3.75 and 3 s of climb, squeezing from 30 s;
+  // gen/level/tide.ts). Every tier passes above its targets: a bot rarely slips on ledges, and one that does lands a
+  // row down, so it's the squeeze that ends a lone climb. Tightening the leash to 4, 2.75 and 2 s moved no lap more
+  // than 7 points. Laps that harden for a lone climber are open (docs/TODO.md → 31).
   slag: {
-    easy: { gentle: [0.5, 0.8], medium: [0.58, 0.9], hard: [0.35, 0.72] },
-    normal: { gentle: [0.78, 1], medium: [0.6, 0.9], hard: [0.28, 0.6] },
-    hard: { gentle: [0.72, 0.96], medium: [0.6, 0.88], hard: [0.58, 0.9] },
+    easy: { gentle: [0.74, 1], medium: [0.58, 0.9], hard: [0.68, 1] },
+    normal: { gentle: [0.74, 1], medium: [0.78, 1], hard: [0.72, 1] },
+    hard: { gentle: [0.86, 1], medium: [0.7, 0.98], hard: [0.82, 1] },
   },
 };
 
@@ -45,16 +46,17 @@ export const PASS_BANDS: Record<ModeId, Record<BotLevel, Record<Difficulty, read
  * Catch-up in Rising Slag: the share of rounds the runner highest 15 s after GO (`at`, frames) goes on to win, four
  * Normal bots on a bare loop (seeds 1–128, the rounds where both are known; tests/stats/slag-catch-up.test.ts).
  * `boxes`: the loop's own boxes as built. `items` and `bare`: what those boxes deal by rank put in every empty hand
- * every 5 s, then used by the bots' item tactics, or never used. Measured 59, 62 and 55: catch-up isn't there yet.
- * Bots use what they hold (about 640 uses), but the leader's defensive draws cancel the pack's attacks, and bots
- * hardly ever collect what a box pops. The target, from the lead-camera racer, is the early leader winning about
+ * every 5 s, then used by the bots' item tactics, or never used. Measured in the open shaft 64, 62 and 78 (in
+ * storeys 60, 59 and 55), bots spread over the shaft each on a lane of its own and the loop's boxes handing over what
+ * they deal (95 uses from boxes in 128 rounds, from 3). Items take 14 to 16 points off the early leader, but bare an
+ * open climb lets it keep the lead more: bots climb at one pace and the lead changes hands under twice a round. The target, from the lead-camera racer, is the early leader winning about
  * half the time (docs/MODES.md); these bands only catch a regression.
  */
 export const LEAD_HOLDS = {
   at: 15 * 60,
   bands: {
-    boxes: [0.46, 0.72],
-    items: [0.49, 0.75],
-    bare: [0.42, 0.68],
+    boxes: [0.54, 0.8],
+    items: [0.44, 0.7],
+    bare: [0.56, 0.82],
   },
 } as const satisfies { at: number; bands: Record<string, readonly [number, number]> };

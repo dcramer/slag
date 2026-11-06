@@ -3,7 +3,7 @@ import { TILE } from '../sim/constants';
 import { type Level, T_SOLID, levelKey } from '../sim/level';
 import { FLOATS } from '../themes';
 import type { RC } from './kit';
-import { TerrainPainter } from './terrain';
+import { TerrainPainter, type View } from './terrain';
 
 /**
  * The land around the level. The camera may show plenty past the world's
@@ -163,8 +163,8 @@ export class Surround {
     c.restore();
   }
 
-  /** In world space, before the level's own terrain. */
-  draw(rc: RC) {
+  /** In world space, before the level's own terrain. `view` is the world the camera shows, for the live decor. */
+  draw(rc: RC, view: View) {
     const land = this.land;
     if (!land) return;
     const x = -this.mx * TILE;
@@ -185,7 +185,7 @@ export class Surround {
       c.translate(x, y);
     }
     this.painter.draw(rc);
-    this.painter.drawLive(rc, land, []);
+    this.painter.drawLive(rc, land, [], { ...view, x: view.x - x, y: view.y - y });
     rc.s.restore();
     rc.g.restore();
   }

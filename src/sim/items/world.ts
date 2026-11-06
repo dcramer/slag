@@ -11,6 +11,7 @@ import { bonk, cx, cy, giveOrDrop, isActive, itemEvent, launch, moveBox, spawnDr
 import { stepBlocks } from './pocket';
 import { BAT, ITEMS, ROCKET, SHIELD, SMOKE, SWORD, swingBat, TREMOR, tossHeld } from './roster';
 import { stepShells } from './tax';
+import { stepFists, stepHooks } from './upward';
 import { DROP_HALF, DROP_LIFE, type ItemKind, type ItemSpawn, type RunnerItems } from './types';
 
 /**
@@ -299,6 +300,8 @@ export function stepItems(w: RunWorld, inputs: readonly InputFrame[], live: bool
   slamBricks(w);
   swingSwords(w);
   stepShells(w);
+  stepHooks(w);
+  stepFists(w);
   stepBlocks(w);
   pickUp(w);
   stepDrops(w);

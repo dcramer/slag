@@ -14,7 +14,7 @@ import type { Temperament } from './temperament';
  */
 
 /** Bumped when BrainView changes shape. A player's script will declare the version it was written against. */
-export const BRAIN_VIEW_VERSION = 5;
+export const BRAIN_VIEW_VERSION = 6;
 
 /** How fast across the ground, as a player would say it. */
 export type Pace = 'still' | 'walking' | 'running' | 'flying';
@@ -70,6 +70,8 @@ export interface BoxSense {
   ty: number;
   /** Full: it pops something when hit now. */
   ready: boolean;
+  /** A loop's box: it puts what it deals straight into empty hands rather than popping it out. */
+  hands: boolean;
 }
 
 /** An item lying loose (or still flying), in tiles. Touch it to take it. */

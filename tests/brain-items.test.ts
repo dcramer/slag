@@ -139,7 +139,7 @@ describe('going for boxes', () => {
   const traits = { ...rollPersonality(1, 'hard'), knack: 1 };
   /** A box at (9, 10) under a rock roof, so what it pops drops out of its bottom. */
   const room = tiles((set) => set(9, 9, T_SOLID));
-  const boxed = (me: Partial<SelfSense>) => view({ tiles: room, boxes: [{ tx: 9, ty: 10, ready: true }], self: { ...SELF, rank: 1, ...me } });
+  const boxed = (me: Partial<SelfSense>) => view({ tiles: room, boxes: [{ tx: 9, ty: 10, ready: true, hands: false }], self: { ...SELF, rank: 1, ...me } });
 
   it('walks under a full box near its way and hops into it; with no knack it carries on', () => {
     const play = new ItemPlay(new Rng(1), traits);
@@ -151,10 +151,16 @@ describe('going for boxes', () => {
     for (let f = 0; f < 20; f++) expect(none.think(boxed({}), { ...SELF, rank: 1 }, false)).toBeNull();
   });
 
-  it('leaves a box it could never reach the pop of, and any box once the slag is close', () => {
-    const open = view({ boxes: [{ tx: 9, ty: 10, ready: true }], detour: (_, ty) => (ty === 9 ? Infinity : 0) });
+  it('leaves a box it could never reach the pop of (unless it hands it over), and any box once the slag is close', () => {
+    const open = view({ boxes: [{ tx: 9, ty: 10, ready: true, hands: false }], detour: (_, ty) => (ty === 9 ? Infinity : 0) });
     const play = new ItemPlay(new Rng(1), traits);
     for (let f = 0; f < 20; f++) expect(play.think(open, { ...SELF, rank: 1 }, false)).toBeNull();
+    // A loop's box hands it over, so where its pop would land doesn't matter.
+    const handing = view({ boxes: [{ tx: 9, ty: 10, ready: true, hands: true }], detour: (_, ty) => (ty === 9 ? Infinity : 0) });
+    const keen = new ItemPlay(new Rng(1), traits);
+    let intent = null;
+    for (let f = 0; f < 20 && !intent; f++) intent = keen.think(handing, { ...SELF, rank: 1 }, false);
+    expect(intent).toEqual({ do: 'goTo', tx: 9, ty: 13 });
     const close = new ItemPlay(new Rng(1), traits);
     for (let f = 0; f < 20; f++) expect(close.think(boxed({ slag: 4 }), { ...SELF, rank: 1, slag: 4 }, false)).toBeNull();
   });
