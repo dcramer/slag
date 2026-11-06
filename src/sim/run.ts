@@ -437,12 +437,15 @@ export class RunWorld {
     for (const t of [...this.projectiles, ...this.items.drops]) t.y += lapShift(this.level, t.y) * rows;
   }
 
-  /** A runner bumped from below (sim/collide.ts): knocked off sideways with a hop, seeing stars, the bump credited like any bonk. */
-  private bump({ victim, by, side }: Bump) {
+  /**
+   * A runner bumped from below (sim/collide.ts): knocked sideways, seeing stars, the bump credited like any bonk. Off
+   * a ledge it hops clear; in the air it never leaves faster upward than that hop, so a bump can't lift anyone.
+   */
+  private bump({ victim, by, side, stood }: Bump) {
     const r = this.runners.find((x) => x.slot === victim)!;
     letGo(r);
     r.body.vx = side * BUMP.kick;
-    r.body.vy = -BUMP.hop;
+    r.body.vy = stood ? -BUMP.hop : Math.max(r.body.vy, -BUMP.hop);
     r.body.onGround = false;
     r.body.groundRef = -1;
     r.body.jumping = false;
