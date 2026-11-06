@@ -3,7 +3,7 @@ import { DT, PHYS, TILE } from '../sim/constants';
 import { type Level, T_ONEWAY, T_SOLID } from '../sim/level';
 import type { Body, Controls } from '../sim/physics';
 import type { Rect } from '../core/geom';
-import { AMMO, AMMO_SIM, footprint, type Hazard, touchesHazard } from '../sim/props';
+import { AMMO, AMMO_SIM, type Hazard, touchesHazard } from '../sim/props';
 import { brakeFrom, isStandable, type Move, movesFrom, type WindColumns } from '../sim/reach';
 import { gustAir } from '../sim/weather';
 import type { RunWorld } from '../sim/run';
@@ -14,6 +14,7 @@ import type { Personality } from './personality';
 import { type Foresight, foresight } from './foresight';
 import { type RaceMap, raceMap } from './route';
 import type { Intent } from './types';
+import { aimPoint } from './view';
 
 /**
  * A seat's hands: turns intents into the InputFrame a player would produce.
@@ -176,16 +177,7 @@ export class Motor {
       case 'place': {
         if (m.phase !== 'place' || p.placed || p.claim < 0) return NO_INPUT;
         if (p.rot !== intent.rot) return this.canPress(m) ? { ...NO_INPUT, altPressed: true } : NO_INPUT;
-        const cells = footprint(m.crate[p.claim].def, intent.rot);
-        let w = 0;
-        let h = 0;
-        for (const [x, y] of cells) {
-          w = Math.max(w, x + 1);
-          h = Math.max(h, y + 1);
-        }
-        // The cursor point Match.ghostOrigin turns back into (tx, ty).
-        const cx = (intent.tx + (w - 1) / 2 + 0.5) * TILE;
-        const cy = (intent.ty + (h - 1) / 2 + 0.5) * TILE;
+        const { x: cx, y: cy } = aimPoint(m.crate[p.claim].def, intent.rot, intent.tx, intent.ty);
         const tol = TILE / 2 - 2;
         if (Math.abs(p.cursor.x - cx) <= tol && Math.abs(p.cursor.y - cy) <= tol) return this.click(m, m.acceptsConfirm() && m.canPlaceFor(p));
         return this.steer(p, cx, cy, tol);

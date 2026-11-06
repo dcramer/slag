@@ -3,6 +3,7 @@ import { BotSeats } from '../src/brain/bots';
 import { rollPersonality } from '../src/brain/personality';
 import { botDevice, isBotDevice } from '../src/brain/device';
 import { Match } from '../src/game/match';
+import { DEFAULT_RULES } from '../src/game/rules';
 import { isBridgePart } from '../src/gen/props';
 import { applyAction, newNetState } from '../src/net/actions';
 import { RunWorld } from '../src/sim/run';
@@ -86,6 +87,22 @@ describe('bots', () => {
     expect(m.phase).toBe('run');
     expect(m.players.every((p) => p.placed && !p.afk)).toBe(true);
     expect(m.placed).toHaveLength(2);
+  });
+
+  it('never holds up an untimed place phase: a legal spot the cursor can’t reach is no spot', () => {
+    // Brawl seed 30, round 2: a bot's spikes were legal hanging half off the bottom row, aimed below where the cursor
+    // stops, and it pressed down against the edge forever.
+    const m = new Match(30, undefined, { ...DEFAULT_RULES, mode: 'brawl' });
+    const bots = new BotSeats();
+    for (let i = 0; i < 4; i++) m.join(bots.add(m));
+    m.rules = { ...m.rules, pickSeconds: 0, placeSeconds: 0, targetScore: 1e6 };
+    m.startMatch();
+    for (let round = 0; round < 2; round++) {
+      for (let f = 0; f < 60 * 60 && m.phase !== 'run'; f++) m.step(bots.frames(m));
+      expect(m.phase, `round ${round + 1}`).toBe('run');
+      expect(m.players.every((p) => p.placed && !p.afk)).toBe(true);
+      for (let f = 0; f < 70 * 60 && m.phase === 'run'; f++) m.step(bots.frames(m));
+    }
   });
 
   // Hard bots with steady hands on levels each of these once beat: what a good player does instead.

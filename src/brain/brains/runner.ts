@@ -36,6 +36,15 @@ const AROUND = [
 ] as const;
 /** A death counts this many frames of standing there: where someone died is where a trap goes. */
 const DEATH_WEIGHT = 240;
+/**
+ * Frames it keeps steering for one spot before it gives that spot up and looks for another, and frames of a place
+ * phase after which it stops looking and lets go of the controls. A spot it can't get placed (something moved into
+ * it on the way, a ghost that won't take) can't keep it pressing arrows forever: an untimed place phase waits on
+ * everyone, and only stops waiting on a seat once it has stood idle (Match `IDLE_FRAMES`), as it does for a player
+ * with nowhere to put their part.
+ */
+const SPOT_FRAMES = 6 * 60;
+const PLACE_FRAMES = 40 * 60;
 /** Frames between spots weighed for a block: each asks the proof again, so it looks the level over a spot at a time. */
 const WEIGH_EVERY = 4;
 /** Tiles of detour a tight jump is worth when weighing how hard a block makes the run. */
@@ -87,6 +96,9 @@ export function runnerBrain(seed: number, traits: Personality, mood: Temperament
   let phase = '';
   let card = -1;
   let spot: Place | null = null;
+  /** Place: the phase frame it set off for `spot`, and the spots it gave up on this phase. */
+  let spotSince = 0;
+  const givenUp = new Set<string>();
   let pause = 0;
   /** Cards still to point at before taking `card`, and the phase frame it moves on from the current one. */
   let looks: number[] = [];
@@ -182,9 +194,13 @@ export function runnerBrain(seed: number, traits: Personality, mood: Temperament
   };
 
   const place = (v: BrainView): Intent => {
-    if (v.placed || v.claim < 0) return { do: 'wait' };
+    if (v.placed || v.claim < 0 || v.phaseFrame > PLACE_FRAMES) return { do: 'wait' };
     const held = v.crate[v.claim];
     if (spot && !v.canPlace(spot.tx, spot.ty, spot.rot)) spot = weighing = null;
+    if (spot && v.phaseFrame - spotSince > SPOT_FRAMES) {
+      givenUp.add(spotKey(spot));
+      spot = null;
+    }
     // Looking the level over, a spot at a time: where would this make the run hardest?
     if (!spot && scheme.block && held && blocker(held)) {
       weighing ??= { left: inTheWay(v, traits.weigh, rng), best: null, score: -Infinity };
@@ -198,7 +214,8 @@ export function runnerBrain(seed: number, traits: Personality, mood: Temperament
         }
         if (weighing.left.length) return { do: 'wait' };
       }
-      spot = weighing.best;
+      spot = weighing.best && !givenUp.has(spotKey(weighing.best)) ? weighing.best : null;
+      spotSince = Math.max(v.phaseFrame, pause);
     }
     if (v.phaseFrame < pause) return { do: 'wait' };
     const hazard = held?.role === 'hazard';
@@ -208,6 +225,9 @@ export function runnerBrain(seed: number, traits: Personality, mood: Temperament
     if (!spot || !v.canPlace(spot.tx, spot.ty, spot.rot)) {
       const trail = them ? trails[them.slot] : scheme.mischief && hazard ? everyone() : undefined;
       spot = (trail && trap(v, trail, passed, scheme.sharp, rng)) || findSpot(v, rng);
+      if (spot && givenUp.has(spotKey(spot))) spot = findSpot(v, rng);
+      if (spot && givenUp.has(spotKey(spot))) spot = null;
+      spotSince = Math.max(v.phaseFrame, pause);
     }
     return spot ?? { do: 'wait' };
   };
@@ -255,6 +275,7 @@ export function runnerBrain(seed: number, traits: Personality, mood: Temperament
         phase = v.phase;
         card = -1;
         spot = null;
+        givenUp.clear();
         weighing = null;
         strategy = null;
         // A beat before choosing, as a person takes in the crate or the level.
@@ -290,6 +311,8 @@ export function runnerBrain(seed: number, traits: Personality, mood: Temperament
     },
   };
 }
+
+const spotKey = (s: Place) => `${s.tx},${s.ty},${s.rot}`;
 
 /** A part that stands in the way: a hazard, or a block that isn't the plan's bridge. */
 function blocker(c: CardSense): boolean {
