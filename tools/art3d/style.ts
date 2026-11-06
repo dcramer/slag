@@ -844,6 +844,26 @@ export const BRIEFS: Record<string, Brief> = {
     // twist with the wear: the tin can's ridges and dent, the hair tie, the umbrella grown huge.
     worn: "the top hat is now clearly an old tin can: two raised ridged rings run round it near its top and its bottom, and a big dent is knocked into its side, its brim still wide and flat and the hat still straight up; its band is a fat lilac hair tie (#e0b0dc) knotted at the side; the umbrella grows huge: an open paper cocktail umbrella as wide as she is, on a long wooden toothpick stick, held out at arm's length in front of her, with white background all round it; the hem of the cape is torn into a big ragged notch; one striped sock has slipped down round her boot. Her face and the ponytail stay as they are.",
   },
+  vampire: {
+    // The nod, each part of the read at race size and each a shape in outline: her height, the tallest and slimmest
+    // figure in the cast, straight up and down (the read: everyone else is a small toy; a tall one for once); the wide
+    // sun hat on a low flat crown over a small head (a flat crown and no point, on a tall slim body: the mage's brim
+    // sits on a small round robed figure, his crown bent into a point; the top-hat girl's is a tall crown); the long
+    // fitted gown falling to the floor and flaring at the hem, hiding her feet (a lady's gown, never a coat over two
+    // legs, the slayer's); one hand raised out in front, clear of her, with five long claws.
+    // Ours, and the joke: the hat's brim was sat on and droops on one side, the hem is torn, and the claws are false
+    // nails, one missing.
+    // The palette is neutral (Decisions 4): the gown in the player's colour; the hat a dark neutral, the skin pale,
+    // the pearls and nails neutrals, the lips a face mark. The colours lead the brief: the image model drops what
+    // comes last.
+    design:
+      'The character: a very tall, slim, elegant cartoon lady in three-quarter view facing right, three times as tall as she is wide, standing straight and haughty. ' +
+      'Colours: a plum gown (#7a2e4a), a black hat (#2a2630), very pale skin (#eee4e0), red lips (#d42a2a), white pearls (#f4f0e8), silver nails (#b8bcc4). ' +
+      'Her signature: a wide black sun hat with a low flat crown and a flat round brim wider than her shoulders, over a small head, her chin up, looking down her nose. ' +
+      'A long fitted gown with a narrow waist falls straight to the floor and flares a little at the hem, hiding her feet. A string of big white pearls round her neck. ' +
+      'Her front hand is raised at shoulder height out in front of her, clear of her body, five very long pointed silver nails splayed like claws.',
+    worn: "the hat's wide brim is bent and droops down steeply on its back side where it was sat on, a big crease across it, the crown still low and flat; one of the five long silver nails is missing, that fingertip short and bare; the hem of the gown is torn into a big ragged notch at the front; there is a gap in the string of pearls where one is gone. Her face, her height and the raised hand stay as they are.",
+  },
 };
 
 function brief(kind: string): Brief {
