@@ -88,8 +88,8 @@ function round(mood: TemperamentId, { killer = 1, scores = [0, 0] }: { killer?: 
         live: true,
         self: { ...self, alive: f < 50 },
         runners: [
-          { slot: 1, x: dead ? DEATH + 0.5 : x, y: 10, up: 0, grounded: true, alive: !dead, finished: false },
-          { slot: 2, x: 3, y: 10, up: 0, grounded: true, alive: true, finished: false },
+          { slot: 1, x: dead ? DEATH + 0.5 : x, y: 10, up: 0, grounded: true, alive: !dead, finished: false, held: null },
+          { slot: 2, x: 3, y: 10, up: 0, grounded: true, alive: true, finished: false, held: null },
         ],
         kills: f < 50 ? [] : [{ victim: 0, killer }],
       }),
@@ -237,7 +237,7 @@ function blockRound({ nobody = false } = {}) {
         phaseFrame: f,
         live: true,
         self: { ...self, alive: f < 10 },
-        runners: [{ slot: 1, x: 5, y: 10, up: 0, grounded: true, alive: true, finished: !nobody && f > 15 }],
+        runners: [{ slot: 1, x: 5, y: 10, up: 0, grounded: true, alive: true, finished: !nobody && f > 15, held: null }],
       }),
     );
   brain.think(view({ phase: 'score' }));

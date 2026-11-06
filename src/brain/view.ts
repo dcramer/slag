@@ -224,6 +224,7 @@ export function senseView(m: Match, p: Player): BrainView {
             grounded: r.body.onGround,
             alive: r.alive,
             finished: r.finished,
+            held: r.items.held?.kind ?? null,
           }))
       : [],
     rivals: m.players

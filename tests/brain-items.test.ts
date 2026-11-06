@@ -50,6 +50,7 @@ const rival = (x: number, up: number, over: Partial<RunnerSense> = {}): RunnerSe
   grounded: true,
   alive: true,
   finished: false,
+  held: null,
   ...over,
 });
 

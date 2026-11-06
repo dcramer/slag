@@ -155,10 +155,25 @@ export interface BotRound {
   leads: number;
   /** Runners bumped from below (sim/collide.ts `BUMP`). */
   bumps: number;
-  /** How the runners who went out went out (`DeathCause`), with `+` where a rival got the credit. */
+  /**
+   * How the runners who went out went out (`DeathCause`, or `slag` where the slag took them), with `+` where a rival's
+   * knock put them there (the bonk's credit still running: sim/items/common.ts `BONK_CREDIT`).
+   */
   causes: Record<string, number>;
   /** Runners out within `at` frames of GO. */
   early: number;
+}
+
+/** How `botRound` and `botRounds` play and measure a round. */
+export interface BotRoundOptions {
+  players?: number;
+  level?: BotLevel;
+  at?: number;
+  limit?: number;
+  hands?: (p: Personality) => Personality;
+  /** Every `deal` frames from GO, every empty hand gets what a loop's box deals its rank (the mode's `boxes`): items reaching everyone, as boxes on the way would. */
+  deal?: number;
+  mode?: ModeId;
 }
 
 /**
@@ -166,37 +181,37 @@ export interface BotRound {
  * placed), to its end: who led `at` frames after GO (highest up, laps and all), and who outlasted everyone. Catch-up's
  * measure (tests/stats/slag-catch-up.test.ts).
  */
-/** How each runner out of `run` went out, `+` marking a credited kill. */
-function causesOf(run: NonNullable<Match['run']>): Record<string, number> {
-  const out: Record<string, number> = {};
-  for (const r of run.runners) if (!r.alive) out[`${r.cause}${r.killer >= 0 ? '+' : ''}`] = (out[`${r.cause}${r.killer >= 0 ? '+' : ''}`] ?? 0) + 1;
-  return out;
-}
-
-export function botRound(
-  seed: number,
-  {
-    players = 4,
-    level = 'normal',
-    at = 15 * 60,
-    limit = 4 * 60 * 60,
-    hands = (p) => p,
-    deal = 0,
-    mode = 'slag',
-  }: {
-    players?: number;
-    level?: BotLevel;
-    at?: number;
-    limit?: number;
-    hands?: (p: Personality) => Personality;
-    /** Every `deal` frames from GO, every empty hand gets what a loop's box deals its rank (the mode's `boxes`): items reaching everyone, as boxes on the way would. */
-    deal?: number;
-    mode?: ModeId;
-  } = {},
-): BotRound {
+export function botRound(seed: number, opts: BotRoundOptions = {}): BotRound {
+  const { players = 4, level = 'normal', hands = (p) => p, mode = 'slag' } = opts;
   const { m, bots } = botMatch(seed, undefined, undefined, players, level, undefined, hands, mode);
   m.startMatch();
   m.startRun();
+  return playRound(seed, m, bots, opts);
+}
+
+/**
+ * `players` bots of `level` playing the first `rounds` rounds of a `mode` match (Brawl by default) on `seed`'s level,
+ * picking and placing their parts as a match does (no timers: bots take a few seconds), each round measured as
+ * `botRound` measures one: how a level gets nastier as its parts pile up.
+ */
+export function botRounds(seed: number, rounds: number, opts: BotRoundOptions = {}): BotRound[] {
+  const { players = 4, level = 'normal', hands = (p) => p, mode = 'brawl' } = opts;
+  const { m, bots } = botMatch(seed, undefined, undefined, players, level, undefined, hands, mode);
+  m.rules = { ...m.rules, pickSeconds: 0, placeSeconds: 0, targetScore: 1e6, maxRounds: rounds };
+  m.startMatch();
+  const out: BotRound[] = [];
+  while (out.length < rounds) {
+    for (let f = 0; f < 120 * 60 && m.phase !== 'run'; f++) m.step(bots.frames(m));
+    if (m.phase !== 'run') break;
+    out.push(playRound(seed, m, bots, opts));
+    // The race's tail and the scoreboard, into the next round's pick.
+    for (let f = 0; f < 60 * 60 && m.phase === 'run'; f++) m.step(bots.frames(m));
+  }
+  return out;
+}
+
+/** `m`'s race played from where it stands to its end (or `limit`), measured. */
+function playRound(seed: number, m: Match, bots: BotSeats, { at = 15 * 60, limit = 4 * 60 * 60, deal = 0 }: BotRoundOptions): BotRound {
   const run = m.run!;
   let leader = -1;
   const uses: Record<string, number> = {};
@@ -216,6 +231,7 @@ export function botRound(
   let leads = 0;
   let next = -1;
   let since = 0;
+  const causes: Record<string, number> = {};
   while (run.endFrame < 0 && run.frame < limit) {
     if (run.frame === RUN_COUNTDOWN + at) leader = top();
     if (run.frame > RUN_COUNTDOWN) {
@@ -233,12 +249,18 @@ export function botRound(
       const lead = top();
       for (const r of run.runners) if (r.alive && !r.finished && !r.items.held) giveItem(r, dealer.pick(r.slot === lead ? CATCH_UP.lead : CATCH_UP.chase));
     }
+    const was = run.runners.map((r) => r.alive);
     m.step(bots.frames(m));
     for (const e of m.drainEvents())
       if (e.type === 'item' && e.what === 'use') uses[e.kind] = (uses[e.kind] ?? 0) + 1;
       else if (e.type === 'item' && e.what === 'pickup') pickups++;
       else if (e.type === 'item' && e.what === 'pop') pops++;
       else if (e.type === 'item' && e.what === 'hit' && e.kind === 'bump') bumps++;
+    run.runners.forEach((r, i) => {
+      if (!was[i] || r.alive) return;
+      const k = `${slagAt(run.slag, m.level, r) ? 'slag' : r.cause}${r.items.bonkCredit > 0 && r.items.bonkedBy !== r.slot ? '+' : ''}`;
+      causes[k] = (causes[k] ?? 0) + 1;
+    });
   }
   const alive = run.runners.filter((r) => r.alive && !r.finished);
   let winner = alive.length === 1 ? alive[0].slot : -1;
@@ -256,7 +278,7 @@ export function botRound(
     frames: run.frame - RUN_COUNTDOWN,
     leads,
     bumps,
-    causes: causesOf(run),
+    causes,
     early: run.runners.filter((r) => !r.alive && r.deathFrame < RUN_COUNTDOWN + at).length,
   };
 }
