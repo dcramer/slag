@@ -161,7 +161,7 @@ export function generateLevel(seed: number, themeOverride?: ThemeId, profileOver
     const lab = (s: string) => (n ? `draw${n}:${s}` : s);
     for (let attempt = 0; attempt < MAX_ATTEMPTS + LEGACY_ATTEMPTS; attempt++) {
       const rng = new Rng(deriveSeed(seed, lab(`level:${attempt}`)));
-      // A Rising Slag loop stays with its set's tower builder: only it closes a loop (sculptors/tall.ts closeLoop).
+      // A Rising Slag loop stays with its set's shaft builder: only it closes a loop (builders/shaft.ts closeLoop).
       const sculptor = attempt < MAX_ATTEMPTS || profile.tide ? SCULPTORS[themeId] : FALLBACK_SCULPTOR;
       const live = concept && attempt < MAX_ATTEMPTS && rejects.landmark < MAX_LANDMARK_REJECTS ? concept : undefined;
       const reject = () => rejects.landmark++;
@@ -187,7 +187,7 @@ export function generateLevel(seed: number, themeOverride?: ThemeId, profileOver
         level.rides = rides;
       }
       // Passable bare: not a level. Only the very last attempts accept it, to keep generation total.
-      // A Rising Slag loop is meant to climb bare (sculptors/tall.ts closeLoop): only race levels must ask for parts.
+      // A Rising Slag loop is meant to climb bare (builders/shaft.ts): only race levels must ask for parts.
       const insist = attempt < LAST_RESORT && !level.loop;
       if (insist && cache.analyze(level).goalReached) {
         rejects.tooEasy++;

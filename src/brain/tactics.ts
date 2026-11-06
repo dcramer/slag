@@ -34,6 +34,9 @@ const KICK_RANGE = 12;
 const SWING_REACH = 1.75;
 /** Tiles out a smoke bomb is worth lobbing at someone: it lands a few tiles ahead. */
 const LOB_RANGE = [2, 7] as const;
+/** Where an Upper Hand reaches: rows up (it rises about 20) and tiles across (it leans about two on the way). */
+const PUNCH_RISE = [1.5, 16] as const;
+const PUNCH_ACROSS = 2.5;
 
 /** The tile at (x, y): off the sides is rock, above and below (a loop's next lap) is air. */
 export function tile(v: BrainView, x: number, y: number): number {
@@ -149,6 +152,15 @@ export const ITEM_TACTICS: Record<ItemKind, ItemTactic> = {
     when({ v, me }) {
       const r = nearest(v, me, (_, dx, dy) => dx >= LOB_RANGE[0] && dx <= LOB_RANGE[1] && Math.abs(dy) <= 2);
       return r && { do: 'use', dir: toward(me, r) };
+    },
+  },
+  // The Queue Jumper trades places with whoever is just ahead: worth it from anywhere but the front.
+  hook: { when: ({ v, me }) => (me.rank > 0 && rivals(v).length > 0 ? { do: 'use' } : null) },
+  // The Upper Hand flies straight up: at a rival above, about over its head.
+  upper: {
+    when({ v, me }) {
+      const r = nearest(v, me, (_, dx, dy) => dx <= PUNCH_ACROSS && dy >= PUNCH_RISE[0] && dy <= PUNCH_RISE[1]);
+      return r && { do: 'use' };
     },
   },
   // The Tremor Brick bonks every rival standing on something when it comes down.

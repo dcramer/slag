@@ -30,11 +30,12 @@ export function rollItem(pool: readonly ItemKind[], seed: number, uid: number, m
 
 /**
  * What a Rising Slag loop's box deals by rank (gen/level/loop-boxes.ts), the way a kart racer's boxes do: whoever
- * is behind draws something to catch up with (a burst upward, a step, the shell that hunts the leader, a throw that
- * bonks the one ahead), and whoever leads something to hold on with. Every item is ours already; none kills.
+ * is behind draws something that reaches up (the hook that trades places with the one ahead, the punch that flies up
+ * through floors, a burst upward, a step, the shell that hunts the leader), and whoever leads something to hold on
+ * with. None kills.
  */
 export const CATCH_UP: { chase: readonly ItemKind[]; lead: readonly ItemKind[] } = {
-  chase: ['rocket', 'block', 'tax', 'boomerang'],
+  chase: ['hook', 'upper', 'upper', 'rocket', 'block', 'tax'],
   lead: ['shield', 'sword', 'block'],
 };
 
