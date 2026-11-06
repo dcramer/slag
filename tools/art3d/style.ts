@@ -186,13 +186,18 @@ export const BRIEFS: Record<string, Brief> = {
       'The mouse itself is small, chubby and round, soft yellow fur (#f2c62a) all over, an animal and not a costume: a pear-shaped body, a big round head almost as wide as the body, short stubby arms with little round paws, short legs with big oval furry feet. ' +
       'Two very long pointed ears standing straight up from the top of the head, each as tall as the head, their top third black (#2a1f1a); the tip of one ear is kinked a little and wrapped in a strip of grey tape. ' +
       'Big round bright-red cheek circles (#e0473b), small round black eyes with a white glint, a tiny dark nose, a small open smile. Two thick brown stripes (#6b4a35) across the upper back only. Cheeky, quick and crackling with mischief.',
-    // Designed at game size: the nod (ears, bolt tail, cheeks, yellow) and the twist kept as big shapes only.
+    // Designed at game size: the nod and the twist kept as big shapes only. The fur is the player's colour, so the
+    // read is what isn't fur (the clean colour audit, 2026-11-06: in purple, "a cat-like body", "a horned
+    // creature"): two long ears both standing in a V with their black tips big, a huge clean bolt of grey tin, big
+    // red cheeks, and a squat round body. A bent ear left one ear standing (a horn), and a crumpled tail was a
+    // grey blob.
     design:
-      'The character: a chubby yellow electric mouse (#f2c62a), a cheap bootleg toy: one big round head fused into a pear-shaped body, round red cheeks (#e0473b), two small black dot eyes and a tiny mouth, stubby arms, short legs with big round feet. ' +
-      'Its two long pointed ears are black-tipped (#2a1f1a) and sewn on unevenly, one higher and longer than the other. ' +
-      'Behind it, a big zigzag lightning-bolt tail cut from a sheet of dull grey tin (#c4c8ce), held on at the root by one big hex bolt. ' +
-      'A black power cord (#2a2a30) is knotted round its middle as a belt, a big cream plug (#d9d4c8) dangling from the knot.',
-    worn: 'the shorter ear is bent over halfway along and wrapped in a wide band of grey tape; the top of the head has a clear dent on one side; the tin tail is bent and dented.',
+      'Behind it, a huge flat zigzag lightning-bolt tail as tall as its body, three sharp zigzags with straight edges and sharp corners, cut from one flat sheet of plain grey tin (#a9afb7) and held to its rump by two big rivets: plainly a lightning bolt. ' +
+      'The character: a chubby round electric mouse, a cheap bootleg toy, its fur one flat bright colour (#f2c62a): a big round head fused into a squat round body nearly as wide as it is tall, stubby little arms, short legs with big round feet. ' +
+      'Two very long pointed ears, each taller than the head, standing straight and splayed apart in a wide V with background between them, their top third solid black (#2a1f1a). ' +
+      'Two huge round red cheeks (#e0473b), small black dot eyes, a tiny mouth. ' +
+      'A brown power cord (#7a5236) knotted round its middle as a belt, a grey plug (#7c848d) dangling from the knot.',
+    worn: 'one ear has a wide band of pale grey tape wrapped round its middle, the ear still straight and as long as the other; the top of the head has a small dent on one side; one corner of the tin tail is bent over.',
     views: 'a front view, a side profile facing right, a back view showing the brown stripes and the riveted tin tail, and a three-quarter view facing right',
     pose: 'The ears stand straight up, clear of the arms. Leave the tin tail and the plug off this figure: no tail at all, a smooth round rump. The cord belt sits snug round the waist, nowhere near the hands.',
     poses:
