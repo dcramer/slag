@@ -3,10 +3,11 @@ import { Rng } from '../src/core/rng';
 import { DIFFICULTIES, generateLevel, isAcceptable, lastGenInfo, setLevelDifficulty } from '../src/gen/level';
 import { jumpProfile, probeGravity, setProbeGravity } from '../src/gen/level/probe';
 import { analyzeRoutes, MAX_SHARED } from '../src/gen/level/routes';
+import { judge, oneBridgeEnough } from '../src/gen/level/validate';
 import { type Crossing, hopGap, jumpCrossing, jumpGap, reachMin, rollChallenges, TWO_PART_TRIES, TWO_PARTS } from '../src/gen/level/sculptors/common';
 import { LEVEL_H, LEVEL_W } from '../src/sim/constants';
 import { type Level, T_ONEWAY, T_SOLID } from '../src/sim/level';
-import { analyzeReach } from '../src/sim/reach';
+import { analyzeReach, ReachCache } from '../src/sim/reach';
 
 const seedAt = (i: number) => (i * 2654435761 + 4242) >>> 0;
 
@@ -80,6 +81,38 @@ describe('route analysis', () => {
       for (let x = 30; x < LEVEL_W - 7; x++) t[(row - 2) * LEVEL_W + x] = T_ONEWAY;
     });
     expect(analyzeRoutes(pit, [{ x: 23, y: 21 }]).shared).toBeLessThanOrEqual(MAX_SHARED);
+  });
+
+  it("answers from a cache's kept routes only while nothing they read has changed", () => {
+    const l = floorLevel();
+    const cache = new ReachCache(l);
+    const first = analyzeRoutes(l, [], cache);
+    expect(analyzeRoutes(l, [], cache)).toBe(first);
+    // A catwalk laid in place (as lanes do), a bridge, a pocket moved and the weather: each is a fresh question.
+    for (let x = 8; x < LEVEL_W - 8; x++) l.tiles[18 * LEVEL_W + x] = T_ONEWAY;
+    expect(analyzeRoutes(l, [], cache)).toEqual(analyzeRoutes(l));
+    expect(analyzeRoutes(l, [{ x: 23, y: 21 }], cache)).toEqual(analyzeRoutes(l, [{ x: 23, y: 21 }]));
+    const moved = { ...l, protectedRects: [l.protectedRects[0]] };
+    expect(analyzeRoutes(moved, [], cache)).toEqual(analyzeRoutes(moved));
+    const wet = { ...l, weather: { kind: 'rain' as const, dir: 0 as const, period: 0, first: 0 } };
+    expect(analyzeRoutes(wet, [], cache)).toEqual(analyzeRoutes(wet));
+  });
+});
+
+describe('one bridge for two', () => {
+  it("asks judge's search again only while the terrain is the one it searched", () => {
+    // A pit two bridges wide in a lone corridor: judge's search settles on two.
+    const pit = floorLevel((t, row) => {
+      for (let y = row + 1; y < LEVEL_H; y++) for (let x = 16; x <= 31; x++) t[y * LEVEL_W + x] = 0;
+    });
+    const cache = new ReachCache(pit);
+    expect(judge(pit, [], [], cache).bridges).toHaveLength(2);
+    expect(oneBridgeEnough(pit, [], cache)).toEqual(oneBridgeEnough(pit));
+    // Narrow it to one bridge's reach in place: the kept search is stale, and a fresh look must find the bridge.
+    for (let y = 21; y < LEVEL_H; y++) for (let x = 16; x <= 31; x++) if (x < 21 || x > 26) pit.tiles[y * LEVEL_W + x] = T_SOLID;
+    cache.rebase(pit.tiles);
+    expect(oneBridgeEnough(pit, [], cache)).toEqual(oneBridgeEnough(pit));
+    expect(oneBridgeEnough(pit, [], cache)).not.toBeNull();
   });
 });
 

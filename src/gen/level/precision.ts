@@ -200,11 +200,25 @@ function watched(world: CollisionWorld, w: number, h: number, read: ReadBox): Co
   };
 }
 
-/** The jump from `from` to `to`, or null if no air move makes that step. */
-function jumpOf(level: Level, world: CollisionWorld, moves: (b: Body, read?: ReadBox) => Move[], from: number, to: number, read?: ReadBox): RouteJump | null {
-  const body = standing(level, world, from);
+/** The jump from `from` to `to`, or null if no air move makes that step. `found`, when given, keeps each cell's moves for the next step from it. */
+function jumpOf(
+  level: Level,
+  world: CollisionWorld,
+  moves: (b: Body, read?: ReadBox) => Move[],
+  from: number,
+  to: number,
+  read?: ReadBox,
+  found?: Map<number, { body: Body; moves: Move[] }>,
+): RouteJump | null {
+  let at = found?.get(from);
+  if (!at) {
+    const body = standing(level, world, from);
+    at = { body, moves: moves(body, read) };
+    found?.set(from, at);
+  }
+  const { body } = at;
   let move: Controls[] | null = null;
-  for (const m of moves(body, read)) if (m.to === to && m.air && (!move || m.controls.length < move.length)) move = m.controls;
+  for (const m of at.moves) if (m.to === to && m.air && (!move || m.controls.length < move.length)) move = m.controls;
   if (!move) return null;
   const tight = SLIPS.some((kind) => {
     const c = slip(move, kind);
@@ -214,20 +228,38 @@ function jumpOf(level: Level, world: CollisionWorld, moves: (b: Body, read?: Rea
 }
 
 /**
+ * The moves from each cell of one level with one plan's bridges, traced once: a level's fastest route and its
+ * alternative run through many of the same cells, and a cell's moves don't depend on where the route goes next.
+ */
+interface Traced {
+  tiles: Uint8Array;
+  world: CollisionWorld;
+  moves: ((b: Body, read?: ReadBox) => Move[]) | null;
+  found: Map<number, { body: Body; moves: Move[] }>;
+}
+
+function traced(level: Level, bridges: readonly BridgeHint[]): Traced {
+  const tiles = withBridges(level, bridges);
+  return { tiles, world: worldOf(level, tiles), moves: null, found: new Map() };
+}
+
+/**
  * Every jump along `route` (stand cells, spawn first), in order: the moves a slip can cost, where they are. Pass the
  * level's `cache` when asking many times over tiles that change a little at a time.
  */
 export function routeJumps(level: Level, route: readonly number[], bridges: readonly BridgeHint[] = [], cache?: JumpCache): RouteJump[] {
-  const tiles = withBridges(level, bridges);
-  const world = worldOf(level, tiles);
-  let moves: ((b: Body, read?: ReadBox) => Move[]) | null = null;
+  return jumpsAlong(level, route, traced(level, bridges), cache);
+}
+
+function jumpsAlong(level: Level, route: readonly number[], t: Traced, cache?: JumpCache): RouteJump[] {
+  const { tiles, world } = t;
   const out: RouteJump[] = [];
   for (let i = 1; i < route.length; i++) {
     const from = route[i - 1];
     const to = route[i];
     let jump = cache?.get(tiles, from, to);
     if (jump === undefined) {
-      moves ??= movesOn({ ...level, tiles });
+      const moves = (t.moves ??= movesOn({ ...level, tiles }));
       if (cache) {
         const read = { x0: Infinity, y0: Infinity, x1: -Infinity, y1: -Infinity };
         const box = { ...read };
@@ -239,22 +271,27 @@ export function routeJumps(level: Level, route: readonly number[], bridges: read
           { x0: Math.min(read.x0, box.x0), y0: Math.min(read.y0, box.y0), x1: Math.max(read.x1, box.x1), y1: Math.max(read.y1, box.y1) },
           jump,
         );
-      } else jump = jumpOf(level, world, moves, from, to);
+      } else jump = jumpOf(level, world, moves, from, to, undefined, t.found);
     }
     if (jump) out.push(jump);
   }
   return out;
 }
 
+function tightAlong(level: Level, route: readonly number[], t: Traced, cache?: JumpCache): RoutePrecision {
+  const jumps = jumpsAlong(level, route, t, cache);
+  return { jumps: jumps.length, tight: jumps.filter((j) => j.tight).length };
+}
+
 /** How many of the jumps along `route` (stand cells, spawn first) some slip turns into a fall. */
 export function routePrecision(level: Level, route: readonly number[], bridges: readonly BridgeHint[] = [], cache?: JumpCache): RoutePrecision {
-  const jumps = routeJumps(level, route, bridges, cache);
-  return { jumps: jumps.length, tight: jumps.filter((j) => j.tight).length };
+  return tightAlong(level, route, traced(level, bridges), cache);
 }
 
 /** Tight jumps on the level's more forgiving route: what a player who picks the safe way still has to land. */
 export function levelPrecision(level: Level, routes: Routes, bridges: readonly BridgeHint[] = [], cache?: JumpCache): number {
-  const fast = routePrecision(level, routes.fastest, bridges, cache).tight;
+  const t = traced(level, bridges);
+  const fast = tightAlong(level, routes.fastest, t, cache).tight;
   if (!fast || !routes.alternative.length) return fast;
-  return Math.min(fast, routePrecision(level, routes.alternative, bridges, cache).tight);
+  return Math.min(fast, tightAlong(level, routes.alternative, t, cache).tight);
 }
