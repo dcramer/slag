@@ -74,10 +74,27 @@ const RUNNER_KEY: HSL = { h: 40, s: 30, l: 90 };
 /** How much of the light map's alpha a figure takes away: the cel pass reads `1 - a` over this as how much of a figure a pixel is. */
 const FIGURE_MARK = 0.5;
 
-/** The prop a player is about to place, as it would stand under their cursor. */
-function ghostProp(m: Match, p: Player): Resolved | null {
-  const gh = m.phase === 'place' && !p.placed ? m.ghostOrigin(p) : null;
-  return gh && resolveProp({ uid: 900 + p.slot, def: gh.def, owner: p.slot, tx: gh.tx, ty: gh.ty, rot: p.rot, ...(gh.ride && { ride: gh.ride }) });
+/** Where a player's part would go under their cursor, and the part as it would stand there. */
+interface Ghost {
+  p: Player;
+  at: NonNullable<ReturnType<Match['ghostOrigin']>>;
+  r: Resolved;
+}
+
+/** Each placing player's ghost, worked out once a frame: the beams, the weather and the ghost art all read it. */
+function ghostsOf(m: Match): Ghost[] {
+  if (m.phase !== 'place') return [];
+  const out: Ghost[] = [];
+  for (const p of m.players) {
+    const at = p.placed ? null : m.ghostOrigin(p);
+    if (at)
+      out.push({
+        p,
+        at,
+        r: resolveProp({ uid: 900 + p.slot, def: at.def, owner: p.slot, tx: at.tx, ty: at.ty, rot: p.rot, ...(at.ride && { ride: at.ride }) }),
+      });
+  }
+  return out;
 }
 
 // Speed trail. Vertical speed counts for less: a jump's launch is fast, but a walking hop isn't speed.
@@ -364,7 +381,7 @@ export class Renderer {
       }
       at(0);
     };
-    if (!L) this.surround.draw(rc);
+    if (!L) this.surround.draw(rc, this.cam.visible());
     // Set pieces are part of the level: show them in every phase (lobby, pick, place), not just races.
     const resolved = run ? run.resolved : [...level.setPieces, ...m.placed].map(resolveProp);
     // Scenery goes down first so the terrain stands in front of it and shadows it.
@@ -396,7 +413,7 @@ export class Renderer {
       g.restore();
     }
     const pushers = m.run ? m.run.runners.filter((r) => r.alive).map((r) => ({ x: r.body.x + r.body.w / 2, y: r.body.y + r.body.h, vy: r.body.vy })) : [];
-    this.terrain.drawLive(rc, level, pushers);
+    this.terrain.drawLive(rc, level, pushers, this.cam.visible());
     each(() => {
       this.drawMarkers(rc, level, MODES[m.rules.mode].run.flag);
       drawBlood(rc, m, frame);
@@ -404,7 +421,8 @@ export class Renderer {
 
     const grips = run?.runners.flatMap((r) => r.attach.grip ?? []);
     // A race's beams are the ones the sim hurts with. Before one, ghosts join in: a block you're holding cuts the flame it would stop.
-    const ghosts = run ? [] : m.players.flatMap((p) => ghostProp(m, p) ?? []);
+    const placing = run ? [] : ghostsOf(m);
+    const ghosts = placing.map((gh) => gh.r);
     const still = run ? null : previewProps(level, [...resolved, ...ghosts], frame);
     const beams = still ? still.beams : run!.beams;
     // Weather lies on what's built in every phase, but not on a ghost: that's only where a part would go.
@@ -431,7 +449,7 @@ export class Renderer {
       drawTideSurface(rc, level, run.slag + lap * L, run.frame);
       if (run.frame >= RUN_COUNTDOWN + level.tide!.wait * FPS) slagEmbers(this.fx, level, run.slag + lap * L, this.cam.visible(), dt, this.slagRush(run));
     }
-    if (m.phase === 'place') this.drawGhosts(rc, m, beams, still?.solids ?? []);
+    if (m.phase === 'place') this.drawGhosts(rc, m, placing, beams, still?.solids ?? []);
     if (m.phase === 'lobby' || m.phase === 'pick' || m.phase === 'place') this.drawIdlers(rc, m, dt);
 
     if (run) {
@@ -735,7 +753,7 @@ export class Renderer {
     g.stroke();
   }
 
-  private drawGhosts(rc: RC, m: Match, beams: readonly Beam[], solids: readonly Solid[]) {
+  private drawGhosts(rc: RC, m: Match, placing: readonly Ghost[], beams: readonly Beam[], solids: readonly Solid[]) {
     const s = rc.s;
     // Off-limits zones.
     s.save();
@@ -748,11 +766,7 @@ export class Renderer {
     }
     s.setLineDash([]);
     s.restore();
-    for (const p of m.players) {
-      if (p.placed) continue;
-      const gh = m.ghostOrigin(p);
-      const ghost = ghostProp(m, p);
-      if (!gh || !ghost) continue;
+    for (const { p, at: gh, r: ghost } of placing) {
       const ok = gh.ok;
       const col = ok ? p.character.body : { h: 0, s: 90, l: 55 };
       s.globalAlpha = 0.85;

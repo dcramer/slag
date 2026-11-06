@@ -18,6 +18,8 @@
 - Art never casts rays. Read how far a beam, column or lane reaches with `beamOf` (`props/common.ts`): the sim hurts with that same number, so what you draw stops where it stops hurting.
 - Glow is for hot things only (fire, molten metal, lasers, sparks, muzzle flashes): `glowDot` on `rc.g`. A lens, LED, gem or warning lamp is a flat `bulb` (kit), and a telegraph is a flat bright shape, never a soft halo. Bloom only lifts glow above `BLOOM_KNEE` (`cel-shader.ts`). A point light (`light`) is for things that throw light; a runner carries only a small neutral key light, because a colored pool tints the pack into one hue. A rendered figure takes no light band itself (`markFigures`, `figAmbient` in `cel-shader.ts`): bands are for the world.
 - Keep per-frame allocation low: the game targets 60 fps with up to 8 players and ~100 lights.
+- Live decor and grass tufts draw only within `LIVE_REACH` (`terrain.ts`) of the camera's view. A live piece whose art or light reaches further raises it (`tests/live-reach.test.ts` checks the lights).
+- The compositor uploads layers unflipped (`post.ts`), so a shader reads a canvas layer through `T(uv)` (`cel-shader.ts`); the bloom targets are in GL space and read at `uv`.
 
 Verify every visual change by looking at it: `pnpm shot race --race all`, `pnpm shot levels --themes all`, `pnpm shot props`, or the scenario closest to your change, then open the printed PNG. The harness fails on page errors.
 
