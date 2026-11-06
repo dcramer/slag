@@ -225,3 +225,25 @@ describe('a mode names what its crates deal', () => {
     expect(boxes).toBeGreaterThan(0);
   });
 });
+
+describe('Sucker Punch', () => {
+  it('reaches a rival three tiles off, past the noodle, and throws them sideways', () => {
+    const punch = (kind: ItemKind) => {
+      const run = race([
+        [10, FLOOR - 1],
+        [13, FLOOR - 1],
+      ]);
+      const [a, b] = run.runners;
+      a.body.facing = 1;
+      giveItem(a, kind);
+      use(run, 0);
+      steps(run, 14);
+      return b;
+    };
+    const far = punch('glove');
+    expect(far.items.daze).toBeGreaterThan(0);
+    expect(far.items.bonkedBy).toBe(0);
+    expect(far.body.vx).toBeGreaterThan(400);
+    expect(punch('sword').items.daze).toBe(0);
+  });
+});

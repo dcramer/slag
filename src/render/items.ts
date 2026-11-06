@@ -4,6 +4,7 @@ import { DROP_BLINK, DROP_LIFE, type ItemKind, ROCKET, SHIELD, SWORD } from '../
 import type { Projectile, Runner, RunWorld } from '../sim/run';
 import type { GameEvent } from '../sim/types';
 import type { Fx } from './fx';
+import { BRAWL_ICONS, drawPunch } from './items-brawl';
 import { CLIMB_ICONS } from './items-climb';
 import { drawBat, drawRaisedBrick, EXTRA_ICONS } from './items-extra';
 import { blob, inkFor, line, type P, stroke } from './ink';
@@ -30,6 +31,7 @@ export const ITEM_HUE: Record<ItemKind, HSL> = {
   block: { h: 98, s: 60, l: 50 },
   hook: { h: 44, s: 78, l: 56 },
   upper: { h: 4, s: 72, l: 54 },
+  glove: { h: 200, s: 55, l: 56 },
 };
 
 const NOODLE: HSL = { h: 96, s: 72, l: 56 };
@@ -253,6 +255,7 @@ const ICONS: Record<ItemKind, Icon> = {
   },
   ...EXTRA_ICONS,
   ...CLIMB_ICONS,
+  ...BRAWL_ICONS,
 };
 
 /** Draw an item icon centered at (x, y), scaled by k, mirrored when facing left. */
@@ -576,7 +579,8 @@ export function drawRunnerItems(rc: RC, r: Runner): void {
   if (h?.kind === 'bat' || batSwing) {
     const u = batSwing ? 1 - it.swing / SWORD.swing : -1;
     drawBat(rc, r, x, swingSmear, u, batSwing && it.swing >= SWORD.activeLo && it.swing <= SWORD.activeHi);
-  } else if (h?.kind === 'sword' || it.swing > 0) drawSword(rc, r, x);
+  } else if (it.swing > 0 && it.swingKind === 'glove') drawPunch(rc, r, x);
+  else if (h?.kind === 'sword' || it.swing > 0) drawSword(rc, r, x);
   else if (it.slam > 0) drawRaisedBrick(rc, r, x);
   else if (h?.kind === 'shield') bubbleWrap(rc, x, b.y + b.h / 2, r.slot, 0);
   else if (h?.kind === 'rocket' || it.thrust > 0) drawItemIcon(s, 'rocket', x - fc * 6, b.y + 8, 0.9, rc.t, fc);
