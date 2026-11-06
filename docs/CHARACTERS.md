@@ -78,7 +78,7 @@ Each kind's entry is its own file in [characters/](characters/): what a stranger
 | [slime](characters/slime.md) | the blue teardrop slime with the grin | a limbless teardrop of goo with a curled tip, two big eyes and a huge grin | costume: the goo; the shine a light of it |
 | [bear](characters/bear.md) | the animatronic bear in the little top hat | a stocky bear with round ears, a tiny top hat between them with background each side, a bow tie, a shower head held up like a mic, a coin jammed in his belly, stiff jointed limbs torn open at the joints | costume: the fur suit; the belly and muzzle a light of it, the torn fur a dark of it |
 | [mech](characters/mech.md) | the girl gamer in the pink mech with the bunny on it | a squat round mech wider than tall on backward-bending legs, two stubby arm cannons forward, a bunny decal, the pilot's headphones over the top | costume: the mech shell; its panels a light of it |
-| [genie](characters/genie.md) | the half-genie who whips her long ponytail | a slim dancer, a ponytail as long as she is whipped out level from her crown, a tiara, harem trousers, hoop earrings | costume: the top and trousers; the sash a dark of it |
+| [genie](characters/genie.md) | the half-genie who whips her long ponytail | a chunky little dancer, a ponytail as long as she is from her crown out level behind her, a tiara, two balloon harem trousers, arms out | costume: the top and trousers; the sash a dark of it |
 | [mushroom](characters/mushroom.md) | the little mushroom retainer in the spotted cap | small and stubby under a huge round spotted cap wider than him, a vest, puffy trousers | costume: the spots and the vest |
 | [boxer](characters/boxer.md) | the tiny boxer with the huge green gloves | small and wiry in a high guard, two huge round gloves up, a tank top, baggy shorts, a towel round his neck | costume: the gloves; their cuffs a dark of it |
 
@@ -159,7 +159,7 @@ The strongest reads first. **Keyed** marks the non-humanoids, the riskiest to dr
 | 41 | slime | Slimple | **keyed**, limbless | drawn flat; the blind read passes (both readers named it at medium-high or better, unpaired: the onion with its tip a point, kept by `smooth: 0`; a big hooked tip read as a witch's hat) |
 | 42 | bear | Creaky Buzzbear | humanoid, stocky | drawn flat; the blind read passes (named by both readers, at medium and low, unpaired: the tiny hat between the round ears with background each side, the mic held up) |
 | 43 | mech | D.Wash | **keyed**, mech on legs | medium: the round mech on bird legs; the robot boy's and the hunter's cannons to watch |
-| 44 | genie | Shampootae | humanoid, side on | medium: the ponytail out level; the raider and the archer to watch |
+| 44 | genie | Shampootae | humanoid, side on | drawn flat; the blind read fails twice: the plume ponytail read as a squirrel's tail, the straight rope as a bazooka, both on a body half the cast's, all the box leaves room for behind a long level ponytail |
 | 45 | mushroom | Toadmund | humanoid, small, capped | high: the spotted cap; the assistant dog and the puffball to watch |
 | 46 | boxer | Little Smack | humanoid, small | medium: the gloves held up; the fighter and the ape to watch |
 
