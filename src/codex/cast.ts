@@ -50,6 +50,10 @@ export const CAST_NOTES: Record<Kind, string> = {
   vampire: 'Ducks under every door. Resents it.',
   assistant: 'Has a clipboard. Has notes.',
   sim: 'Mood: unclear.',
+  succubus: 'Thinks the slippers are part of the look.',
+  archer: 'Hunts the robot vacuum. It is winning.',
+  slime: 'One poke from the end.',
+  bear: 'Sings on the hour. Not your hour.',
 };
 
 export interface CastEntry {

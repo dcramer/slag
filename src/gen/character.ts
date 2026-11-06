@@ -49,6 +49,10 @@ export const CAST = [
   'vampire',
   'assistant',
   'sim',
+  'succubus',
+  'archer',
+  'slime',
+  'bear',
 ] as const;
 export type Kind = (typeof CAST)[number];
 
@@ -128,6 +132,10 @@ export const KIND_NAMES: Record<Kind, string> = {
   vampire: 'Lady Dimistretch',
   assistant: 'Jinglebelle',
   sim: 'Bella Gauche',
+  succubus: 'Moribund',
+  archer: 'Aloof',
+  slime: 'Slimple',
+  bear: 'Creaky Buzzbear',
 };
 
 /**
@@ -173,6 +181,10 @@ const PAINTS: Record<Kind, readonly HSL[]> = {
   vampire: [hsl3(258, 32, 40)],
   assistant: [hsl3(75, 55, 48)],
   sim: [hsl3(335, 60, 45)],
+  succubus: [hsl3(295, 45, 36)],
+  archer: [hsl3(140, 40, 40)],
+  slime: [hsl3(195, 75, 52)],
+  bear: [hsl3(32, 48, 38)],
 };
 
 /** How many `vary` rolls a character has, and how many of them come from the look's main stream. */

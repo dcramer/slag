@@ -263,6 +263,10 @@ const READS_AS: Record<Kind, string> = {
   vampire: 'the giant vampire lady in the big hat',
   assistant: 'the town assistant dog with the bell in her hair',
   sim: 'the lady with the green diamond over her head',
+  succubus: 'the succubus with bat wings on her head',
+  archer: 'the red-braided girl with the bow who hunts robot beasts',
+  slime: 'the blue teardrop slime with the grin',
+  bear: 'the animatronic bear in the little top hat',
 };
 
 /**

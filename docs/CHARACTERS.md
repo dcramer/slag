@@ -1,6 +1,6 @@
 # Characters
 
-The runners are a cast of thirty-eight homages to famous game characters, in our own designs. In the lore (DESIGN.md) they're the knock-off heroes who almost got their own game. Each kind is a character design of its own, the way the barnyard party game's animals are: its own outline, its signature props, and a way of moving.
+The runners are a cast of forty-two homages to famous game characters, in our own designs. In the lore (DESIGN.md) they're the knock-off heroes who almost got their own game. Each kind is a character design of its own, the way the barnyard party game's animals are: its own outline, its signature props, and a way of moving.
 
 `pnpm shot cast` shoots the sheet: the 8-player lineup at play scale on farm and mine, the race start, deaths, a 3× close-up, the lobby cards, the "is it the homage?" sheet (`cast-recognise.png`: each kind close up beside "This is ___"), the silhouette test (`cast-silhouettes.png`) and the catalog of every kind (`--only catalog` for the last three). Every sheet waits for the rendered kinds' frames (`slagDebug.sprites.ready()`), so it shows what ships. In the console, `slagDebug.cast` has `catalog()`, `silhouettes()`, `recognise()` and `bench()`.
 
@@ -73,6 +73,10 @@ Each kind's entry is its own file in [characters/](characters/): what a stranger
 | [vampire](characters/vampire.md) | the giant vampire lady in the big hat | the tallest and slimmest of the cast, a wide flat-crowned sun hat drooping at the back over a small head, a long gown to the floor hiding her feet, one hand raised clear of her with long false nails, pearls | costume: the gown; the hat a dark neutral |
 | [assistant](characters/assistant.md) | the town assistant dog with the bell in her hair | a small dog upright with a big round head, floppy ears hanging down, a short bushy top-knot pinched by a cat's collar with a big jingle bell on it, a vest over a white shirt, a short flared skirt, a cracked clipboard held out in front | costume: the fur; the vest a dark of it, the ears' tips a light |
 | [sim](characters/sim.md) | the lady with the green diamond over her head | a little woman with a round black bob in a bell of a dress, a green double-pointed diamond floating clear above her head | costume: the dress; the diamond keeps its green |
+| [succubus](characters/succubus.md) | the succubus with bat wings on her head | slim and long-legged, bat wings spread up and out from her head, a bigger pair at her back, big long hair, a strapless bodysuit, thigh-high boots | costume: the bodysuit; the wings a dark of it |
+| [archer](characters/archer.md) | the red-braided girl with the bow who hunts robot beasts | side on in a hunter's crouch, a bow drawn and held out level ahead, thick braids bushing out behind, a quiver, a fur shoulder wrap | costume: the leathers; the fur a light of it |
+| [slime](characters/slime.md) | the blue teardrop slime with the grin | a limbless teardrop of goo with a curled tip, two big eyes and a huge grin | costume: the goo; the shine a light of it |
+| [bear](characters/bear.md) | the animatronic bear in the little top hat | a stocky bear with round ears, a tiny top hat between them, a bow tie, a mic held up, stiff jointed limbs | costume: the fur suit; the belly and muzzle a light of it |
 
 **Reserves**, if a kind won't read: the spinning bandicoot (its tuft and grin rhyme with the speedster), the shovel-wielding knight, the red-haired mountain climber, the falling-block party bean (rhymes with the crewmate). The space marine in green armour reads as a generic soldier at 20 px; the plumber's tall brother, the ape's red-capped nephew and the king's turtle foot soldiers rhyme with kinds already in.
 
@@ -146,6 +150,10 @@ The strongest reads first. **Keyed** marks the non-humanoids, the riskiest to dr
 | 36 | vampire | Lady Dimistretch | humanoid, tall, gowned | drawn flat; the blind read passes (named at medium by both on the first sheet: the height under the wide flat hat, the gown to the floor) |
 | 37 | assistant | Jinglebelle | humanoid, small, dog | drawn flat; the blind read not passed (unpaired as "Pikmin" while the tuft stood on a stalk, then a nameless small figure with a tuft or hat; a side-on redraw with a snout, round 3, read the same and worse in colour, not shipped): in black her head is a hat; accepted as a colour read (2026-11-06) |
 | 38 | sim | Bella Gauche | humanoid + floating diamond | drawn flat; the blind read passes (both readers named her at high once the diamond's points survived the tracer: rounded, it was a Pikmin's leaf) |
+| 39 | succubus | Moribund | humanoid, winged head | medium: the head wings, only standing clear of the hair; the stinger's horns and the vampire to watch |
+| 40 | archer | Aloof | humanoid, side on | medium: the bow drawn ahead; the raider and the elf to watch |
+| 41 | slime | Slimple | **keyed**, limbless | high: the curled teardrop; the jelly and the chomper to watch |
+| 42 | bear | Creaky Buzzbear | humanoid, stocky | medium: the tiny hat between round ears; the top-hat girl and the ape to watch |
 
 **What to check.** No two kinds may rhyme. Watch these pairs:
 

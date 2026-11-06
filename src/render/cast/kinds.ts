@@ -28,6 +28,10 @@ import { art as invader } from './art/invader';
 import { art as vampire } from './art/vampire';
 import { art as assistant } from './art/assistant';
 import { art as sim } from './art/sim';
+import { art as succubus } from './art/succubus';
+import { art as archer } from './art/archer';
+import { art as slime } from './art/slime';
+import { art as bear } from './art/bear';
 import { type D, type KindArt, line, mark, ORANGE, ORANGE_SH, oval, poly, spot, STEEL, STEEL_SH, toned, tonedOval, Y } from './kit';
 
 /**
@@ -949,4 +953,8 @@ export const KINDS: Record<Kind, KindArt> = {
   vampire,
   assistant,
   sim,
+  succubus,
+  archer,
+  slime,
+  bear,
 };
