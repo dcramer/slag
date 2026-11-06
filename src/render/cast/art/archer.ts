@@ -36,9 +36,9 @@ function mane(d: D) {
 
 /** The bow: a tall bent rod with a knob on each end, strung, held upright out ahead of the front hand. */
 function bow(d: D, hx: number, hy: number) {
-  const top = { x: hx + d.f * 1.2, y: hy - d.H * 0.6 };
+  const top = { x: hx + d.f * 1.2, y: hy - d.H * 0.66 };
   const mid = { x: hx + d.f * 3, y: hy };
-  const low = { x: hx + d.f * 1.2, y: hy + d.H * 0.45 };
+  const low = { x: hx + d.f * 1.2, y: hy + d.H * 0.32 };
   const arc: P[] = [];
   for (let j = 0; j <= 10; j++) {
     const t = j / 10;
