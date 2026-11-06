@@ -323,6 +323,33 @@ export const BRIEFS: Record<string, Brief> = {
       'A tiny light-blue body (#7fc4f0) with short thin arms and legs; a blue mitten (#2a5fc4) on the free hand.',
     worn: 'a big round dent is knocked into the side of the helmet, behind the ridge; the tin-can cannon is dented in at its middle and its muzzle rim crumpled; the far boot has been repainted a lighter blue and is a little bigger than the near one. The face, the eyes, the ridge and the ear discs stay as they are.',
   },
+  mech: {
+    // The nod, each part of the read at race size and each a shape in outline: the squat round mech body much wider
+    // than tall (the silhouette: nobody else in the cast is a wide egg on legs); the two thick stubby cannons jutting
+    // level out ahead of it with background between them (two, short, on a body, where the robot boy and the hunter
+    // each hold one long one on an arm); the long backward-bending bird legs (the mech, not a creature's feet); the
+    // pilot's small head in big headphones peeking over its top (somebody's in there, and it's her).
+    // Ours, and the joke: the mech is a front-loading washing machine on stilts. The porthole door on its front is
+    // the cockpit glass with laundry tumbling behind it, the cannons are two lengths of dryer duct, the bunny an
+    // iron-on patch, and a sock is stuck in the door seal.
+    // The palette is neutral (Decisions 4): the shell in the player's colour, its panels a light of it; the legs,
+    // ducts and the porthole's rim metal greys, the pilot's hair dark, the bunny white. The first design, drawn
+    // round-bodied with its ducts curling in at its sides, traced at 22 px as a round blob on stubs: the ducts were
+    // inside the outline. So the body is a flattened egg and the ducts reach far out ahead, straight and level. Black at
+    // blind-sheet size that one was a round body with a barrel out front on spindly legs, so an edit before the wear
+    // (art/sprites/mech/design.prompt.txt) made the legs thick armoured mech legs and her head twice as big, with long
+    // hair and big headphone cups, and a later one made the body half again as wide and the ducts twice as long and far
+    // apart: a rider on a vehicle with a gun sticking forward.
+    design:
+      'A walking washing machine: a squat rounded pink body (#e86aa8, pale pink panels #f6b8d4), much wider than tall, like a fat flattened egg on its side, a round porthole door on its front with a grey metal rim and laundry behind the glass. ' +
+      "Two long grey metal ostrich legs, the knees bending backward like a bird's, big clawed feet, white space between the legs. " +
+      'From each side two thick straight grey dryer-duct tubes stick far out forward, level, past the front of the body, with white space between them. ' +
+      "A white bunny patch on its side. Peeking over its top edge, a small young woman's head with brown hair and big white headphones, dot eyes.",
+    // Off her face: the feed hoses across its side gone (they read as two more ducts), a dent in the drum, a sock caught
+    // in the door seal, the upper duct's end crumpled and its clip undone. The legs' backward knee was asked for here
+    // too and not drawn.
+    worn: "the two grey hoses running back across the pink body's side are gone, leaving plain pink panels; both thick grey mech legs bend sharply backward at the knee like a bird's, the knee joint pointing behind; a big round dent is knocked into the top back of the pink body; a long white sock hangs out of the porthole door's seal, dangling down the front; the upper duct cannon's open end is crumpled and its metal clip hangs undone. The woman's head, her headphones and hair, the porthole and the bunny patch stay as they are.",
+  },
   engineer: {
     // The nod, each part of the read at race size: the kit, carried low and clear of the body (the read in
     // silhouette, so it leads the brief): a hard rectangular toolbox hanging from one hand (a box with square
