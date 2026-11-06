@@ -52,16 +52,16 @@ What we borrow: the camera that follows the leader, out when you fall off it; th
 | How boxes deal | weighted random [SR-patch]; players say by rank: drills to the back, crates to the front [SR-odds] | by rank: catch-up to the pack, defence to the leader (`CATCH_UP`) | by rank |
 | Strongest catch-up | Golden Hook: swap places with the runner ahead [SR-pickups] | Queue Jumper: trade places with the runner just above | keep |
 | Movement tools | grapple at 45° onto white ceilings; a boost meter [SR-controls] | walk, run, jumps, wall jumps; no grapple or boost | a grapple item |
-| Early leader wins (leader at 15 s) | not documented | 60% as built, 59% with items in every hand, 55% with none (128 seeds) | about half (estimate) |
+| Early leader wins (leader at 15 s) | not documented | open shaft: 67% as built, 57% with items in every hand, 69% with none (storeys: 60, 59, 55; 128 seeds) | about half (estimate) |
 | Lone bot gets through a lap (laps 1–3) | n/a | Easy 63/75/53, Normal 88/75/43, Hard 84/74/75 (32 seeds) | `PASS_TARGETS` |
 
 ### Why catch-up isn't working yet: level design and mechanics
 
 | | The lead-camera racer | Rising Slag today |
 | --- | --- | --- |
-| Track | handmade horizontal loops, everyone on the same line at about the same speed, with high and low routes (grapple ceilings over the ground) | a vertical shaft, generated per match: storeys with two ways up each, perch flights on harder loops |
+| Track | handmade horizontal loops, everyone on the same line at about the same speed, with high and low routes (grapple ceilings over the ground) | a vertical shaft, generated per match: open air, ledges staggered like bricks with several lines up every height, a wall-jump chimney up one side (until 2026-11-05: storeys with two ways up each) |
 | Pace | running speed; a lap is a stretch of screens | climbing, about 4 rows a second; a 48-row lap is about 12 s |
-| Overtaking | constant: shortcuts, boosts and stuns reorder the pack | rare: two connectors a storey, and a perch well holds one at a time |
+| Overtaking | constant: shortcuts, boosts and stuns reorder the pack | rare with bots: about 1.8 lead changes a round (leader on top a second straight) in storeys, 1.3–2.1 in the open shaft |
 | Where the leader is | ahead, on your line | above you; most of our items fire or swing sideways |
 | What a hit costs | a stun: seconds of position | a bonk; on a perch, a storey, which is strong but only if you can reach the leader |
 | Catch-up items | the Golden Hook swaps you with the one ahead; missiles, crates and freeze aim ahead | the Queue Jumper swaps you with the one above, the Upper Hand punches up through floors, the winged shell hunts the leader |

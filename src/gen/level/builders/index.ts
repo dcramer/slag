@@ -5,13 +5,14 @@ import type { SculptCtx, Shape } from '../types';
 import { sculptCarved } from './carved';
 import { sculptChain } from './chain';
 import { sculptCourse } from './course';
+import { sculptShaft } from './shaft';
 
 /**
  * Level builders, one per shape or mode, each composing any set's kit (sets/, SET_KITS): the plan is the builder's,
  * the pieces the set's. A new mode's level is a new builder here asking for kit kinds every set provides (KIT_KINDS),
  * so every set builds it from the start. src/gen/AGENTS.md → Set kits and level builders.
  */
-export type BuilderId = 'course' | 'climb' | 'descent' | 'tower';
+export type BuilderId = 'course' | 'climb' | 'descent' | 'tower' | 'shaft';
 
 const COURSE_KINDS = ['ground', 'gap', 'stamps'] as const;
 
@@ -39,10 +40,16 @@ export const BUILDERS: Record<BuilderId, BuilderDef> = {
     build: onCourse,
   },
   tower: {
-    about: 'storeys stacked up a shaft, two connectors between every pair, moats on the spawn and goal storeys; a Rising Slag shaft loops',
-    takes: (p) => p.size === 'tall',
+    about: 'storeys stacked up a shaft, two connectors between every pair, moats on the spawn and goal storeys',
+    takes: (p) => p.size === 'tall' && !p.tide,
     asks: ['floor', 'connector', 'shell'],
     build: (ctx, set) => (set.tower ? (set.towerPost ?? keep)(sculptTall(ctx, set.tower), ctx) : onCourse(ctx, set)),
+  },
+  shaft: {
+    about: 'Rising Slag: ledges staggered like bricks up a walled shaft that loops, several lines up every height, a wall-jump chimney up one side',
+    takes: (p) => p.size === 'tall' && !!p.tide,
+    asks: ['floor', 'shell'],
+    build: (ctx, set) => (set.tower ? (set.towerPost ?? keep)(sculptShaft(ctx, set.tower), ctx) : onCourse(ctx, set)),
   },
 };
 
