@@ -4,7 +4,7 @@ import { isBridgePart, type PropDef } from '../gen/props';
 import { type Bridge, cacheFor, canPlaceBridge, fieldOf, prove, settled, withBridges } from '../gen/level';
 import { JumpCache, levelPrecision } from '../gen/level/precision';
 import { analyzeRoutes } from '../gen/level/routes';
-import type { Level } from '../sim/level';
+import { type Level, spawnsOf } from '../sim/level';
 import { RUN_COUNTDOWN, TILE } from '../sim/constants';
 import { barrierOf, footprint, hangRow, motionOffset, mysterySpent, mysteryState, type PlacedProp, spotAt } from '../sim/props';
 import type { Body } from '../sim/physics';
@@ -55,7 +55,11 @@ function lift(b: Body): Lift {
 const OBJECTIVES: Record<ModeId, (m: Match) => Objective> = {
   race: (m) => ({ kind: 'reach', cell: { ...m.level.goal } }),
   slag: (m) => ({ kind: 'climb', lapLine: { ...m.level.goal }, loop: m.level.loop ?? 0 }),
-  brawl: (m) => ({ kind: 'fight', cell: { tx: Math.round((m.level.spawn.tx + m.level.goal.tx) / 2), ty: m.level.spawn.ty } }),
+  brawl: (m) => ({
+    kind: 'fight',
+    cell: { tx: Math.round((m.level.spawn.tx + m.level.goal.tx) / 2), ty: m.level.spawn.ty },
+    ends: spawnsOf(m.level).map((c) => ({ ...c })),
+  }),
 };
 
 /** Rows `r`'s feet stand above the spawn's floor, laps and all. */

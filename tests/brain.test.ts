@@ -3,12 +3,17 @@ import { BotSeats } from '../src/brain/bots';
 import { rollPersonality } from '../src/brain/personality';
 import { botDevice, isBotDevice } from '../src/brain/device';
 import { Match } from '../src/game/match';
+import { Motor } from '../src/brain/motor';
+import { Rng } from '../src/core/rng';
+import { bodyAtCell } from '../src/sim/physics';
+import { T_SOLID } from '../src/sim/level';
 import { DEFAULT_RULES } from '../src/game/rules';
-import { isBridgePart } from '../src/gen/props';
+import { generateProp, isBridgePart } from '../src/gen/props';
 import { applyAction, newNetState } from '../src/net/actions';
 import { RunWorld } from '../src/sim/run';
+import type { PlacedProp } from '../src/sim/props';
 import { brakeFrom, movesFrom } from '../src/sim/reach';
-import { RUN_COUNTDOWN } from '../src/sim/constants';
+import { RUN_COUNTDOWN, TILE } from '../src/sim/constants';
 import { NO_INPUT } from '../src/sim/types';
 import { botRace } from './lib/bot-race';
 
@@ -206,6 +211,58 @@ describe('bots', () => {
     applyAction(m, ns, { t: 'leave', dev });
     expect(m.players).toEqual([]);
     expect(ns.parked).toEqual({});
+  });
+});
+
+describe('the motor’s own moves', () => {
+  /** A one-seat race on `m` over `placed`, past the countdown, with the seat's body standing at stand cell (tx, ty). */
+  function standing(m: Match, tx: number, ty: number, placed: PlacedProp[] = []) {
+    const p = m.join('kb')!;
+    m.startMatch();
+    m.placed = placed;
+    m.startRun();
+    const run = m.run!;
+    while (run.frame < RUN_COUNTDOWN) m.step({});
+    run.runners[0].body = bodyAtCell(tx, ty);
+    return { p, run, r: run.runners[0] };
+  }
+
+  it('won’t leap off a side of the map: it goes by the route instead, and stops at the end of it', () => {
+    // A brawl arena's right end opens onto the side of the map, where a leap toward it runs off and out.
+    const m = new Match(1, undefined, { ...DEFAULT_RULES, mode: 'brawl' });
+    const { goal, w } = m.level;
+    const { p, run, r } = standing(m, goal.tx, goal.ty);
+    const motor = new Motor(rollPersonality(1, 'normal'), 1);
+    let stood = false;
+    for (let f = 0; f < 90 && r.alive; f++) {
+      m.step({ kb: motor.drive(m, p, { do: 'leap', tx: w - 1, ty: goal.ty }) });
+      stood ||= r.body.onGround && r.body.vx === 0 && Math.floor((r.body.x + r.body.w / 2) / TILE) === w - 1;
+    }
+    expect(r.alive, `${r.cause} at race frame ${run.frame}`).toBe(true);
+    expect(stood).toBe(true);
+  });
+
+  it('won’t hop into a flail swinging overhead: it waits for the swing to pass', () => {
+    const m = new Match(4);
+    // Open ground well clear of the spawn, open above, with a flail's pivot three rows up.
+    const { tiles, w, spawn } = m.level;
+    const open = (x: number, y: number) => tiles[y * w + x] === 0;
+    let at: { tx: number; ty: number } | null = null;
+    for (let ty = 6; ty < m.level.h - 1 && !at; ty++)
+      for (let tx = 2; tx < w - 4 && !at; tx++)
+        if (Math.abs(tx - spawn.tx) > 8 && tiles[(ty + 1) * w + tx] === T_SOLID && [0, 1, 2, 3, 4, 5].every((k) => open(tx, ty - k) && open(tx + 1, ty - k)))
+          at = { tx, ty };
+    const flail = generateProp(new Rng(1), 'flail', 'x');
+    const { p, run, r } = standing(m, at!.tx, at!.ty, [{ uid: 1, def: flail, owner: 0, tx: at!.tx, ty: at!.ty - 3, rot: 0 }]);
+    const motor = new Motor(rollPersonality(1, 'normal'), 1);
+    let hops = 0;
+    for (let f = 0; f < 2 * 60 && r.alive; f++) {
+      const inp = motor.drive(m, p, { do: 'hop', tx: at!.tx });
+      if (inp.jumpPressed) hops++;
+      m.step({ kb: inp });
+    }
+    expect(r.alive, `${r.cause} at race frame ${run.frame}`).toBe(true);
+    expect(hops).toBeGreaterThan(0);
   });
 });
 

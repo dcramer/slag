@@ -1,9 +1,9 @@
-import { floorAt, hurtsAt, ITEM_TACTICS, KNOCKS, knockedInto, slagRow, tile } from '../tactics';
+import { ENDS_CLEAR, floorAt, hurtsAt, ITEM_TACTICS, KNOCKS, knockedInto, knockLanes, slagRow, tile } from '../tactics';
 import type { ItemKind } from '../../sim/items/types';
-import type { BrainView, Cell, Intent, RunnerSense, SelfSense } from '../types';
+import type { BrainView, Cell, Intent, PropSense, RunnerSense, SelfSense } from '../types';
 import { aimOf } from './headway';
 import { type Errands, ItemPlay } from './items';
-import type { StrategyDef } from './types';
+import type { Lay, StrategyDef } from './types';
 
 /** Frames it sticks with a rival before looking round for a nearer one. */
 const MARK_FRAMES = 90;
@@ -55,13 +55,32 @@ function highGround(v: BrainView, me: SelfSense, priced: Set<number>, banned: Re
 /** Where `r` stands, as a stand cell: the row over the floor its feet are on. */
 const standOf = (r: { x: number; y: number }): Cell => ({ tx: Math.floor(r.x), ty: Math.round(r.y) - 1 });
 
-/** The stand cell nearest column `x` on row `ty` (or a row either side), a few tiles at most, or null. */
+/** The stand cell nearest column `x` on row `ty` (or a row either side), a few tiles at most, out of the parts' way, or null. */
 function standNear(v: BrainView, x: number, ty: number): Cell | null {
   const c = Math.floor(x);
   for (let dx = 0; dx <= 3; dx++)
     for (const tx of dx ? [c - dx, c + dx] : [c])
-      for (const y of [ty, ty - 1, ty + 1]) if (tx >= 0 && tx < v.level.w && tile(v, tx, y) === 0 && floorAt(v, tx, y + 1)) return { tx, ty: y };
+      for (const y of [ty, ty - 1, ty + 1])
+        if (tx >= 0 && tx < v.level.w && tile(v, tx, y) === 0 && floorAt(v, tx, y + 1) && !hurtsAt(v, tx, y)) return { tx, ty: y };
   return null;
+}
+
+/** Each arena's knock lanes, by its parts as they stand. */
+const lanes = new WeakMap<readonly PropSense[], readonly number[]>();
+
+/**
+ * Where a brawl's parts go: where a knock throws someone and they'd still come down safe (tactics.ts `knockLanes`),
+ * so the part turns that knock into a kill, and nowhere near where the field starts, where a part would only catch
+ * someone walking off at GO. There's no route to block: everyone fights over the same screen.
+ */
+function brawlLay(v: BrainView): Lay {
+  const ends = v.objective.kind === 'fight' ? v.objective.ends : [v.level.spawn];
+  let cells = lanes.get(v.props);
+  if (!cells) {
+    cells = knockLanes(v, ends);
+    lanes.set(v.props, cells);
+  }
+  return { cells, keeps: (tx, ty) => !ends.some((e) => Math.abs(e.tx - tx) <= ENDS_CLEAR && Math.abs(e.ty - ty) <= ENDS_CLEAR) };
 }
 
 /** Rivals still in it. */
@@ -129,6 +148,7 @@ function dodge(v: BrainView, t: Threat): Intent | null {
  * (one bare-handed only once they're on it, a box coming first). When the slag pours in, it climbs out of its way.
  */
 export const brawlStrategy: StrategyDef = {
+  lay: brawlLay,
   make(rng, traits) {
     const items = new ItemPlay(rng, traits, BRAWL_ERRANDS);
     let frame = 0;

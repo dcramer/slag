@@ -14,7 +14,7 @@ import type { Temperament } from './temperament';
  */
 
 /** Bumped when BrainView changes shape. A player's script will declare the version it was written against. */
-export const BRAIN_VIEW_VERSION = 8;
+export const BRAIN_VIEW_VERSION = 9;
 
 /** How fast across the ground, as a player would say it. */
 export type Pace = 'still' | 'walking' | 'running' | 'flying';
@@ -101,8 +101,8 @@ export type Objective =
    * climbing carries you on a lap up, so the whole climb is ahead again; with no loop (`loop` 0) it's the top, a place to hold.
    */
   | { kind: 'climb'; lapLine: Cell; loop: number }
-  /** Knock everyone else out (a brawl): `cell` is the arena's middle, where to head with nobody to go for. */
-  | { kind: 'fight'; cell: Cell };
+  /** Knock everyone else out (a brawl): `cell` is the arena's middle, where to head with nobody to go for; `ends` where the field starts. */
+  | { kind: 'fight'; cell: Cell; ends: Cell[] };
 
 /** A part standing in the level, by what it does to a route rather than by name. */
 export interface PropSense {
@@ -190,7 +190,7 @@ export interface BrainView {
   kills: KillSense[];
   /** Race: the countdown is over. */
   live: boolean;
-  /** Place: would the held part go at (tx, ty) turned `rot` quarter turns? */
+  /** Place: would the held part go at (tx, ty) turned `rot` quarter turns, with the cursor able to aim it there? */
   canPlace(tx: number, ty: number, rot: number): boolean;
   /** Place: would the level still have a way to the flag, with at most its bridges, after that? */
   keepsWay(tx: number, ty: number, rot: number): boolean;

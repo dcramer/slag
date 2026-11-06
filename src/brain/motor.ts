@@ -4,7 +4,7 @@ import { type Level, T_ONEWAY, T_SOLID } from '../sim/level';
 import type { Body, Controls } from '../sim/physics';
 import type { Rect } from '../core/geom';
 import { AMMO, AMMO_SIM, type Hazard, touchesHazard } from '../sim/props';
-import { brakeFrom, isStandable, type Move, movesFrom, type WindColumns } from '../sim/reach';
+import { brakeFrom, isStandable, type Move, movesFrom, type Played, playFrom, type WindColumns } from '../sim/reach';
 import { gustAir } from '../sim/weather';
 import type { RunWorld } from '../sim/run';
 import { type InputFrame, NO_INPUT } from '../sim/types';
@@ -90,9 +90,49 @@ type Act =
 
 /** Tiles off its column a hop steers back from. */
 const HOP_SLACK = 0.15;
+/** Frames a hop is played out for before it's pressed: a full jump and its fall. */
+const HOP_FRAMES = 90;
+/** Frames a coast to a stop is played out for: past a run's skid. */
+const COAST_FRAMES = 40;
 
-/** Frames a leap may last before the motor lets it go. */
+/** Frames a leap may last before the motor lets it go, and frames it goes by the route before it looks at a leap it turned down again. */
 const LEAP_FRAMES = 200;
+const LEAP_BAR = 30;
+
+/** In the air over a hop, the arrows that steer it back over column `tx`. */
+function hopLean(b: Body, tx: number): { left: boolean; right: boolean } {
+  const off = (tx * TILE + (TILE - b.w) / 2 - b.x) / TILE;
+  return { left: off < -HOP_SLACK, right: off > HOP_SLACK };
+}
+
+/** A hop's controls, frame by frame from the press, as `Motor.hop` plays them: jump held while rising, steering back in the air. */
+function hopInput(tx: number): (f: number, b: Body, c: Controls) => void {
+  let held = false;
+  return (f, b, c) => {
+    held = f === 0 || (held && b.vy < 0);
+    c.jump = held;
+    c.jumpPressed = f === 0;
+    if (f > 0 && !b.onGround) Object.assign(c, hopLean(b, tx));
+  };
+}
+
+/** Whether a leap toward `dir` jumps now, on its `t`th frame (from 1): about to run off the ground, or stopped by a wall after the run-up. */
+function leapJumps(field: Level, dir: -1 | 1, b: Body, t: number): boolean {
+  const step = Math.max(1, Math.abs(b.vx) / 60);
+  const ahead = Math.floor((dir > 0 ? b.x + b.w + step : b.x - step) / TILE);
+  const under = field.tiles[Math.floor((b.y + b.h + 1) / TILE) * field.w + ahead];
+  return (under !== T_SOLID && under !== T_ONEWAY) || (t > 10 && Math.abs(b.vx) < 5);
+}
+
+/** A leap's controls, frame by frame from setting off, as `Motor.leap` plays them: run at it, jump once and hold it. */
+function leapInput(field: Level, dir: -1 | 1): (f: number, b: Body, c: Controls) => void {
+  let jumped = false;
+  return (f, b, c) => {
+    const press = b.onGround && !jumped && leapJumps(field, dir, b, f + 1);
+    if (press) jumped = true;
+    Object.assign(c, { left: dir < 0, right: dir > 0, run: true, jump: jumped, jumpPressed: press });
+  };
+}
 
 export class Motor {
   private readonly rng: Rng;
@@ -126,6 +166,8 @@ export class Motor {
   private pressed = -2;
   /** No time to pick a move this frame (see drive). */
   private rushed = false;
+  /** Match frame until which it goes by the route rather than look at a leap again (one it played out didn't come down safe). */
+  private leapBarred = -1;
 
   constructor(
     /** Its hands: how quick, clean and careful it is. Set again when the room's Bots rule changes. */
@@ -187,7 +229,7 @@ export class Motor {
       case 'goTo':
         return this.race(m, p, intent.tx, intent.ty);
       case 'leap':
-        return this.leap(m, p, intent.tx);
+        return this.leap(m, p, intent.tx, intent.ty);
       case 'hop':
         return this.hop(m, p, intent.tx);
       case 'use':
@@ -199,30 +241,61 @@ export class Motor {
 
   /**
    * Jump straight up in column `tx`, holding it while rising, and again each time it lands. It stops first and
-   * steers back over the column in the air: a box hangs over a perch as often as a floor.
+   * steers back over the column in the air: a box hangs over a perch as often as a floor. Each hop is played out
+   * before it's pressed, as a walking move is: one that meets something that hurts, or doesn't come down, it doesn't
+   * take. It stands instead, or, with something coming for it there too, gets out of the way as a race does.
    */
   private hop(m: Match, p: Player, tx: number): InputFrame {
-    const r = m.phase === 'run' ? m.run?.runners.find((x) => x.slot === p.slot) : undefined;
-    if (!r || !r.alive || r.finished) return NO_INPUT;
+    const run = m.phase === 'run' ? m.run : null;
+    const r = run?.runners.find((x) => x.slot === p.slot);
+    if (!run || !r || !r.alive || r.finished) return NO_INPUT;
     const b = r.body;
-    const off = (tx * TILE + (TILE - b.w) / 2 - b.x) / TILE;
-    const lean = { left: off < -HOP_SLACK, right: off > HOP_SLACK };
-    if (!b.onGround) return { ...NO_INPUT, ...lean, jump: this.prev.jump && b.vy < 0 };
+    // Getting out of the way, from an earlier hop it didn't take.
+    const away = this.act?.kind === 'move' ? this.follow(b) : null;
+    if (away) return away;
+    if (!b.onGround) return { ...NO_INPUT, ...hopLean(b, tx), jump: this.prev.jump && b.vy < 0 };
     if (Math.abs(b.vx) > BRAKE_TO) return this.brake(b);
-    return this.prev.jump ? NO_INPUT : { ...NO_INPUT, jump: true, jumpPressed: true };
+    if (this.prev.jump) return NO_INPUT;
+    const map = raceMap(run);
+    this.fore = foresight(run, map);
+    const shots = shotsAhead(run, map);
+    const air = gustAir(run.level, run.frame);
+    if (this.clear(map, run, b, playFrom(map.field, b, hopInput(tx), HOP_FRAMES, run.solids, air, columns(map, run.frame)), shots, this.traits.margin))
+      return { ...NO_INPUT, jump: true, jumpPressed: true };
+    if (!hurtsStill(map, this.fore, run.frame, b, shots, this.traits.margin)) return this.still(b);
+    this.act = this.escape(map, run, b, shots, movesFrom(map.field, b, run.solids, air, columns(map, run.frame)), standCell(map.field, b));
+    return this.follow(b) ?? NO_INPUT;
   }
 
-  /** Run toward column `tx` and jump at the first edge or wall: what a player tries with no better idea. */
-  private leap(m: Match, p: Player, tx: number): InputFrame {
+  /**
+   * Run toward column `tx` and jump at the first edge or wall: what a player tries with no better idea. It plays the
+   * leap out before it sets off, as it does a walking move. One that runs off a side of the map or drops into the pit
+   * it doesn't take: it goes on toward (tx, ty) by the route instead, looking again a beat later. One that meets
+   * something that hurts on the way it waits out where it stands, as it waits for a saw to come round, if standing
+   * there is safe.
+   */
+  private leap(m: Match, p: Player, tx: number, ty: number): InputFrame {
     const run = m.phase === 'run' ? m.run : null;
     const r = run?.runners.find((x) => x.slot === p.slot);
     if (!run || !r || !r.alive || r.finished) return NO_INPUT;
     const b = r.body;
     let act = this.act?.kind === 'leap' ? this.act : null;
     if (!act) {
+      if (m.frame < this.leapBarred) return this.race(m, p, tx, ty);
       if (!b.onGround) return NO_INPUT;
       const to = (tx + 0.5) * TILE - (b.x + b.w / 2);
-      act = this.act = { kind: 'leap', dir: to < 0 ? -1 : to > 0 ? 1 : b.facing, t: 0, jumped: false, flown: false };
+      const dir = to < 0 ? -1 : to > 0 ? 1 : b.facing;
+      const map = raceMap(run);
+      this.fore = foresight(run, map);
+      const leapt = playFrom(map.field, b, leapInput(map.field, dir), LEAP_FRAMES, run.solids, gustAir(run.level, run.frame), columns(map, run.frame));
+      const shots = shotsAhead(run, map);
+      if (!this.clear(map, run, b, leapt, shots, 0)) {
+        const lands = leapt.fate !== 'fall' && leapt.fate !== 'out';
+        if (lands && !hurtsStill(map, this.fore, run.frame, b, shots, this.traits.margin)) return Math.abs(b.vx) > BRAKE_TO ? this.brake(b) : this.still(b);
+        this.leapBarred = m.frame + LEAP_BAR;
+        return this.race(m, p, tx, ty);
+      }
+      act = this.act = { kind: 'leap', dir, t: 0, jumped: false, flown: false };
     }
     const { dir } = act;
     if (!b.onGround) act.flown = true;
@@ -230,16 +303,25 @@ export class Motor {
       this.act = null;
       return NO_INPUT;
     }
-    let press = false;
-    if (b.onGround && !act.jumped) {
-      // About to run off the ground, or stopped by a wall after the run-up: jump now.
-      const field = raceMap(run).field;
-      const ahead = Math.floor((dir > 0 ? b.x + b.w + Math.max(1, Math.abs(b.vx) / 60) : b.x - Math.max(1, Math.abs(b.vx) / 60)) / TILE);
-      const under = field.tiles[Math.floor((b.y + b.h + 1) / TILE) * field.w + ahead];
-      press = (under !== T_SOLID && under !== T_ONEWAY) || (act.t > 10 && Math.abs(b.vx) < 5);
-      act.jumped = press;
-    }
+    const press = b.onGround && !act.jumped && leapJumps(raceMap(run).field, dir, b, act.t);
+    if (press) act.jumped = true;
     return { ...NO_INPUT, left: dir < 0, right: dir > 0, run: true, jump: act.jumped, jumpPressed: press };
+  }
+
+  /** Would letting go here leave it standing, still on this ground and clear of anything that hurts? */
+  private coasts(map: RaceMap, run: RunWorld, b: Body): boolean {
+    const coast = playFrom(map.field, b, () => {}, COAST_FRAMES, run.solids, gustAir(run.level, run.frame), columns(map, run.frame));
+    return coast.fate === 'open' && coast.end.onGround && !hurts(map, this.fore, coast, run.frame, b, NO_SHOTS, this.traits.margin);
+  }
+
+  /**
+   * Is a move of its own making (a hop, a leap) safe to play from `b`? It comes down somewhere rather than off a side
+   * of the map or into the pit, and meets nothing that hurts on the way with `margin` px to spare, as `hurts` checks
+   * the controller's own moves. A leap of faith is a last try, so it takes one with no room to spare.
+   */
+  private clear(map: RaceMap, run: RunWorld, b: Body, mv: Played, shots: readonly Shot[], margin: number): boolean {
+    if (mv.fate === 'fall' || mv.fate === 'out') return false;
+    return !hurts(map, this.fore, mv, run.frame, b, shots, margin);
   }
 
   private click(m: Match, ok: boolean): InputFrame {
@@ -323,8 +405,9 @@ export class Motor {
         // Stop, then tap toward the middle of the cell, where the route's moves start.
         const mid = (act.at % (this.run?.level.w ?? 1)) * TILE + (TILE - b.w) / 2;
         const off = mid - b.x;
-        // In a gust there's no lining up: it stands against it (wait) or goes.
+        // In a gust there's no lining up: it stands against it (wait) or goes. Nor with something coming for it here.
         if (this.gust() !== 0 || !b.onGround || act.t++ > SETTLE_FRAMES || (Math.abs(b.vx) < 0.5 && Math.abs(off) <= 1)) return (this.act = null);
+        if (this.run && hurtsStill(raceMap(this.run), this.fore, this.run.frame, b, NO_SHOTS, this.traits.margin)) return (this.act = null);
         // Against the skid past a walk, as the landing's own stop was proven (reach.ts brakeFrom).
         const hard = Math.abs(b.vx) > PHYS.walkSpeed + 1;
         if (Math.abs(b.vx) >= 0.5) return this.press({ left: hard && b.vx > 0, right: hard && b.vx < 0, jump: false, jumpPressed: false });
@@ -389,7 +472,11 @@ export class Motor {
   private choose(map: RaceMap, run: RunWorld, b: Body, target: number): Act | null {
     const f = run.frame;
     const here = standCell(map.field, b);
-    if (here === target && b.onGround) return null;
+    // There, and nothing coming for it: it lets go, unless coasting on would carry it off a ledge, off the side of the
+    // map or into something: then it brakes, the way the step that got it here was proven to stop. With something
+    // coming, it gets out of the way like anywhere else.
+    if (here === target && b.onGround && !hurtsStill(map, this.fore, f, b, shotsAhead(run, map), this.traits.margin))
+      return Math.abs(b.vx) < 0.5 || this.coasts(map, run, b) ? null : this.hold(map, run, b, NO_SHOTS, gustAir(run.level, f), f + 1);
     if (b.onGround && here !== this.last) {
       this.last = here;
       this.visits.set(here, (this.visits.get(here) ?? 0) + 1);
@@ -448,7 +535,7 @@ export class Motor {
           cost = trap.p;
         }
       }
-      if (b.onGround && !exposed && this.settled !== here && cost > dist[here] + SHORT && this.canStop(map, run, b, shots, air)) {
+      if (b.onGround && !exposed && this.settled !== here && cost > dist[here] + SHORT && this.canStop(map, run, b, shots, air, f, SETTLE_FRAMES)) {
         this.settled = here;
         return { kind: 'settle', at: here, t: 0 };
       }
