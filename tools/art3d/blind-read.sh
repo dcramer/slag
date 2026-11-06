@@ -5,7 +5,7 @@
 #
 #   tools/art3d/blind-read.sh <image.png> [prompt-file]
 #
-# The prompt defaults to the blind-read prompt in tools/art3d/CHECKLIST.md; pass a file for another read
+# The prompt defaults to the blind-read prompt in tools/art3d/CHECKLIST.md (the colour read, the bar); pass a file for another read
 # (the twist read, a design read). `<path>` in the prompt becomes the copied image's name. Run it once per
 # reader: every call is a new reader.
 set -euo pipefail
