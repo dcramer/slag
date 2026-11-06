@@ -6,12 +6,14 @@ import { oval, poly, toned, tonedOval } from '../../ink-figure';
 /** Junior's own yellow (docs/characters/junior.md → Palette): the head, the arms and the claw, on every player. */
 const YELLOW = '#fab214';
 const YELLOW_SHADE = '#d9920c';
-/** The legs, the headphones and the antennae: a neutral dark purple-grey. */
+/** The legs and the headphones: a neutral dark purple-grey. */
 const GREY = '#4e445c';
+/** The antennae and the skates' wheels: a light steel, apart from the cap and the headphones. */
+const STEEL = '#aaa6b4';
 
 /**
  * Junior, Sentry's own robot: a square yellow box head as wide as the shoulders with one huge eye and a toothy
- * grin, a cap on backwards with its bill out behind, zigzag antennae with ball tips, headphone ears, a hoodie in
+ * grin, a cap on backwards with its bill out behind, a zigzag antenna with a ball tip, headphone ears, a hoodie in
  * the player's colour, a claw hanging at the back hand and a phone held up in the front one, on roller skates. A
  * rendered kind draws from its frames (src/render/cast/sprites/junior/); this is what shows before they load, and
  * on the hand-drawn sheets.
@@ -61,7 +63,8 @@ export const art: KindArt = {
     );
   },
   back: (d) => {
-    // The antennae, zigzags with ball tips springing up and out: one off the cap's crown, one off each headphone.
+    // The antenna, a zigzag with a ball tip springing up off the cap's crown: the drawn kind keeps only this one, since three
+    // spread round the head read as spiky hair or horns (docs/characters/junior.md → Rig).
     const spring = d.m === 'up' ? -1.2 : 0;
     const zig = (x0: number, y0: number, dx: number, dy: number) => {
       const pts = [
@@ -70,16 +73,14 @@ export const art: KindArt = {
         { x: x0 + dx * 0.55, y: y0 + dy * 0.6 },
         { x: x0 + dx, y: y0 + dy },
       ];
-      mark(d.s, GREY, pts, 0.7, d.sd, [0.1, 0.1]);
-      tonedOval(d.s, x0 + dx, y0 + dy, 0.9, 0.9, 8, GREY, '#3a3246', d.lk.ink, 0.2, 0.4 * d.k, 0.2);
+      mark(d.s, STEEL, pts, 0.7, d.sd, [0.1, 0.1]);
+      tonedOval(d.s, x0 + dx, y0 + dy, 1.1, 1.1, 8, STEEL, '#8a8696', d.lk.ink, 0.2, 0.4 * d.k, 0.2);
     };
     zig(d.f * d.W * 0.06, Y(d, 0.98), d.f * 3, -4 + spring);
-    zig(-d.f * d.W * 0.42, Y(d, 0.74), -d.f * 3, -1.5 + spring / 2);
-    zig(d.f * d.W * 0.42, Y(d, 0.76), d.f * 2.4, -2 + spring / 2);
-    // The claw at the back hand, hanging low: three yellow fingers in a C.
+    // The claw at the back hand, hanging low: a big yellow pincer, as big as the head, in a C.
     const cx = -d.f * d.W * 0.5;
     const cy = Y(d, 0.18);
-    poly(d.s, oval(cx, cy, 1.6, 1.3, 9), YELLOW);
+    poly(d.s, oval(cx, cy, 2.2, 1.8, 9), YELLOW);
     mark(
       d.s,
       YELLOW,
@@ -151,14 +152,14 @@ export const art: KindArt = {
     );
   },
   tool: (d, hx, hy) => {
-    // The phone, held up in the front hand.
+    // The phone, as tall as the head, held up in the front hand.
     toned(
       d.s,
       [
-        { x: hx - 0.9, y: hy - 3.2 },
-        { x: hx + 0.9, y: hy - 3.2 },
-        { x: hx + 0.9, y: hy + 0.2 },
-        { x: hx - 0.9, y: hy + 0.2 },
+        { x: hx - 1.2, y: hy - 4.4 },
+        { x: hx + 1.2, y: hy - 4.4 },
+        { x: hx + 1.2, y: hy + 0.2 },
+        { x: hx - 1.2, y: hy + 0.2 },
       ],
       GREY,
       GREY,
@@ -170,10 +171,10 @@ export const art: KindArt = {
     poly(
       d.s,
       [
-        { x: hx - 0.5, y: hy - 2.8 },
-        { x: hx + 0.5, y: hy - 2.8 },
-        { x: hx + 0.5, y: hy - 0.6 },
-        { x: hx - 0.5, y: hy - 0.6 },
+        { x: hx - 0.8, y: hy - 4 },
+        { x: hx + 0.8, y: hy - 4 },
+        { x: hx + 0.8, y: hy - 0.6 },
+        { x: hx - 0.8, y: hy - 0.6 },
       ],
       '#eef3f3',
     );

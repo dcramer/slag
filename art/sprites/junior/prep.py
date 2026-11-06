@@ -73,6 +73,14 @@ def within(poly, x, y):
     return all((poly[(i + 1) % n][0] - poly[i][0]) * (y - poly[i][1]) - (poly[(i + 1) % n][1] - poly[i][1]) * (x - poly[i][0]) >= 0 for i in range(n))
 
 
+def round_(p):
+    """About as wide as tall, as an eye is: the phone's screen, as big in the redrawn design, is a tall slab."""
+    xs = [x for x, _ in p]
+    ys = [y for _, y in p]
+    r = (max(xs) - min(xs) + 1) / (max(ys) - min(ys) + 1)
+    return 0.75 < r < 1.33
+
+
 args = sys.argv[1:]
 for src, dst in zip(args[::2], args[1::2]):
     im = Image.open(src).convert('RGB')
@@ -89,7 +97,7 @@ for src, dst in zip(args[::2], args[1::2]):
         # The drawn off-white is bluish and under 248 in red; the background is white.
         if mean[0] < 246:
             drawn.append(patch)
-    high = [p for p in drawn if sum(y for _, y in p) / len(p) < top + (low - top) * 0.5]
+    high = [p for p in drawn if sum(y for _, y in p) / len(p) < top + (low - top) * 0.5 and round_(p)]
     eye = max(high, key=len) if high else None
     if eye and len(eye) < EYE_LEAST:
         eye = None
