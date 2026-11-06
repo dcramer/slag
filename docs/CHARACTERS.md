@@ -144,7 +144,7 @@ The strongest reads first. **Keyed** marks the non-humanoids, the riskiest to dr
 | 34 | pyramid | Pyramid Ted | humanoid, big + blade | drawn flat, no face; the blind read not passed (one reader of two names him, the other reads the mage's pointed hat: the cowl overhanging his shoulders is a brim at play size) |
 | 35 | invader | Invayda | **keyed**, legs only, pixel edge | drawn flat, front on, the eye holes cut through; the blind read passes (both readers named it at high, unpaired) |
 | 36 | vampire | Lady Dimitreskew | humanoid, tall, gowned | drawn flat; the blind read passes (named at medium by both on the first sheet: the height under the wide flat hat, the gown to the floor) |
-| 37 | assistant | Izzabelle | humanoid, small, dog | drawn flat; the blind read not passed (unpaired as "Pikmin" while the tuft stood on a stalk, then a nameless small figure with a tuft or hat): in black the knot and bell are a hat |
+| 37 | assistant | Izzabelle | humanoid, small, dog | drawn flat; the blind read not passed (unpaired as "Pikmin" while the tuft stood on a stalk, then a nameless small figure with a tuft or hat; a side-on redraw with a snout, round 3, read the same and worse in colour, not shipped): in black her head is a hat |
 | 38 | sim | Bella Gauche | humanoid + floating diamond | drawn flat; the blind read passes (both readers named her at high once the diamond's points survived the tracer: rounded, it was a Pikmin's leaf) |
 
 **What to check.** No two kinds may rhyme. Watch these pairs:
