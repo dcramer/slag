@@ -2,7 +2,7 @@ import { BotSeats } from '../../src/brain/bots';
 import { deriveSeed, Rng } from '../../src/core/rng';
 import { giveItem } from '../../src/sim/items';
 import { type Personality, steady as steadyHands } from '../../src/brain/personality';
-import { type BotLevel, Match } from '../../src/game/match';
+import { type BotLevel, Match, type Phase } from '../../src/game/match';
 import type { ProfileOverride } from '../../src/gen/level';
 import { isBridgePart } from '../../src/gen/props';
 import type { Difficulty } from '../../src/sim/level';
@@ -12,7 +12,7 @@ import { feetUp } from '../../src/sim/run';
 import { leaderOf } from '../../src/sim/standing';
 import type { ModeId } from '../../src/game/modes';
 import { MODES } from '../../src/game/modes';
-import { DEFAULT_RULES } from '../../src/game/rules';
+import { DEFAULT_RULES, withMode } from '../../src/game/rules';
 import type { ThemeId } from '../../src/themes';
 
 export interface BotRace {
@@ -281,4 +281,37 @@ function playRound(seed: number, m: Match, bots: BotSeats, { at = 15 * 60, limit
     causes,
     early: run.runners.filter((r) => !r.alive && r.deathFrame < RUN_COUNTDOWN + at).length,
   };
+}
+
+/** Where a whole bot match's time went (`botMatchTime`). */
+export interface BotMatchTime {
+  /** Frames spent in each phase, lobby aside. */
+  frames: Partial<Record<Phase, number>>;
+  /** Rounds played (every bout is one) and placements (pick and place) made. */
+  rounds: number;
+  placements: number;
+  /** It reached victory within the cap. */
+  ended: boolean;
+}
+
+/**
+ * `players` bots of `level` playing one whole `mode` match on `seed`'s level with the lobby's rules for it (`withMode`,
+ * then `bouts` if given), from the first pick to victory: the frames each phase took. What bouts per placement buy.
+ */
+export function botMatchTime(
+  seed: number,
+  { players = 4, level = 'normal', mode = 'brawl', bouts }: { players?: number; level?: BotLevel; mode?: ModeId; bouts?: number } = {},
+): BotMatchTime {
+  const { m, bots } = botMatch(seed, undefined, undefined, players, level, undefined, undefined, mode);
+  m.rules = { ...withMode(m.rules, mode), ...(bouts ? { bouts } : {}) };
+  m.startMatch();
+  const frames: Partial<Record<Phase, number>> = {};
+  let placements = 0;
+  for (let f = 0; f < 4 * 60 * 60 * 60 && m.phase !== 'victory'; f++) {
+    if (m.phase === 'pick' && m.phaseFrame === 1) placements++; // a frame in: startMatch's pick starts on frame 0, the rest a step before we look
+    frames[m.phase] = (frames[m.phase] ?? 0) + 1;
+    m.step(bots.frames(m));
+    m.drainEvents();
+  }
+  return { frames, rounds: m.round, placements, ended: m.phase === 'victory' };
 }

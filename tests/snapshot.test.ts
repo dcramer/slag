@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { Match } from '../src/game/match';
-import { DEFAULT_RULES, MATCH_LENGTHS } from '../src/game/rules';
+import { DEFAULT_RULES, MATCH_LENGTHS, withMode } from '../src/game/rules';
 import { sanitizeRules } from '../src/net/actions';
 import { Predictor } from '../src/net/predict';
 import { fromWire, hashMatch, hashSnap, restoreMatch, snapshotMatch, toWire } from '../src/net/snapshot';
@@ -33,7 +33,7 @@ function inputsAt(m: Match, f: number): Record<string, InputFrame> {
  */
 const MATCH_FIELDS = {
   saved:
-    'seed level phase phaseFrame frame round players placed plan crate run result prevScores winners nextUid charRolls pendingAdvance themeOverride rules nextSalt salt dryRounds forceProfile blood',
+    'seed level phase phaseFrame frame round bout players placed plan crate run result prevScores winners nextUid charRolls pendingAdvance themeOverride rules nextSalt salt dryRounds forceProfile blood',
   derived: 'events', // render/audio only, drained every frame
 };
 const RUN_FIELDS = {
@@ -138,6 +138,28 @@ describe('match snapshots', () => {
       a.drainEvents();
     }
     expect([...checked]).toEqual(expect.arrayContaining(['pick', 'place', 'run']));
+  }, 60_000);
+
+  it('restores a brawl mid-bout and carries on into the next bout in lockstep', () => {
+    const a = new Match(31, undefined, { ...withMode(DEFAULT_RULES, 'brawl'), pickSeconds: 10, placeSeconds: 15 });
+    for (const d of ['a:kb1', 'b:kb1']) a.join(d);
+    a.startMatch();
+    // Idle through pick and place (the timers hand out cards and forfeit spots); in a race b holds self-destruct.
+    const inputs = (m: Match): Record<string, InputFrame> =>
+      m.phase === 'run' ? { 'b:kb1': press({ alt: true, altPressed: m.run!.frame % 200 === 60 }) } : {};
+    for (let f = 0; f < 60 * 60 && !(a.phase === 'run' && a.bout === 2 && a.run!.frame === 90); f++) a.step(inputs(a));
+    expect(a.bout).toBe(2);
+    const b = new Match(1);
+    restoreMatch(b, JSON.parse(JSON.stringify(snapshotMatch(a))));
+    expect(b.bout).toBe(2);
+    expect(hashMatch(b)).toBe(hashMatch(a));
+    for (let f = 0; f < 60 * 60 && !(a.phase === 'run' && a.bout === 3); f++) {
+      a.step(inputs(a));
+      b.step(inputs(b));
+    }
+    expect(b.phase).toBe('run');
+    expect(b.bout).toBe(3);
+    expect(hashMatch(b)).toBe(hashMatch(a));
   }, 60_000);
 
   it("carries a held controller cursor's speed ramp, or it would jump after a resync", () => {

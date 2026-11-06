@@ -107,6 +107,20 @@ export const shots: Scenarios = {
     const race = opt('race') || ',';
     // `--bots N` seats bots first, and with `--players 0` they race alone.
     await open(`seed=${seed}&players=${players}&race=${race}&propseed=${opt('propseed', '1')}${opt('bots') ? `&bots=${opt('bots')}` : ''}`);
+    // `--bout N`: play the bouts before it out (the runners as they are: bots, or players standing still) into bout N's race.
+    const bout = Number(opt('bout', '1'));
+    if (bout > 1) {
+      const got = await page.evaluate((n) => {
+        const d = (window as any).slagDebug;
+        for (let f = 0; f < 600 && !(d.match.phase === 'run' && d.match.bout >= n); f++) d.step(30);
+        return d.match.phase === 'run' ? d.match.bout : -1;
+      }, bout);
+      if (got !== bout)
+        throw new Error(`never reached bout ${bout} (the rules give ${await page.evaluate(() => (window as any).slagDebug.match.rules.bouts)})`);
+      // The HUD's phase wipe runs on the clock, which stood still while the frames were stepped: let it finish.
+      await page.waitForTimeout(600);
+      await page.evaluate(() => (window as any).slagDebug.render());
+    }
     const exact = opt('runframe');
     if (exact) {
       // Boot time decides how far the race got before the pause, so step to the frame rather than by a count.
@@ -142,7 +156,7 @@ export const shots: Scenarios = {
         opt('campin')?.split(',').map(Number) ?? null,
       );
       await step(4);
-      await snap(`race-${seed}-${exact}`);
+      await snap(`race-${seed}${bout > 1 ? `-bout${bout}` : ''}-${exact}`);
       return;
     }
     const pop = Number(opt('pop', '0'));

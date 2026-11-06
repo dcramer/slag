@@ -32,6 +32,8 @@ export interface ModeDef {
   crate: CrateMix;
   /** With more than one player, what the race camera frames (render/camera-follow.ts): the whole pack, or the leader and a screen behind them. */
   camera: 'pack' | 'leader';
+  /** Bouts per placement when the mode is chosen (MatchRules.bouts): fights on one level's parts before the next pick. One if unset. */
+  bouts?: number;
   /**
    * Whether a level set (theme) builds this mode's level as the mode means it. Every set should, since the engine
    * builds the level; one that doesn't yet still plays (Rising Slag in a farm is a classic climb, no loop), and the
@@ -117,6 +119,9 @@ export const MODES: Record<ModeId, ModeDef> = {
     // No gap to cross: the crate leans to hazards to knock people into and utility to throw them about.
     crate: { bridges: false, roles: { hazard: 1.8, utility: 1.2, build: 0.4, demolish: 0.5 } },
     camera: 'pack',
+    // Three fights on each placement, as the party brawler plays rounds back to back: picking and placing (up to 30 s)
+    // would otherwise outlast a fight (about 28 s with bots).
+    bouts: 3,
     builds: () => true,
     score: ({ run, standings }) =>
       scoreSurvival(

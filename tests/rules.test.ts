@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 import { Match } from '../src/game/match';
-import { DEFAULT_RULES, type MatchRules } from '../src/game/rules';
+import { DEFAULT_RULES, type MatchRules, restoreRules, withMode } from '../src/game/rules';
 import { rollKind } from '../src/gen/level/weather';
 import { applyAction, newNetState, sanitizeRules } from '../src/net/actions';
 import { cloneSnap, hashMatch, restoreMatch, snapshotMatch } from '../src/net/snapshot';
@@ -15,6 +15,7 @@ const CHANGED: MatchRules = {
   mode: 'slag',
   targetScore: 80,
   maxRounds: 25,
+  bouts: 2,
   pickSeconds: 20,
   placeSeconds: 30,
   raceSeconds: 60,
@@ -61,6 +62,23 @@ describe('sanitizeRules', () => {
 
   it('never lets rounds drift away from points', () => {
     expect(sanitizeRules({ targetScore: 30, maxRounds: 1e9 }).maxRounds).toBe(10);
+  });
+});
+
+describe('bouts per placement', () => {
+  it("come with a mode: Brawl's three, one elsewhere, and whatever the host chose after", () => {
+    expect(withMode(DEFAULT_RULES, 'brawl').bouts).toBe(3);
+    expect(withMode({ ...DEFAULT_RULES, bouts: 5 }, 'race').bouts).toBe(1);
+    expect(withMode(DEFAULT_RULES, 'slag').bouts).toBe(1);
+    expect(sanitizeRules({ ...withMode(DEFAULT_RULES, 'brawl'), bouts: 5 }).bouts).toBe(5);
+  });
+
+  it("are the mode's own when a packet or a save has none on offer", () => {
+    expect(sanitizeRules({ mode: 'brawl' }).bouts).toBe(3);
+    expect(sanitizeRules({ mode: 'brawl', bouts: 4 }).bouts).toBe(3);
+    expect(sanitizeRules({ mode: 'race', bouts: 99 }).bouts).toBe(1);
+    expect(restoreRules({ mode: 'brawl' }).bouts).toBe(3);
+    expect(restoreRules({ mode: 'brawl', bouts: 2 }).bouts).toBe(2);
   });
 });
 

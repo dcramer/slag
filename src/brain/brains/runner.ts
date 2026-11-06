@@ -247,8 +247,9 @@ export function runnerBrain(seed: number, traits: Personality, mood: Temperament
   return {
     think(v) {
       if (v.phase !== phase) {
-        // The race is over (the score screen still shows it): take it to heart once, as it last stood.
-        if (raced && v.phase !== 'run' && v.phase !== 'score') {
+        // The race is over (the score screen still shows it): take it to heart once, as it last stood. Leaving the
+        // score screen for another bout on the same parts is the end of one too.
+        if (raced && v.phase !== 'score') {
           reckon(raced);
           raced = null;
         }

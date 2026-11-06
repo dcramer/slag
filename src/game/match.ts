@@ -162,23 +162,26 @@ export function rulesProfile(rules: MatchRules): ProfileOverride {
 }
 
 /**
- * The full match state machine: lobby → (pick → place → run → score)* → victory.
- * Deterministic given the seed and per-device input stream; owns no DOM.
- */
-/**
  * Rounds this page has started with no proven way to the flag on a level nothing has touched. Generation promises
  * one there, so any count is a broken guarantee, and the host reports it (src/game-client.ts). A level parts have
  * sealed is play, not a miss. Diagnostics only, like `lastGenInfo`: the sim never reads it, and it isn't match state.
  */
 export const planMisses = { count: 0 };
 
+/**
+ * The full match state machine: lobby → (pick → place → (run → score)×bouts)* → victory.
+ * Deterministic given the seed and per-device input stream; owns no DOM.
+ */
 export class Match {
   seed: number;
   level: Level;
   phase: Phase = 'lobby';
   phaseFrame = 0;
   frame = 0;
+  /** Rounds played, this one included: every bout is a round. */
   round = 0;
+  /** Which bout on this placement the round is (1 to `rules.bouts`); 0 in the lobby. */
+  bout = 0;
   /** Rounds in a row nobody finished; a stuck match gets more help from the crate. */
   dryRounds = 0;
   players: Player[] = [];
@@ -497,6 +500,7 @@ export class Match {
   startMatch() {
     this.salt = this.nextSalt;
     this.round = 0;
+    this.bout = 0;
     this.dryRounds = 0;
     this.placed = [];
     this.plan = this.solution();
@@ -517,6 +521,7 @@ export class Match {
     this.players = this.players.filter((p) => !p.leaving);
     if (!this.players.length) return this.toLobby();
     this.round++;
+    this.bout = 1;
     this.run = null;
     const count = Math.max(3, this.players.length + 2);
     // Re-proven here, so bridges built from the plan shorten it. The crate offers every bridge it still has,
@@ -777,6 +782,16 @@ export class Match {
 
   // ---------------------------------------------------------------- run
 
+  /**
+   * The next bout on this placement: a round of its own on the same level and parts, straight from the score screen.
+   * The race starts fresh (runners home, slag down, boxes full, parts as the run's start sets them).
+   */
+  private startBout() {
+    this.round++;
+    this.bout++;
+    this.startRun();
+  }
+
   /** Skip straight to the race with whatever is placed (used by pick/place flow and debug tools). */
   startRun() {
     this.detonateCharges();
@@ -854,6 +869,7 @@ export class Match {
     this.newLevel(deriveSeed(this.seed, 'next-match'));
     this.run = null;
     this.result = null;
+    this.bout = 0;
     for (const p of this.players) {
       p.ready = false;
       p.score = 0;
@@ -872,6 +888,8 @@ export class Match {
       // Top score wins, ties are joint. At the limit with nobody on the board there is no winner, not a tie of everyone.
       this.winners = best > 0 ? this.players.filter((p) => p.score === best).map((p) => p.slot) : [];
       this.setPhase('victory');
+    } else if (this.bout < this.rules.bouts) {
+      this.startBout();
     } else {
       this.startRound();
     }
