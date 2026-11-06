@@ -942,6 +942,28 @@ export const BRIEFS: Record<string, Brief> = {
     // loose at its end, a boot's sole flapping.
     worn: "a strip of grey tape (#9a9c98) is wrapped round the bow's curtain rod just above her hand where it snapped and was mended, the bow's curve staying the same; a big ragged notch is torn out of the fur wrap's lower edge; the end of the longest braid is frayed loose into a ragged tuft; the back boot's sole is flapping loose at the toe. Her face, the bushy hair and the bow's shape stay as they are.",
   },
+  bear: {
+    // The nod, each part of the read at race size and each a shape in outline: the tiny top hat perched upright
+    // between two round ears, with background between the hat and each ear (the read: parts that touch become one
+    // shape, so the ears sit far out on the head's sides; the top-hat girl's hat is as tall as she is, his is small);
+    // the microphone held up in front of the mouth, clear of the face (the puppy's mic sits under a beanie on a
+    // skinny card; this is a stocky bear); the round head with a big muzzle on a big round belly, stiff jointed limbs
+    // (upright and stiff, never the ape's hunch and long arms). The head faces us, so both ears show apart.
+    // Ours, and the joke: a coin-op kiddie ride gone walkabout: the mic is a shower head on its hose, a coin slot in
+    // the belly, one eye's bulb blown, the jaw stuck half open.
+    // The palette is neutral (Decisions 4): the fur in the player's colour, the belly and muzzle a light of it; the
+    // hat and bow tie dark neutrals, the shower head metal, the eyes a pale glow. The colours lead the brief: the
+    // image model drops what comes last.
+    design:
+      'The character: a stocky cartoon animatronic bear, a creepy old coin-operated kiddie ride come to life, standing upright, his head turned to face us so both ears show. Colours: brown fur (#8f6432), a pale tan belly and muzzle (#e0bc90), a black top hat and bow tie (#2a2428), a steel grey shower head and hose (#a8acb0), pale yellow glowing eyes (#f4ecb0). ' +
+      'His signature, big and bold: a tiny black top hat, taller than it is wide, perched upright on the very top of his big round head, with clear white gaps between it and his two round ears, which sit far out on the sides of his head. ' +
+      'His near hand holds a steel shower head on a hose up in front of his mouth like a microphone, out clear of his face. ' +
+      'A big round muzzle, a black bow tie, a big round belly with a coin slot in it, short stiff jointed limbs with gaps at the elbows and knees.',
+    // The edit carries the rest of the twist with the wear, all off the face (the kit draws the eyes): the coin jammed
+    // in the belly's slot, the fur torn open at a joint with the metal showing, the hat dented. The hose stays short:
+    // a cord coiled by the feet reads as a tail.
+    worn: 'a big coin slot is set in the middle of his belly with a large silver coin jammed half into it; the fur on his near forearm is torn open at the elbow joint, a grey metal rod showing through; the fur on his far knee is split open showing a grey metal joint; the bow tie hangs crooked; the top hat has a big dent in its side. The top hat stays exactly where it is, small and upright on top of his head with white gaps between it and both round ears, and the shower head and its short hose stay held up in front of his mouth. His face stays as it is.',
+  },
 };
 
 function brief(kind: string): Brief {

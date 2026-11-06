@@ -76,7 +76,7 @@ Each kind's entry is its own file in [characters/](characters/): what a stranger
 | [succubus](characters/succubus.md) | the succubus with bat wings on her head | slim and long-legged, bat wings spread up and out from her head, a bigger pair at her back, big long hair, a strapless bodysuit, thigh-high boots | costume: the bodysuit; the wings a dark of it |
 | [archer](characters/archer.md) | the red-braided girl with the bow who hunts robot beasts | side on in a hunter's crouch, a bow drawn and held out level ahead, thick braids bushing out behind, a quiver, a fur shoulder wrap | costume: the leathers; the fur a light of it |
 | [slime](characters/slime.md) | the blue teardrop slime with the grin | a limbless teardrop of goo with a curled tip, two big eyes and a huge grin | costume: the goo; the shine a light of it |
-| [bear](characters/bear.md) | the animatronic bear in the little top hat | a stocky bear with round ears, a tiny top hat between them, a bow tie, a mic held up, stiff jointed limbs | costume: the fur suit; the belly and muzzle a light of it |
+| [bear](characters/bear.md) | the animatronic bear in the little top hat | a stocky bear with round ears, a tiny top hat between them with background each side, a bow tie, a shower head held up like a mic, a coin jammed in his belly, stiff jointed limbs torn open at the joints | costume: the fur suit; the belly and muzzle a light of it, the torn fur a dark of it |
 
 **Reserves**, if a kind won't read: the spinning bandicoot (its tuft and grin rhyme with the speedster), the shovel-wielding knight, the red-haired mountain climber, the falling-block party bean (rhymes with the crewmate). The space marine in green armour reads as a generic soldier at 20 px; the plumber's tall brother, the ape's red-capped nephew and the king's turtle foot soldiers rhyme with kinds already in.
 
@@ -153,7 +153,7 @@ The strongest reads first. **Keyed** marks the non-humanoids, the riskiest to dr
 | 39 | succubus | Moribund | humanoid, winged head | medium: the head wings, only standing clear of the hair; the stinger's horns and the vampire to watch |
 | 40 | archer | Aloof | humanoid, side on | drawn flat; named by both blind readers at medium in the first round, paired with nobody (the bow drawn in every pose, the bushy mane) |
 | 41 | slime | Slimple | **keyed**, limbless | drawn flat; the blind read passes (both readers named it at medium-high or better, unpaired: the onion with its tip a point, kept by `smooth: 0`; a big hooked tip read as a witch's hat) |
-| 42 | bear | Creaky Buzzbear | humanoid, stocky | medium: the tiny hat between round ears; the top-hat girl and the ape to watch |
+| 42 | bear | Creaky Buzzbear | humanoid, stocky | drawn flat; the blind read passes (named by both readers, at medium and low, unpaired: the tiny hat between the round ears with background each side, the mic held up) |
 
 **What to check.** No two kinds may rhyme. Watch these pairs:
 
