@@ -1040,22 +1040,23 @@ export const BRIEFS: Record<string, Brief> = {
     worn: "the hem of the near leg of her puffy trousers is snagged and torn into a big ragged hanging strip; the tin-foil tiara has its front point bent over; a strip of grey tape (#9a9c98) is wrapped round the middle of the ponytail where it was mended; the trailing end of the dark sash hangs frayed into ragged tatters. Her face, the ponytail's length and shape straight out behind her head, the white ring at her crown and the hoop earrings stay exactly as they are.",
   },
   bear: {
-    // The nod, each part of the read at race size and each a shape in outline: the tiny top hat perched upright
-    // between two round ears, with background between the hat and each ear (the read: parts that touch become one
+    // The nod, each part of the read at race size and each a shape in outline: the top hat perched upright
+    // between two round ears, tall enough to read as a top hat at play size (the clean colour read went from low to
+    // medium and high when it and the bow tie grew), with background between the hat and each ear (the read: parts that touch become one
     // shape, so the ears sit far out on the head's sides; the top-hat girl's hat is as tall as she is, his is small);
     // the microphone held up in front of the mouth, clear of the face (the puppy's mic sits under a beanie on a
     // skinny card; this is a stocky bear); the round head with a big muzzle on a big round belly, stiff jointed limbs
     // (upright and stiff, never the ape's hunch and long arms). The head faces us, so both ears show apart.
-    // Ours, and the joke: a coin-op kiddie ride gone walkabout: the mic is a shower head on its hose, a coin slot in
-    // the belly, one eye's bulb blown, the jaw stuck half open.
+    // Ours, and the joke: a coin-op kiddie ride gone walkabout: the mic is a shower head on a stub of hose, a coin slot
+    // in the belly, the jaw stuck hanging open on its hinge.
     // The palette is neutral (Decisions 4): the fur in the player's colour, the belly and muzzle a light of it; the
     // hat and bow tie dark neutrals, the shower head metal, the eyes a pale glow. The colours lead the brief: the
     // image model drops what comes last.
     design:
       'The character: a stocky cartoon animatronic bear, a creepy old coin-operated kiddie ride come to life, standing upright, his head turned to face us so both ears show. Colours: brown fur (#8f6432), a pale tan belly and muzzle (#e0bc90), a black top hat and bow tie (#2a2428), a steel grey shower head and hose (#a8acb0), pale yellow glowing eyes (#f4ecb0). ' +
-      'His signature, big and bold: a tiny black top hat, taller than it is wide, perched upright on the very top of his big round head, with clear white gaps between it and his two round ears, which sit far out on the sides of his head. ' +
-      'His near hand holds a steel shower head on a hose up in front of his mouth like a microphone, out clear of his face. ' +
-      'A big round muzzle, a black bow tie, a big round belly with a coin slot in it, short stiff jointed limbs with gaps at the elbows and knees.',
+      'His signature, big and bold: a tall black top hat, taller than it is wide, perched upright on the very top of his big round head, with clear white gaps between it and his two round ears, which sit far out on the sides of his head. ' +
+      'His near hand holds a steel shower head on a short stub of hose up in front of his mouth like a microphone, out clear of his face. ' +
+      'A big round muzzle with the lower jaw hanging open on its hinge, a dark mouth with a row of pointed teeth, a big black bow tie, a big round belly with a small coin slot in it, short stiff jointed limbs with gaps at the elbows and knees.',
     // The edit carries the rest of the twist with the wear, all off the face (the kit draws the eyes): the coin jammed
     // in the belly's slot, the fur torn open at a joint with the metal showing, the hat dented. The hose stays short:
     // a cord coiled by the feet reads as a tail.
