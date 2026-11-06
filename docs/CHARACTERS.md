@@ -1,6 +1,6 @@
 # Characters
 
-The runners are a cast of thirty-four homages to famous game characters, in our own designs. In the lore (DESIGN.md) they're the knock-off heroes who almost got their own game. Each kind is a character design of its own, the way the barnyard party game's animals are: its own outline, its signature props, and a way of moving.
+The runners are a cast of thirty-eight homages to famous game characters, in our own designs. In the lore (DESIGN.md) they're the knock-off heroes who almost got their own game. Each kind is a character design of its own, the way the barnyard party game's animals are: its own outline, its signature props, and a way of moving.
 
 `pnpm shot cast` shoots the sheet: the 8-player lineup at play scale on farm and mine, the race start, deaths, a 3× close-up, the lobby cards, the "is it the homage?" sheet (`cast-recognise.png`: each kind close up beside "This is ___"), the silhouette test (`cast-silhouettes.png`) and the catalog of every kind (`--only catalog` for the last three). Every sheet waits for the rendered kinds' frames (`slagDebug.sprites.ready()`), so it shows what ships. In the console, `slagDebug.cast` has `catalog()`, `silhouettes()`, `recognise()` and `bench()`.
 
@@ -69,6 +69,10 @@ Each kind's entry is its own file in [characters/](characters/): what a stranger
 | [creeper](characters/creeper.md) | the green block creeper | a tall block body with a square head the same width, four stubby block legs, no arms, a frowning face of square holes cut through him, a birthday candle burnt to a stub for a fuse | costume: the body; its painted squares a light and a dark of it |
 | [tophat](characters/tophat.md) | the little girl in the tall top hat | a tin-can top hat as tall as the rest of her, a short cape with a high collar, a ponytail out the back, a huge cocktail umbrella | costume: the hat and cape; the hair tie and the lining a light of it |
 | [pyramid](characters/pyramid.md) | the triangle-helmeted executioner | a huge rusty wedge of a helmet, its point out past his shoulder, no face, a butcher's apron with a pig on it, thick bare arms, a giant cheese slicer dragged behind | costume: the apron, the pig a light of it |
+| [invader](characters/invader.md) | the pixel crab from space | wider than tall and cut from square pixels, two antennae, side claws raised, stubby legs that shuffle in and out, two square eye holes | costume: the body |
+| [vampire](characters/vampire.md) | the giant vampire lady in the big hat | as tall as the box allows, a wide flat-crowned hat, a long gown to the floor, long claws, pearls | costume: the gown |
+| [assistant](characters/assistant.md) | the town assistant dog with the bell in her hair | a small yellow dog upright, floppy ears, a top-knot with a bell, a vest and skirt, a clipboard | costume: the fur, the vest a dark of it |
+| [sim](characters/sim.md) | the lady with the green diamond over her head | a slim woman with a black bob in a dress, a green double-pointed diamond floating clear above her head | costume: the dress; the diamond keeps its green |
 
 **Reserves**, if a kind won't read: the spinning bandicoot (its tuft and grin rhyme with the speedster), the shovel-wielding knight, the red-haired mountain climber, the falling-block party bean (rhymes with the crewmate). The space marine in green armour reads as a generic soldier at 20 px; the plumber's tall brother, the ape's red-capped nephew and the king's turtle foot soldiers rhyme with kinds already in.
 
@@ -138,6 +142,10 @@ The strongest reads first. **Keyed** marks the non-humanoids, the riskiest to dr
 | 32 | creeper | Creepah | **keyed**, four legs, no arms | drawn flat; the blind read passes (named at medium by both once the face was cut through him and the candle burnt to a stub) |
 | 33 | tophat | Hat Kidd | humanoid, small | drawn flat; the blind read passes (the hat, a clean tin cylinder on a wide brim, with the umbrella held out low, clear of it) |
 | 34 | pyramid | Pyramid Ted | humanoid, big + blade | drawn flat, no face; the blind read not passed (one reader of two names him, the other reads the mage's pointed hat: the cowl overhanging his shoulders is a brim at play size) |
+| 35 | invader | Invayda | **keyed**, legs only, pixel edge | high: the pixel crab; the creeper's blocks and the crewmate's legs to watch |
+| 36 | vampire | Lady Dimitreskew | humanoid, tall, gowned | medium: the height and the hat; the mage's and the top-hat girl's hats to watch |
+| 37 | assistant | Izzabelle | humanoid, small, dog | medium: the bell top-knot; the zapmouse and the rapping puppy to watch |
+| 38 | sim | Bella Gauche | humanoid + floating diamond | medium: the diamond, only while it floats clear |
 
 **What to check.** No two kinds may rhyme. Watch these pairs:
 

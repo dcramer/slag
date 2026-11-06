@@ -259,6 +259,10 @@ const READS_AS: Record<Kind, string> = {
   creeper: 'the green block creeper',
   tophat: 'the little girl in the tall top hat',
   pyramid: 'the triangle-helmeted executioner',
+  invader: 'the pixel crab from space',
+  vampire: 'the giant vampire lady in the big hat',
+  assistant: 'the town assistant dog with the bell in her hair',
+  sim: 'the lady with the green diamond over her head',
 };
 
 /**
