@@ -52,7 +52,7 @@ What we borrow: the camera that follows the leader, out when you fall off it; th
 | How boxes deal | weighted random [SR-patch]; players say by rank: drills to the back, crates to the front [SR-odds] | by rank: catch-up to the pack, defence to the leader (`CATCH_UP`) | by rank |
 | Strongest catch-up | Golden Hook: swap places with the runner ahead [SR-pickups] | Queue Jumper: trade places with the runner just above | keep |
 | Movement tools | grapple at 45° onto white ceilings; a boost meter [SR-controls] | walk, run, jumps, wall jumps; no grapple or boost | a grapple item |
-| Early leader wins (leader at 15 s) | not documented | open shaft with the bump from below: 69% as built, 65% with items in every hand, 61% with none (storeys: 60, 59, 55; 128 seeds, about 80 judged each, so ±5) | about half (estimate) |
+| Early leader wins (leader at 15 s) | not documented | open shaft, bumping from below in the air too: 66% as built, 50% with items in every hand, 69% with none (storeys: 60, 59, 55; 128 seeds, about 80 judged each, so ±5) | about half (estimate) |
 | Lone bot gets through a lap (laps 1–3) | n/a | Easy 63/75/53, Normal 88/75/43, Hard 84/74/75 (32 seeds) | `PASS_TARGETS` |
 
 ### Why catch-up isn't working yet: level design and mechanics
