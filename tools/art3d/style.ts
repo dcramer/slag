@@ -442,25 +442,26 @@ export const BRIEFS: Record<string, Brief> = {
     worn: 'the tip of every hair spike is singed black; the hubcap has a big dent knocked into it and a crack across it; two teeth are snapped out of the middle of the knife edge, leaving a big notch; one trouser leg is torn off ragged at the shin.',
   },
   pyramid: {
-    // The nod, each part of the read at race size and each a shape in outline: the head one huge fat wedge, a
-    // right-angled triangle wider than his shoulders, its point sticking out past his front shoulder with background
-    // above and below it (the read: nobody else in the cast has a triangle for a head; the stinger's horns, the king's
-    // crown and the warrior's pot all sit on a head, this is the head); a hulking body with thick bare arms and two
-    // thick legs apart (the brute; with the blade across his legs his base flared into a robe and the wedge read as a
-    // wizard's hat, the mage's read); the giant flat blade dragged behind him, a long diagonal from his fist to the
-    // floor (a smooth paddle with a slot through it, never the merc's serrated knife standing beside him).
+    // The nod, each part of the read at race size and each a shape in outline: the head one tall upright pyramid
+    // sitting straight down on his shoulders, its point straight up, its base narrower than them and as tall as his
+    // torso (the read: nobody else in the cast has a triangle for a head; the stinger's horns, the king's crown and the
+    // warrior's pot all sit on a head, this is the head; the first design's wedge, its point out past his front
+    // shoulder, was a brim at play size and two readers in three rounds took it for the mage's hat); a hulking body
+    // with thick bare arms and two thick legs apart (the brute; narrower shoulders sloping into the pyramid made one
+    // cone, a gnome); the long flat blade dragged behind him, a steep diagonal from his fist to the floor (the second
+    // read: without it the pyramid alone is a cone hat; a smooth paddle with a slot, never the merc's serrated knife).
     // Ours, and the joke: the helmet is a rusty roof-vent cowl, rivets and a dent; the blade an enormous cheese
     // slicer; the smock a butcher's apron with a cartoon pig on it (the wear edit). A toy, slapstick: no blood.
     // The palette is neutral (Decisions 4): the apron in the player's colour, the pig a light of it; the rust, the
     // grey skin, the steel and the boots all their own. The slicer leads the brief: the model drops what comes last,
-    // and asked for last it came back small and in front of him. This is the fourth round's brief, the one kept
-    // (art/sprites/pyramid/design.prompt.txt).
+    // and asked for last it came back small and in front of him. The design shipped is an edit of the wedge's worn
+    // design to this (art/sprites/pyramid/design.prompt.txt); this brief is it, for a redraw.
     design:
       'The character: a big hulking cartoon toy brute, in five colours: a blue apron (#4f7fae), a rusty orange metal helmet (#b8683e), pale grey skin (#bdb8b2), a steel blade (#c4c8ce), dark brown boots (#4a3e38). ' +
-      'He drags a giant flat steel cheese slicer as long as he is tall behind him: his back arm reaches back, and its broad paddle blade, as wide as his head, with a slot across it, slants from his fist down to the ground far behind him on the left. ' +
-      'His head is a huge metal wedge, a right-angled triangle: a tall upright back edge, a long flat level bottom edge on his shoulders sticking far out to the right, half his width again past his front shoulder, and a straight slope between them. No brim. A slot in its front. ' +
+      'He drags a giant flat steel cheese slicer as long as he is tall behind him: its long broad paddle blade with a slot across it slants steeply from his back fist down to the ground behind his back heel. ' +
+      'His head is one tall upright metal pyramid, its sharp point straight up, as tall as his torso, its base a little narrower than his broad square shoulders and sitting straight down on them, the shoulders showing level on both sides. No neck, no brim, nothing sticking out sideways. ' +
       'Thick bare grey arms, a knee-length apron, two thick legs apart, big boots.',
-    worn: "the helmet is an old rusty roof-vent cowl: a row of big round rivets along its bottom edge and a big dent knocked into its sloping top face; a big cartoon pig face in pink (#e8a0a8), round with a snout and two ears, is printed on the front of the apron; the apron hem is torn into a ragged notch at one side; a big chip is knocked out of the cheese slicer blade edge. The helmet's wedge shape, its point and the slot stay exactly as they are.",
+    worn: "the helmet is an old rusty roof-vent cowl: a row of big round rivets along its base and a big dent knocked into one face; a big cartoon pig face in pink (#e8a0a8), round with a snout and two ears, is printed on the front of the apron; the apron hem is torn into a ragged notch at one side. The pyramid's shape and its point stay exactly as they are.",
   },
   ape: {
     // The nod, each part of the read at race size: the hunched gorilla shape with arms longer than its legs

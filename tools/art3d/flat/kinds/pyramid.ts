@@ -1,20 +1,20 @@
 import type { FlatKind } from '../kinds';
 
-// Every pose keeps the two shapes that carry him (art/sprites/pyramid/design.prompt.txt): the huge rusty wedge on his
-// shoulders, its point sticking out to the right with background above and below it (the read: a triangle for a
-// head; with the cheese slicer held in front of his legs the base flared into a robe and the wedge read as a
-// wizard's hat); and the giant cheese slicer trailing low behind him to the left, a long diagonal from his fist to the
-// floor (never raised, never in front of his legs, never planted beside him like the merc's knife). The drawings in
-// flat/ are the model's (drawn/) with the cowl scaled 1.35 by art/sprites/pyramid/helmet.py: drawn head-sized, it read
-// as a hat or a hood at play scale. KEEP is the second round's words, for a redraw.
+// Every pose keeps the two shapes that carry him (art/sprites/pyramid/design.prompt.txt): the tall upright rusty
+// pyramid sitting straight down on his shoulders, its point straight up and its base narrower than them (the read: a
+// triangle for a head on a hulking body; the old wedge, its point out past his front shoulder, was a brim at play
+// size, and the mage's hat); and the long cheese slicer in his back fist, slanting from it down to the floor behind
+// him to the left (the second read, a great blade dragged; never raised, never across his legs, where his base
+// flared into a robe). KEEP is the words the pose sheets were drawn with.
 const KEEP =
-  'the long low rusty wedge helmet always flat on his shoulders with its long point sticking far out to the right and white background above and below it, the giant cheese slicer always in his back fist, trailing low behind him to the left, never raised, never in front of his legs';
+  'the tall upright rusty pyramid helmet always sitting straight down on his shoulders with its point straight up, and the long cheese slicer always in his back fist, slanting from his fist down to the floor behind him to the left, never raised, never in front of his legs';
 
 export const kind: FlatKind = {
-  body: 200,
+  body: 146,
   map: {
     roles: ['boot', 'skin', 'apron', 'pig', 'rust', 'steel', 'dark'],
-    // Sampled from the design (art/sprites/pyramid/design.png, `swatch.py`), region by region.
+    // Sampled from the design (art/sprites/pyramid/design.png, `swatch.py`), region by region: the wedge's design's
+    // samples and the pyramid's, which are the same character's colours.
     families: [
       // The boots and the trousers under the apron, and their shade: one dark brown.
       ['boot', [68, 60, 52]],
@@ -23,10 +23,19 @@ export const kind: FlatKind = {
       ['boot', [52, 44, 36]],
       ['boot', [68, 52, 44]],
       ['boot', [84, 68, 60]],
+      // The boots' cel shade in the pyramid's drawings, a dark brown just off the ink: big enough to stay a fill, it
+      // traced as ink blots on the boots until it had a family.
+      ['boot', [44, 38, 32]],
+      ['boot', [48, 38, 32]],
+      ['boot', [42, 32, 28]],
       // The grey skin and its cel shade.
       ['skin', [188, 180, 172]],
       ['skin', [186, 182, 173]],
-      ['skin', [188, 188, 172]],
+      ['skin', [182, 178, 169]],
+      ['skin', [181, 179, 169]],
+      ['skin', [183, 180, 172]],
+      ['skin', [173, 170, 163]],
+      ['skin', [126, 123, 131]],
       ['skin', [132, 124, 132]],
       ['skin', [134, 128, 134]],
       ['skin', [132, 132, 132]],
@@ -39,12 +48,21 @@ export const kind: FlatKind = {
       ['apron', [63, 97, 135]],
       ['apron', [52, 84, 124]],
       ['apron', [97, 121, 150]],
+      ['apron', [78, 102, 130]],
       // The cartoon pig printed on it.
       ['pig', [228, 148, 148]],
       ['pig', [207, 164, 162]],
       ['pig', [220, 140, 148]],
       ['pig', [180, 138, 144]],
+      ['pig', [205, 156, 156]],
+      ['pig', [181, 134, 139]],
       // The roof-vent cowl: its rust, the rust's blotches, the rivets and the shade, all one.
+      ['rust', [110, 60, 32]],
+      ['rust', [132, 67, 34]],
+      ['rust', [166, 96, 57]],
+      ['rust', [135, 73, 39]],
+      ['rust', [154, 87, 50]],
+      ['rust', [67, 37, 28]],
       ['rust', [148, 76, 44]],
       ['rust', [172, 100, 60]],
       ['rust', [180, 108, 68]],
@@ -62,11 +80,13 @@ export const kind: FlatKind = {
       ['steel', [191, 194, 198]],
       ['steel', [195, 198, 201]],
       ['steel', [95, 97, 112]],
+      ['steel', [186, 185, 190]],
+      ['steel', [198, 198, 202]],
       // The ink.
       ['dark', [36, 19, 26]],
       ['dark', [28, 9, 15]],
       ['dark', [20, 4, 12]],
-      ['dark', [46, 36, 38]],
+      ['dark', [27, 10, 12]],
     ],
     line: 'dark',
     thin: ['boot', 'skin', 'apron', 'pig', 'rust', 'steel'],
@@ -75,8 +95,9 @@ export const kind: FlatKind = {
     feet: ['boot'],
     // The slicer is carried, so the body's size is the man under his helmet, alike in every pose.
     loose: ['steel'],
-    min: { dark: 0.3, pig: 0.6 },
-    // The slicer's slot and the gap between his arm and his body, cut through.
+    // Skin slivers on the slicer's blade (its grey is near his) and the pig's rust-brown eye dots go.
+    min: { dark: 0.3, pig: 0.6, skin: 0.4, rust: 0.4 },
+    // The slicer's slot and the gaps between his arms and his body, cut through.
     holes: 0.6,
   },
   roles: [
@@ -98,10 +119,10 @@ export const kind: FlatKind = {
     { name: 'plaster', vary: 1, options: 2 },
     { name: 'wear', vary: 11, options: 3 },
   ],
-  // No face: nothing under the helmet. A kit eye in the first design's slot sat near the wedge's point and turned the
-  // helmet into a bird's head with a beak, and the long wedge's edit drew no slot at all. The "eye" is only the place
-  // the build sets the plaster from (and the wear's chin): set by hand on the middle of the helmet in every pose
-  // (`at`, fractions of the figure's box, from the rust's centre); with no `face`, nothing is drawn there.
+  // No face: nothing under the helmet. A kit eye in the first wedge's slot sat near its point and turned the helmet
+  // into a bird's head with a beak, and the pyramid has no slot. The "eye" is only the place the build sets the
+  // plaster from (and the wear's chin): set by hand on the pyramid's face in every pose (`at`, fractions of the
+  // figure's box, the slicer in it, from the rust's centre); with no `face`, nothing is drawn there.
   eyes: {
     role: 'dark',
     area: [0.1, 2.4],
@@ -109,17 +130,17 @@ export const kind: FlatKind = {
     specks: {},
     count: 1,
     at: {
-      idle: [0.58, 0.26],
-      idle2: [0.55, 0.26],
-      'walk-1': [0.55, 0.26],
-      'walk-2': [0.55, 0.26],
-      'run-1': [0.62, 0.27],
-      'run-2': [0.6, 0.25],
-      'air-1': [0.5, 0.22],
-      'air-2': [0.44, 0.2],
-      wall: [0.58, 0.25],
-      cheer: [0.53, 0.21],
-      cheer2: [0.55, 0.23],
+      idle: [0.73, 0.32],
+      idle2: [0.68, 0.32],
+      'walk-1': [0.72, 0.33],
+      'walk-2': [0.72, 0.32],
+      'run-1': [0.68, 0.34],
+      'run-2': [0.68, 0.33],
+      'air-1': [0.44, 0.27],
+      'air-2': [0.42, 0.31],
+      wall: [0.38, 0.24],
+      cheer: [0.66, 0.32],
+      cheer2: [0.64, 0.33],
     },
   },
   wear: {
