@@ -54,6 +54,12 @@ export const SMOKE = { vx: 190, vy: 230, radius: 46, life: 60 * 5, cooldown: 30 
 export const BAT = { windup: 36, tap: 0.6, full: 3, lift: 1.6, reach: 22 } as const;
 /** Tremor Brick: frames it's held up before it comes down (the tell), and the hop it gives the grounded. */
 export const TREMOR = { delay: 14, pop: 230 } as const;
+/**
+ * Sucker Punch: a boxing glove that springs out of a gift box, out to `reach` px in front, knocking whoever it meets
+ * `power` times as hard as the noodle and lifting them as hard as the noodle at most, so they fly sideways into whatever
+ * is behind them. It's a swing (SWORD's timing) with a long reach, so it swats shots as the noodle does.
+ */
+export const GLOVE = { reach: 54, power: 1.9, lift: 1 } as const;
 
 /** Toss the held item forward as a loose drop (down + use, or use with a shield). */
 export function tossHeld(w: RunWorld, r: Runner): void {
@@ -223,6 +229,17 @@ export const ITEMS: Record<ItemKind, ItemSpec> = {
     verb: 'Cut In',
     uses: 1,
     use: (w, r) => throwHook(w, r),
+  },
+  glove: {
+    kind: 'glove',
+    name: 'Sucker Punch',
+    verb: 'Punch',
+    uses: 3,
+    use(w, r) {
+      startSwing(r, 'glove', GLOVE.power);
+      itemEvent(w, 'use', 'glove', r.slot, cx(r), r.body.y);
+      return true;
+    },
   },
   upper: {
     kind: 'upper',

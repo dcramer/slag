@@ -25,6 +25,7 @@ Each row gives what the item or part mocks, its silhouette (what must read at ga
 | **Pocket Block** | Building a block where you stand, from the crafting sandbox and the battle-royale builders | A turf cube, carried by a handle like a lunchbox | Every block wears an assembly-instructions sticker (step 1), and cracks from the corners before it crumbles. |
 | **Queue Jumper** | The lead-camera racer's golden hook that swaps you with the runner ahead | A brass hook on a rope, flung out and reeled | It's the hook off a queue post, on red velvet rope: you're cutting in line. |
 | **Upper Hand** | The fighting game's rising anti-air, as a firework | A boxing glove, fist up, riding a rocket on a stick | The glove is strapped to a bottle rocket; it goes off with the punch. |
+| **Sucker Punch** | The prank gift box with a boxing glove on a spring | A gift box, lid ajar, a glove shooting out of it on a coiled spring | It's wrapped, with a bow; the codex card says "For you." |
 
 ## Mystery crate
 

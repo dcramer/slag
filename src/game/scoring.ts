@@ -4,7 +4,13 @@ export const POINTS = {
   survive: 10,
   first: 4,
   trap: 2,
-  underdog: 3,
+  /**
+   * A race's comeback: a trailing finisher who hadn't scored in a while. Most of a finish again, as the build-then-race
+   * party game pays its comeback four fifths of a finish (docs/MODES.md → Race).
+   */
+  underdog: 8,
+  /** The same for a trailing scorer in a mode scored by outlasting (Rising Slag, Brawl). */
+  survivor: 3,
 } as const;
 
 /** Scoreless rounds in a row before a trailing finisher counts as an underdog. */
@@ -75,11 +81,16 @@ export interface Fate {
 }
 
 /** A trailing scorer who hasn't scored in a while: the underdog bonus (see scoreRound). */
-function underdogs(slots: readonly number[], scorers: readonly number[], standings: Readonly<Record<number, Standing>>): Award[] {
+function underdogs(
+  slots: readonly number[],
+  scorers: readonly number[],
+  standings: Readonly<Record<number, Standing>>,
+  points: number = POINTS.survivor,
+): Award[] {
   const leader = Math.max(0, ...slots.map((s) => standings[s]?.score ?? 0));
   return scorers.flatMap((slot) => {
     const s = standings[slot];
-    return s && s.score < leader && s.scoreless >= UNDERDOG_ROUNDS ? [{ slot, points: POINTS.underdog, reason: 'underdog' as const }] : [];
+    return s && s.score < leader && s.scoreless >= UNDERDOG_ROUNDS ? [{ slot, points, reason: 'underdog' as const }] : [];
   });
 }
 

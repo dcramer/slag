@@ -34,6 +34,8 @@ const KICK_RANGE = 12;
 const SWING_REACH = 1.75;
 /** Tiles out a smoke bomb is worth lobbing at someone: it lands a few tiles ahead. */
 const LOB_RANGE = [2, 7] as const;
+/** Tiles a Sucker Punch reaches, about: its glove's reach and a body. */
+const PUNCH_REACH = 3.5;
 /** Where an Upper Hand reaches: rows up (it rises about 20) and tiles across (it leans about two on the way). */
 const PUNCH_RISE = [1.5, 16] as const;
 const PUNCH_ACROSS = 2.5;
@@ -151,6 +153,13 @@ export const ITEM_TACTICS: Record<ItemKind, ItemTactic> = {
   smoke: {
     when({ v, me }) {
       const r = nearest(v, me, (_, dx, dy) => dx >= LOB_RANGE[0] && dx <= LOB_RANGE[1] && Math.abs(dy) <= 2);
+      return r && { do: 'use', dir: toward(me, r) };
+    },
+  },
+  // The Sucker Punch: a long swing, at a rival level with it and up to its reach across.
+  glove: {
+    when({ v, me }) {
+      const r = nearest(v, me, (_, dx, dy) => dx <= PUNCH_REACH && Math.abs(dy) <= 1.25);
       return r && { do: 'use', dir: toward(me, r) };
     },
   },

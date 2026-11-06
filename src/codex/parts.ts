@@ -145,6 +145,7 @@ const ITEM_NOTES: Record<ItemKind, string> = {
   block: 'Some assembly required.',
   hook: 'Now serving.',
   upper: 'Keep your guard up.',
+  glove: 'For you.',
 };
 
 const crate = (name: string, pool: ItemKind[], uses: number, look: MysteryLook): PropDef =>
