@@ -8,9 +8,9 @@ import type { Level } from '../sim/level';
 import { RUN_COUNTDOWN, TILE } from '../sim/constants';
 import { barrierOf, hangRow, motionOffset, mysterySpent, mysteryState, type PlacedProp, spotAt } from '../sim/props';
 import type { Body } from '../sim/physics';
-import { routeDistance } from '../sim/items';
 import { feetUp, type Runner, type RunWorld } from '../sim/run';
 import { raceMap } from './route';
+import { rankOf } from '../sim/standing';
 import { BRAIN_VIEW_VERSION, type BoxSense, type BrainView, type Lift, type Objective, type Pace, type PropSense, type SelfSense } from './types';
 
 /**
@@ -59,15 +59,6 @@ const OBJECTIVES: Record<ModeId, (m: Match) => Objective> = {
 
 /** Rows `r`'s feet stand above the spawn's floor, laps and all. */
 const upOf = (run: RunWorld, r: Runner) => round4(((run.level.spawn.ty + 1) * TILE - feetUp(run.level, r)) / TILE);
-
-/** Runners still racing ahead of `r`: everyone finished, and whoever is nearer the flag by route, or round a climb, higher. */
-function rankOf(run: RunWorld, r: Runner): number {
-  const active = (q: Runner) => q.alive && !q.finished;
-  if (!active(r)) return 0;
-  const by = run.level.tide ? (q: Runner) => feetUp(run.level, q) : (q: Runner) => routeDistance(run.level, q);
-  const mine = by(r);
-  return run.runners.filter((q) => q !== r && (q.finished || (active(q) && by(q) < mine))).length;
-}
 
 /** The mystery boxes standing in the race, where they stand now. */
 function boxesOf(run: RunWorld): BoxSense[] {

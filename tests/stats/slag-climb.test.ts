@@ -17,7 +17,7 @@ import { botRace } from '../lib/bot-race';
 const SEEDS = Array.from({ length: 32 }, (_, i) => i + 1);
 const LEVELS: readonly BotLevel[] = ['easy', 'normal', 'hard'];
 /** A shaft's laps, as every Rising Slag shaft has them (gen/level/difficulty.ts `stretchesOf`). */
-const LAPS = stretchesOf({ tide: true, curve: true, size: 'tall', h: LOOP_ROWS + LOOP_BAND, difficulty: 'medium' });
+const LAPS = stretchesOf({ loop: true, curve: true, size: 'tall', h: LOOP_ROWS + LOOP_BAND, difficulty: 'medium' });
 const BANDED = LAPS.filter((s) => Number.isFinite(s.to));
 const DIFFS = ['gentle', 'medium', 'hard'] as const;
 

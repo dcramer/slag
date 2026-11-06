@@ -2,8 +2,8 @@ import { DT, TILE } from '../constants';
 import { lapShift } from '../level';
 import { letGo } from '../props/attach';
 import type { Runner, RunWorld } from '../run';
+import { aheadOf as standingAhead } from '../standing';
 import { BONK_CREDIT, bonk, cx, cy, isActive, itemEvent, launch } from './common';
-import { routeDistance } from './tax';
 import type { HookLine, UpperFist } from './types';
 
 /**
@@ -48,31 +48,11 @@ function wrapped(w: RunWorld, d: number): number {
   return m > p / 2 ? m - p : m;
 }
 
-/** How far along a runner is: climbed height on a climb (laps counted), nearness to the flag by route in a race. Bigger is further. */
-function progress(w: RunWorld, r: Runner): number {
-  if (w.level.tide) return -(r.body.y + r.body.h - r.lap * loopPx(w));
-  return -routeDistance(w.level, r);
-}
-
 /** Someone a hook or a fist can reach: racing, out of the spawn zone, not shut inside a part. */
 const reachable = (w: RunWorld, r: Runner) => isActive(r) && !w.isSafe(r) && !r.attach.grip?.sealed;
 
-/** The runner just ahead of `r`: the least far along of everyone further along. -1 if `r` leads. Ties go to the lower slot. */
-export function aheadOf(w: RunWorld, r: Runner): number {
-  const mine = progress(w, r);
-  let best = -1;
-  let bestP = 0;
-  w.runners.forEach((o, i) => {
-    if (o === r || !reachable(w, o)) return;
-    const p = progress(w, o);
-    if (!(p > mine) || !Number.isFinite(p)) return;
-    if (best < 0 || p < bestP || (p === bestP && o.slot < w.runners[best].slot)) {
-      best = i;
-      bestP = p;
-    }
-  });
-  return best;
-}
+/** The runner just ahead of `r` (sim/standing.ts) that a hook can reach; -1 if `r` leads. */
+const aheadOf = (w: RunWorld, r: Runner) => standingAhead(w, r, (q) => reachable(w, q));
 
 /** Throw a Queue Jumper at whoever is just ahead. False (nothing spent) if nobody is. */
 export function throwHook(w: RunWorld, r: Runner): boolean {

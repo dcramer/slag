@@ -153,8 +153,8 @@ export interface Stretch {
 export const LAP_TIERS: readonly Difficulty[] = ['gentle', 'medium', 'hard'];
 
 /** The stretches a level is measured in: a looping shaft's laps, or the whole level as one stretch of its own tier. */
-export function stretchesOf(p: { tide?: boolean; curve?: boolean; difficulty: Difficulty; size?: string; h?: number }): readonly Stretch[] {
-  if (!p.tide || p.size !== 'tall' || !p.h) return [{ from: 0, to: Infinity, tier: p.difficulty }];
+export function stretchesOf(p: { loop?: boolean; curve?: boolean; difficulty: Difficulty; size?: string; h?: number }): readonly Stretch[] {
+  if (!p.loop || p.size !== 'tall' || !p.h) return [{ from: 0, to: Infinity, tier: p.difficulty }];
   const lap = p.h - LOOP_BAND;
   const laps: Stretch[] = LAP_TIERS.map((tier, i) => ({ from: i * lap, to: (i + 1) * lap, tier: p.curve ? tier : p.difficulty }));
   laps.push({ from: LAP_TIERS.length * lap, to: Infinity, tier: p.curve ? 'hard' : p.difficulty });

@@ -1,17 +1,16 @@
 import { pointInRect } from '../../core/geom';
 import { DT, TILE } from '../constants';
-import { goalRect, type Level } from '../level';
-import { goalField } from '../reach';
 import type { Runner, RunWorld } from '../run';
+import { leaderOf } from '../standing';
 import { bonk, cx, cy, isActive, itemEvent, launch } from './common';
 import type { TaxShell } from './types';
 
 /**
- * Front-Runner Tax: a winged shell that flies over everything to whoever is
- * nearest the flag, hovers over them as a warning, then dives on the spot
- * they stood. "Nearest" is route distance (`goalField` in sim/reach.ts), not a
- * straight line, so a runner high in a tower beside the flag isn't the leader
- * when the way up is long. If the thrower leads, it comes for the thrower.
+ * Front-Runner Tax: a winged shell that flies over everything to whoever
+ * leads (sim/standing.ts: in a race nearest the flag by route, not a straight
+ * line, so a runner high in a tower beside the flag isn't the leader when the
+ * way up is long; in a climb highest), hovers over them as a warning, then
+ * dives on the spot they stood. If the thrower leads, it comes for the thrower.
  *
  * The shell is plain data on ItemWorld and never collides with anything; the
  * spawn zone and finishing are the only cover.
@@ -32,56 +31,6 @@ export const TAX = {
   /** Pops on its own after this many frames. */
   life: 60 * 8,
 } as const;
-
-/** The field per level, rebuilt when the level's tiles change (a crater bumps `version`). Derived data only: every peer computes the same. */
-const FIELDS = new WeakMap<Level, { version: number; field: Float64Array }>();
-
-/** Route distance to the flag from every cell of `level` (tenths of a tile), computed once per level version. */
-export function goalFieldOf(level: Level): Float64Array {
-  const hit = FIELDS.get(level);
-  if (hit && hit.version === level.version) return hit.field;
-  const field = goalField(level);
-  FIELDS.set(level, { version: level.version, field });
-  return field;
-}
-
-/** A runner's route distance to the flag: the field at their center, or under their feet if they're clipping a wall. */
-export function routeDistance(level: Level, r: Runner): number {
-  const f = goalFieldOf(level);
-  const tx = Math.floor(cx(r) / TILE);
-  if (tx < 0 || tx >= level.w) return Number.POSITIVE_INFINITY;
-  for (const y of [cy(r), r.body.y + r.body.h + 1]) {
-    const ty = Math.floor(y / TILE);
-    if (ty >= 0 && ty < level.h && Number.isFinite(f[ty * level.w + tx])) return f[ty * level.w + tx];
-  }
-  return Number.POSITIVE_INFINITY;
-}
-
-/**
- * The live, unfinished runner nearest the flag by route; then by straight line, then the lower slot. -1 if nobody's
- * racing. With slag rising there's no flag to be near: the leader is whoever has climbed highest, laps and all.
- */
-export function leaderIndex(w: RunWorld): number {
-  if (w.level.tide) return highestIndex(w);
-  const g = goalRect(w.level);
-  const gx = g.x + g.w / 2;
-  const gy = g.y + g.h / 2;
-  let best = -1;
-  let bestD = 0;
-  let bestE = 0;
-  w.runners.forEach((r, i) => {
-    if (!isActive(r)) return;
-    const d = routeDistance(w.level, r);
-    const e = (cx(r) - gx) * (cx(r) - gx) + (cy(r) - gy) * (cy(r) - gy);
-    const b = best >= 0 ? w.runners[best] : null;
-    if (!b || d < bestD || (d === bestD && (e < bestE || (e === bestE && r.slot < b.slot)))) {
-      best = i;
-      bestD = d;
-      bestE = e;
-    }
-  });
-  return best;
-}
 
 /** Fire a shell from the runner's head. */
 export function launchTax(w: RunWorld, r: Runner): void {
@@ -110,7 +59,7 @@ function stepShell(w: RunWorld, s: TaxShell): boolean {
   if (w.frame - s.born > TAX.life) return pop(w, s);
   if (s.phase !== 'dive') {
     // The leader can change until the dive: someone overtakes, or the leader finishes.
-    const lead = leaderIndex(w);
+    const lead = leaderOf(w);
     if (lead < 0) return pop(w, s);
     if (lead !== s.target) {
       s.target = lead;
@@ -170,20 +119,4 @@ export function stepShells(w: RunWorld): void {
   const shells = w.items.shells;
   if (!shells.length) return;
   w.items.shells = shells.filter((s) => stepShell(w, s));
-}
-
-/** The live runner whose feet stand highest in climbed coordinates (a loop's laps counted), then the lower slot. */
-function highestIndex(w: RunWorld): number {
-  const lap = (w.level.loop ?? 0) * TILE;
-  let best = -1;
-  let top = Infinity;
-  w.runners.forEach((r, i) => {
-    if (!isActive(r)) return;
-    const feet = r.body.y + r.body.h - r.lap * lap;
-    if (feet < top || (feet === top && r.slot < w.runners[best].slot)) {
-      best = i;
-      top = feet;
-    }
-  });
-  return best;
 }

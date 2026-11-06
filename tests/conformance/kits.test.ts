@@ -2,6 +2,7 @@ import { readdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { deriveSeed, Rng } from '../../src/core/rng';
+import { MODES } from '../../src/game/modes';
 import { BUILDERS, type BuilderId } from '../../src/gen/level/builders';
 import { setLevelDifficulty } from '../../src/gen/level/difficulty';
 import { setProbeGravity } from '../../src/gen/level/probe';
@@ -36,7 +37,7 @@ const FORCE: Record<BuilderId, ProfileOverride[]> = {
   climb: [{ size: 'classic', route: 'climb' }],
   descent: [{ size: 'wide', route: 'descent' }],
   tower: [{ size: 'tall', route: 'zigzag' }],
-  shaft: [{ tide: true }],
+  shaft: [MODES.slag.profile],
 };
 
 function ctxFor(seed: number, theme: ThemeId, p: LevelProfile, attempt = 0): SculptCtx {
@@ -76,7 +77,7 @@ describe('every builder composes every set’s kit', () => {
 });
 
 it('every set builds every mode: a Rising Slag shaft in each', () => {
-  for (const theme of THEME_IDS) expect(BUILDERS.shaft.takes(rollProfile(1, theme, { tide: true })), theme).toBe(true);
+  for (const theme of THEME_IDS) expect(BUILDERS.shaft.takes(rollProfile(1, theme, MODES.slag.profile)), theme).toBe(true);
 });
 
 describe('builders never read the theme', () => {

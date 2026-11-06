@@ -156,8 +156,6 @@ export interface RunnerView {
   w: number;
   h: number;
   active: boolean;
-  /** Feet in climbed coordinates (sim/run.ts `feetUp`): who is higher, a loop's laps counted. */
-  up?: number;
 }
 
 export interface ProjectileSpawn {
@@ -185,6 +183,8 @@ export interface TickCtx extends PropCtx {
   handItem?(i: number, kind: ItemKind): boolean;
   /** Seed of this race's item rolls: differs per round, so a crate that survives a round doesn't repeat itself. */
   itemSeed?: number;
+  /** The runner index that leads the race (sim/standing.ts), worked out when asked; -1 if nobody's racing. */
+  leader?(): number;
   /** This frame's solids, for anything that looks or moves through the world. Optional so headless callers can omit them. */
   solids?: readonly Solid[];
   /** This frame's hazards, for parts set off by what touches them (Fuse Crates). Optional so headless callers can omit them. */

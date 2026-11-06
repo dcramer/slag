@@ -100,7 +100,10 @@ const WIDE_SIZES = { w: [64, 96], h: [24, 30] } as const;
 
 /** Debug/tools: force some knobs (the rest still roll from the seed). A size the theme can't do falls back to its widest. */
 export type ProfileOverride = Partial<
-  Pick<LevelProfile, 'size' | 'route' | 'density' | 'hazards' | 'danger' | 'gravity' | 'difficulty' | 'draw' | 'tide' | 'curve'>
+  Pick<
+    LevelProfile,
+    'size' | 'route' | 'density' | 'hazards' | 'danger' | 'gravity' | 'difficulty' | 'draw' | 'builder' | 'loop' | 'bare' | 'boxes' | 'tide' | 'curve'
+  >
 > & {
   weather?: WeatherKind;
   /** A stage concept id of the theme's (gen/stage), or 'plain'; with no size or route forced, the level takes one the concept fits. */
@@ -138,8 +141,8 @@ export function gravityClass(g: number): GravityClass {
 export function rollProfile(seed: number, themeId: ThemeId, o: ProfileOverride = {}, salt = ''): LevelProfile {
   const rng = new Rng(deriveSeed(seed, `profile:${themeId}${salt}`));
   const rolled = rng.weighted(SIZE_WEIGHTS[themeId]);
-  // Rising Slag's level is a looping shaft in every set (sculptors/tall.ts has a tower kit for each).
-  const size = o.tide ? 'tall' : o.size && SIZE_WEIGHTS[themeId].some(([s]) => s === o.size) ? o.size : o.size === 'tall' ? 'wide' : rolled;
+  // A loop is a tall shaft in every set (each set's tower kit builds it).
+  const size = o.loop ? 'tall' : o.size && SIZE_WEIGHTS[themeId].some(([s]) => s === o.size) ? o.size : o.size === 'tall' ? 'wide' : rolled;
   let w: number = LEVEL_W;
   let h: number = LEVEL_H;
   if (size === 'wide') {
@@ -149,9 +152,9 @@ export function rollProfile(seed: number, themeId: ThemeId, o: ProfileOverride =
     w = rng.int(TALL_SIZES.w[0] / 2, TALL_SIZES.w[1] / 2) * 2;
     // Taller than wide by a clear margin: 40×40 is a square, not a tower.
     h = rng.int(Math.max(TALL_SIZES.h[0], w + 6), TALL_SIZES.h[1]);
-    // A Rising Slag shaft loops (Level.loop): a lap's rows and the band it repeats, a screen wide or more so its
-    // walls sit on the screen's edges.
-    if (o.tide) {
+    // A loop (Level.loop): a lap's rows and the band it repeats, a screen wide or more so its walls sit on the
+    // screen's edges.
+    if (o.loop) {
       w = rng.int(LOOP_W[0] / 2, LOOP_W[1] / 2) * 2;
       h = LOOP_ROWS + LOOP_BAND;
     }
@@ -199,9 +202,13 @@ export function rollProfile(seed: number, themeId: ThemeId, o: ProfileOverride =
         ])
       ],
     difficulty,
+    ...(o.builder ? { builder: o.builder } : {}),
+    ...(o.loop ? { loop: true } : {}),
+    ...(o.bare ? { bare: true } : {}),
+    ...(o.boxes ? { boxes: true } : {}),
     ...(o.tide ? { tide: true } : {}),
-    // A shaft's laps climb the difficulty curve unless the host fixed one difficulty for every level.
-    ...(o.tide && size === 'tall' && (o.curve ?? !o.difficulty) ? { curve: true } : {}),
+    // A loop's laps climb the difficulty curve unless the host fixed one difficulty for every level.
+    ...(o.loop && size === 'tall' && (o.curve ?? !o.difficulty) ? { curve: true } : {}),
   };
 }
 

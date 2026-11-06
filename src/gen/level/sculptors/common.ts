@@ -395,7 +395,7 @@ export function knobs(ctx: SculptCtx, maxClimb?: number, range: [number, number]
     wide,
     challenge: ctx.challenge,
     // A Rising Slag tower asks its one part at the top nobody reaches: a crossing on the spawn storey would hold everyone for the slag.
-    twoParts: p.tide ? 0 : (TWO_PART_ASK[ctx.themeId] ?? TWO_PARTS),
+    twoParts: p.bare ? 0 : (TWO_PART_ASK[ctx.themeId] ?? TWO_PARTS),
   };
 }
 
