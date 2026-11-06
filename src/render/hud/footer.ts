@@ -1,4 +1,5 @@
 import type { Match } from '../../game/match';
+import { minPlayersOf } from '../../game/modes';
 import { type KeyProfile, keyboardDevices } from '../../input/bindings';
 import { RUN_COUNTDOWN } from '../../sim/constants';
 import { drawGlyph, type Glyph, glyphWidth } from '../../ui/glyphs';
@@ -45,6 +46,14 @@ function usePrompt(hud: Hud, m: Match): FooterItem[] | null {
 }
 
 /** Footer prompts and the left-hand context label for this phase. */
+/** The lobby's count: players against what the mode needs while short of it, then how many are ready. */
+function lobbyCount(m: Match): string {
+  if (!m.players.length) return '';
+  const need = minPlayersOf(m.rules.mode);
+  if (m.players.length < need) return `${m.players.length}/${need} Players`;
+  return `${m.players.filter((p) => p.ready).length}/${m.players.length} Ready`;
+}
+
 function footerItems(hud: Hud, m: Match): { items: FooterItem[]; left: string; alpha: number; bar: boolean } {
   const touch = hud.mode === 'touch';
   // Without a seat there's nothing to control mid-match: the way in is the Join button in the corner.
@@ -61,8 +70,7 @@ function footerItems(hud: Hud, m: Match): { items: FooterItem[]; left: string; a
         return { items, left: '', alpha: 1, bar: true };
       }
       // A phone's lobby buttons are all on the cards and the top bar, big enough for a thumb.
-      if (hud.phone)
-        return { items, left: m.players.length ? `${m.players.filter((p) => p.ready).length}/${m.players.length} Ready` : '', alpha: 1, bar: true };
+      if (hud.phone) return { items, left: lobbyCount(m), alpha: 1, bar: true };
       if (!primary) {
         if (!hud.net?.stranded) items.push({ action: 'confirm', label: 'Join', hud: 'join', device: hud.mouseDevice });
       } else {
@@ -74,9 +82,7 @@ function footerItems(hud: Hud, m: Match): { items: FooterItem[]; left: string; a
       }
       if (!touch && hud.net?.kickable?.length) items.push({ action: 'use', label: 'Kick' });
       if (!touch) items.push({ action: 'menu', label: 'Settings', hud: 'settings' });
-      const ready = m.players.filter((p) => p.ready).length;
-      const left = m.players.length ? `${ready}/${m.players.length} Ready` : '';
-      return { items, left, alpha: 1, bar: true };
+      return { items, left: lobbyCount(m), alpha: 1, bar: true };
     }
     case 'pick': {
       const picked = m.players.filter((p) => p.claim >= 0).length;

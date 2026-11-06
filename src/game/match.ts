@@ -38,7 +38,7 @@ import { type GameEvent, type InputFrame, NO_INPUT } from '../sim/types';
 import type { ThemeId } from '../themes';
 import { DEFAULT_RULES, type MatchRules } from './rules';
 import { overview, viewToWorld, worldToView } from './view';
-import { MODE_IDS, MODES } from './modes';
+import { MODE_IDS, MODES, minPlayersOf } from './modes';
 import type { RoundResult } from './scoring';
 
 export type Phase = 'lobby' | 'pick' | 'place' | 'run' | 'score' | 'victory';
@@ -445,8 +445,9 @@ export class Match {
       if (inp.downPressed) this.pickLevel(deriveSeed(this.seed, 'reroll'), this.themeOverride);
     }
     for (const p of this.players) if (!p.ready && this.idleFrames(p) >= LOBBY_IDLE_FRAMES) p.afk = true;
-    // Someone has to be here and ready; someone who isn't here doesn't hold the rest up.
-    if (this.players.some((p) => p.ready && !p.afk) && this.players.every((p) => p.ready || p.afk)) this.startMatch();
+    // Someone has to be here and ready, and as many as the mode needs; someone who isn't here doesn't hold the rest up.
+    const here = this.players.filter((p) => !p.afk);
+    if (here.some((p) => p.ready) && here.length >= minPlayersOf(this.rules.mode) && this.players.every((p) => p.ready || p.afk)) this.startMatch();
   }
 
   /**
