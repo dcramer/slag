@@ -35,7 +35,7 @@ Each kind's entry is its own file in [characters/](characters/): what a stranger
 
 | Kind | Homage (what a stranger should say) | Signature traits | Player's color |
 |---|---|---|---|
-| [plumber](characters/plumber.md) | the mustached plumber | a cap with its bill out front and a round badge (our own mark, a little wrench, never the letter), big round nose, thick mustache, bib overalls over the shirt with two buttons, gauntlets, boots; big head, stout | costume: cap and shirt; overalls and plunger cup a dark of it |
+| [plumber](characters/plumber.md) | the mustached plumber | a cap with its bill out front and big welding goggles on it, big round nose, thick mustache, patched bib overalls over the shirt, tan foundry gauntlets, boots; big head, stout; a plunger as long as he is on his shoulder like a greatsword, its cup out behind his head | costume: cap and shirt; overalls and plunger cup a dark of it, the patches a light of the overalls |
 | [hedgehog](characters/hedgehog.md) | the blue speedster, as a tin wind-up toy | a pressed-tin box head with a grey flange and a square snout, fat spikes swept straight back, green eyes, peach belly, a one-sided grin, big boxy shoes, a wind-up key out of his hip; runs leaning hard, spins in the air | costume: the tin quills, head and body; the quills' folded edge a light of it, the shoes a dark |
 | [elf](characters/elf.md) | the green-tunic elf hero | long cap flopping back, pointed ear, blond fringe, flared tunic with a belt, a shield and a sword hilt on the back | costume: cap and tunic; the darned toe a light of it |
 | [hunter](characters/hunter.md) | the armored bounty hunter | tall and long-legged, huge round shoulder pads wider than anything else, a helmet with a wide visor band, the forearm a cannon held straight out from the shoulder; tucks into a ball | costume: the suit, the buoys a dark of it, the cannon a light |
@@ -78,7 +78,7 @@ Each kind's entry is its own file in [characters/](characters/): what a stranger
 | [slime](characters/slime.md) | the blue teardrop slime with the grin | a limbless teardrop of goo with a curled tip, two big eyes and a huge grin | costume: the goo; the shine a light of it |
 | [bear](characters/bear.md) | the animatronic bear in the little top hat | a stocky bear with round ears, a tiny top hat between them with background each side, a bow tie, a shower head held up like a mic, a coin jammed in his belly, stiff jointed limbs torn open at the joints | costume: the fur suit; the belly and muzzle a light of it, the torn fur a dark of it |
 | [mech](characters/mech.md) | the girl gamer in the pink mech with the bunny on it | a wide flat mech much wider than tall on thick mech legs, two long duct cannons forward with a gap between them, a bunny decal, the pilot's head in headphones over the top | costume: the mech shell; its front and strips lights of it |
-| [genie](characters/genie.md) | the half-genie who whips her long ponytail | a slim dancer, a ponytail as long as she is whipped out level from her crown, a tiara, harem trousers, hoop earrings | costume: the top and trousers; the sash a dark of it |
+| [genie](characters/genie.md) | the half-genie who whips her long ponytail | a chunky little dancer, a ponytail as long as she is springing up from her crown and falling back like a fountain, a tiara, two balloon harem trousers apart, arms out | costume: the top and trousers; the sash a dark of it |
 | [mushroom](characters/mushroom.md) | the little mushroom retainer in the spotted cap | small and stubby under a huge round spotted lampshade cap wider than him, a dome with a rolled lip, a vest with a crooked race plate, puffy trousers, a chequered flag on a taped broom handle held out ahead | costume: the spots and the vest; the vest's trim a dark of it |
 | [boxer](characters/boxer.md) | the tiny boxer with the huge green gloves | small and wiry, two huge round gloves each bigger than his head held far apart ahead of him, one at his face and one at his belly, with background round each, a tank top, baggy shorts, a tea towel round his neck; jumps in a rising uppercut | costume: the gloves; the scorch a dark of it |
 
@@ -116,7 +116,7 @@ The strongest reads first. **Keyed** marks the non-humanoids, the riskiest to dr
 
 | # | Kind | Name | Rig | Status or risk |
 |---|---|---|---|---|
-| 1 | plumber | Plumbo | humanoid | drawn flat |
+| 1 | plumber | Plumbo | humanoid | drawn flat; the twist redrawn (2026-11-06): the plunger on his shoulder like a greatsword, its cup far out behind his head. The twist read passes (both readers: a parody with its own twist); the scripted blind read does not ("Mario? low" and unsure, unpaired; the shipped first-twist frames read unsure twice), named at medium and high only standing, in a design read |
 | 2 | hedgehog | Zoomic | humanoid, spin keyed | drawn flat, a tin wind-up toy with a box head; the blind read passes (named at medium and low), the twist read says a knock-off with or without the key; the dragon's dash is read as him, as it was before |
 | 3 | chomper | Snack-Man | generated, no limbs | drawn flat |
 | 4 | zapmouse | Kilowatchu | **keyed**, quadruped | drawn flat |
@@ -159,7 +159,7 @@ The strongest reads first. **Keyed** marks the non-humanoids, the riskiest to dr
 | 41 | slime | Slimple | **keyed**, limbless | drawn flat; the blind read passes (both readers named it at medium-high or better, unpaired: the onion with its tip a point, kept by `smooth: 0`; a big hooked tip read as a witch's hat) |
 | 42 | bear | Creaky Buzzbear | humanoid, stocky | drawn flat; the blind read passes (named by both readers, at medium and low, unpaired: the tiny hat between the round ears with background each side, the mic held up) |
 | 43 | mech | D.Wash | **keyed**, mech on legs | drawn flat; the blind read fails, owner to decide (two rounds: a hunched stocky figure, then the ape, paired with it; never with the robot boy or the hunter): black at 22 px a rider or a walker is the best read, and the pink shell, bunny and headphones carry her in colour |
-| 44 | genie | Shampootae | humanoid, side on | medium: the ponytail out level; the raider and the archer to watch |
+| 44 | genie | Shampootae | humanoid, side on | drawn flat; the blind read fails three times: a plume swept back read as a squirrel's tail, a level rope as a bazooka, a fountain from the crown as a hook or a hat, each on a body the box leaves small beside a ponytail as long as she is |
 | 45 | mushroom | Toadmund | humanoid, small, capped | drawn flat; the blind read passes (named by both readers, at medium and medium-high, unpaired: the huge dome cap over a small body) |
 | 46 | boxer | Little Smack | humanoid, small | drawn flat, side on, redrawn with bigger gloves held far apart; the blind read not passed (fresh readers outside the repository: "unsure – round head with a big puffy hand or arm", "unsure; figure with something big and round on its back or arm"; the first design, "a small figure with a big hairdo"); round gloves on thin arms read as balloons; the design read alone named him at medium and medium-high |
 
@@ -171,7 +171,7 @@ The strongest reads first. **Keyed** marks the non-humanoids, the riskiest to dr
 - **The speedster and the robot boy:** the two blue originals. Quills swept back against a round helmet.
 - **The miner and the sneaking soldier:** both boxy. A cube head on a body with arms against one box on two legs.
 - **The ape and the turtle king:** the two brutes. Hunched and long-armed against upright, side on under a smooth shell dome with three big spikes, horned, the jaw open.
-- **The mercenary and the plumber:** both carry a huge prop. The plunger is strapped to the plumber's back; the blade is always in the mercenary's hand, trailing low or leaning on the floor.
+- **The mercenary and the plumber:** both carry a huge prop. The plunger rests on the plumber's shoulder, its cup out behind his head; the blade is always in the mercenary's hand, trailing low or leaning on the floor.
 - **The mercenary and the elf:** both carry a blade, but a poker on the elf's back against a blade bigger than the mercenary.
 - **The crewmate and the sneaking soldier:** both a body on two stubby legs. A rounded bean with a visor against a square box with an eye slot.
 
