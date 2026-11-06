@@ -46,28 +46,29 @@ What we borrow: the camera that follows the leader, out when you fall off it; th
 | Round won by | last standing [SR-wiki] | last standing (10), then 6 and 3 for outlasting | keep the places: they pay more than the winner, as a race does |
 | Match won by | first to 3 round wins (4 in teams) [SR-wiki] | 50 points (Normal): 7 rounds (4–8) | 5–7 rounds |
 | Start | side by side on a start line | a start line across the shaft's floor, four cells apart | keep |
-| Round length | not documented | four Normal bots: 25 s median, 8% over by 15 s (was 16 s and 41%) | 20–40 s (estimate: "short") |
+| Round length | not documented | four Normal bots: 29 s median, 4% over by 15 s (25 s and 7% before the gates; 16 s and 41% before the long opening) | 20–40 s (estimate: "short") |
 | Late squeeze | after the first elimination, or after a set time with none [SR-wiki] (time not documented) | from the first one out, or 30 s, 0.3 rows a second | keep |
 | No weapons at the start | first 1.5 s [SR-patch] | the slag boils 3 s; items come from boxes later | keep |
 | Items | 8 kinds, from orbs on the track [SR-pickups] | 10 kinds, from the loop's boxes and placed boxes | rethink for a climb (below) |
 | How boxes deal | weighted random [SR-patch]; players say by rank: drills to the back, crates to the front [SR-odds] | by rank: catch-up to the pack, defence to the leader (Rising Slag's `boxes` table, `src/game/modes.ts`) | by rank |
 | Strongest catch-up | Golden Hook: swap places with the runner ahead [SR-pickups] | Queue Jumper: trade places with the runner just above | keep |
 | Movement tools | grapple at 45° onto white ceilings; a boost meter [SR-controls] | walk, run, jumps, wall jumps; no grapple or boost | a grapple item |
-| Early leader wins (leader at 15 s) | not documented | 56% as built, 57% with items in every hand, 64% with none (128 seeds, about 115 judged each, so ±5; 512 seeds: 64, 59, 66). Was 66, 50, 69 (512: 69, 58, 66) with a third of rounds over by 15 s | about half (estimate) |
-| Lone bot gets through a lap (laps 1–3) | n/a | Easy 91/86/80, Normal 94/83/100, Hard 100/84/96 (32 seeds; was 81/81/76, 91/86/92, 100/81/92): a bot seldom falls further than a rise on bricks, short of even the hard lap's leash | `PASS_TARGETS` |
+| Early leader wins (leader at 15 s) | not documented | 512 seeds, about 480 judged each (±5): 50% as built, 47% with items in every hand, 54% with none, since the regroup gates (were 64, 59, 66; before that 69, 58, 66 with a third of rounds over by 15 s) | about half (estimate) |
+| Regroup | the leader camera's screen holds the pack together by itself | two gates a lap across the shaft, shut 4 s then open 2 s on one clock; the slag waits while the leader waits under one. Lead changes 3.1 a round (were 1.5; 3.2 with items in every hand, were 2.0) | keep |
+| Lone bot gets through a lap (laps 1–3) | n/a | Easy 91/83/58, Normal 97/87/81, Hard 97/71/77 with the gates (32 seeds; before them 91/86/80, 94/83/100, 100/84/96): a bot seldom falls further than a rise on bricks, short of even the hard lap's leash; a lone bot waits at each gate while the squeeze runs on, so the hard lap comes later and tighter | `PASS_TARGETS` |
 
-### Why catch-up isn't working yet: level design and mechanics
+### How catch-up got to half: level design and mechanics
 
 | | The lead-camera racer | Rising Slag today |
 | --- | --- | --- |
-| Track | handmade horizontal loops, everyone on the same line at about the same speed, with high and low routes (grapple ceilings over the ground) | a vertical shaft, generated per match: open air, ledges staggered like bricks with several lines up every height, a wall-jump chimney up one side (until 2026-11-05: storeys with two ways up each) |
+| Track | handmade horizontal loops, everyone on the same line at about the same speed, with high and low routes (grapple ceilings over the ground) | a vertical shaft, generated per match: open air, ledges staggered like bricks with several lines up every height, a wall-jump chimney up one side, two gates across it a lap (until 2026-11-05: storeys with two ways up each) |
 | Pace | running speed; a lap is a stretch of screens | climbing, about 5 rows a second; a 48-row lap is about 10 s |
-| Overtaking | constant: shortcuts, boosts and stuns reorder the pack | rare with bots: about 1.5 lead changes a round (leader on top a second straight), 2 with items in every hand |
+| Overtaking | constant: shortcuts, boosts and stuns reorder the pack | about 3 lead changes a round with the gates (leader on top a second straight), from 1.5: the pack comes through a gate together |
 | Where the leader is | ahead, on your line | above you; most of our items fire or swing sideways |
 | What a hit costs | a stun: seconds of position | a bonk; on a perch, a storey, which is strong but only if you can reach the leader |
 | Catch-up items | the Golden Hook swaps you with the one ahead; missiles, crates and freeze aim ahead | the Queue Jumper swaps you with the one above, the Upper Hand punches up through floors, the winged shell hunts the leader |
 
-So the shape works against catch-up: a lead holds even between equals. Four bots with the same hands and no items still keep the 15 s leader on top 62% of the time (512 seeds); a lead of under 3 rows at 15 s wins 41%, 6–8 rows 71%, 12 or more 86–88%. A longer leash, so rounds last longer after 15 s, is what moved it most.
+So the open shaft alone works against catch-up: a lead holds even between equals. Before the gates, four bots with the same hands and no items still keep the 15 s leader on top 62% of the time (512 seeds); a lead of under 3 rows at 15 s wins 41%, 6–8 rows 71%, 12 or more 86–88%. A longer leash, so rounds last longer after 15 s, is what moved it most.
 
 Tried, in order:
 
@@ -77,7 +78,9 @@ Tried, in order:
 4. **A start line** (built): four bots in one pocket jammed for seconds.
 5. No effect, or worse, at 512 seeds: twice the boxes, solid floors with holes every fourth row, narrower ledges and more wells, no chimney, a lead deal of only Bubble Wrap, bots holding the Queue Jumper for the swap into the lead, bots climbing under whoever is just above (more bumps), lanes near a bot's own column (70%: the pack stops crossing).
 
-Next: something in the level that pulls a pack back together (a lift or a gate on a cycle, which the leader waits for), or items that cost the leader seconds, not a bonk. Both are owner calls.
+6. **Regroup gates** (built, the owner's pick over items that cost the leader seconds): a shutter across the whole shaft, wall to wall, that shuts and opens on the race clock (`src/gen/level/loop-gates.ts`). Whoever reaches it shut waits under it while the pack climbs up, and the slag's floor pace waits while the leader does (`Tide.hold`), so a pack under a shut gate isn't eaten for the leader's wait. Every gate runs one cycle, so a leader who slips through one as it shuts meets the next one shut. Measured with the gate right over its ledges, at 512 seeds (boxes, bare): one gate a lap at mid-height 57% and 56%; two, a third and two thirds up, 51% and 53%; three 54% and 55%; two shut 5 s 49% and 49% with rounds 2 s longer; one shut 3 s 63% and 58%, 5.5 s 55% and 57% with 12% of rounds over by 15 s; one with the slag never waiting 57% and 58%, with more rounds over early; the slag waiting for anyone under a shut gate, not just the leader, the same as the leader alone. Kept: two gates, 4 s shut and 2 s open. A gate right over its ledges meant a jump onto them met it shut, so a pack waited a ledge lower with two jumps to make in the 2 s; it now goes a row higher where the shaft has room (50, 47 and 54 from 51, 51 and 53, and lone Easy bots through the first lap 91% again, from 78%). About half the runners who go out go out under a shut gate the leader got through: the gate splits a pack as well as gathering it.
+
+Next: nothing for catch-up itself. Whether a gate that splits the pack that often feels fair is a playtest question.
 
 ---
 

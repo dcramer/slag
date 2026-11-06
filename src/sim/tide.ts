@@ -40,6 +40,45 @@ export interface Tide {
   open?: { rows: number; seconds: number };
   /** Fastest the slag closes on a leader who got more than the leash ahead, tiles/s. */
   rush: number;
+  /**
+   * Gates across a loop's shaft (gen/level/loop-gates.ts), the same ones its set pieces shut on the race clock. While
+   * the leader stands under a shut one, within `hold` rows of it, the floor pace waits with them: the pack climbs up
+   * to them and nobody is eaten for the leader's wait.
+   */
+  gates?: readonly TideGate[];
+  hold?: number;
+}
+
+/**
+ * A gate across the shaft (Rising Slag's regroup, docs/MODES.md): its cells' row in the loop's first lap (it shuts
+ * there every lap), shut `shut` frames then open `open`, on the race frame shifted by `offset`. The gate's own blink
+ * blocks (sim/props/modules/phase.ts, `clock`) run the same cycle: `on` is `shut`, `off` is `open`.
+ */
+export interface TideGate {
+  row: number;
+  shut: number;
+  open: number;
+  offset: number;
+}
+
+/** Is `g` shut on run frame `f`? The phase module's cycle (segment 0 solid) on the race clock. */
+export function gateShut(g: TideGate, f: number): boolean {
+  const total = g.shut + g.open;
+  return (((f + g.offset) % total) + total) % total < g.shut;
+}
+
+/**
+ * Is a leader with feet at world y `feet` (climbed coordinates) waiting under a shut gate on frame `f`: standing at
+ * most `hold` rows under its cells, in any lap?
+ */
+function heldAtGate(tide: Tide, loop: number, feet: number, f: number): boolean {
+  if (!tide.gates || !tide.hold || !loop) return false;
+  for (const g of tide.gates) {
+    if (!gateShut(g, f)) continue;
+    const under = (((feet / TILE - (g.row + 1)) % loop) + loop) % loop;
+    if (under <= tide.hold) return true;
+  }
+  return false;
 }
 
 /** World y the slag starts at, or null on a level without a tide. */
@@ -77,6 +116,12 @@ function squeezeFrom(tide: Tide, out: number): number {
   return tide.squeeze.out !== undefined && out >= 0 ? Math.min(late, out + tide.squeeze.out * FPS) : late;
 }
 
+/** Rows the leash is longer on run frame `f` for the opening (`open`): its full length to GO, fading to none. */
+export function openingRows(tide: Tide, f: number): number {
+  const s = (f - RUN_COUNTDOWN) / FPS;
+  return tide.open && s < tide.open.seconds ? tide.open.rows * (1 - Math.max(0, s) / tide.open.seconds) : 0;
+}
+
 /**
  * Rows the slag may lag the leader on run frame `f`, with the leader `climbed` rows above the spawn's floor and the
  * first runner out on frame `out` (`firstOut`).
@@ -84,8 +129,7 @@ function squeezeFrom(tide: Tide, out: number): number {
 export function leashRows(tide: Tide, climbed: number, f: number, out = -1): number {
   let rows = Infinity;
   for (const l of tide.leash) if (climbed >= l.from) rows = l.rows;
-  const s = (f - RUN_COUNTDOWN) / FPS;
-  if (tide.open && s < tide.open.seconds) rows += tide.open.rows * (1 - Math.max(0, s) / tide.open.seconds);
+  rows += openingRows(tide, f);
   const late = (f - squeezeFrom(tide, out)) / FPS;
   return late > 0 ? Math.max(Math.min(rows, tide.squeeze.min), rows - late * tide.squeeze.rate) : rows;
 }
@@ -98,7 +142,7 @@ export function leashRows(tide: Tide, climbed: number, f: number, out = -1): num
 export function stepTide(level: Level, line: number, f: number, leader: number | null, out = -1): number {
   const tide = level.tide!;
   if (f < RUN_COUNTDOWN + tide.wait * FPS) return line;
-  const pace = floorRise(tide, f + 1) - floorRise(tide, f);
+  const pace = leader !== null && heldAtGate(tide, level.loop ?? 0, leader, f) ? 0 : floorRise(tide, f + 1) - floorRise(tide, f);
   if (leader === null) return line - pace;
   const climbed = ((level.spawn.ty + 1) * TILE - leader) / TILE;
   const target = leader + leashRows(tide, climbed, f, out) * TILE;

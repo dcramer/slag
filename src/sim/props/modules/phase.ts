@@ -10,8 +10,8 @@ type Phase = ModuleOf<'phase'>;
 /** Frames of flicker before vanishing / of outline fill before appearing (art and fairness). */
 export const PHASE_WARN = 30;
 
-/** Segment 0 = solid, 1 = gone. `t`/`len` drive the telegraphs. */
-export const phaseCycle = (m: Phase, f: number, phase: number) => cycle(f + m.offset, phase, [m.on, m.off]);
+/** Segment 0 = solid, 1 = gone. `t`/`len` drive the telegraphs. On the race clock (`clock`) the piece's own phase doesn't shift it. */
+export const phaseCycle = (m: Phase, f: number, phase: number) => cycle(f + m.offset, m.clock ? 0 : phase, [m.on, m.off]);
 
 const holdKey = (mi: number) => `${mi}:hold`;
 
