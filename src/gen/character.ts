@@ -45,6 +45,10 @@ export const CAST = [
   'creeper',
   'tophat',
   'pyramid',
+  'invader',
+  'vampire',
+  'assistant',
+  'sim',
 ] as const;
 export type Kind = (typeof CAST)[number];
 
@@ -120,6 +124,10 @@ export const KIND_NAMES: Record<Kind, string> = {
   creeper: 'Creepah',
   tophat: 'Hat Kidd',
   pyramid: 'Pyramid Ted',
+  invader: 'Invayda',
+  vampire: 'Lady Dimitreskew',
+  assistant: 'Izzabelle',
+  sim: 'Bella Gauche',
 };
 
 /**
@@ -161,6 +169,10 @@ const PAINTS: Record<Kind, readonly HSL[]> = {
   creeper: [hsl3(118, 50, 40)],
   tophat: [hsl3(305, 40, 42)],
   pyramid: [hsl3(20, 22, 36)],
+  invader: [hsl3(160, 55, 45)],
+  vampire: [hsl3(258, 32, 40)],
+  assistant: [hsl3(75, 55, 48)],
+  sim: [hsl3(335, 60, 45)],
 };
 
 /** How many `vary` rolls a character has, and how many of them come from the look's main stream. */

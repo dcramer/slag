@@ -804,6 +804,25 @@ export const BRIEFS: Record<string, Brief> = {
     // antenna, a fuse and a mage's pointed hat (art/sprites/creeper/design.prompt.txt).
     worn: 'he is an old painted cardboard box: a wide strip of brown packing tape (#c49a5a) is stuck across a big split in the front of his body; the top back corner of his head is dented in, a big notch in its outline; the bottom front corner of his body is torn open, the brown corrugated cardboard (#b8925e) showing; the birthday candle is stuck in crooked, leaning back, wax dripping down it, its flame big. The four square face holes stay exactly as they are.',
   },
+  invader: {
+    // The nod, each part of the read at race size and each a shape in outline: the crab cut from big square pixels,
+    // its outline stepping square by square all round (the read: nobody else in the cast is made of square steps; the
+    // creeper's box is smooth-sided and tall, the miner's cube a head on a body); wider than tall, so never a block
+    // standing up; the two antennae up from its top corners and the two claws raised off its sides (the crab, and
+    // what keeps it off the crewmate's bean on legs); a row of stubby square legs under it.
+    // Ours, and the joke: a pixel has fallen out of its back and been taped back on, crooked, and one antenna is bent
+    // over at the tip. The palette is neutral (Decisions 4): the body in the player's colour, the eye holes, the tape
+    // neutrals. The colours lead the brief: the image model drops a prompt's tail.
+    design:
+      'The character: a flat cartoon space crab built from big chunky square pixel tiles, seen straight from the front, flat like a paper cut-out, much wider than it is tall. ' +
+      'Colours: a lavender (#9a7ad8) body, near-black (#1e1a2a) eye holes. ' +
+      'Its outline steps square by square all the way round, every edge a staircase of square tiles, no curves at all. ' +
+      'Two antennae, each a short column of square tiles, stand up from its top corners. ' +
+      'A short stepped arm sticks out of each side and bends straight upward like a raised claw. ' +
+      'Under its body a row of four stubby square legs, the outer two splayed out. ' +
+      'Two square black eye holes side by side in its face, no mouth.',
+    worn: 'one square pixel tile on the top edge of its body, beside an antenna, has fallen out, leaving a square notch, and is stuck back on crooked, tilted at an angle and sticking up out of the outline, a strip of grey tape (#a4a8ac) across it; the near antenna is bent over sideways at its tip, its top tile hanging off at an angle. The two square eye holes, the raised claws and the legs stay exactly as they are.',
+  },
   tophat: {
     // The nod, each part of the read at race size and each a shape in outline: the top hat as tall as the rest of
     // her, a clean cylinder standing straight up off a small girl's head with a brim (the read: nobody else in the
@@ -824,6 +843,75 @@ export const BRIEFS: Record<string, Brief> = {
     // The design came back close to the original redrawn (a plain top hat with a band), so the edit carries the
     // twist with the wear: the tin can's ridges and dent, the hair tie, the umbrella grown huge.
     worn: "the top hat is now clearly an old tin can: two raised ridged rings run round it near its top and its bottom, and a big dent is knocked into its side, its brim still wide and flat and the hat still straight up; its band is a fat lilac hair tie (#e0b0dc) knotted at the side; the umbrella grows huge: an open paper cocktail umbrella as wide as she is, on a long wooden toothpick stick, held out at arm's length in front of her, with white background all round it; the hem of the cape is torn into a big ragged notch; one striped sock has slipped down round her boot. Her face and the ponytail stay as they are.",
+  },
+  vampire: {
+    // The nod, each part of the read at race size and each a shape in outline: her height, the tallest and slimmest
+    // figure in the cast, straight up and down (the read: everyone else is a small toy; a tall one for once); the wide
+    // sun hat on a low flat crown over a small head (a flat crown and no point, on a tall slim body: the mage's brim
+    // sits on a small round robed figure, his crown bent into a point; the top-hat girl's is a tall crown); the long
+    // fitted gown falling to the floor and flaring at the hem, hiding her feet (a lady's gown, never a coat over two
+    // legs, the slayer's); one hand raised out in front, clear of her, with five long claws.
+    // Ours, and the joke: the hat's brim was sat on and droops on one side, the hem is torn, and the claws are false
+    // nails, one missing.
+    // The palette is neutral (Decisions 4): the gown in the player's colour; the hat a dark neutral, the skin pale,
+    // the pearls and nails neutrals, the lips a face mark. The colours lead the brief: the image model drops what
+    // comes last.
+    design:
+      'The character: a very tall, slim, elegant cartoon lady in three-quarter view facing right, three times as tall as she is wide, standing straight and haughty. ' +
+      'Colours: a plum gown (#7a2e4a), a black hat (#2a2630), very pale skin (#eee4e0), red lips (#d42a2a), white pearls (#f4f0e8), silver nails (#b8bcc4). ' +
+      'Her signature: a wide black sun hat with a low flat crown and a flat round brim wider than her shoulders, over a small head, her chin up, looking down her nose. ' +
+      'A long fitted gown with a narrow waist falls straight to the floor and flares a little at the hem, hiding her feet. A string of big white pearls round her neck. ' +
+      'Her front hand is raised at shoulder height out in front of her, clear of her body, five very long pointed silver nails splayed like claws.',
+    worn: "the hat's wide brim is bent and droops down steeply on its back side where it was sat on, a big crease across it, the crown still low and flat; one of the five long silver nails is missing, that fingertip short and bare; the hem of the gown is torn into a big ragged notch at the front; there is a gap in the string of pearls where one is gone. Her face, her height and the raised hand stay as they are.",
+  },
+  sim: {
+    // The nod, each part of the read at race size and each a shape in outline: the green diamond floating above her
+    // head, a long double point top and bottom, with a clear gap of background under it (the read: nobody else in the
+    // cast has a part hanging in the air over the head, and only while the gap shows; joined to the head it is a
+    // pointed hat, the mage's or a gnome's); the black bob, a rounded helmet of hair to the jaw (an ordinary woman's
+    // head, not the raider's braid or the fighter's buns); the plain knee-length dress flaring a little from the
+    // waist, slim legs together in heels (not the raider's shorts and wide stance, nor the fighter's thick legs in a
+    // kick); one hand raised in a polite wave at shoulder height, never over the head (arms up read as the ape).
+    // Ours, and the joke: the diamond is cracked and taped and hangs crooked, and one shoe has lost its heel (the
+    // wear edit).
+    // The palette is neutral (Decisions 4): the dress in the player's colour, the shoes a dark of it; the hair black,
+    // the skin neutral; the diamond keeps its green, a fixed mark like the zapmouse's cheeks. The diamond leads the
+    // brief: the image model drops what comes last. Asked for a slim woman, it drew a realistic one, a stick under a
+    // dot at play size, so she is a chunky toy. No drawn diamond ships: one drawn once is hung over her head in every
+    // drawing (art/sprites/sim/design.prompt.txt).
+    design:
+      'The character: a chunky little cartoon woman like a toy figure, three-quarter view facing right, her head a third of her height. Her signature: a huge bright green crystal diamond (#46c84a, its lit facets #9ee87a) floating in the air above her head, a long double point, pointed top and bottom, as tall as her head and half as wide, with a clear gap of white background between it and her hair: it never touches her. ' +
+      'A big glossy black bob haircut (#24202a), round and wider than her face, to her jaw, with a straight fringe. Peach skin (#efc9a4). ' +
+      'A plain blue knee-length dress (#3f6fb5), sleeveless, flaring out wide from the waist into a big bell. Short legs together, chunky dark blue high heels (#24345e). ' +
+      'One hand raised in a polite little wave at shoulder height, the other at her side. A polite, vacant smile.',
+    worn: 'the green diamond is cracked across its middle and a strip of grey tape (#9a9c98) is stuck over the crack, and it hangs crooked, tilted to one side, still floating clear above her head with white background under it; the hem of the dress is torn into a big ragged notch at the side; the heel of her back shoe has snapped off, that shoe now flat. Her face, the bob and the gap under the diamond stay as they are.',
+  },
+  assistant: {
+    // The nod, each part of the read at race size and each a shape in outline: the top-knot, a tuft of hair standing
+    // straight up off the crown, pinched in at its base by a band and splaying out at its tip, with a big round bell
+    // hanging off the front of the band clear of the head (the read: nobody else in the cast has a bell on its head;
+    // a round knot on a round head is the fighter's buns, so the tuft is tall and splayed, and one, in the middle);
+    // the two floppy ears hanging straight down beside the face to the shoulders (the zapmouse's stand up, the
+    // puppy has one ear behind); a small upright dog in a vest over a white shirt and a short flared skirt (a girl's
+    // outline, not the puppy's tee and shorts); the clipboard, held out in front clear of her (hugged to the chest
+    // it vanishes inside the outline).
+    // Ours, and the joke: the bell is a jingle bell off a cat's collar, the collar itself the band round her knot;
+    // one ear is folded inside out; papers are slipping out of the clipboard.
+    // The palette is neutral (Decisions 4): the fur in the player's colour, the vest a dark of it; the shirt, skirt,
+    // collar, bell and clipboard neutrals. The colours lead the brief: the image model drops what comes last.
+    // The first four designs (art/sprites/assistant/drafts/design-1..4), traced black at 22 px, were a hooded blob:
+    // the tuft a one-pixel nub, the bell inside the head's outline, the ears one mass with the body. So the head is half
+    // of her, the tuft half as tall again, the bell big and out past the head's outline, the ears flicked out clear.
+    // Blind, that stalked tuft read as a leaf on a sprout ("Pikmin", both readers), so the shipped design is an edit of
+    // it: the tuft a short bushy fan with no stem, the bell twice as big (art/sprites/assistant/design.prompt.txt).
+    design:
+      'The character: a small cheerful cartoon dog girl standing upright, her round head huge, half of her height. Colours: fluffy yellow fur (#f2c84a), a dark ochre vest (#9a6a1e), a white shirt (#f6f2ea), a slate grey skirt (#5e6470), a silver bell (#c4c8cc), a dark brown leather collar (#5a3a26), a wooden clipboard (#d8b47a). ' +
+      'Her signature, big and bold: a tall tuft of fur shoots straight up out of the top of her head, as tall as half her head, pinched tight at its base by a small cat collar and fanning out wide at its tip like a palm tree; a big round silver jingle bell, a third as wide as her head, hangs off the collar out in front of the tuft, sticking out past the outline of her head. ' +
+      'Two long fluffy floppy ears hang straight down past her chin and flick outward at their tips, a gap between each ear and her body. Big round eyes, a black nose. ' +
+      "A vest over a white shirt, a short flared skirt, short legs. Her front hand holds a clipboard out level at arm's length, clear of her body.",
+    // The edit carries the rest of the twist with the wear: the ear folded inside out (still hanging, so it never
+    // stands up like the zapmouse's), the papers sliding out of a broken clipboard, a dented bell. Nothing on the face.
+    worn: "her front hand now holds the clipboard out in front of her at arm's length, level, clear of her body with white background all round it, its top corner cracked and patched with grey tape, three loose white papers sliding out of it; the near floppy ear is folded inside out at its tip, its pale inside (#f8e4a8) showing, still hanging down; the silver bell has a big dent in its side; the short skirt flares out wider, its hem torn into a big ragged notch. Her face, the tall tuft and the bell stay exactly where they are.",
   },
 };
 

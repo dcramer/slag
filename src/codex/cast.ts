@@ -46,6 +46,10 @@ export const CAST_NOTES: Record<Kind, string> = {
   creeper: 'Means well. Hugs once.',
   tophat: 'Collects anything not nailed down.',
   pyramid: 'Never hurries. Never late.',
+  invader: 'Came a long way to step side to side.',
+  vampire: 'Ducks under every door. Resents it.',
+  assistant: 'Has a clipboard. Has notes.',
+  sim: 'Mood: unclear.',
 };
 
 export interface CastEntry {

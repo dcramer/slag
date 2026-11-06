@@ -1,0 +1,19 @@
+# The town assistant dog with the bell in her hair
+
+A kind of the cast: [CHARACTERS.md](../CHARACTERS.md) has the rules every kind follows.
+
+- **Kind:** `assistant` · **Name:** Izzabelle
+- **A stranger should say:** "the little yellow dog from the village game, the assistant with the bell in her hair."
+- **Silhouette:** small and upright: a round head with two floppy ears hanging down, a tuft of hair tied up on top of her head into a top-knot with a bell on it, a vest over a shirt, a short skirt, a clipboard hugged to her chest.
+- **Traits:** the top-knot with the bell; the floppy ears; the fluffy fur; the vest and skirt; the clipboard; a cheerful, eager face.
+- **Palette:** the fur in the player's colour; the vest a dark of it; the shirt, the clipboard and the bell neutral; the cheeks may keep a warm blush (a face mark).
+- **Color slot:** costume: the fur, the vest a dark of it.
+- **Gait:** a quick, eager trot on short legs, the bell bouncing, the clipboard held tight.
+- **The nod:** the top-knot with the bell (the read: a bell on the head, the ears hanging under it); the clipboard.
+- **Our twist:** the bell is a jingle bell off a cat's collar, one ear is folded inside out, and papers are slipping out of the clipboard.
+- **Swaps:** which ear is folded; a pencil behind the other ear; a coffee stain on a paper.
+- **Rig:** drawn flat (2026-11-05): three-quarter view, eleven drawings three to a sheet, every source and prompt in `art/sprites/assistant/` (`design.prompt.txt`). The tuft is a short bushy fan bursting out of a cat's collar with the bell on its front; the fur, the tuft and the ears are the player's colour, the vest a dark of it, the ears' pale tips a light of it; the skirt (slate, charcoal or warm grey), shirt, collar, bell and clipboard are neutrals. Face: the kit's `dot` eyes, found in the role map. Pairs to watch: the zapmouse (yellow, big ears: hers hang down, his stand up), the rapping puppy (a dog: his beanie stands straight up, her knot is small with a bell), the horse.
+  - Design read (traced designs at 22 px, before any pose): "unsure. A narrow, small body with a tuft or small hat on top"; "unsure, maybe the Animal Crossing dog secretary (low): slim upright body tapering at the bottom, small head with a tuft or ears on top".
+  - Blind read 1 (the tuft a tall fan on a thin stalk): "Pikmin, medium. Tiny thin body with a leaf or flower stalk on its head"; "Pikmin, medium. Tiny body with a leaf or stalk on the head". Unpaired. So the stalk went: the tuft a short bushy fan, the bell twice as big.
+  - Blind read 2 (the bushy fan): "unsure. Small figure with a big head and a hair tuft or ponytail"; "Unsure. Small figure with a hat, maybe Toad or Mario" (pairing it with the plumber and the fighter as "small figures with caps or hats"). Not passed. A third edit that grew a muzzle and longer ears drew the ears to her knees, a long-haired lady in a gown at play size (drafts/snout-*), and was dropped. Two rounds only moved the misread: in black she has no shape nobody else's has; in colour she reads (`cast-recognise.png`). The next idea is a new one, not an edit: the bell hung clear of the head on its own, or the ears as two separate lobes with background round them.
+- **Concept prompt:** A small cheerful cartoon dog girl standing upright in three-quarter view, fluffy yellow fur, a round head with two long floppy ears hanging down, one ear folded inside out, a tuft of hair tied up on top of her head into a little top-knot with a jingle bell from a cat collar, a vest over a white shirt, a short skirt, hugging a clipboard to her chest with papers slipping out of it.
