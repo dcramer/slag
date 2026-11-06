@@ -357,6 +357,7 @@ function toLevel(seed: number, s: Shape, theme: Theme, profile: LevelProfile): L
     version: 0,
     setPieces: [],
     ...(profile.tide ? { tide: slagTide(profile, s.tiles, s.w, s.h) } : {}),
+    ...(profile.ends ? { spawns: [{ ...s.goal }] } : {}),
     ...(profile.loop && profile.size === 'tall' ? { loop: profile.h - LOOP_BAND } : {}),
   };
 }

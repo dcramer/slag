@@ -62,8 +62,13 @@ export interface LevelProfile {
   bare?: boolean;
   /** Mystery boxes of its own up every lap, dealing by rank from this table (gen/level/loop-boxes.ts). */
   boxes?: ItemDeal;
-  /** Slag rising under it from GO (Level.tide, sim/tide.ts): a climb. */
-  tide?: boolean;
+  /**
+   * Slag rising under it (Level.tide, sim/tide.ts): `true` for a climb's, on a leash to the leader and squeezing late;
+   * or a pour of the mode's own pace with no leash (a brawl's arena closing in from below).
+   */
+  tide?: boolean | Pick<Tide, 'wait' | 'speed' | 'gain'>;
+  /** Spawns at both ends: the goal's pocket is a second spawn (Level.spawns), so a field starts split across it. */
+  ends?: boolean;
   /** A loop whose laps follow the difficulty curve (gen/level/difficulty.ts `LAP_TIERS`), the first gentle to hard; absent, every lap is `difficulty`. */
   curve?: boolean;
 }

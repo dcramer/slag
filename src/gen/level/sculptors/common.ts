@@ -130,10 +130,10 @@ export function easyRise(): number {
  *
  * The count is decided once per level (k.challenge), not per attempt: harder
  * shapes are rejected more often, so a per-attempt roll would quietly select
- * for easy ones.
+ * for easy ones. A level that owes no part (a loop, an arena) asks for none.
  */
-export function rollChallenges(attempt: number, k: Pick<Knobs, 'challenge'> & Partial<Pick<Knobs, 'twoParts'>>): number {
-  if (attempt >= LAST_RESORT) return 0;
+export function rollChallenges(attempt: number, k: Pick<Knobs, 'challenge'> & Partial<Pick<Knobs, 'twoParts' | 'bare'>>): number {
+  if (attempt >= LAST_RESORT || k.bare) return 0;
   return k.challenge < (k.twoParts ?? TWO_PARTS) && attempt < TWO_PART_TRIES ? 2 : 1;
 }
 
@@ -365,6 +365,8 @@ export interface Knobs {
   challenge: number;
   /** Share of this theme's levels that ask for two parts (TWO_PART_ASK). */
   twoParts: number;
+  /** The level owes no part (LevelProfile.bare): it asks for no crossing a part solves. */
+  bare: boolean;
 }
 
 /**
@@ -396,6 +398,7 @@ export function knobs(ctx: SculptCtx, maxClimb?: number, range: [number, number]
     challenge: ctx.challenge,
     // A Rising Slag tower asks its one part at the top nobody reaches: a crossing on the spawn storey would hold everyone for the slag.
     twoParts: p.bare ? 0 : (TWO_PART_ASK[ctx.themeId] ?? TWO_PARTS),
+    bare: !!p.bare,
   };
 }
 

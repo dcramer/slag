@@ -77,23 +77,24 @@ What would close it, in the order to try it:
 
 ---
 
-## Brawl (planned): the one-hit party brawler (Duck Game), with the crossover brawler's knockback as the alternative
+## Brawl: the party brawler (Duck Game), killing by knockback into the level as the crossover brawler does (Smash)
 
-What we'd borrow: tiny rounds, last one standing, weapons from spawners and boxes knocked from below, first to N.
+What we borrow: short rounds, last one standing, items from boxes knocked from below, a draw scores nothing. What's ours: nothing kills on its own (items knock, bodies shove, on the race's physics), the level does: its hazards, the parts placed in it every round (so the arena gets nastier through a match), the drop, and late in a round slag pouring in from below.
 
-| Attribute | Reference | Target |
-| --- | --- | --- |
-| Players | 2–8 [DG-steam] | 2–8 |
-| Kill | one hit [DG-steam]; or knockback past a blast line, further the more damage you've taken [Smash-kb] | the owner's call: one-hit, or knockback into the level (today items never kill) |
-| Round won by | last standing, who must stay alive a moment; a draw scores nothing [DG-mp] | the same |
-| Round length | 8–10 s, rarely more (a review); under a minute (another) [DG-reviews] | 8–20 s |
-| Match won by | 10 wins by default, checked at intermission every 10 rounds [DG-mp] | 10 wins |
-| Weapons | spawners on a timer, boxes bumped from below, a mystery gun at the start [DG-spawns] | spawners and boxes in every arena |
-| Item frequency | crossover brawler: one every 8–13 s on medium [Smash-items] | one every 5–10 s |
-| Catch-up | none found | none at first (the crossover brawler has an optional underdog boost [Smash-rules]) |
-| Sudden death | crossover brawler: 300% damage, a shrinking blast zone [Smash-sd] | a shrinking arena after 20 s |
+| Attribute | Reference | Ours | Target |
+| --- | --- | --- | --- |
+| Players | 2–8 [DG-steam] | 1–8 | 2–8 |
+| Kill | one hit [DG-steam]; or knockback past a blast line, further the more damage you've taken [Smash-kb] | knockback into a hazard or off the edge; items and bumps knock, bodies shove (owner decision) | the same |
+| Round won by | last standing, who must stay alive a moment; a draw scores nothing [DG-mp] | last standing (10), and a kill credited by a bonk (2); a draw (everyone out at once, or the time out) scores nothing | the same |
+| Round length | 8–10 s, rarely more (a review); under a minute (another) [DG-reviews] | 40 s on average with bots, round 1 (no parts placed yet); 60 s at most | 20–40 s |
+| Draws | rare (not documented) | about half of round-1 bot rounds: the slag takes the last ones together | rare |
+| Match won by | 10 wins by default, checked at intermission every 10 rounds [DG-mp] | 50 points (Normal): 5 wins | the same |
+| Weapons | spawners on a timer, boxes bumped from below, a mystery gun at the start [DG-spawns] | 3 boxes in every arena, handing over what they deal | the same |
+| Item frequency | crossover brawler: one every 8–13 s on medium [Smash-items] | boxes refill every 5 s | one every 5–10 s |
+| Catch-up | none found | none | none at first (the crossover brawler has an optional underdog boost [Smash-rules]) |
+| Sudden death | crossover brawler: 300% damage, a shrinking blast zone [Smash-sd] | slag pours in from below 25 s in | the same |
 
-What it needs from us: an arena builder (TODO 32's builders), spawn points for every player, item spawners, a fight strategy for bots (the per-mode strategies make that one entry), and the one-hit call.
+The arena is a classic one-screen level that owes no part (`bare`), everyone starting from its two ends (`ends`), with its set's hazards and landmarks. Bots go for the nearest rival and shove, use what the boxes hand them, and climb out of the slag; they rarely knock anyone into a hazard yet (4 credited kills in 24 round-1 rounds of four).
 
 ---
 

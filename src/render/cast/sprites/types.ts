@@ -95,7 +95,7 @@ export interface SpriteGait {
  * flat lid, `anime` a big iris under a thick lash, `square` a white block and an iris block, `cat` an almond all
  * iris round a slit pupil (the monster slayer's), `cutout` the drawing's own hole cut through the figure (the box creeper's).
  */
-export type EyeStyle = 'round' | 'tall' | 'dot' | 'pill' | 'profile' | 'scowl' | 'heavy' | 'anime' | 'square' | 'cat' | 'hole' | 'glow' | 'cutout';
+export type EyeStyle = 'round' | 'tall' | 'dot' | 'pill' | 'profile' | 'scowl' | 'heavy' | 'anime' | 'square' | 'cat' | 'hole' | 'glow' | 'bulb' | 'cutout';
 
 /**
  * The face kit's settings for a kind: eye size (world px, the near eye's at rest), iris, its eye style (`round` if

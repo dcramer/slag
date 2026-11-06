@@ -877,6 +877,25 @@ export const BRIEFS: Record<string, Brief> = {
       'One hand raised in a polite little wave at shoulder height, the other at her side. A polite, vacant smile.',
     worn: 'the green diamond is cracked across its middle and a strip of grey tape (#9a9c98) is stuck over the crack, and it hangs crooked, tilted to one side, still floating clear above her head with white background under it; the hem of the dress is torn into a big ragged notch at the side; the heel of her back shoe has snapped off, that shoe now flat. Her face, the bob and the gap under the diamond stay as they are.',
   },
+  slime: {
+    // The nod, each part of the read at race size and each a shape in outline: the teardrop of goo, wide and flat at
+    // the bottom, rising to a pointed tip that curls over to one side (the read: nobody else in the cast comes to a
+    // point on top, and it parts it from the jelly's dome, the dot-eater's circle and the puffball's ball, so the tip
+    // stands tall and clear and is traced with `smooth: 0`); no limbs (it parts it from the puffball and the hopper,
+    // on feet); the huge open grin across its middle and the two big round eyes high on it (the face, in colour).
+    // Ours, and the joke: it's a water balloon. The curled tip is the balloon's tied knot, a seam of the rubber shows,
+    // and a slow drip leaks from a pinhole in its back.
+    // The palette is neutral (Decisions 4): the goo in the player's colour, the shine a light of it; the eyes and the
+    // mouth neutrals, the tongue a warm fixed tone (a face mark). The image model draws the original's onion whatever
+    // the twist says, so the balloon is the wear edit's: made the balloon's neck, the tip tied off a sack (a money bag in
+    // black), and a big hooked curl read as a witch's hat; the tip as drawn, a knot tied round its root, read as the
+    // homage (art/sprites/slime/design.prompt.txt).
+    design:
+      'The character: a small blob of glossy blue goo (#3d8fe0) shaped like an onion or a teardrop, with no arms, no legs and no feet, side on facing right. ' +
+      'Its signature: wide and flat at the bottom, it rises to a tall pointed tip that curls over backwards to the left like a flame, as tall as a third of the body, the tip standing clear against the white. ' +
+      'The tip is the tied knot of a water balloon. Two big round white eyes with black pupils high on its front, a huge open grin across its middle, dark inside (#2a1f1a), with a pink tongue (#e26a6a). A big pale shine (#bfe2ff) on its upper side.',
+    worn: 'the pointed tip on top keeps its shape, curling over at its end, but taller and thicker at its root, and a thin twist of rubber is tied round its root like the knot of a water balloon; a strip of grey tape (#9a9c98) is stuck over a pinhole low on its back, and one big drop of water leaks out from under it and hangs off the back of the body; the body sags a little lopsided, slumped lower on its back side. The eyes and the grin stay exactly as they are.',
+  },
   assistant: {
     // The nod, each part of the read at race size and each a shape in outline: the top-knot, a tuft of hair standing
     // straight up off the crown, pinched in at its base by a band and splaying out at its tip, with a big round bell
@@ -923,6 +942,47 @@ export const BRIEFS: Record<string, Brief> = {
     // The edit carries the rest of the twist with the wear: the drooping back wing, a hanger's hook, the bunny
     // slipper. Nothing on the face, and the head wings stay as drawn.
     worn: "one of the felt back wings droops down limp off its bent wire hanger; a coat hanger's wire hook pokes up above her back shoulder; the front slipper is now a fuzzy bunny slipper with two long floppy ears and a round face; the back wing's felt has a big ragged tear. Her face, the two bat wings on her head and the gap between them and her hair stay exactly as they are.",
+  },
+  archer: {
+    // The nod, each part of the read at race size and each a shape in outline: the bow drawn and held out level at
+    // arm's length ahead of her, as tall as she is, with background all round it (the read: nobody else in the cast
+    // holds one; a thin curve with a string, never a block like the hunter's cannon or the raider's pistols); the
+    // huge bushy red hair puffing out behind her head with thick braids flying off it (her, not the raider's one
+    // tight rope); the fur wrap over her shoulders and back (the tribal hunter's bulk); a low hunter's crouch.
+    // Ours, and the joke: her quarry is household robots. The bow is a bent wooden curtain rod with a round knob on
+    // each end, strung with a bungee cord, and the arrows are suction-cup darts.
+    // The palette is neutral (Decisions 4): the leathers and leg wraps in the player's colour, the fur a light of it;
+    // the hair red-brown (a neutral the read needs), the skin, the rod's wood, the boots and the darts neutrals.
+    // Side on: her read is a profile. The design read (black, among seven cast silhouettes) named her twice, at medium
+    // and medium-high (art/sprites/archer/design.prompt.txt).
+    design:
+      "The character: a young huntress seen side on in profile facing right, in a low crouch, drawing a big bow held out level at arm's length ahead of her with white background all round it: the bow is a thick bent wooden curtain rod (#a0703f) with a round knob on each end, as tall as she is, strung with a black bungee cord, a suction-cup dart on the string. " +
+      'Huge bushy red-brown hair (#b0482a) puffing out far behind her head in thick braids. Green leather tunic and leg wraps (#4f8a5e), a big cream fur wrap on one shoulder (#e8dcc0), a quiver of darts on her back, brown boots, tan skin, dot eyes.',
+    // Off the face and off the bow's curve: tape on the rod where it snapped, a notch out of the fur, a braid frayed
+    // loose at its end, a boot's sole flapping.
+    worn: "a strip of grey tape (#9a9c98) is wrapped round the bow's curtain rod just above her hand where it snapped and was mended, the bow's curve staying the same; a big ragged notch is torn out of the fur wrap's lower edge; the end of the longest braid is frayed loose into a ragged tuft; the back boot's sole is flapping loose at the toe. Her face, the bushy hair and the bow's shape stay as they are.",
+  },
+  bear: {
+    // The nod, each part of the read at race size and each a shape in outline: the tiny top hat perched upright
+    // between two round ears, with background between the hat and each ear (the read: parts that touch become one
+    // shape, so the ears sit far out on the head's sides; the top-hat girl's hat is as tall as she is, his is small);
+    // the microphone held up in front of the mouth, clear of the face (the puppy's mic sits under a beanie on a
+    // skinny card; this is a stocky bear); the round head with a big muzzle on a big round belly, stiff jointed limbs
+    // (upright and stiff, never the ape's hunch and long arms). The head faces us, so both ears show apart.
+    // Ours, and the joke: a coin-op kiddie ride gone walkabout: the mic is a shower head on its hose, a coin slot in
+    // the belly, one eye's bulb blown, the jaw stuck half open.
+    // The palette is neutral (Decisions 4): the fur in the player's colour, the belly and muzzle a light of it; the
+    // hat and bow tie dark neutrals, the shower head metal, the eyes a pale glow. The colours lead the brief: the
+    // image model drops what comes last.
+    design:
+      'The character: a stocky cartoon animatronic bear, a creepy old coin-operated kiddie ride come to life, standing upright, his head turned to face us so both ears show. Colours: brown fur (#8f6432), a pale tan belly and muzzle (#e0bc90), a black top hat and bow tie (#2a2428), a steel grey shower head and hose (#a8acb0), pale yellow glowing eyes (#f4ecb0). ' +
+      'His signature, big and bold: a tiny black top hat, taller than it is wide, perched upright on the very top of his big round head, with clear white gaps between it and his two round ears, which sit far out on the sides of his head. ' +
+      'His near hand holds a steel shower head on a hose up in front of his mouth like a microphone, out clear of his face. ' +
+      'A big round muzzle, a black bow tie, a big round belly with a coin slot in it, short stiff jointed limbs with gaps at the elbows and knees.',
+    // The edit carries the rest of the twist with the wear, all off the face (the kit draws the eyes): the coin jammed
+    // in the belly's slot, the fur torn open at a joint with the metal showing, the hat dented. The hose stays short:
+    // a cord coiled by the feet reads as a tail.
+    worn: 'a big coin slot is set in the middle of his belly with a large silver coin jammed half into it; the fur on his near forearm is torn open at the elbow joint, a grey metal rod showing through; the fur on his far knee is split open showing a grey metal joint; the bow tie hangs crooked; the top hat has a big dent in its side. The top hat stays exactly where it is, small and upright on top of his head with white gaps between it and both round ears, and the shower head and its short hose stay held up in front of his mouth. His face stays as it is.',
   },
 };
 

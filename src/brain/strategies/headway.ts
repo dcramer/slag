@@ -14,7 +14,7 @@ const LAST_FRAMES = 120;
 export type Stage = 'go' | 'leap' | 'spent';
 
 /** The cell `togo` and `away` measure to. */
-export const aimOf = (o: Objective): Cell => (o.kind === 'reach' ? o.cell : o.lapLine);
+export const aimOf = (o: Objective): Cell => (o.kind === 'climb' ? o.lapLine : o.cell);
 
 /** How a race is getting on, frame by frame: what every mode's strategy reads to know it's stuck. */
 export class Headway {

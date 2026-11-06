@@ -785,7 +785,7 @@ export class Match {
       this.level,
       this.placed,
       this.players.map((p) => p.slot),
-      this.rules.raceSeconds * 60,
+      (MODES[this.rules.mode].run.seconds ?? this.rules.raceSeconds) * 60,
       deriveSeed(this.seed ^ this.salt, `items:${this.round}`),
       this.blood,
       this.rules.bloodRounds > 0,
@@ -814,8 +814,11 @@ export class Match {
     const run = this.run!;
     for (const r of run.runners) {
       const p = this.player(r.slot);
-      // Only someone still racing holds the round open: a finished or dead runner may watch as long as they like.
-      if (!this.rules.raceSeconds && p && r.alive && !r.finished && this.idleFrames(p) >= IDLE_FRAMES) p.afk = true;
+      // Only someone still racing holds the round open: a finished or dead runner may watch as long as they like. A
+      // bot is never away (holding still beside a rival in a brawl is playing), and a round with its own time limit
+      // ends by itself.
+      const timed = this.rules.raceSeconds || MODES[this.rules.mode].run.seconds;
+      if (!timed && p && !p.bot && r.alive && !r.finished && this.idleFrames(p) >= IDLE_FRAMES) p.afk = true;
     }
     run.step(this.players.map((p) => (this.gone(p) ? AWAY_RUN_INPUT : this.input(p, inputs))));
     if (run.endFrame >= 0 && run.frame - run.endFrame > 75) this.finishRound();
