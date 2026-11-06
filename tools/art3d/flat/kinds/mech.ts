@@ -3,8 +3,8 @@ import type { FlatKind } from '../kinds';
 // Every pose keeps what carries her (art/sprites/mech/design.prompt.txt): the mech is the outline, she is its crest. The
 // wide flat washing-machine body, the two long duct cannons jutting far forward with a band of background between them,
 // the thick mech legs, and her small head in big headphones over its top. Round-bodied with its ducts curled in at its
-// sides, the first design traced at 22 px as a ball on stubs ("Bob-omb"); with its body as tall as it was wide and its
-// two ducts close together, the first drawn set read as "a stocky figure with a big fist" (r1/). So the body is half
+// sides, the first design traced at 22 px as a ball on stubs; with its body as tall as it was wide and its
+// two ducts close together, the first drawn set read as "a hunched, bulky figure" (r1/). So the body is half
 // again as wide and the ducts twice as long and far apart.
 const KEEP =
   "always the wide flat pink washing-machine body much wider than tall, the two long straight grey duct cannons sticking far forward, one high and one low with a wide band of white between them, the thick grey mech legs, and the pilot's small head with headphones and long brown hair over its top";

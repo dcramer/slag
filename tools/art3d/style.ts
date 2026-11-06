@@ -326,10 +326,11 @@ export const BRIEFS: Record<string, Brief> = {
     // The palette is neutral (Decisions 4): the shell in the player's colour, its panels a light of it; the legs,
     // ducts and the porthole's rim metal greys, the pilot's hair dark, the bunny white. The first design, drawn
     // round-bodied with its ducts curling in at its sides, traced at 22 px as a round blob on stubs: the ducts were
-    // inside the outline. So the body is a flattened egg and the ducts reach far out ahead, straight and level. That
-    // one, black at blind-sheet size, read as "Bob-omb" and "a walker mech, low" on spindly legs with her head a nub,
-    // so an edit before the wear (art/sprites/mech/design.prompt.txt) made the legs thick armoured mech legs and her
-    // head twice as big, with long hair and big headphone cups: "a D.Va-style mech, low" and "a heavy gunner or mech".
+    // inside the outline. So the body is a flattened egg and the ducts reach far out ahead, straight and level. Black at
+    // blind-sheet size that one was a round body with a barrel out front on spindly legs, so an edit before the wear
+    // (art/sprites/mech/design.prompt.txt) made the legs thick armoured mech legs and her head twice as big, with long
+    // hair and big headphone cups, and a later one made the body half again as wide and the ducts twice as long and far
+    // apart: a rider on a vehicle with a gun sticking forward.
     design:
       'A walking washing machine: a squat rounded pink body (#e86aa8, pale pink panels #f6b8d4), much wider than tall, like a fat flattened egg on its side, a round porthole door on its front with a grey metal rim and laundry behind the glass. ' +
       "Two long grey metal ostrich legs, the knees bending backward like a bird's, big clawed feet, white space between the legs. " +

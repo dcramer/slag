@@ -158,7 +158,7 @@ The strongest reads first. **Keyed** marks the non-humanoids, the riskiest to dr
 | 40 | archer | Aloof | humanoid, side on | drawn flat; named by both blind readers at medium in the first round, paired with nobody (the bow drawn in every pose, the bushy mane) |
 | 41 | slime | Slimple | **keyed**, limbless | drawn flat; the blind read passes (both readers named it at medium-high or better, unpaired: the onion with its tip a point, kept by `smooth: 0`; a big hooked tip read as a witch's hat) |
 | 42 | bear | Creaky Buzzbear | humanoid, stocky | drawn flat; the blind read passes (named by both readers, at medium and low, unpaired: the tiny hat between the round ears with background each side, the mic held up) |
-| 43 | mech | D.Wash | **keyed**, mech on legs | drawn flat; the blind read fails, owner to decide (two rounds: a stocky figure with a fist, then the ape; never paired with the robot boy or the hunter): black at 22 px a walker mech with a pilot is the best read, and the pink shell, bunny and headphones carry her in colour |
+| 43 | mech | D.Wash | **keyed**, mech on legs | drawn flat; the blind read fails, owner to decide (two rounds: a hunched stocky figure, then the ape, paired with it; never with the robot boy or the hunter): black at 22 px a rider or a walker is the best read, and the pink shell, bunny and headphones carry her in colour |
 | 44 | genie | Shampootae | humanoid, side on | medium: the ponytail out level; the raider and the archer to watch |
 | 45 | mushroom | Toadmund | humanoid, small, capped | high: the spotted cap; the assistant dog and the puffball to watch |
 | 46 | boxer | Little Smack | humanoid, small | medium: the gloves held up; the fighter and the ape to watch |
