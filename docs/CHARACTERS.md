@@ -1,6 +1,6 @@
 # Characters
 
-The runners are a cast of forty-two homages to famous game characters, in our own designs. In the lore (DESIGN.md) they're the knock-off heroes who almost got their own game. Each kind is a character design of its own, the way the barnyard party game's animals are: its own outline, its signature props, and a way of moving.
+The runners are a cast of forty-six homages to famous game characters, in our own designs. In the lore (DESIGN.md) they're the knock-off heroes who almost got their own game. Each kind is a character design of its own, the way the barnyard party game's animals are: its own outline, its signature props, and a way of moving.
 
 `pnpm shot cast` shoots the sheet: the 8-player lineup at play scale on farm and mine, the race start, deaths, a 3× close-up, the lobby cards, the "is it the homage?" sheet (`cast-recognise.png`: each kind close up beside "This is ___"), the silhouette test (`cast-silhouettes.png`) and the catalog of every kind (`--only catalog` for the last three). Every sheet waits for the rendered kinds' frames (`slagDebug.sprites.ready()`), so it shows what ships. In the console, `slagDebug.cast` has `catalog()`, `silhouettes()`, `recognise()` and `bench()`.
 
@@ -77,6 +77,10 @@ Each kind's entry is its own file in [characters/](characters/): what a stranger
 | [archer](characters/archer.md) | the red-braided girl with the bow who hunts robot beasts | side on in a hunter's crouch, a bow drawn and held out level ahead, thick braids bushing out behind, a quiver, a fur shoulder wrap | costume: the leathers; the fur a light of it |
 | [slime](characters/slime.md) | the blue teardrop slime with the grin | a limbless teardrop of goo with a curled tip, two big eyes and a huge grin | costume: the goo; the shine a light of it |
 | [bear](characters/bear.md) | the animatronic bear in the little top hat | a stocky bear with round ears, a tiny top hat between them with background each side, a bow tie, a shower head held up like a mic, a coin jammed in his belly, stiff jointed limbs torn open at the joints | costume: the fur suit; the belly and muzzle a light of it, the torn fur a dark of it |
+| [mech](characters/mech.md) | the girl gamer in the pink mech with the bunny on it | a squat round mech wider than tall on backward-bending legs, two stubby arm cannons forward, a bunny decal, the pilot's headphones over the top | costume: the mech shell; its panels a light of it |
+| [genie](characters/genie.md) | the half-genie who whips her long ponytail | a slim dancer, a ponytail as long as she is whipped out level from her crown, a tiara, harem trousers, hoop earrings | costume: the top and trousers; the sash a dark of it |
+| [mushroom](characters/mushroom.md) | the little mushroom retainer in the spotted cap | small and stubby under a huge round spotted cap wider than him, a vest, puffy trousers | costume: the spots and the vest |
+| [boxer](characters/boxer.md) | the tiny boxer with the huge green gloves | small and wiry in a high guard, two huge round gloves up, a tank top, baggy shorts, a towel round his neck | costume: the gloves; their cuffs a dark of it |
 
 **Reserves**, if a kind won't read: the spinning bandicoot (its tuft and grin rhyme with the speedster), the shovel-wielding knight, the red-haired mountain climber, the falling-block party bean (rhymes with the crewmate). The space marine in green armour reads as a generic soldier at 20 px; the plumber's tall brother, the ape's red-capped nephew and the king's turtle foot soldiers rhyme with kinds already in.
 
@@ -91,7 +95,7 @@ Every entry feeds the art pipeline (Rendered kinds below) and is written as prom
 - **Facing.** Drawn facing right, standing on the floor.
 - **Player's color.** Decisions 4. The region a stranger would name the character's colour by wears the player's colour (`slot: 'player'` in its entry, `tools/art3d/flat/kinds.ts`); every other coloured part is a tone of it (`on` that role, `tone` lighter or darker), far enough apart that the parts stay separate shapes; the rest is neutral (skin, eyes, hair, metal, wood, bone, cloth greys, ink). No ring. Nothing that a stranger reads as skin, eyes or a face takes it. This holds even where a colour is the original's identity (the dot-eater's ball, the plumber's blue overalls): the shape carries the read.
 - **Faces.** Expressive eyes with highlights, and brows that react to running, jumping, falling and cheering. The face is the kind's, never rolled: eye count, style, iris, place and mouth are part of its design (`paintFace` in `KINDS`, `face` in a rendered kind's entry), so every character of a kind has the same face and only its expression changes. A rendered kind's eyes are found in every pose (`tools/art3d/README.md` → Face, variety, frames).
-- **The nod and the twist.** The nod is the three or four traits a stranger names it by, and each entry says why each one is needed. The twist is ours: a foundry, scrapyard or knock-off flavour, a changed signature prop, and one joke. A twist never moves or hides a trait the nod needs.
+- **The nod and the twist.** The nod is the three or four traits a stranger names it by, and each entry says why each one is needed. The twist is ours: a foundry, scrapyard or knock-off flavour, a changed signature prop, and one joke. A twist never moves or hides a trait the nod needs. Nor does it vanish in the drawing: a kind whose twist was cut for misreading at play size, leaving the original's own face and shape, looks like the original redrawn (the puffball, 2026-11-06); replace a lost twist with one that shows.
 - **Swaps.** Small accessories inside the outline, rolled per look from `vary`: they never change the silhouette. A rendered kind draws one, a strip on the crown or the cheek (`accessories` in its entry).
 - **Disheveled.** Two or three worn tells per kind, each a change to the outline or a big flat shape that reads at play scale (Decisions 9). They are the design, not a roll: every look of a kind is battered the same way.
 - **Variety.** Every look of a kind is the same character by the same hand, so variety is curated, never rolled freely: the face, the proportions and the silhouette are fixed per kind. Besides the costume colour and the swaps, each kind designs three layers, each picked from the look seed (`VARIETY` in `src/render/cast/sprites/play.ts`) and render only:
@@ -154,6 +158,10 @@ The strongest reads first. **Keyed** marks the non-humanoids, the riskiest to dr
 | 40 | archer | Aloof | humanoid, side on | drawn flat; named by both blind readers at medium in the first round, paired with nobody (the bow drawn in every pose, the bushy mane) |
 | 41 | slime | Slimple | **keyed**, limbless | drawn flat; the blind read passes (both readers named it at medium-high or better, unpaired: the onion with its tip a point, kept by `smooth: 0`; a big hooked tip read as a witch's hat) |
 | 42 | bear | Creaky Buzzbear | humanoid, stocky | drawn flat; the blind read passes (named by both readers, at medium and low, unpaired: the tiny hat between the round ears with background each side, the mic held up) |
+| 43 | mech | D.Wash | **keyed**, mech on legs | medium: the round mech on bird legs; the robot boy's and the hunter's cannons to watch |
+| 44 | genie | Shampootae | humanoid, side on | medium: the ponytail out level; the raider and the archer to watch |
+| 45 | mushroom | Toadmund | humanoid, small, capped | high: the spotted cap; the assistant dog and the puffball to watch |
+| 46 | boxer | Little Smack | humanoid, small | medium: the gloves held up; the fighter and the ape to watch |
 
 **What to check.** No two kinds may rhyme. Watch these pairs:
 

@@ -267,6 +267,10 @@ const READS_AS: Record<Kind, string> = {
   archer: 'the red-braided girl with the bow who hunts robot beasts',
   slime: 'the blue teardrop slime with the grin',
   bear: 'the animatronic bear in the little top hat',
+  mech: 'the girl gamer in the pink mech with the bunny on it',
+  genie: 'the half-genie who whips her long ponytail',
+  mushroom: 'the little mushroom retainer in the spotted cap',
+  boxer: 'the tiny boxer with the huge green gloves',
 };
 
 /**
