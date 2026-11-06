@@ -13,7 +13,7 @@ For a production agent taking one kind's entry (`docs/characters/<kind>.md`) to 
 - [ ] **Register:** the kind in `LOADERS` (`src/render/cast/sprites/index.ts`), if it isn't there.
 - [ ] **Build** and iterate: `pnpm exec tsx tools/art3d/flat/build.ts <kind>` until every pose has its eyes (`FLAT_DEBUG`) and its wear ("no room for" gone), and `pnpm vitest run tests/sprite-cast.test.ts` passes.
 - [ ] **Shoot:** `pnpm shot variety --kinds <kind>` on a light theme and `--theme mine`, and `pnpm shot sprites --kind <kind>`. Look at all of it: eight at play scale and 3×, the cast lineup, the run cycle, the six-rolls lobby, `sprites-<kind>-variety.png`.
-- [ ] **Blind read:** give `shots/sprites-blind.png` (copy it out of the repo first) to two fresh agents with the prompt below. Nothing else in their brief. After a failed round, change what the readers' words point at and read again with two new readers; log each round's words in your entry's Rig line. When two rounds in a row only move the misread somewhere else, stop spending and report: the design needs a new idea, not another edit.
+- [ ] **Blind read:** give `shots/sprites-blind.png` (copy it out of the repo first, to a folder whose path doesn't name the kind: a reader read "pyramid" in one) to two fresh agents with the prompt below. Nothing else in their brief. After a failed round, change what the readers' words point at and read again with two new readers; log each round's words in your entry's Rig line. When two rounds in a row only move the misread somewhere else, stop spending and report: the design needs a new idea, not another edit.
 - [ ] **Gate:** `git merge origin/main`, `pnpm check`, `pnpm build`. Commit to your branch, the sources in `art/` included (Git LFS); don't push.
 
 ## Done when
