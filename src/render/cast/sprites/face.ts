@@ -32,6 +32,9 @@ const SLIVER = 0.5;
 const TURNED = 0.7;
 /** A googly eye's far one against the near (with the kit's own 0.85 for the far eye's size): the pair mismatched. */
 const GOOGLY_FAR = 2.3;
+/** A goggle's rim and its dark lens: neutral, so they read as goggles on any player's colour. */
+const RIM = '#8e8a84';
+const LENS = '#2b3338';
 
 /** One style of eye (`EyeStyle`), drawn about the origin, already turned with the head. */
 interface EyeArt {
@@ -338,6 +341,32 @@ export const EYES: Record<EyeStyle, EyeArt> = {
       }
       within(s, pts, () => poly(s, oval(f * px * rr, py * rr, pr, pr, 10), INK));
       glint(s, -f * rr * 0.42, -rr * 0.44, rr * 0.17);
+    },
+  },
+  // Welding goggles worn down over the eyes, so no eye shows: a dark lens in a thick grey rim, a glint slashed
+  // across it (the engineer's). Goggles never shut, so it acts in the glint: it slides back into the run, up on
+  // the way up, sparkles twice on a cheer, and the lens cracks on a death.
+  goggle: {
+    extent: [1, 1],
+    brow: false,
+    stuck: true,
+    open(s, r, m, f) {
+      inked(s, oval(0, 0, r, r, 14), RIM, INK, r * 0.14, r * 0.22);
+      const lens = oval(0, 0, r * 0.66, r * 0.66, 12);
+      poly(s, lens, LENS);
+      if (m === 'dead') {
+        s.fillStyle = RIM;
+        cross[0].x = -r * 0.5;
+        cross[0].y = -r * 0.4;
+        cross[1].x = r * 0.45;
+        cross[1].y = r * 0.5;
+        stroke(s, cross, { w: Math.max(0.3, r * 0.18), seed: 3, taper: [0.2, 0.2], press: 0.1 });
+        return;
+      }
+      const gx = m === 'run' ? -f * 0.3 : m === 'up' ? f * 0.05 : f * 0.22;
+      const gy = m === 'up' ? -0.4 : m === 'fall' ? 0.1 : -0.22;
+      within(s, lens, () => glint(s, gx * r, gy * r, r * (m === 'cheer' ? 0.3 : 0.24)));
+      if (m === 'cheer') within(s, lens, () => glint(s, -f * r * 0.24, r * 0.26, r * 0.16));
     },
   },
   // A hole cut through the figure, the level showing in it: the box creeper's square eyes, which are its frame's own

@@ -1,42 +1,48 @@
 import type { FlatKind } from '../kinds';
 
 // Small and low on four legs, side on, with what only this little dragon has in outline: the long horns swept
-// straight back off the head, the stubby wings up off the shoulders, and the arrowhead on the end of the tail. The
-// wings are umbrella cloth on bent spokes and a firefly in a jam jar hangs from the tail: the twist. The poses were
-// drawn three to a 16:9 image with the design as the reference and cut apart (art/sprites/dragon/design.prompt.txt).
+// straight back off a big round head, a small wing standing straight up off the middle of the back with background
+// between it and the horns (swept back beside them, wing, horns and spines read as one bundle of quills: the
+// hedgehog), and the arrowhead on the end of the tail. The run is a charge, the horns raised and the chin tucked, never
+// a flat dash with everything streaming back (read as the hedgehog too). The wings are umbrella cloth on bent spokes
+// and a firefly in a jam jar hangs from the tail: the twist. The poses were drawn three to a 16:9 image with the design
+// as the reference and cut apart (art/sprites/dragon/design.prompt.txt).
 const KEEP =
-  'the two long pale horns always swept straight back off its head, the two small umbrella-cloth wings always on its shoulders, the taped arrowhead tip always on the end of its tail with the small jam jar hanging from it, its eye open';
+  'the two long pale horns always on its big round head, the small umbrella-cloth wing always standing straight up off the middle of its back, the taped arrowhead tip always on the end of its tail with the small jam jar hanging from it on a string, its eye open';
 
 export const kind: FlatKind = {
-  body: 214,
+  body: 250,
   map: {
     roles: ['wing', 'far', 'scales', 'bone', 'grey', 'glass', 'mouth', 'dark'],
     // Sampled from the design (art/sprites/dragon/design.png, `swatch.py`) and its poses.
     families: [
-      ['scales', [137, 106, 209]],
-      ['scales', [140, 108, 206]],
-      ['scales', [135, 110, 187]],
-      ['scales', [146, 115, 191]],
+      ['scales', [135, 102, 207]],
+      ['scales', [133, 100, 204]],
+      ['scales', [134, 105, 198]],
+      ['scales', [130, 98, 200]],
+      ['scales', [136, 106, 201]],
+      ['scales', [129, 100, 189]],
+      ['scales', [146, 114, 184]],
       // The far legs, and the scales' cel shadow under the belly and the head, in the drawing's one shade.
-      ['far', [96, 77, 144]],
-      ['far', [104, 81, 158]],
-      ['far', [115, 89, 157]],
-      ['far', [98, 75, 139]],
+      ['far', [114, 85, 132]],
+      ['far', [124, 97, 176]],
+      ['far', [119, 93, 162]],
       // The umbrella cloth, and its shade.
-      ['wing', [212, 176, 224]],
-      ['wing', [206, 171, 215]],
-      ['wing', [185, 149, 179]],
-      ['wing', [178, 142, 180]],
-      ['wing', [161, 127, 174]],
+      ['wing', [193, 178, 217]],
+      ['wing', [187, 172, 209]],
+      ['wing', [189, 172, 223]],
+      ['wing', [172, 154, 185]],
+      ['wing', [136, 115, 165]],
       // The belly, the horns, the spines and the arrowhead, their shade, and the eye's white.
-      ['bone', [236, 219, 183]],
-      ['bone', [238, 229, 204]],
-      ['bone', [234, 215, 184]],
-      ['bone', [193, 169, 161]],
-      ['bone', [221, 206, 191]],
+      ['bone', [235, 219, 183]],
+      ['bone', [234, 226, 198]],
+      ['bone', [239, 228, 200]],
+      ['bone', [230, 215, 183]],
+      ['bone', [212, 200, 191]],
       // The wing's patch and the tape round the arrowhead.
-      ['grey', [160, 147, 164]],
-      ['grey', [154, 144, 152]],
+      ['grey', [161, 148, 176]],
+      ['grey', [153, 143, 145]],
+      ['grey', [168, 158, 168]],
       // The jar's glass and the firefly's glow.
       ['glass', [216, 232, 236]],
       ['glass', [208, 224, 232]],
@@ -44,14 +50,17 @@ export const kind: FlatKind = {
       ['mouth', [208, 116, 124]],
       ['mouth', [172, 88, 96]],
       ['mouth', [232, 140, 134]],
-      ['dark', [47, 19, 57]],
-      ['dark', [52, 29, 58]],
-      ['dark', [28, 10, 35]],
-      ['dark', [39, 20, 47]],
+      ['mouth', [112, 68, 90]],
+      ['dark', [48, 35, 35]],
+      ['dark', [34, 21, 27]],
+      ['dark', [51, 36, 45]],
+      ['dark', [63, 47, 61]],
+      ['dark', [83, 68, 84]],
     ],
     line: 'dark',
     thin: ['wing', 'far', 'scales', 'bone', 'grey', 'glass', 'mouth'],
-    fringe: 5,
+    fringe: 3,
+    holes: 0.8,
     stroke: 2.4,
     feet: ['scales', 'far'],
     // The jar swings on its string below the tail: left out of the body's size.
@@ -103,47 +112,49 @@ export const kind: FlatKind = {
   face: { r: 1.15, iris: '#3a2a5a', eye: 'profile', far: 'none' },
   gait: { bounce: [0.2, 0.8], lean: [0, 0.03] },
   clips: {
-    idle: { frames: ['idle'], loop: true, fps: 1 },
-    idle2: { frames: ['idle2', 'idle'], loop: true, holds: [1.8, 2.4] },
-    walk: { frames: ['walk-1', 'walk-2'], loop: true, stride: 24 },
-    run: { frames: ['run-1', 'run-2'], loop: true, stride: 38, scale: 0.8 },
-    air: { frames: ['air-1', 'air-2'], loop: false, vy: [-200, 200], centre: 'box', scale: 0.9 },
-    wall: { frames: ['wall'], loop: true, fps: 1, centre: 'box' },
-    cheer: { frames: ['cheer', 'idle'], loop: true, holds: [0.5, 0.25], eyes: false },
-    cheer2: { frames: ['cheer2', 'idle'], loop: true, holds: [0.6, 0.3] },
+    // Long and low, the tail and its jar reach past the box behind him: every pose is centred on itself.
+    idle: { frames: ['idle'], loop: true, fps: 1, centre: 'box' },
+    idle2: { frames: ['idle2', 'idle'], loop: true, holds: [1.8, 2.4], centre: 'box' },
+    walk: { frames: ['walk-1', 'walk-2'], loop: true, stride: 24, centre: 'box' },
+    run: { frames: ['run-1', 'run-2'], loop: true, stride: 38, scale: 0.9, centre: 'box' },
+    air: { frames: ['air-1', 'air-2'], loop: false, vy: [-200, 200], centre: 'box', scale: 0.8 },
+    wall: { frames: ['wall'], loop: true, fps: 1, centre: 'box', scale: 0.74 },
+    cheer: { frames: ['cheer', 'idle'], loop: true, holds: [0.5, 0.25], eyes: false, centre: 'box' },
+    cheer2: { frames: ['cheer2', 'idle'], loop: true, holds: [0.6, 0.3], centre: 'box' },
     death: { frames: ['death'], loop: false, fps: 1, eyes: false, centre: 'box', scale: 0.78 },
   },
   // Drawn three to a 16:9 image and cut apart (README → 3. Poses); the sheets' prompts are in
   // art/sprites/dragon/design.prompt.txt. These are each pose alone, for a redraw.
   poses: {
-    // Not the tail arched over the back to hold the jar up to its face: standing in the blind sheet, the arc hid the
-    // horns and wings and it read as a kettle.
     idle2: { pose: `standing on all four legs, one front foot raised and curled, its head held high, a smug little smile, the tail out low behind; ${KEEP}.` },
     'walk-1': {
-      pose: `scampering to the right at a quick trot, the near front leg reaching forward and the far back leg pushing back, the other two legs planted, the wings flicked up; ${KEEP}.`,
+      pose: `trotting briskly to the right with a cocky bounce, the near front leg lifted high and reaching forward and the far back leg pushing back, the other two legs planted, its chin up; ${KEEP}.`,
     },
     'walk-2': { pose: `trotting to the right, the legs passing under the body, all four feet close to the ground, one front foot just lifted; ${KEEP}.` },
+    // A charge, not a dash: the head and horns up and forward, the wing up. Streamed back, the dash read as the hedgehog.
     'run-1': {
-      pose: `running flat out to the right, stretched out long and low: both front legs reaching far forward, both back legs kicked far back, the head pushed forward, the tail streaming straight out behind; ${KEEP}.`,
+      pose: `charging to the right at a full gallop like a little bull, its head lowered and pushed forward so both long horns point forward like a battering ram, both front legs reaching forward and both back legs pushing off far behind, the wing up on its back, a cocky determined grin; ${KEEP}.`,
     },
     'run-2': {
-      pose: `running flat out to the right, gathered: all four legs bunched up under its body, every foot off the ground, the back rounded, the tail streaming out behind; ${KEEP}.`,
+      pose: `galloping to the right, gathered: all four legs bunched up under its body, every foot off the ground, its back rounded, its head still lowered with the horns pointing forward, the wing up; ${KEEP}.`,
     },
     'air-1': {
-      pose: `leaping up and forward, both front legs tucked up under its chest, both back legs stretched out behind, both umbrella wings flung up high, the tail out behind; ${KEEP}.`,
+      pose: `leaping up and forward, its body tilted up, both front legs tucked up under its chest, both back legs stretched out behind, both umbrella wings spread wide and flung up high, the tail out behind; ${KEEP}.`,
     },
     'air-2': {
       pose: `gliding down, both umbrella wings spread wide open out to the sides like a parachute, all four legs dangling straight down below it, its eye wide and its mouth open in alarm; ${KEEP}.`,
     },
+    // Drawn facing left and mirrored.
     wall: {
       pose: 'seen from its side, facing right: it is clinging to a tall wall on the right edge of its space (do not draw the wall), standing up on its hind legs with both front claws braced flat against the wall, its tail hanging down behind, its head turned to look back at us, its eye open.',
       far: true,
     },
     cheer: {
-      pose: `rearing up tall on its hind legs, both front legs raised high in the air, both wings spread wide, its head thrown up, a huge open grin; ${KEEP}.`,
+      pose: `rearing up on its hind legs, both front legs raised forward in front of its chest, both wings spread up, its head thrown up, a huge open grin, its horns swept back; ${KEEP}.`,
     },
+    // Drawn facing left and mirrored.
     cheer2: {
-      pose: `a happy play bow, its front legs stretched forward flat on the ground and its rump high in the air, the tail raised high and wagging, a big grin; ${KEEP}.`,
+      pose: `a happy play bow, its front legs stretched forward flat on the ground and its rump high in the air, the tail raised high, a big grin; ${KEEP}.`,
     },
     death: {
       pose: 'it has been knocked out and lies on its back on the floor, the whole body horizontal, its head on the left and its tail on the right, all four legs sticking stiffly straight up in the air, its tongue out, its eyes shut. Seen from the side.',

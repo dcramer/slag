@@ -365,25 +365,24 @@ export const BRIEFS: Record<string, Brief> = {
     worn: "the two grey hoses running back across the pink body's side are gone, leaving plain pink panels; both thick grey mech legs bend sharply backward at the knee like a bird's, the knee joint pointing behind; a big round dent is knocked into the top back of the pink body; a long white sock hangs out of the porthole door's seal, dangling down the front; the upper duct cannon's open end is crumpled and its metal clip hangs undone. The woman's head, her headphones and hair, the porthole and the bunny patch stay as they are.",
   },
   engineer: {
-    // The nod, each part of the read at race size: the kit, carried low and clear of the body (the read in
-    // silhouette, so it leads the brief): a hard rectangular toolbox hanging from one hand (a box with square
-    // corners, which no other kind carries) and one huge wrench held low in the other, its open jaw out in
-    // front; the dome hard hat with a rim all round and the goggles on it (the head shape and the trade: a dome
-    // with a rim both sides, where the plumber's cap has a bill out front only); the tall, broad, square build
-    // with a small head for it and the square jaw (the gruff builder, and never the plumber's big head on a
-    // stout body); the work shirt over khakis (the colour block).
-    // Ours, and the joke: a backyard engineer. The hard hat is a battered bowl of a helmet, the goggles are
-    // swimming goggles, the wrench one giant spanner, the toolbox a dented tin one.
-    // Blind reads (2026-11-03 and 11-04): carried up by his shoulder, the spanner's jaw read as ears or as spikes
-    // off the hat; a wide brim on a short man read as the plumber's rival; short and stocky with the kit low,
-    // he was named only at low confidence, and an audit paired him with the plumber at play scale. So he is
-    // drawn tall, with the hat a dome and the toolbox a crisp box (art/sprites/engineer/design.prompt.txt).
+    // The nod, each part of the read at race size: the little gun turret he builds, carried low by its handle
+    // (the read nobody else has: a round body, a long barrel out back, three thin legs); big dark welding goggles
+    // down over his eyes, so no eye shows; one robot hand, a big steel gauntlet; a hard hat with a rim all round,
+    // never a cap's bill; the square clean-shaven jaw, no moustache; the huge wrench held low; the tall, broad,
+    // square build with a small head (never the plumber's big head on a stout body).
+    // Ours, and the joke: a backyard engineer. The hard hat is a plain steel bowl, the turret a dented tin pot on
+    // spider legs with a taped pipe for a barrel, the wrench one giant spanner. A dent in the dome's side hid the
+    // back of its rim, and the hat read as a cap: the wear stays off the hat.
+    // Blind reads: carried up by his shoulder, the spanner's jaw read as ears; a wide brim on a short man read as
+    // the plumber's rival. The clean colour audit (2026-11-06) took the toolbox, the cap-coloured hat and the
+    // drawn eyes for a Mario-style workman; the turret, the goggles down and the steel hand made him the
+    // engineer (art/sprites/engineer/design.prompt.txt).
     design:
-      'The character: a tall, broad, square-built handyman, long-legged, a big square slab of a chest on long sturdy legs, his head small for his body, head and hat a quarter of his height. ' +
-      'His kit is carried low, clear of his body. In his hand on the left of the picture a big hard rectangular metal toolbox (#3f7f5a), a crisp box longer than it is tall with straight edges, square corners and a flat lid, hanging by a small handle beside his knee, clear of his leg. In his gloved hand on the right of the picture one giant grey spanner (#8e8a84) held low, slanting forward and down, its single big open C jaw out in front of his knees. Nothing beside or above his head. ' +
-      'On his head a round yellow hard hat (#e9b730): a tall smooth dome with a narrow rim sticking out evenly all the way round, front, sides and back, no bill, no peak; a dark goggle strap (#3a4246) round the dome as a band. ' +
-      'A square clean-shaven jaw, peach skin (#efc9a4), two small black eyes. A red work shirt (#b8433c), khaki trousers (#8c7a58), tan work gloves (#a8794a), chunky brown boots.',
-    worn: "a big dent is knocked into the side of the hard hat's dome, its rim still running all round; one top corner of the toolbox is crumpled in, its straight edges and square corners otherwise kept; the spanner's handle is bent a little; the hole in the trouser knee is gone, the trousers whole.",
+      'The character: a tall, broad, square-built engineer, long-legged, a big square slab of a chest on long sturdy legs, his head small for his body, head and hat a quarter of his height. ' +
+      'His kit is carried low, clear of his body. His hand on the left of the picture is a big chunky steel robot hand with three thick metal fingers and a steel wrist, and from it hangs by a small handle, beside his knee and clear of his leg, a little gun turret robot (#7a2a26): a squat round dark red metal body, one long thick grey gun barrel sticking straight out of it away from him, three thin grey legs splayed under it. In his gloved hand on the right of the picture one giant grey spanner (#8e8a84) held low, slanting forward and down, its single big open C jaw out in front of his knees. Nothing beside or above his head. ' +
+      'Big round welding goggles with thick light grey rims and dark lenses pulled down over his eyes, strapped round his head under the hat, so no eyes show. On his head a plain pale steel hard hat (#c9c5bc): a smooth dome with a narrow rim sticking out evenly all the way round, no bill, no peak. ' +
+      'A square clean-shaven jaw, no moustache, peach skin (#efc9a4). A red work shirt (#b8433c), khaki trousers (#8c7a58), one tan work glove (#a8794a), chunky brown boots.',
+    worn: "a wide band of pale grey tape is wrapped round the middle of the turret's gun barrel; the turret's round red body has a big dent in its top; the spanner's handle is bent a little; the steel hard hat stays smooth, its rim running all round.",
   },
   goose: {
     // The nod, each part of the read at race size: the S of a neck (a goose, not a duck or a chicken), white
@@ -575,22 +574,25 @@ export const BRIEFS: Record<string, Brief> = {
   },
   dragon: {
     // The nod, each part of the read at race size: small and low on four short legs, side on (the horse is tall
-    // with a long neck, the dino upright); the horns swept straight back off the head (the head's outline, and
-    // back, never up like the king's); stubby wings standing up off the back (a dragon, not a lizard); the pale
-    // belly and the ridge of small spines (the purple dragon's markings, in neutral bone); the tail's arrowhead
-    // tip (the tip everyone draws him with).
+    // with a long neck, the dino upright); the long horns swept straight back off a big round head (the head's
+    // outline, and back, never up like the king's); a small wing standing straight up off the middle of the back,
+    // with background between it and the horns (a dragon, not a lizard; swept back beside the horns, wing, horns and
+    // spines read as the hedgehog's quills); the pale belly and the ridge of small spines (the purple dragon's
+    // markings, in neutral bone); the tail's arrowhead tip (the tip everyone draws him with).
     // Ours, and the joke: the wings are umbrella cloth on bent spokes, and he carries his own light, a firefly
     // in a jam jar tied to his tail.
     // The palette is neutral (Decisions 4): the scales in the player's colour, the wing cloth a light of it; the
-    // belly, horns, spines and tip bone; the jar glass.
+    // belly, horns, spines and tip bone; the jar glass. The shipped design was drawn from a paste-up of the first
+    // one with the wing stood up (art/sprites/dragon/design.prompt.txt): asked in words, the image model kept the
+    // swept-back bat wing.
     design:
       'The character: a small cute cartoon baby dragon standing low on all four short stubby legs, seen from its side, facing right, its whole outline unmistakably a little dragon, long and low with no neck. ' +
       'Its big round head has a short blunt snout and one big eye, and two long pale bone horns (#ecdcb8) sweep straight back off the top of its head, flat and backward, longer than the head. ' +
-      'Two small stubby wings stand up off its shoulders, each made of umbrella cloth (#c4a2ea) stretched over three bent thin black metal spokes, the cloth scalloped between the spoke tips. ' +
+      'One small stubby wing stands straight up off the middle of its back, pointing at the sky, well behind the horns with white space between them, made of umbrella cloth (#c4a2ea) stretched over three bent thin black metal spokes with round knob tips, the cloth scalloped between them. ' +
       'A row of small pale bone triangle spines runs along the top of its back. A pale bone belly (#ecdcb8). ' +
       'A long thin tail curves out behind and ends in a big flat pale bone arrowhead tip; a small glass jam jar with a firefly glowing pale inside hangs from the tail on a string. ' +
       'The head, body, legs and tail are all one purple (#8a5cc0).',
-    worn: "one wing's cloth is torn, a big flap of it hanging loose, and one of its spokes is bent and poking out past the cloth; a big square patch of grey cloth (#9a9c98) is sewn on the other wing with big stitches; the arrowhead tail tip is bent sideways and wrapped with a strip of grey tape.",
+    worn: 'a big square patch of grey cloth (#9a9c98) is sewn on the wing with big stitches; the arrowhead tail tip is bent sideways and wrapped with a strip of grey tape.',
   },
   horse: {
     // The nod, each part of the read at race size, and each a shape only a horse has in outline: four long legs
@@ -1099,6 +1101,29 @@ export const BRIEFS: Record<string, Brief> = {
     // Off the face and off the gloves' round outline: the scorch on the near mitt, a tape end flapping loose, the tea
     // towel's corner frayed, a boot's lace trailing.
     worn: "the near oven-mitt glove has a big dark brown scorch mark on its side; the grey tape on the near wrist has come loose and one end flaps out; one corner of the tea towel is frayed ragged; the back boot's lace has come undone and trails. Both gloves stay big and round, held up in front of his chin with white background between them and his face. His face stays as it is.",
+  },
+  junior: {
+    // No homage and no twist: Junior is Sentry's own robot, which the owner's team made (docs/characters/junior.md), so
+    // the design is the reference (art/sprites/junior/reference.png) redrawn flat, every trait kept: the square yellow
+    // box head with one huge eye and a big grin (the face, and the head nobody else in the cast has: the robot boy's is
+    // a round helmet, the miner's and the creeper's cubes have two eyes); the cap on backwards, its bill out behind;
+    // the zigzag antennae with ball tips springing up and out (they stand clear of the cap, or they join it); the round
+    // headphone ears; the long arm ending in a claw, held out clear of the body; the phone in the other hand; the thin
+    // legs on roller skates.
+    // At play size the reference's own sizes were lost (a colour read against it saw "bone-shaped blobs", "round yellow
+    // mitts" and no phone), so the props are bigger than its: one big zigzag to each antenna with a big ball tip, a pincer
+    // as big as the head, a phone as tall as it, a longer bill, steel wheels (art/sprites/junior/design.prompt.txt). The
+    // drawings keep only the antenna off the cap (art/sprites/junior/prune.py): three read in black as spiky hair or horns.
+    // The palette is neutral (Decisions 4): the hoodie in the player's colour, the cap and the skates a dark of it;
+    // the head, the arms and the ankle bands Junior's own yellow; the antennae and wheels a light steel, the legs and the
+    // headphones a dark purple-grey. The first image is an edit of the reference (`--ref`), not a new design.
+    design:
+      'The same robot character exactly as in the reference image, redrawn as a simple flat cartoon sprite design, full body, three-quarter view facing right. ' +
+      'A square yellow box head (#fdb819), as wide as the shoulders, with one huge round eye and a big toothy grin; a purple baseball cap (#8a3f8c) worn backwards, its long bill sticking far out behind; three light steel-grey wire antennae (#aaa6b4), each with one big sharp zigzag and a big round ball tip, one off the crown of the cap and one springing out from each round dark headphone ear (#4a4058), clear of the cap. ' +
+      'A pink hoodie (#ee4d9b). One long yellow arm held out low ending in a big open yellow pincer claw as big as his head, clear of his body; the other yellow hand holds a phone as tall as his head out to the side. ' +
+      'Thin dark purple-grey legs (#4a4058) with yellow ankle bands, white socks and purple roller skates (#6c3a78) on big light steel-grey wheels.',
+    // Off the face, the antennae and the cap: a torn hem, tape at the claw arm's elbow.
+    worn: "the hoodie's hem has a big ragged tear at one side; a wide band of grey tape (#9a9c98) is wrapped round the elbow of the long claw arm; the near roller skate has lost its front wheel and tips a little. The head, the eye, the grin, the cap, the antennae, the claw and the phone stay exactly as they are.",
   },
 };
 

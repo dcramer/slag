@@ -68,6 +68,9 @@ const RED = '#c9473f';
 const RED_SH = '#9c3530';
 const GOLD = '#e8c24a';
 const KHAKI = '#8c7a58';
+/** The engineer's steel hard hat. */
+const HAT = '#c9c5bc';
+const HAT_SH = '#a19d94';
 const KHAKI_SH = '#6c5c40';
 
 /** A beak or bill out of the front of a head at (x, y). */
@@ -740,10 +743,11 @@ export const KINDS: Record<Kind, KindArt> = {
     parts: ['shard', 'shard'],
   },
 
-  // The team shooter's engineer: tall, broad and square, his head small for his body under a dome hard hat with
-  // a rim all round (never a cap's bill out front: that's the plumber), goggles strapped on it, a square jaw, a
-  // work shirt in the player's colour over khakis, a hard rectangular toolbox hanging from his back hand and one
-  // huge wrench held low in the front one. Trudges, heavy-stepped. His rendered frames draw instead once loaded.
+  // The team shooter's engineer: tall, broad and square, his head small for his body under a steel hard hat with
+  // a rim all round (never a cap's bill out front: that's the plumber), dark welding goggles down over his eyes, a
+  // square jaw, a work shirt in the player's colour over khakis, a little gun turret hanging from his back hand
+  // and one huge wrench held low in the front one. Trudges, heavy-stepped. His rendered frames draw instead once
+  // loaded.
   engineer: {
     size: [1.06, 1.08],
     // Square shoulders on a slab of a torso, a small head on a thick neck, the jaw jutting forward.
@@ -758,9 +762,25 @@ export const KINDS: Record<Kind, KindArt> = {
     faceX: 0.06,
     gait: (g) => (g.moving ? { hop: abs(S(g.ph)) * 0.5, sy: 1 - abs(S(g.ph)) * 0.05, upright: 0.7 } : {}),
     paintFace: (d) => {
-      const y = Y(d, 0.77);
-      for (const sd of [-1, 1]) eye(d, sd * d.W * 0.08 + d.f * 0.6, y, 0.7);
-      brows(d, [-d.W * 0.08 + d.f * 0.6, d.W * 0.08 + d.f * 0.6], y, 0.8);
+      // Welding goggles down over his eyes, so no eye shows: a dark lens in a grey rim each, on a strap.
+      const y = Y(d, 0.79);
+      mark(
+        d.s,
+        '#3a4246',
+        [
+          { x: -d.W * 0.24, y },
+          { x: d.W * 0.24, y },
+        ],
+        0.7,
+        3,
+        [0, 0],
+      );
+      for (const sd of [-1, 1]) {
+        const gx = sd * d.W * 0.1 + d.f * 0.6;
+        tonedOval(d.s, gx, y, 1.1, 1.05, 10, STEEL, STEEL_SH, d.lk.ink, 0.3, 0.6 * d.k, 0.4);
+        poly(d.s, oval(gx, y, 0.62, 0.6, 8), '#2b3338');
+        poly(d.s, oval(gx + d.f * 0.2, y - 0.22, 0.18, 0.18, 6), '#ffffff');
+      }
       mouthMark(d, d.f * 1.2, Y(d, 0.66), 2.2, 'flat');
     },
     print: (d) => {
@@ -770,34 +790,36 @@ export const KINDS: Record<Kind, KindArt> = {
       tone(d, 0.25, 0.29, BROWN, BROWN_SH);
     },
     back: (d) => {
-      // The toolbox, a hard box with square corners and a handle, hanging beside his back knee: a dark of the
-      // shirt, clear of the legs.
-      const x0 = -d.f * d.W * 0.44;
-      const x1 = x0 - d.f * 5.6;
-      const y0 = Y(d, 0.06) - 1.4;
-      const y1 = y0 + 3.8;
-      const corner = (x: number, y: number) => ({ x, y });
-      toned(d.s, [corner(x0, y0), corner(x1, y0), corner(x1, y1), corner(x0, y1)], d.lk.playerDark, d.lk.playerShade, d.lk.ink, 0.3, 0.7 * d.k, 0.3);
-      const hx = (x0 + x1) / 2;
+      // The little turret, hanging by its handle beside his back knee, clear of the legs: a round body in a dark
+      // of the shirt, a long barrel pointing back, three thin legs under it.
+      const cx = -d.f * (d.W * 0.44 + 2.6);
+      const cy = Y(d, 0.06) + 0.6;
       d.s.fillStyle = d.lk.ink;
-      line(d.s, hx - 1.3, y0, hx - 1, y0 - 1.3, { w: 0.6, seed: 4, taper: [0, 0], press: 0 });
-      line(d.s, hx - 1, y0 - 1.3, hx + 1, y0 - 1.3, { w: 0.6, seed: 5, taper: [0, 0], press: 0 });
-      line(d.s, hx + 1, y0 - 1.3, hx + 1.3, y0, { w: 0.6, seed: 6, taper: [0, 0], press: 0 });
-      mark(
+      for (const lx of [-1.6, 0, 1.6]) line(d.s, cx + lx * 0.5, cy + 1, cx + lx, cy + 3.4, { w: 0.9, seed: 8, taper: [0, 0], press: 0 });
+      d.s.fillStyle = STEEL;
+      for (const lx of [-1.6, 0, 1.6]) line(d.s, cx + lx * 0.5, cy + 1, cx + lx, cy + 3.2, { w: 0.4, seed: 8, taper: [0, 0], press: 0 });
+      toned(
         d.s,
-        d.lk.ink,
         [
-          { x: x0, y: y0 + 1.2 },
-          { x: x1, y: y0 + 1.2 },
+          { x: cx, y: cy - 0.6 },
+          { x: cx - d.f * 5, y: cy - 0.6 },
+          { x: cx - d.f * 5, y: cy + 0.6 },
+          { x: cx, y: cy + 0.6 },
         ],
-        0.4,
-        7,
-        [0, 0],
+        STEEL,
+        STEEL_SH,
+        d.lk.ink,
+        0.3,
+        0.6 * d.k,
+        0.3,
       );
+      tonedOval(d.s, cx, cy, 2, 1.8, 12, d.lk.playerDark, d.lk.playerShade, d.lk.ink, 0.3, 0.7 * d.k, 0.4);
+      d.s.fillStyle = d.lk.ink;
+      line(d.s, cx, cy - 1.8, cx, cy - 3.4, { w: 0.6, seed: 4, taper: [0, 0], press: 0 });
     },
     front: (d) => {
-      // The hard hat, a light of the shirt: a tall dome over a rim that sticks out evenly all round it, front
-      // and back alike, and the goggles strapped round the dome.
+      // The steel hard hat, neutral: a tall dome over a rim that sticks out evenly all round it, front and back
+      // alike. In a tone of the shirt it matched the costume as a cap does, and read as the plumber's.
       const x = d.bx(0.95) + d.f * d.W * 0.02;
       const rim = Y(d, 0.86);
       toned(
@@ -810,8 +832,8 @@ export const KINDS: Record<Kind, KindArt> = {
           { x: x + d.W * 0.28, y: d.top - 2.4 },
           { x: x + d.W * 0.3, y: rim },
         ],
-        d.lk.playerHi,
-        d.lk.player,
+        HAT,
+        HAT_SH,
         d.lk.ink,
         0.4,
         0.8 * d.k,
@@ -825,29 +847,13 @@ export const KINDS: Record<Kind, KindArt> = {
           { x: x + d.W * 0.44, y: rim + 0.9 },
           { x: x - d.W * 0.44, y: rim + 0.9 },
         ],
-        d.lk.playerHi,
-        d.lk.player,
+        HAT,
+        HAT_SH,
         d.lk.ink,
         0.3,
         0.7 * d.k,
         0.4,
       );
-      const gy = rim - 1.6;
-      mark(
-        d.s,
-        '#3a4246',
-        [
-          { x: x - d.W * 0.29, y: gy + 0.2 },
-          { x: x + d.W * 0.29, y: gy },
-        ],
-        0.9,
-        1,
-        [0, 0],
-      );
-      for (const sd of [-0.5, 0.5]) {
-        const gx = x + d.f * d.W * (0.1 + sd * 0.26);
-        tonedOval(d.s, gx, gy, 1.2, 1.1, 10, '#8e8a84', '#6b6862', d.lk.ink, 0.3, 0.6 * d.k, 0.4);
-      }
     },
     tool: (d, hx, hy) => {
       // One huge wrench, held low and slanting forward and down, its open jaw out in front of his knees.
