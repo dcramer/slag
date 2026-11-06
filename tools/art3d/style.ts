@@ -984,6 +984,28 @@ export const BRIEFS: Record<string, Brief> = {
     // a cord coiled by the feet reads as a tail.
     worn: 'a big coin slot is set in the middle of his belly with a large silver coin jammed half into it; the fur on his near forearm is torn open at the elbow joint, a grey metal rod showing through; the fur on his far knee is split open showing a grey metal joint; the bow tie hangs crooked; the top hat has a big dent in its side. The top hat stays exactly where it is, small and upright on top of his head with white gaps between it and both round ears, and the shower head and its short hose stay held up in front of his mouth. His face stays as it is.',
   },
+  mushroom: {
+    // The nod, each part of the read at race size and each a shape in outline: the huge round cap, a smooth dome
+    // with a thick lip rolled under at its rim, much wider than him and sitting low over his face (the read in black:
+    // a dome with a lip, never a beret, a helmet, the mage's brim with its bent point or the assistant's tuft); the
+    // small round face under the rim (the cap is a cap, not his head); a short stubby body in a vest over puffy
+    // trousers on two little feet (small and upright, never the puffball's one ball on big feet).
+    // Ours, and the joke: he's from the pit crew. The cap is a polka-dot lampshade, its fringe trimmed off and a bit of
+    // its wire frame showing at the rim; he waves a chequered flag on a sawn-off broom handle, held out ahead and
+    // never upright beside him (upright, it's the mage's staff); a race plate is pinned crooked on his vest.
+    // The palette is neutral (Decisions 4): the spots and the vest in the player's colour, the vest's trim a dark of
+    // it; the cap's dome white, the skin, the trousers, the flag and the wood neutrals. The colours lead the brief.
+    design:
+      'The character: a small stubby cartoon mushroom man, two caps tall. Colours: a white cap (#f4f0e8) with big round red spots (#c9473f), a red vest (#c9473f) with dark red trim (#7a2620), pale peach skin (#f6d2b0), white puffy trousers (#f0ece4), a black and white chequered flag on a wooden handle (#a87a4a). ' +
+      'His signature, big and bold: a huge round mushroom cap, a smooth wide dome like half a ball, with a thick rounded lip rolled under all round its rim, the rim much wider than his body and sitting low over a small round face, three or four big round spots on the dome. ' +
+      'It is a polka-dot lampshade: a bent wire of its frame pokes out from under the rim. ' +
+      'A short vest over a round belly, puffy short trousers, two little feet. ' +
+      'His front hand waves a small chequered flag on a short broom handle held out forward and up, the flag flying out in front of him clear of the cap.',
+    // The edit carries the rest of the twist with the wear, all off the face (the kit draws the eyes) and off the
+    // dome's outline (the read): the race plate pinned crooked, a spot that's a sewn-on patch, the flag torn and its
+    // handle taped where it snapped. The flag is held out level below the rim: raised, it joined the dome in black.
+    worn: "a white square race plate with one big black ring on it is pinned on his vest crooked, tilted far over, with a big safety pin; the nearest red spot on the cap is a round cloth patch sewn on with big white stitches; the chequered flag has a big ragged tear across its corner and its broom handle is bound with grey tape (#9a9c98) where it snapped; his front arm holds the flag's handle out ahead of him level at waist height, pointing forward, the flag hanging off its far end in front of him, well below the cap's rim, with white background all round it and between it and the cap. The cap's dome, its rolled lip and its width stay exactly as they are, and so does his face under it.",
+  },
 };
 
 function brief(kind: string): Brief {
