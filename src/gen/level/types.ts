@@ -12,6 +12,8 @@ export interface Shape {
   /** Row-major w×h tile kinds (T_EMPTY/T_SOLID/T_ONEWAY). */
   tiles: Uint8Array;
   spawn: { tx: number; ty: number };
+  /** More cells a race spawns in after `spawn` (Level.spawns): a start line across a shaft's floor. */
+  spawns?: { tx: number; ty: number }[];
   goal: { tx: number; ty: number };
   protectedRects: TileRect[];
   /** Free-form label for debugging/tools ("farm:fields", "legacy:caverns", ...). */

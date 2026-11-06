@@ -2,7 +2,7 @@ import { FPS, RUN_COUNTDOWN, TILE } from '../sim/constants';
 import { dirOf, flameCycle, laserCycle, motionOffset, pistonState, swingAngles, swingHeads, teslaCycle } from '../sim/props';
 import type { Level } from '../sim/level';
 import { feetUp, type RunWorld } from '../sim/run';
-import { leashRows } from '../sim/tide';
+import { firstOut, leashRows } from '../sim/tide';
 import { gustShown, type WeatherKind } from '../sim/weather';
 import type { SfxName } from './sfx';
 
@@ -78,7 +78,7 @@ export function slagEmitters(run: RunWorld, f: number, x: number, y: number, out
   const gap = Math.max(0, run.slag - lead) / TILE;
   const boiling = f < RUN_COUNTDOWN + tide.wait * FPS;
   const climbed = ((run.level.spawn.ty + 1) * TILE - lead) / TILE;
-  const rush = !boiling && gap > leashRows(tide, climbed, f) + 0.5 ? 1 : 0;
+  const rush = !boiling && gap > leashRows(tide, climbed, f, firstOut(run.runners)) + 0.5 ? 1 : 0;
   out.push({ kind: 'slag', x, y: y + gap * TILE * 0.5, level: Math.max(0, 1 - gap / SLAG_HEARD) * (boiling ? 0.4 : 1), p: rush });
 }
 

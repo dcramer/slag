@@ -4,6 +4,9 @@ import { rollPersonality } from '../src/brain/personality';
 import { ItemPlay } from '../src/brain/strategies/items';
 import { ITEM_TACTICS, knockedInto, type Moment } from '../src/brain/tactics';
 import { BRAIN_VIEW_VERSION, type BrainView, type RunnerSense, type SelfSense } from '../src/brain/types';
+import { Motor } from '../src/brain/motor';
+import { Match } from '../src/game/match';
+import { PHYS, RUN_COUNTDOWN, TILE } from '../src/sim/constants';
 import { T_ONEWAY, T_SOLID } from '../src/sim/level';
 import { botRound } from './lib/bot-race';
 
@@ -200,6 +203,31 @@ describe('going for boxes', () => {
     expect(intent).toEqual({ do: 'goTo', tx: 9, ty: 13 });
     const close = new ItemPlay(new Rng(1), traits);
     for (let f = 0; f < 20; f++) expect(close.think(boxed({ slag: 4 }), { ...SELF, rank: 1, slag: 4 }, false)).toBeNull();
+  });
+
+  it('hops at once on arriving at a walk, rather than turning back and forth under the box', () => {
+    const m = new Match(1);
+    const p = m.join('kb')!;
+    m.startMatch();
+    m.startRun();
+    const run = m.run!;
+    while (run.frame < RUN_COUNTDOWN) m.step({});
+    const r = run.runners[0];
+    const home = { ...r.body };
+    const tx = Math.floor((r.body.x + r.body.w / 2) / TILE);
+    // Arriving under its column at a walk, the way an errand's goTo leaves it: at any speed short of one it's off the
+    // ground within a few frames (pressing back at a walk only turned it round, every frame).
+    for (const share of [0.2, 0.4, 0.6, 1]) {
+      r.body = { ...home, vx: PHYS.walkSpeed * share };
+      const motor = new Motor(traits, 1);
+      let left = -1;
+      for (let f = 0; f < 20 && left < 0; f++) {
+        m.step({ kb: motor.drive(m, p, { do: 'hop', tx }) });
+        if (!r.body.onGround) left = f;
+      }
+      expect(left, `at ${share} of a walk`).toBeGreaterThanOrEqual(0);
+      while (!r.body.onGround) m.step({});
+    }
   });
 });
 

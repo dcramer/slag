@@ -26,7 +26,7 @@ export interface Errands {
   slag: boolean;
   shun: boolean;
 }
-const ERRANDS: Errands = { across: 10, rows: 8, detour: 8, slag: true, shun: false };
+export const ERRANDS: Errands = { across: 10, rows: 8, detour: 8, slag: true, shun: false };
 /** Rows a box may hang over the floor it's knocked from: a full jump's head room. */
 const BOX_HANG = 3;
 /**
