@@ -242,9 +242,10 @@ async function bench(): Promise<string> {
   return text;
 }
 
-/** The blind read: every kind's play-scale silhouette, shuffled and numbered (`castBlind`). */
+/** The blind read: every kind's play-scale silhouette, shuffled and numbered (`castBlind`), and the same cells in colour. */
 async function blind(): Promise<string> {
   await open(`seed=${seed}`);
+  await castSheet('sprites-blind-colour', 'blind', 0.4, true);
   const path = await castSheet('sprites-blind', 'blind');
   const order: string[] = await page.evaluate(() => (window as any).slagDebug.cast.blindOrder());
   writeFileSync(`${out}/sprites-blind-answers.txt`, order.map((k, i) => `${i + 1}. ${k}`).join('\n') + '\n');

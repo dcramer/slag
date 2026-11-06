@@ -44,7 +44,11 @@ Phone support (follow camera, pinch, scaled HUD, settings sheet) is on `main` bu
 - **Impact words** can hide a hazard for most of a second; `?lettering=0` turns them off. Decide whether they stay. Big plain walls are a taste call. Try a real phone.
 
 ## 31. Blind-read leftovers
-Every drawn kind passes the blind read except the warrior, the slayer and the assistant dog, which the owner accepted as colour reads (2026-11-06, docs/DECISIONS.md). Their rounds are in their Rig lines.
+**Clean audit (2026-11-06).** Every blind read before `tools/art3d/blind-read.sh` was leaky: subagent readers saw the git status, and seat commits name the kinds by trait. Three clean readers per sheet, all 46 kinds (the readers' words are in the session's scratchpad only; the counts are here):
+- **Black** (`sprites-blind.png`): about 20 kinds reach the old bar. Even the plumber isn't named ("a figure holding a horn or trumpet"), nor the raider, archer, bear, vampire, pyramid, rapper, tophat, sneak, engineer, hopper, worm, horse or boxer.
+- **Colour** (`sprites-blind-colour.png`, the same cells as the game draws them): about 33 reach it, the mech, genie and boxer among them (Little Mac and Shantae at high). Still unnamed in colour: the engineer, warrior, sneak, assistant, tophat, dragon, elf (read as an Inkling in blue), rapper, horse, slayer (a viking), creeper, and the zapmouse and hedgehog when the player's colour isn't theirs (a purple "cat", an orange "spiky creature").
+- Pairs, colour: the engineer with the plumber, the warrior with the slayer, the robot with the hunter.
+- **Owner's call:** which read is the bar.
 
 A full-cast read (2026-11-04, every kind drawn, cells wide enough for a held prop; two fresh readers) agrees: the warrior "King Dedede, low" twice (a round body under a tall headpiece); the slayer "Princess Peach or Zelda, low" twice (his long coat reads as a gown, his hair as a princess's). The worm passed at medium twice. Both readers also paired the plumber with the engineer (4 and 22, capped and moustached), the robot with the hunter (the arm cannons) and the hopper with the dino (a round head with a long snout); the merc read as "Crash Bandicoot or Tails, low" twice.
 
