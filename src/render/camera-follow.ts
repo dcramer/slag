@@ -2,7 +2,7 @@ import { clamp } from '../core/geom';
 import type { Match } from '../game/match';
 import { overview, viewToWorld, type ViewXform, worldToView } from '../game/view';
 import { PHYS, RUN_COUNTDOWN, TILE, VIEW_H, VIEW_W } from '../sim/constants';
-import { feetUp } from '../sim/run';
+import { leaderOf } from '../sim/standing';
 import type { Camera } from './camera';
 
 /**
@@ -177,8 +177,9 @@ export class PhoneCam {
     // Round a loop the view is the leader's lap (`lap`): the others sit a loop up or down by their own, and the
     // camera crosses the lap line with the leader, which shows the same rows.
     const L = (m.level.loop ?? 0) * TILE;
-    if (L && racing.length) {
-      const lap = racing.reduce((a, b) => (feetUp(m.level, b) < feetUp(m.level, a) ? b : a)).lap;
+    const leader = leaderOf(run);
+    if (L && leader >= 0) {
+      const lap = run.runners[leader].lap;
       if (lap !== this.lap) cam.shiftY((lap - this.lap) * L);
       this.lap = lap;
     }
@@ -195,7 +196,7 @@ export class PhoneCam {
     if (slag) {
       // Rising Slag frames like a racer that follows the leader: from a few rows over whoever is highest down to
       // the slag, so the slag is the bottom of the screen and falling behind is falling off it.
-      const lead = pts.reduce((a, b) => (b.y < a.y ? b : a));
+      const lead = pts[racing.indexOf(run.runners[leader])];
       pts.push({ x: lead.x, y: lead.y - SLAG_LOOK_UP * TILE }, { x: lead.x, y: Math.min(run.slag! + this.lap * L, lead.y + SLAG_VIEW_DOWN * TILE) });
     }
     if (pts.length && !solo) cam.frameAll(pts, this.enabled ? Math.max(RACE_MAX_ZOOM, this.zoom) : RACE_MAX_ZOOM, slag ? SLAG_PAD : RACE_PAD);

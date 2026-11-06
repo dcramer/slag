@@ -6,7 +6,7 @@ import { CRATE_ITEMS, giveItem, HOOK, type ItemKind, UPPER } from '../src/sim/it
 import type { Level } from '../src/sim/level';
 import { bodyAtCell } from '../src/sim/physics';
 import { CATCH_UP } from '../src/sim/props/modules/mystery';
-import { type Runner, RunWorld } from '../src/sim/run';
+import { RACE_RUN, type Runner, RunWorld, type RunRules } from '../src/sim/run';
 import type { Tide } from '../src/sim/tide';
 import { type InputFrame, NO_INPUT } from '../src/sim/types';
 
@@ -40,11 +40,17 @@ function level(climb: boolean): Level {
 
 /** A race past its countdown, runner i standing in cell `at[i]`. */
 function race(at: [number, number][], climb = false): RunWorld {
+  // A climb ranks by height (sim/standing.ts), as Rising Slag's rules say.
+  const rules: RunRules = { ...RACE_RUN, ahead: climb ? 'height' : 'route' };
   const run = new RunWorld(
     level(climb),
     [],
     at.map((_, i) => i),
     0,
+    undefined,
+    [],
+    true,
+    rules,
   );
   while (run.frame < RUN_COUNTDOWN) run.step(at.map(() => NO_INPUT));
   at.forEach(([tx, ty], i) => (run.runners[i].body = bodyAtCell(tx, ty)));

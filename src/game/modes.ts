@@ -55,8 +55,9 @@ export const MODES: Record<ModeId, ModeDef> = {
    */
   slag: {
     label: 'Rising Slag',
-    profile: { tide: true },
-    run: { flag: false, lastStanding: true },
+    // A looping shaft of open ledges in every set, owing no part, with boxes of its own up every lap and slag under it.
+    profile: { builder: 'shaft', loop: true, bare: true, boxes: true, tide: true },
+    run: { flag: false, lastStanding: true, ahead: 'height' },
     // A loop climbs bare, so no bridge is owed: the crate leans to what you put in each other's way, and to
     // utility, and away from building (a shortcut for whoever's ahead) and demolition (nothing needs clearing).
     crate: { bridges: false, roles: { hazard: 1.6, utility: 1.3, build: 0.6, demolish: 0.35 } },

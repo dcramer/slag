@@ -41,13 +41,13 @@ export const BUILDERS: Record<BuilderId, BuilderDef> = {
   },
   tower: {
     about: 'storeys stacked up a shaft, two connectors between every pair, moats on the spawn and goal storeys',
-    takes: (p) => p.size === 'tall' && !p.tide,
+    takes: (p) => p.size === 'tall' && !p.builder,
     asks: ['floor', 'connector', 'shell'],
     build: (ctx, set) => (set.tower ? (set.towerPost ?? keep)(sculptTall(ctx, set.tower), ctx) : onCourse(ctx, set)),
   },
   shaft: {
     about: 'Rising Slag: ledges staggered like bricks up a walled shaft that loops, several lines up every height, a wall-jump chimney up one side',
-    takes: (p) => p.size === 'tall' && !!p.tide,
+    takes: (p) => p.builder === 'shaft',
     asks: ['floor', 'shell'],
     build: (ctx, set) => (set.tower ? (set.towerPost ?? keep)(sculptShaft(ctx, set.tower), ctx) : onCourse(ctx, set)),
   },
@@ -55,7 +55,8 @@ export const BUILDERS: Record<BuilderId, BuilderDef> = {
 
 const keep = (s: Shape) => s;
 
-/** The builder for a level's profile: every profile has exactly one. */
+/** The builder for a level's profile: the one its mode names, else the one whose `takes` fits. Every profile has exactly one. */
 export function builderFor(p: LevelProfile): BuilderDef {
+  if (p.builder) return BUILDERS[p.builder as BuilderId];
   return Object.values(BUILDERS).find((b) => b.takes(p))!;
 }

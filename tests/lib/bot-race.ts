@@ -10,6 +10,7 @@ import type { Difficulty } from '../../src/sim/level';
 import type { PlacedProp } from '../../src/sim/props';
 import { RUN_COUNTDOWN, TILE } from '../../src/sim/constants';
 import { feetUp } from '../../src/sim/run';
+import { leaderOf } from '../../src/sim/standing';
 import type { ModeId } from '../../src/game/modes';
 import { DEFAULT_RULES } from '../../src/game/rules';
 import type { ThemeId } from '../../src/themes';
@@ -191,15 +192,10 @@ export function botRound(
   let pickups = 0;
   let pops = 0;
   let bumps = 0;
+  /** Whoever leads (sim/standing.ts), by slot; -1 if nobody's racing. */
   const top = () => {
-    let best = -1;
-    let feet = Infinity;
-    for (const r of run.runners)
-      if (r.alive && !r.finished && feetUp(m.level, r) < feet) {
-        feet = feetUp(m.level, r);
-        best = r.slot;
-      }
-    return best;
+    const i = leaderOf(run);
+    return i < 0 ? -1 : run.runners[i].slot;
   };
   const dealer = new Rng(deriveSeed(seed, 'deal'));
   // Who leads, changing hands only when someone has been on top for a second straight, so climbers hopping past each

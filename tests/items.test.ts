@@ -5,26 +5,12 @@ import { generateTheme } from '../src/gen/theme';
 import { defaultSettings, loadSettings } from '../src/input/bindings';
 import { TouchInput, touchLayout } from '../src/input/touch';
 import { KILL_Y, LEVEL_H, LEVEL_W, POP_HOLD, RUN_COUNTDOWN, TILE } from '../src/sim/constants';
-import {
-  BAT,
-  blockCells,
-  DROP_LIFE,
-  giveItem,
-  ITEM_KINDS,
-  ITEMS,
-  type ItemKind,
-  leaderIndex,
-  POCKET,
-  routeDistance,
-  SWORD,
-  spawnItem,
-  TAX,
-  TREMOR,
-} from '../src/sim/items';
+import { BAT, blockCells, DROP_LIFE, giveItem, ITEM_KINDS, ITEMS, type ItemKind, POCKET, SWORD, spawnItem, TAX, TREMOR } from '../src/sim/items';
 import type { Level } from '../src/sim/level';
 import { bodyAtCell } from '../src/sim/physics';
 import { canPlace, type Module, mysteryState, type PlacedProp, type PropDef, rollItem, THROW_GRACE } from '../src/sim/props';
 import { type Runner, RunWorld } from '../src/sim/run';
+import { leaderOf as leaderIndex, routeDistance } from '../src/sim/standing';
 import { type InputFrame, NO_INPUT } from '../src/sim/types';
 import { glyphsFor } from '../src/ui/prompts';
 

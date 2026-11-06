@@ -15,6 +15,7 @@
  */
 import { deriveSeed, parseSeed, Rng } from '../src/core/rng';
 import { argReader } from './lib/server';
+import { MODES } from '../src/game/modes';
 import { SCULPTORS } from '../src/gen/level/sculptors';
 import { BRIDGE_W, DIFFICULTIES, describeProfile, generateLevel, gravityClass, judge, lastGenInfo, type ProfileOverride } from '../src/gen/level';
 import { MAX_SHARED } from '../src/gen/level/routes';
@@ -38,7 +39,7 @@ if (opt('weather')) force.weather = opt('weather') as WeatherKind;
 if (opt('concept')) force.concept = opt('concept');
 const difficulty = DIFFICULTIES.find((d) => d === opt('difficulty'));
 if (difficulty) force.difficulty = difficulty;
-if (flag('tide')) force.tide = true;
+if (flag('tide')) Object.assign(force, MODES.slag.profile);
 
 /** Share of levels whose solution takes 0, 1, 2 and 3 parts. */
 function partShares(parts: number[], n: number): Record<string, string> {

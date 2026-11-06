@@ -21,6 +21,7 @@ import {
   stepItems,
 } from './items';
 import { goalRect, killY, lapShift, type Level, offMap, spawnZone, tileAt } from './level';
+import { leaderOf } from './standing';
 import { stepTide, tideStart } from './tide';
 import { type Body, bodyAtCell, type CollisionWorld, firstOverlap, type Solid, stepBody } from './physics';
 import {
@@ -132,10 +133,12 @@ export interface RunRules {
   flag: boolean;
   /** With more than one runner, the race ends when one is left standing. */
   lastStanding: boolean;
+  /** What ahead means (sim/standing.ts): nearer the flag by route, or higher up, laps and all. */
+  ahead: 'route' | 'height';
 }
 
 /** The race the game was built on: run for the flag. */
-export const RACE_RUN: RunRules = { flag: true, lastStanding: false };
+export const RACE_RUN: RunRules = { flag: true, lastStanding: false, ahead: 'route' };
 
 /**
  * One race through the level. Pure function of (level, set pieces, placed
@@ -278,8 +281,8 @@ export class RunWorld {
       w: x.body.w,
       h: x.body.h,
       active: x.alive && !x.finished,
-      up: feetUp(this.level, x),
     }));
+    let leader: number | undefined;
     return {
       ...this.ctx(r, mi, f),
       runners,
@@ -294,6 +297,7 @@ export class RunWorld {
         return true;
       },
       itemSeed: this.itemSeed,
+      leader: () => (leader ??= leaderOf(this)),
       solids: this.solids,
       hazards: this.out.hazards,
       struck: this.struck,

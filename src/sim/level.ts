@@ -50,9 +50,20 @@ export interface LevelProfile {
   difficulty: Difficulty;
   /** Which draw of its layout the level is (gen/level/index.ts): with the rest of the profile, what rebuilds it. */
   draw?: number;
-  /** Built for Rising Slag (game/modes.ts): a climb with slag rising under it (Level.tide). */
+  /**
+   * What a mode asks of its level (game/modes.ts `ModeDef.profile`), each on its own so a new mode takes the ones it
+   * needs. `builder`: the level builder by name (gen/level/builders `BUILDERS`); absent, the one whose `takes` fits.
+   */
+  builder?: string;
+  /** Loops on itself: a tall shaft whose top band is its bottom one (Level.loop), so the climb never ends. */
+  loop?: boolean;
+  /** Owes no part: passable bare, with no crossing that takes one (a loop climbs bare, every lap). */
+  bare?: boolean;
+  /** Mystery boxes of its own up every lap, dealing by rank (gen/level/loop-boxes.ts). */
+  boxes?: boolean;
+  /** Slag rising under it from GO (Level.tide, sim/tide.ts): a climb. */
   tide?: boolean;
-  /** A Rising Slag shaft whose laps follow the difficulty curve (gen/level/difficulty.ts `LAP_TIERS`), the first gentle to hard; absent, every lap is `difficulty`. */
+  /** A loop whose laps follow the difficulty curve (gen/level/difficulty.ts `LAP_TIERS`), the first gentle to hard; absent, every lap is `difficulty`. */
   curve?: boolean;
 }
 

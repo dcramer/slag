@@ -110,7 +110,7 @@ export function generateLevel(seed: number, themeOverride?: ThemeId, profileOver
     let profile = rollProfile(seed, themeId, o, salt);
     const concept = rollConcept(seed, themeId, profile, profileOverride?.concept, salt);
     // A forced concept gets a size and route it fits, unless those were forced too.
-    if (concept && !fits(concept, profile) && !profileOverride?.size && !profileOverride?.route && !profileOverride?.tide) {
+    if (concept && !fits(concept, profile) && !profileOverride?.size && !profileOverride?.route && !profileOverride?.builder) {
       const size = concept.sizes.includes(profile.size) ? profile.size : concept.sizes[0];
       const route = concept.routes && !concept.routes.includes(profile.route) ? concept.routes[0] : undefined;
       profile = rollProfile(seed, themeId, { ...o, size, ...(route ? { route } : {}) }, salt);
@@ -161,8 +161,8 @@ export function generateLevel(seed: number, themeOverride?: ThemeId, profileOver
     const lab = (s: string) => (n ? `draw${n}:${s}` : s);
     for (let attempt = 0; attempt < MAX_ATTEMPTS + LEGACY_ATTEMPTS; attempt++) {
       const rng = new Rng(deriveSeed(seed, lab(`level:${attempt}`)));
-      // A Rising Slag loop stays with its set's shaft builder: only it closes a loop (builders/shaft.ts closeLoop).
-      const sculptor = attempt < MAX_ATTEMPTS || profile.tide ? SCULPTORS[themeId] : FALLBACK_SCULPTOR;
+      // A loop stays with its builder: only it closes a loop (builders/shaft.ts closeLoop).
+      const sculptor = attempt < MAX_ATTEMPTS || profile.loop ? SCULPTORS[themeId] : FALLBACK_SCULPTOR;
       const live = concept && attempt < MAX_ATTEMPTS && rejects.landmark < MAX_LANDMARK_REJECTS ? concept : undefined;
       const reject = () => rejects.landmark++;
       const shape = sculptor({ rng, themeId, theme, attempt, profile, challenge, ...(live ? { concept: live } : {}) });
@@ -187,15 +187,15 @@ export function generateLevel(seed: number, themeOverride?: ThemeId, profileOver
         level.rides = rides;
       }
       // Passable bare: not a level. Only the very last attempts accept it, to keep generation total.
-      // A Rising Slag loop is meant to climb bare (builders/shaft.ts): only race levels must ask for parts.
-      const insist = attempt < LAST_RESORT && !level.loop;
+      // A level that owes no part is meant to be passable bare (a loop climbs bare): the rest must ask for parts.
+      const insist = attempt < LAST_RESORT && !profile.bare;
       if (insist && cache.analyze(level).goalReached) {
         rejects.tooEasy++;
         continue;
       }
       const v = judge(level, shape.bridgeHints, shape.crossings, cache);
-      // A loop that takes a part to climb would stop every lap there.
-      if (!v.ok || (level.loop && v.bridges.length)) {
+      // A level that owes no part can't take one either: a loop would stop every lap there.
+      if (!v.ok || (profile.bare && v.bridges.length)) {
         rejects.unsolvable++;
         continue;
       }
@@ -276,16 +276,16 @@ export function generateLevel(seed: number, themeOverride?: ThemeId, profileOver
       const budget = live ? (live.budget ?? fixed.length) : 0;
       const pieces = SET_PIECES[themeId](new Rng(deriveSeed(seed, lab(`setpieces:${attempt}`))), level, {
         // A Rising Slag tower is several levels tall: its hazards come at the same rate per storey.
-        count: Math.max(0, profile.hazards * (profile.tide ? Math.max(1, Math.round(profile.h / 50)) : 1) - budget),
+        count: Math.max(0, profile.hazards * (profile.loop ? Math.max(1, Math.round(profile.h / 50)) : 1) - budget),
         danger: profile.danger,
         cache,
         keep: fixed.length ? (ps) => keep([...fixed, ...ps]) : keep,
         ...(live && landmark ? { standing: fixed, avoid: landmark.air, family: live.family } : {}),
       });
       // (The placer already avoids these cells; this is a safety net. Keep uids contiguous, the landmark's first.)
-      // A Rising Slag loop gets mystery boxes of its own, after the builder and its set pieces (./loop-boxes.ts).
+      // A level that asks for boxes gets mystery boxes of its own, after the builder and its set pieces (./loop-boxes.ts).
       const kept = [...fixed, ...pieces.filter(clearOfBridges)];
-      const boxes = loopBoxes(level, kept, keep, new Rng(deriveSeed(seed, lab(`loop-boxes:${attempt}`))));
+      const boxes = profile.boxes ? loopBoxes(level, kept, keep, new Rng(deriveSeed(seed, lab(`loop-boxes:${attempt}`)))) : [];
       level.setPieces = [...kept, ...boxes].map((p, i) => ({ ...p, uid: SET_PIECE_UID + i }));
       while (level.setPieces.length && !planHolds(level, [], bridges, cache)) level.setPieces.pop();
       if (level.rides) {
@@ -357,7 +357,7 @@ function toLevel(seed: number, s: Shape, theme: Theme, profile: LevelProfile): L
     version: 0,
     setPieces: [],
     ...(profile.tide ? { tide: slagTide(profile, s.tiles, s.w, s.h) } : {}),
-    ...(profile.tide && profile.size === 'tall' ? { loop: profile.h - LOOP_BAND } : {}),
+    ...(profile.loop && profile.size === 'tall' ? { loop: profile.h - LOOP_BAND } : {}),
   };
 }
 

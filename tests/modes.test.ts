@@ -3,7 +3,7 @@ import { Match } from '../src/game/match';
 import { climbed, MODES } from '../src/game/modes';
 import { DEFAULT_RULES } from '../src/game/rules';
 import { generateCrate } from '../src/gen/props';
-import { leaderIndex } from '../src/sim/items/tax';
+import { leaderOf as leaderIndex } from '../src/sim/standing';
 import { POINTS, scoreSurvival, SURVIVE_PLACES } from '../src/game/scoring';
 import { generateLevel } from '../src/gen/level';
 import { LOOP_ROWS, LOOP_W, rollProfile } from '../src/gen/level/profile';
@@ -51,11 +51,11 @@ const pop = (f: number): InputFrame => ({ ...NO_INPUT, alt: true, altPressed: f 
 describe('Rising Slag levels', () => {
   it('loops in every set: a walled shaft, built bare, its bands the same rows', () => {
     for (const theme of THEME_IDS) {
-      const p = rollProfile(1, theme, { tide: true });
+      const p = rollProfile(1, theme, MODES.slag.profile);
       expect(['climb', 'zigzag'], theme).toContain(p.route);
       expect([p.size, p.h], theme).toEqual(['tall', LOOP_ROWS + LOOP_BAND]);
       expect(p.w).toBeGreaterThanOrEqual(LOOP_W[0]);
-      const lv = generateLevel(1, theme, { tide: true });
+      const lv = generateLevel(1, theme, MODES.slag.profile);
       expect(lv.loop, theme).toBe(LOOP_ROWS);
       expect(lv.theme.id).toBe(theme);
       expect(lv.solution ?? [], theme).toEqual([]);
@@ -243,7 +243,7 @@ describe("a loop's mystery boxes", () => {
       seed: 1,
       catchUp: true,
     };
-    /** The item the box pops when knocked from below by a runner `up` climbed, beside one at `other`. */
+    /** The item the box pops when knocked from below by a runner whose feet stand at `up` (climbed px), beside one at `other`. */
     const knock = (uid: number, up: number, other: number) => {
       const got: string[] = [];
       const ctx = {
@@ -257,9 +257,11 @@ describe("a loop's mystery boxes", () => {
         itemSeed: 7,
         r: { pp: { uid }, phase: 0 },
         runners: [
-          { x: 10 * TILE + 2, y: 11 * TILE, w: 12, h: 22, active: true, up },
-          { x: 300, y: 100, w: 12, h: 22, active: true, up: other },
+          { x: 10 * TILE + 2, y: 11 * TILE, w: 12, h: 22, active: true },
+          { x: 300, y: 100, w: 12, h: 22, active: true },
         ],
+        // Higher up leads (sim/standing.ts): the lower feet.
+        leader: () => (up < other ? 0 : 1),
         spawnItem: (s: { kind: string }) => got.push(s.kind),
         emit: () => {},
       };

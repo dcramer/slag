@@ -8,6 +8,7 @@ import { deriveSeed, Rng } from '../src/core/rng';
 import { setLevelDifficulty } from '../src/gen/level/difficulty';
 import { setProbeGravity } from '../src/gen/level/probe';
 import { rollProfile } from '../src/gen/level/profile';
+import { MODES } from '../src/game/modes';
 import { SCULPTORS } from '../src/gen/level/sculptors';
 import { CONCEPTS, fits } from '../src/gen/stage';
 import { generateTheme } from '../src/gen/theme';
@@ -27,7 +28,7 @@ for (const themeId of THEME_IDS) {
       const theme = generateTheme(seed, themeId);
       for (const route of ROUTES)
         for (const tide of [false, true]) {
-          const profile = rollProfile(seed, themeId, { size, route, ...(tide ? { tide: true } : {}) });
+          const profile = rollProfile(seed, themeId, { size, route, ...(tide ? MODES.slag.profile : {}) });
           if (profile.size !== size || profile.route !== route) continue;
           setProbeGravity(profile.gravity);
           setLevelDifficulty(profile.difficulty);

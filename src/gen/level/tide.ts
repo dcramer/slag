@@ -43,7 +43,7 @@ export function slagTide(profile: LevelProfile, tiles: Uint8Array, w: number, h:
     ...SLAG_FLOOR,
     // A loop starts it a storey's depth under the spawn's floor, in the lap below, so the spawn storey is a head start,
     // not a trap; anywhere else, at the lowest open row.
-    from: profile.size === 'tall' ? profile.h - LOOP_BAND + LOOP_SPAWN + 1 + LOOP_HEAD_START : lowestOpen(tiles, w, h),
+    from: profile.loop ? profile.h - LOOP_BAND + LOOP_SPAWN + 1 + LOOP_HEAD_START : lowestOpen(tiles, w, h),
     leash: stretchesOf(profile).map((s) => ({ from: s.from, rows: TIER_LEASH[s.tier] })),
     squeeze: SQUEEZE,
     rush: RUSH,
