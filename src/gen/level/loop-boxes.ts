@@ -1,7 +1,7 @@
 import type { Rng } from '../../core/rng';
 import { isProtected, type Level, LOOP_BAND, T_EMPTY, T_ONEWAY, T_SOLID } from '../../sim/level';
 import { footprintCells, type PlacedProp, type PropDef } from '../../sim/props';
-import { ITEM_KINDS } from '../../sim/items/types';
+import { CRATE_ITEMS } from '../../sim/items/roster';
 
 /**
  * Mystery boxes a Rising Slag loop is built with (game/modes.ts), as SpeedRunners' tracks have their item boxes:
@@ -28,7 +28,7 @@ function boxAt(tx: number, ty: number, seed: number): PropDef {
     role: 'utility',
     style: { metal: 'steel', trim: 'none', hue: 0, glowHue: 0, woodHue: 30 },
     motion: { type: 'none' },
-    modules: [{ type: 'mystery', cells: [[tx, ty]], pool: [...ITEM_KINDS], uses: 0, refill: REFILL, look: 'crate', seed, catchUp: true }],
+    modules: [{ type: 'mystery', cells: [[tx, ty]], pool: [...CRATE_ITEMS], uses: 0, refill: REFILL, look: 'crate', seed, catchUp: true }],
     footprint: [[tx, ty]],
   };
 }

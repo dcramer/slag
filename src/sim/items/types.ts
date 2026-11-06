@@ -8,9 +8,9 @@
  * "attached to a prop" state can be added next to both without touching them.
  */
 
-export type ItemKind = 'sword' | 'puck' | 'boomerang' | 'shield' | 'rocket' | 'smoke' | 'bat' | 'tremor' | 'tax' | 'block';
+export type ItemKind = 'sword' | 'puck' | 'boomerang' | 'shield' | 'rocket' | 'smoke' | 'bat' | 'tremor' | 'tax' | 'block' | 'hook' | 'upper';
 
-export const ITEM_KINDS: readonly ItemKind[] = ['sword', 'puck', 'boomerang', 'shield', 'rocket', 'smoke', 'bat', 'tremor', 'tax', 'block'];
+export const ITEM_KINDS: readonly ItemKind[] = ['sword', 'puck', 'boomerang', 'shield', 'rocket', 'smoke', 'bat', 'tremor', 'tax', 'block', 'hook', 'upper'];
 
 /** What a runner holds. */
 export interface Held {
@@ -100,12 +100,36 @@ export interface PocketBlock {
   owner: number;
 }
 
+/** A Queue Jumper's line, reeling out from its thrower to the runner just ahead of them; when it gets there they trade places. */
+export interface HookLine {
+  id: number;
+  /** Runner indices: who threw it, and who it's after. */
+  owner: number;
+  target: number;
+  /** Frames since it was thrown. */
+  t: number;
+}
+
+/** An Upper Hand in flight: a gloved firework rising straight up through everything. */
+export interface UpperFist {
+  id: number;
+  /** Slot credited for its bonks. */
+  owner: number;
+  x: number;
+  y: number;
+  /** How far it has risen (px). */
+  rose: number;
+  born: number;
+}
+
 /** Item state for one race (lives on RunWorld). */
 export interface ItemWorld {
   drops: ItemDrop[];
   clouds: SmokeCloud[];
   shells: TaxShell[];
   blocks: PocketBlock[];
+  hooks: HookLine[];
+  fists: UpperFist[];
   nextId: number;
 }
 
@@ -140,7 +164,7 @@ export function newRunnerItems(): RunnerItems {
 }
 
 export function newItemWorld(): ItemWorld {
-  return { drops: [], clouds: [], shells: [], blocks: [], nextId: 1 };
+  return { drops: [], clouds: [], shells: [], blocks: [], hooks: [], fists: [], nextId: 1 };
 }
 
 /** Loose items vanish this long after they appear, blinking for the last DROP_BLINK frames. */

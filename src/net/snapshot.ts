@@ -1,6 +1,6 @@
 import type { ProfileOverride } from '../gen/level';
-import { buildLevel } from '../gen/level/pregen';
-import type { CrateItem, Match, Phase, Player } from '../game/match';
+import { levelAtHand, type LevelRequest, levelRecipe, pristineLevel } from '../gen/level/pregen';
+import { type CrateItem, type Match, type Phase, type Player, rulesProfile } from '../game/match';
 import { MODES } from '../game/modes';
 import type { MatchRules } from '../game/rules';
 import type { RoundResult } from '../game/scoring';
@@ -32,7 +32,7 @@ import { cleanCharacter } from './actions';
  * Worktree branches never bump it, since two bumps always conflict: `pnpm land` bumps it once
  * for a batch that changed this file's code or that test's field lists (`--snap` for a change in what a field means).
  */
-export const SNAP_VERSION = 55;
+export const SNAP_VERSION = 56;
 
 export interface RunSnap {
   slots: number[];
@@ -157,20 +157,36 @@ function b64ToBytes(s: string): Uint8Array {
 
 // ---------------------------------------------------------------- levels
 
-const pristine = new Map<string, Level>();
-const pristineKey = (seed: number, theme: ThemeId | undefined, profile: ProfileOverride) => `${seed}:${theme ?? ''}:${JSON.stringify(profile)}`;
+/** The level a snapshot is played on, as the level worker would be asked for it. */
+export function snapLevel(s: MatchSnap): LevelRequest {
+  return { seed: s.seed, theme: s.themeOverride ?? undefined, profile: s.profile };
+}
 
-/** The freshly generated level for (seed, theme, profile), cached (generation is slow). Never mutate the result. */
-function pristineLevel(seed: number, theme: ThemeId | undefined, profile: ProfileOverride): Level {
-  const key = pristineKey(seed, theme, profile);
-  let l = pristine.get(key);
-  if (!l) {
-    l = buildLevel(seed, theme, profile);
-    l = { ...l, tiles: l.tiles.slice(), setPieces: [...l.setPieces] };
-    pristine.set(key, l);
-    if (pristine.size > 6) pristine.delete(pristine.keys().next().value!);
-  }
-  return l;
+/** The level worker, as far as a restore needs it (src/level-ahead.ts). */
+export interface LevelSource {
+  /** Resolves once `req` is built and offered, or as soon as it's clear it won't be. */
+  first(req: LevelRequest): Promise<void>;
+  /** Is the worker on `req`, or has it queued? */
+  building(req: LevelRequest): boolean;
+}
+
+/**
+ * Get a snapshot's level made off the main thread, so `restoreMatch` finds it instead of generating it there and
+ * stalling the frame. The snapshot names the level by its recipe, while the worker builds what the match asks for
+ * (the rules' profile): when it's already on that, the wait is for it rather than for a second build of the same level.
+ * Resolves at once for a level this page already has. Only when it happens changes, not what the restore does.
+ */
+export async function prepareSnapLevel(s: MatchSnap, levels: LevelSource): Promise<void> {
+  const exact = snapLevel(s);
+  if (levelAtHand(exact)) return;
+  const asked = { ...exact, profile: { ...s.force, ...rulesProfile(s.rules) } };
+  if (levels.building(asked)) await levels.first(asked);
+  if (!levelAtHand(exact)) await levels.first(exact);
+}
+
+/** Can the snapshot's level be restored without generating it? */
+export function snapLevelAtHand(s: MatchSnap): boolean {
+  return levelAtHand(snapLevel(s));
 }
 
 /**
@@ -190,15 +206,6 @@ function isPlayedCopy(base: Level, tiles: Uint8Array): boolean {
 
 // ---------------------------------------------------------------- snapshot / restore
 
-/**
- * The stage concept the level was built with, when the profile alone wouldn't rebuild it: its
- * landmark's, or a forced one (a forced concept that fell back, or a forced plain level).
- */
-function levelConcept(m: Match): ProfileOverride {
-  const concept = m.level.landmark?.concept ?? m.forceProfile.concept;
-  return concept ? { concept } : {};
-}
-
 export function snapshotMatch(m: Match): MatchSnap {
   const mp = m as unknown as MatchPrivate;
   const run = m.run;
@@ -211,7 +218,7 @@ export function snapshotMatch(m: Match): MatchSnap {
     frame: m.frame,
     round: m.round,
     dryRounds: m.dryRounds,
-    profile: m.level.profile ? { ...m.level.profile, ...levelConcept(m) } : m.profileOverride(),
+    profile: levelRecipe(m.level, m.profileOverride()),
     force: { ...m.forceProfile },
     players: toWire(m.players),
     placed: toWire(m.placed),
@@ -259,7 +266,7 @@ export function restoreMatch(m: Match, s: MatchSnap): void {
   const mp = m as unknown as MatchPrivate;
   const theme = s.themeOverride ?? undefined;
   const prev = { run: m.run, round: m.round, phase: m.phase, level: m.level, placed: m.placed.map((p) => p.uid).join() };
-  const base = pristineLevel(s.seed, theme, s.profile);
+  const base = pristineLevel(snapLevel(s));
   const tiles = b64ToBytes(s.level.tiles);
   if (!isPlayedCopy(base, tiles)) throw new Error(`snapshot of level ${s.seed} has terrain this build doesn't generate`);
   const keep = new Set(s.level.setPieces);

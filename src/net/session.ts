@@ -29,7 +29,18 @@ import { CONFIRM_BIT, decode, type Enc, encode, held, heldPeerFrame, mergePeerFr
 import { type Depth, foldTo, newDepth, paceFor, QUEUE_HARD, type Queued, relieve, sampleSlack } from './pace';
 import { Predictor } from './predict';
 import { MAX_PEERS, type RoomListing } from './signal-protocol';
-import { hashMatch, hashSnap, type MatchSnap, restoreMatch, snapshotMatch } from './snapshot';
+import {
+  hashMatch,
+  hashSnap,
+  type LevelSource,
+  type MatchSnap,
+  prepareSnapLevel,
+  restoreMatch,
+  SNAP_VERSION,
+  snapLevel,
+  snapLevelAtHand,
+  snapshotMatch,
+} from './snapshot';
 import type { LinkStatus, Member, Transport } from './transport';
 import { ACTS_PER_BUNDLE, ACTS_PER_MSG, type Bundle, BUNDLES_PER_MSG, FRAMES_PER_MSG, type Msg, parseMsg } from './wire';
 
@@ -166,6 +177,11 @@ export interface SessionOptions {
    * whatever the person is using by then: a page can't know it's on a phone until its touch input is up.
    */
   primaryDevice?: string | (() => string);
+  /**
+   * The level worker. With it, a guest's sync waits for the worker to build its level (if this page doesn't have it
+   * yet) instead of generating it on the main thread; without it, as in tests and tools, the restore generates it.
+   */
+  levels?: LevelSource;
   /** Called with a resumable snapshot when we become host of an empty room; return one to resume. */
   resume?: () => { snap: MatchSnap; ns: NetState } | null;
   /** The host removed this peer: it's already out of the room. */
@@ -286,6 +302,9 @@ export class NetSession {
   private sendEvery: number;
   private predict: boolean;
   private resumeFn: SessionOptions['resume'];
+  private levels: LevelSource | undefined;
+  /** Guests: the newest sync whose level the worker is still building; it applies once that's done. */
+  private levelWait: Extract<Msg, { t: 'sync' }> | null = null;
   private onKickedFn: SessionOptions['onKicked'];
   private client: string;
   private banFrames: number;
@@ -382,6 +401,7 @@ export class NetSession {
     this.sendEvery = Math.max(1, opts.sendEvery ?? 1);
     this.predict = opts.predict ?? true;
     this.resumeFn = opts.resume;
+    this.levels = opts.levels;
     this.onKickedFn = opts.onKicked;
     this.client = opts.client ?? '';
     this.banFrames = Math.max(1, Math.round(opts.banFrames ?? KICK_BAN_FRAMES));
@@ -764,6 +784,7 @@ export class NetSession {
       this.role = 'guest';
       this.resumed = true; // we joined a live room: its state wins over any local save
       this.synced = false;
+      this.levelWait = null; // the old host's sync
       this.inbox.clear();
       this.wantSentTo = '';
       this.lastHello = -1e9;
@@ -1412,10 +1433,17 @@ export class NetSession {
     if (!samePeerFrame(guess, played)) this.stats.ownMisses++;
   }
 
-  private onSync(msg: Extract<Msg, { t: 'sync' }>) {
+  /** `waited`: the worker was already asked for this sync's level, so it restores even if that came to nothing. */
+  private onSync(msg: Extract<Msg, { t: 'sync' }>, waited = false) {
+    if (this.levelWait) {
+      this.levelWait = msg;
+      return;
+    }
     const m = this.match;
     const fresh = !this.synced;
-    if ((fresh || m.frame !== msg.s.frame || hashMatch(m) !== hashSnap(msg.s)) && !this.tryRestore(msg.s)) {
+    const restore = fresh || m.frame !== msg.s.frame || hashMatch(m) !== hashSnap(msg.s);
+    if (restore && !waited && this.levels && msg.s.v === SNAP_VERSION && !snapLevelAtHand(msg.s)) return this.awaitLevel(msg, this.levels);
+    if (restore && !this.tryRestore(msg.s)) {
       if (fresh) this.refused = true;
       return;
     }
@@ -1437,6 +1465,22 @@ export class NetSession {
     this.log(`synced (${msg.why}) at frame ${m.frame}`);
     // A join's first sync is routine; the others mean this peer had fallen out of step.
     if (!fresh) reportLog('net resync', 'info', { why: msg.why, frame: m.frame });
+  }
+
+  /**
+   * Hold a sync until the worker has built its level: generating it here would stall this page's frames, and a
+   * level the worker is already on would be built twice. Syncs that arrive meanwhile replace it, and the newest
+   * applies, after a wait of its own if its level is another. The host's bundles queue in the inbox as usual.
+   */
+  private awaitLevel(msg: Extract<Msg, { t: 'sync' }>, levels: LevelSource) {
+    this.levelWait = msg;
+    const done = () => {
+      const next = this.levelWait;
+      this.levelWait = null;
+      const same = !!next && JSON.stringify(snapLevel(next.s)) === JSON.stringify(snapLevel(msg.s));
+      if (next && !this.closed && this.role === 'guest') this.onSync(next, same);
+    };
+    prepareSnapLevel(msg.s, levels).then(done, done);
   }
 
   private prune([seq, actN]: [number, number]) {

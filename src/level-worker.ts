@@ -13,5 +13,5 @@ scope.onmessage = ({ data: { key, req } }) => {
   const level = generateLevel(req.seed, req.theme, req.profile);
   // How the generator got there, for monitoring: the main thread can't see this worker's lastGenInfo.
   const { fallback, conceptFallback, attempts } = lastGenInfo;
-  scope.postMessage({ key, level, gen: { fallback, conceptFallback, attempts } }, [level.tiles.buffer]);
+  scope.postMessage({ key, req, level, gen: { fallback, conceptFallback, attempts } }, [level.tiles.buffer]);
 };

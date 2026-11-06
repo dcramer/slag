@@ -22,7 +22,7 @@ import type {
   Trim,
 } from '../sim/props/types';
 
-import { ITEM_KINDS } from '../sim/items/types';
+import { CRATE_ITEMS } from '../sim/items/roster';
 import { AMMO } from '../sim/props/types';
 
 export type { Aim, Archetype, MetalStyle, Module, PropDef, PropStyle, Role };
@@ -1200,7 +1200,7 @@ const RECIPES: Record<Archetype, PartRecipe> = {
       archetype: 'mystery',
       role: 'utility',
       name: title(rng, adjs, ['Loot Box', 'Surprise Mechanic', 'Lucky Block']),
-      modules: [{ type: 'mystery', cells: [[0, 0]], pool: [...ITEM_KINDS], uses, refill, look: 'crate', seed: rng.int(0, 1 << 20) }],
+      modules: [{ type: 'mystery', cells: [[0, 0]], pool: [...CRATE_ITEMS], uses, refill, look: 'crate', seed: rng.int(0, 1 << 20) }],
     };
   },
 

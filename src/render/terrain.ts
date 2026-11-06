@@ -27,6 +27,20 @@ import {
 } from './ink-terrain';
 import { cutOutside, type RC } from './kit';
 
+/** A rect of the world in px. */
+export interface View {
+  x: number;
+  y: number;
+  w: number;
+  h: number;
+}
+
+/**
+ * How far past a live piece's spot its drawing or its light can reach, in px: the biggest decor lamp throws
+ * 95 px at up to 1.3×, from a few px above the spot. A piece further than this outside the view can't touch it.
+ */
+export const LIVE_REACH = 160;
+
 /**
  * Terrain, baked once and redrawn only where it changes: an ink drawing of the level (`ink-terrain.ts`),
  * with static decor, and the emissive veins that go with it. Animated bits (tufts, live decor) are
@@ -336,12 +350,21 @@ export class TerrainPainter {
     }
   }
 
-  /** Per-frame: swaying grass (parted by players), decor with animated/emissive bits. */
-  drawLive(rc: RC, level: Level, pushers: { x: number; y: number }[]) {
-    drawTufts(rc, rc.s, this.tufts, level, level.theme.terrain.capColor, pushers);
+  /**
+   * Per-frame: swaying grass (parted by players), decor with animated/emissive bits. Only what can reach
+   * `view` (world px in this painter's frame) is drawn: a wide or tall race shows a quarter to a half of its
+   * level, and a jungle's live leaves cost more than the rest of the frame.
+   */
+  drawLive(rc: RC, level: Level, pushers: { x: number; y: number }[], view: View) {
+    const x0 = view.x - LIVE_REACH;
+    const y0 = view.y - LIVE_REACH;
+    const x1 = view.x + view.w + LIVE_REACH;
+    const y1 = view.y + view.h + LIVE_REACH;
+    const near = (x: number, y: number, pad = 0) => x >= x0 - pad && x <= x1 + pad && y >= y0 && y <= y1;
+    drawTufts(rc, rc.s, this.tufts, level, level.theme.terrain.capColor, pushers, near);
     const th = level.theme;
     for (const d of this.live) {
-      if (!tileAt(level, d.tx, d.ty)) continue;
+      if (!near(d.x, d.y, d.span * TILE) || !tileAt(level, d.tx, d.ty)) continue;
       rc.s.save();
       DECOR[d.kind].live!(rc, d, th);
       rc.s.restore();

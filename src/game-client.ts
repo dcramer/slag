@@ -97,6 +97,7 @@ function startGame(container: HTMLElement, room: string, params: URLSearchParams
     // Read at seat time: touch only becomes the pointer device further down, so a phone read here would seat a keyboard.
     primaryDevice: () => input.pointerDevice,
     params,
+    levels,
     onRejoin: () => nav.hardLoad(lobby(room)),
     name: () => loadProfile().name ?? '',
     wear: () => {
