@@ -53,7 +53,7 @@ Each kind's entry is its own file in [characters/](characters/): what a stranger
 | [dino](characters/dino.md) | the green saddled dino | a huge round snout out front, eyes on top of the head, white belly and cheeks, a torn black bicycle seat strapped low on its back, a long tail straight out behind, wellies, a carrier bag with its own spotted egg | costume: the skin (the head spikes a light of it, the wellies a dark) |
 | [robot](characters/robot.md) | the blue robot boy | a big round helmet with a ridge down it and an ear disc standing proud, the pale face in a grey rim in its opening, a small light suit in a wide stance on huge flared boots, the forearm a thick taped tin can held out level; small | costume: helmet, mitten and near boot; the suit and ridge a light tone, the far boot a shade off, the can and ear disc darks |
 | [sneak](characters/sneak.md) | the sneaking soldier | side on, a square cardboard box on two crouched legs, his eyes in a slot, a striped bandana's two tails out of a hand-hole behind | costume: the box (its back end, tape, arrow and bandana tones of it) |
-| [cuptoon](characters/cuptoon.md) | the cup-headed toon | a white enamel mug for a head, its handle out the back and a straw bent over out of the tea, black rubber-hose limbs, white gloves, high-waisted shorts, big round shoes | costume: the shorts |
+| [cuptoon](characters/cuptoon.md) | the cup-headed toon | a takeaway coffee cup for a head under a crooked grey lid, a mug's handle taped onto its back and a straw kinked at the top out of the lid, black rubber-hose limbs, white gloves, high-waisted shorts, big round shoes | costume: the shorts; the cup's sleeve a light of it |
 | [horse](characters/horse.md) | the barnyard party game's horse | on all four legs, side on: a long neck with the mane standing up along it as a crest, a long blunt head with a pale nose and buck teeth, a long straight tail hanging to the heels, flat hooves; a scarf and a zip (a costume) | costume: the coat, the far legs and the scarf darks of it |
 | [rapper](characters/rapper.md) | the rapping paper puppy | side on, a big dog's head on a skinny card cut-out with its brown edge showing: a tall thumb of a knit beanie standing straight up, a long snout jutting far forward with a big round nose on its tip and the jaw dropped open rapping, a short floppy ear hanging down behind, a tee and shorts, big trainers, a cordless mic held out in front | costume: the beanie and tee, the shorts a dark of it |
 | [limbless](characters/limbless.md) | the limbless hero | no arms or legs: white gloves and big shoes floating clear of a small round body with background all round each, a huge nose, a spiky hair tuft standing up, a neckerchief | costume: the top, the shoes a light tone of it |
@@ -130,7 +130,7 @@ The strongest reads first. **Keyed** marks the non-humanoids, the riskiest to dr
 | 12 | dino | Noshasaurus | humanoid + tail | drawn flat |
 | 13 | robot | Meh Man | humanoid + can prop | drawn flat |
 | 14 | sneak | Soggy Snake | humanoid + box prop, keyed | drawn flat |
-| 15 | cuptoon | Mughead | humanoid, rubber hose keyed | drawn flat |
+| 15 | cuptoon | Mughead | humanoid, rubber hose keyed | drawn flat, the takeaway cup |
 | 16 | hunter | Samosa | humanoid, ball tuck keyed | drawn flat |
 | 17 | engineer | Wrenchie | humanoid | drawn flat |
 | 18 | goose | Honkers | **keyed**, bird | drawn flat |

@@ -1,66 +1,76 @@
 import type { FlatKind } from '../kinds';
 
 export const kind: FlatKind = {
-  body: 172,
+  body: 155,
   map: {
-    // The tea and the shoes are one brown in the drawing: `recolour` tells the shoes from the tea by place.
-    roles: ['white', 'red', 'rim', 'brown', 'shoe', 'tag', 'dark'],
+    // The coffee and the shoes are one brown in the drawing: `recolour` tells the shoes from the coffee by place.
+    roles: ['white', 'red', 'sleeve', 'brown', 'shoe', 'tape', 'lid', 'dark'],
     families: [
-      // The enamel, the gloves and the straw's white stripes, with the mug's cel shadow.
-      ['white', [245, 239, 226]],
-      ['white', [243, 236, 224]],
-      ['white', [236, 230, 222]],
-      ['white', [203, 181, 154]],
-      ['white', [215, 198, 156]],
-      ['white', [202, 192, 175]],
-      ['white', [168, 156, 145]],
+      // The paper cup, the lid's lip, the handle, the gloves and the straw's white stripes, with their cel shadow. The
+      // cup is drawn pure white: every drawing's enamel-white closed in by the outline is tinted just under the
+      // tracer's near-white (art/sprites/cuptoon/design.prompt.txt), so `holes` cuts only the true gaps.
+      ['white', [238, 236, 226]],
+      ['white', [239, 231, 219]],
+      ['white', [240, 234, 222]],
+      ['white', [236, 228, 218]],
+      ['white', [216, 218, 217]],
+      ['white', [207, 207, 206]],
+      ['white', [213, 211, 211]],
+      ['white', [207, 197, 189]],
+      ['white', [190, 188, 188]],
       // The shorts, the straw's red stripes and the nose (which goes with the drawn face), and the shorts' shade.
-      ['red', [183, 56, 43]],
-      ['red', [190, 51, 41]],
-      ['red', [166, 66, 47]],
-      ['red', [134, 32, 23]],
-      ['red', [108, 41, 31]],
-      ['rim', [65, 97, 140]],
-      ['rim', [71, 89, 118]],
-      ['rim', [85, 104, 130]],
-      ['rim', [81, 83, 93]],
-      ['brown', [105, 68, 42]],
-      ['brown', [137, 77, 37]],
-      ['brown', [100, 53, 35]],
-      ['brown', [95, 67, 50]],
-      ['brown', [152, 116, 90]],
-      ['tag', [227, 189, 72]],
-      ['tag', [215, 187, 113]],
-      ['dark', [6, 9, 27]],
-      ['dark', [2, 2, 14]],
-      ['dark', [16, 17, 31]],
-      ['dark', [40, 22, 26]],
-      ['dark', [68, 57, 54]],
+      ['red', [174, 46, 39]],
+      ['red', [180, 50, 41]],
+      ['red', [140, 39, 35]],
+      ['red', [106, 30, 28]],
+      // The cardboard sleeve and its shade.
+      ['sleeve', [214, 120, 95]],
+      ['sleeve', [217, 122, 97]],
+      ['sleeve', [176, 101, 83]],
+      ['sleeve', [189, 133, 120]],
+      // The coffee under the popped lid, and the shoes.
+      ['brown', [97, 63, 42]],
+      ['brown', [97, 67, 48]],
+      ['brown', [92, 57, 37]],
+      ['brown', [106, 56, 41]],
+      ['brown', [141, 105, 81]],
+      // The tape holding the handle on.
+      ['tape', [170, 171, 170]],
+      ['tape', [136, 135, 140]],
+      ['tape', [111, 102, 103]],
+      // The plastic lid, painted grey in every drawing (design.prompt.txt): drawn white it was white rings on
+      // the white cup, and the twist read as the original redrawn.
+      ['lid', [86, 84, 92]],
+      ['dark', [7, 12, 30]],
+      ['dark', [3, 1, 8]],
+      ['dark', [13, 9, 21]],
+      ['dark', [23, 18, 29]],
+      ['dark', [26, 6, 14]],
+      ['dark', [54, 42, 42]],
     ],
     line: 'dark',
-    thin: ['white', 'red', 'rim', 'brown', 'tag'],
+    thin: ['white', 'red', 'sleeve', 'brown', 'tape', 'lid'],
     fringe: 5,
     stroke: 2.4,
     feet: ['brown'],
-    loose: ['tag'],
     min: { dark: 0.1 },
-    // The handle's eye and the gaps between the hose limbs (the drawings' cream is kept under the near-white).
+    // The handle's eye and the gaps between the hose limbs.
     holes: 0.4,
     // Each hole takes its rim and the ink beside it goes to the figure: at 228 the handle's eye and the gaps
-    // between the legs kept a white sliver of the enamel's colour inside them.
+    // between the legs kept a white sliver of the cup's colour inside them.
     white: 150,
   },
   roles: [
-    { name: 'white', color: '#f4efe6' },
+    { name: 'white', color: '#f4f1ea' },
     // The shorts are the costume, in the player's colour; the straw's stripes are drawn in it too.
     { name: 'red', color: '#c9473f', slot: 'player' },
-    // The enamel rim: a dark of the player's colour, apart from the white mug and the tea.
-    { name: 'rim', color: '#808080', on: 1, tone: -22 },
-    { name: 'brown', color: '#7a4e30' },
+    // The cardboard sleeve: a light of the player's colour, the twist's colour block on the cup.
+    { name: 'sleeve', color: '#808080', on: 1, tone: 14 },
+    { name: 'brown', color: '#5c3a26' },
     // A colourway is the shoes (VARIETY.palette): brown leather, tan, grey.
     { name: 'shoe', color: '#6b4a35', alts: ['#9a7448', '#6e6a66'], vary: 6 },
-    // The tea-bag's tag: a light tone of the player's colour.
-    { name: 'tag', color: '#808080', on: 1, tone: 26 },
+    { name: 'tape', color: '#a9a8a4' },
+    { name: 'lid', color: '#5c5a62' },
     { name: 'dark', color: '#1c1a24' },
     { name: 'scuff', color: '#808080', on: 1, tone: 12 },
     { name: 'scorch', color: '#808080', on: 1, tone: -18 },
@@ -74,8 +84,8 @@ export const kind: FlatKind = {
   recolour: { from: 'brown', to: 'shoe', below: 6, lying: [0.3, 0] },
   wear: {
     on: ['red'],
-    chin: 6,
-    marks: [[['scuff', 0.6, 0.9, 0.45]], [['scorch', 0.6, 0.9, 0.42]]],
+    chin: 4,
+    marks: [[['scuff', 0.6, 0.9, 0.32]], [['scorch', 0.6, 0.9, 0.3]]],
   },
   accessories: [{ slot: 'plaster', role: 'plaster', at: 'cheek', size: [1.8, 0.8] }],
   face: { r: 0.9, iris: '#1c1a24', eye: 'tall' },

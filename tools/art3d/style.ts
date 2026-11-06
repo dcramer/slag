@@ -368,23 +368,24 @@ export const BRIEFS: Record<string, Brief> = {
     worn: 'a round hand-hole is torn ragged high on the back half of the box, and out of it the two long tails of his bandana stream straight back behind the box, each as long as the box is wide: dark navy cloth (#3a4a5c) with two broad white stripes across each near its tip, like a tea towel, one tail frayed at its end; two big crossed strips of pale packing tape (#e6d6a6) are stuck over a split in the lower back corner of the box; a big printed arrow on the back half of the box, below the hand-hole, points down, in a darker brown. The box keeps its crisp straight edges and square corners, and the eye slot and the eyes stay as they are.',
   },
   cuptoon: {
-    // The nod, each part of the read at race size: the mug for a head with its loop handle (the one head
-    // nobody else in the cast has, and the whole silhouette: a squat cylinder wider than the body under it);
-    // the straw standing up out of it (it breaks the top of the outline, where every other kind is round or
-    // capped); the black rubber-hose limbs, big white gloves and big round shoes (the 1930s cartoon read,
-    // which is half the joke); the high-waisted shorts (the toon costume, and the costume block in the
-    // player's colour).
-    // Ours, and the joke: a camping mug, not fine china. White enamel with a thick rim, a chip knocked out of
-    // the rim at the back, a paper straw gone soggy and flopped over, and a tea-bag's string hung over the rim
-    // with its paper tag dangling by the handle.
+    // The nod, each part of the read at race size: a cup for a head with a loop handle out the back (the one
+    // head nobody else in the cast has); the straw standing up out of it (it breaks the top of the outline,
+    // where every other kind is round or capped); the black rubber-hose limbs, big white gloves and big round
+    // shoes (the 1930s cartoon read, which is half the joke); the high-waisted shorts (the toon costume, and
+    // the costume block in the player's colour).
+    // Ours, and the joke: no china, a takeaway coffee cup. A paper cup wider at the top, a plastic lid with a
+    // lip proud of the cup, a cardboard sleeve (a light of the player's colour) under the smile, and a mug's
+    // loop handle taped onto the back of the paper cup, because the knock-off couldn't afford a real one.
+    // Without the handle the silhouette read as a box with an antenna (design reads, 2026-11-06).
     design:
-      'The character: a small 1930s rubber-hose cartoon toon whose whole head is a big white enamel camping mug (#f4efe6), a squat round cylinder wider than it is tall and wider than the body under it, ' +
-      'with a thick blue enamel rim (#3a5a8c) round its top and one big round loop handle sticking out from the back of the mug; its open top is tipped toward us a little so dark brown tea (#8a5a3a) shows inside the rim. ' +
-      'Standing straight up out of the tea, a tall red-and-white striped paper straw (#d8382f), as tall as the mug. ' +
-      'On the front of the mug, two big black pie-cut cartoon eyes and a small round red nose, a wide happy smile. ' +
-      'Under the mug a tiny body: big baggy high-waisted red shorts (#c9473f), thin black rubber-hose arms and legs that bend in smooth curves with no elbows or knees, ' +
+      'The character: a small 1930s rubber-hose cartoon toon whose whole head is a big white paper takeaway coffee cup (#f6f3ee), wider at the top than at the bottom and wider than the body under it, ' +
+      'with a dark grey plastic lid (#5c5a62) whose thick lip sticks out past the cup all round, and a wide pale salmon cardboard sleeve (#e0806a) round the bottom of the cup; ' +
+      "a big round loop handle like a teacup's is stuck onto the back of the paper cup with two wide strips of grey tape (#a6a6a6). " +
+      'Standing straight up out of a hole in the lid, a thick tall red-and-white striped straw (#d8382f), as tall as the cup, bent once near its top. ' +
+      'On the front of the cup above the sleeve, two big black pie-cut cartoon eyes and a small round red nose, a wide happy smile. ' +
+      'Under the cup a tiny body: big baggy high-waisted red shorts (#c9473f), thin black rubber-hose arms and legs that bend in smooth curves with no elbows or knees, ' +
       'big puffy white cartoon gloves (#fbf6ee) and big round brown cartoon shoes (#6b4a35).',
-    worn: 'a big chip is broken out of the blue rim at the back of the mug, a jagged notch in its outline, and a black chip of enamel is knocked off the side of the mug just under the handle; the paper straw has gone soggy and flops over at the top in a big droop; a tea-bag string hangs over the back of the rim with a big yellow paper tag (#e8c24a) dangling from it beside the handle; the sole of one shoe has come loose and flaps open at the toe. The front of the mug and the face stay clean.',
+    worn: 'the grey plastic lid has been knocked crooked and has popped up off the cup at the back, tilted, with brown coffee (#5c3a26) showing under its back edge; a big crumpled dent is pushed into the back edge of the paper cup, a notch in its outline; the straw is chewed flat at the top and kinked; the sole of one shoe has come loose and flaps open at the toe. The front of the cup and the face stay clean.',
   },
   jelly: {
     // The nod, each part of the read at race size: the green dome (the whole silhouette, and the only see-through
