@@ -46,11 +46,10 @@ export const PASS_BANDS: Record<ModeId, Record<BotLevel, Record<Difficulty, read
  * Catch-up in Rising Slag: the share of rounds the runner highest 15 s after GO (`at`, frames) goes on to win, four
  * Normal bots on a bare loop (seeds 1–128, the rounds where both are known; tests/stats/slag-catch-up.test.ts).
  * `boxes`: the loop's own boxes as built. `items` and `bare`: what those boxes deal by rank put in every empty hand
- * every 5 s, then used by the bots' item tactics, or never used. Measured in the open shaft 69, 65 and 61 (in
+ * every 5 s, then used by the bots' item tactics, or never used. Measured in the open shaft 66, 50 and 69 (in
  * storeys 60, 59 and 55), bots spread over the shaft each on a lane of its own, the loop's boxes handing over what
- * they deal, and whoever is behind bumping a rival off a board from below (under one bump a round). Bare, the bump
- * took the early leader from 78% to 61%; with items the rounds are too few to tell 3 to 5 points apart. The lead
- * changes hands under twice a round. The target, from the lead-camera racer, is the early leader winning about
+ * they deal, and a jump up into anyone's feet bumping them (about 3 bumps a round). About 80 rounds are judged in
+ * each, so ±5. The lead changes hands under twice a round. The target, from the lead-camera racer, is the early leader winning about
  * half the time (docs/MODES.md); these bands only catch a regression.
  */
 export const LEAD_HOLDS = {
