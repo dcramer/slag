@@ -152,7 +152,7 @@ The strongest reads first. **Keyed** marks the non-humanoids, the riskiest to dr
 | 38 | sim | Bella Gauche | humanoid + floating diamond | drawn flat; the blind read passes (both readers named her at high once the diamond's points survived the tracer: rounded, it was a Pikmin's leaf) |
 | 39 | succubus | Moribund | humanoid, winged head | medium: the head wings, only standing clear of the hair; the stinger's horns and the vampire to watch |
 | 40 | archer | Aloof | humanoid, side on | medium: the bow drawn ahead; the raider and the elf to watch |
-| 41 | slime | Slimple | **keyed**, limbless | high: the curled teardrop; the jelly and the chomper to watch |
+| 41 | slime | Slimple | **keyed**, limbless | drawn flat; the blind read passes (both readers named it at medium-high or better, unpaired: the onion with its tip a point, kept by `smooth: 0`; a big hooked tip read as a witch's hat) |
 | 42 | bear | Creaky Buzzbear | humanoid, stocky | medium: the tiny hat between round ears; the top-hat girl and the ape to watch |
 
 **What to check.** No two kinds may rhyme. Watch these pairs:
