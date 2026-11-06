@@ -19,14 +19,14 @@ const METAL_SH = '#7c828a';
 function costume(d: D) {
   const x = (u: number) => d.f * d.W * u;
   const crown = [
-    { x: x(-0.07), y: Y(d, 0.88) },
-    { x: x(0.17), y: Y(d, 0.88) },
-    { x: x(0.17), y: Y(d, 0.9) },
-    { x: x(0.13), y: Y(d, 0.9) },
+    { x: x(-0.07), y: Y(d, 0.81) },
+    { x: x(0.17), y: Y(d, 0.81) },
+    { x: x(0.17), y: Y(d, 0.84) },
+    { x: x(0.13), y: Y(d, 0.84) },
     { x: x(0.13), y: Y(d, 1) },
     { x: x(-0.03), y: Y(d, 1) },
-    { x: x(-0.03), y: Y(d, 0.9) },
-    { x: x(-0.07), y: Y(d, 0.9) },
+    { x: x(-0.03), y: Y(d, 0.84) },
+    { x: x(-0.07), y: Y(d, 0.84) },
   ];
   poly(d.s, crown, HAT);
   const by = Y(d, 0.53);
@@ -57,7 +57,7 @@ export const art: KindArt = {
   // The hat stands up out of the middle of the crown with a notch of background each side of it down to the head,
   // the round ears out on the corners; the muzzle bulges out front, the belly is big and round over two short legs.
   outline:
-    'M -0.03 -1 L 0.13 -1 L 0.13 -0.9 L 0.17 -0.9 L 0.17 -0.87 C 0.2 -0.86 0.22 -0.85 0.24 -0.84 C 0.22 -0.92 0.3 -0.98 0.36 -0.95 C 0.43 -0.92 0.44 -0.83 0.38 -0.78 C 0.42 -0.72 0.44 -0.66 0.46 -0.62 C 0.48 -0.56 0.42 -0.52 0.34 -0.52 C 0.36 -0.48 0.4 -0.42 0.4 -0.34 C 0.42 -0.2 0.36 -0.12 0.28 -0.1 L 0.26 0 L 0.06 0 L 0.06 -0.08 L -0.04 -0.08 L -0.04 0 L -0.26 0 L -0.28 -0.12 C -0.4 -0.16 -0.44 -0.28 -0.42 -0.4 C -0.42 -0.48 -0.36 -0.52 -0.3 -0.54 C -0.38 -0.6 -0.38 -0.72 -0.32 -0.78 C -0.4 -0.82 -0.4 -0.94 -0.32 -0.96 C -0.24 -0.98 -0.18 -0.92 -0.18 -0.86 C -0.14 -0.87 -0.1 -0.875 -0.07 -0.875 L -0.07 -0.9 L -0.03 -0.9 Z',
+    'M -0.03 -1 L 0.13 -1 L 0.13 -0.84 L 0.17 -0.84 L 0.17 -0.81 C 0.2 -0.8 0.22 -0.8 0.24 -0.8 C 0.22 -0.88 0.3 -0.93 0.36 -0.91 C 0.43 -0.88 0.44 -0.81 0.38 -0.77 C 0.42 -0.72 0.44 -0.66 0.46 -0.62 C 0.48 -0.56 0.42 -0.52 0.34 -0.52 C 0.36 -0.48 0.4 -0.42 0.4 -0.34 C 0.42 -0.2 0.36 -0.12 0.28 -0.1 L 0.26 0 L 0.06 0 L 0.06 -0.08 L -0.04 -0.08 L -0.04 0 L -0.26 0 L -0.28 -0.12 C -0.4 -0.16 -0.44 -0.28 -0.42 -0.4 C -0.42 -0.48 -0.36 -0.52 -0.3 -0.54 C -0.38 -0.6 -0.38 -0.72 -0.32 -0.78 C -0.4 -0.8 -0.4 -0.9 -0.32 -0.92 C -0.24 -0.93 -0.18 -0.88 -0.18 -0.81 C -0.14 -0.81 -0.1 -0.81 -0.07 -0.81 L -0.07 -0.84 L -0.03 -0.84 Z',
   lift: 1,
   feet: 'paw',
   arms: 'mitten',
@@ -66,12 +66,12 @@ export const art: KindArt = {
   faceX: 0.16,
   // The stiff toy's walk: no bounce in the knees, a jerky rock from side to side on each step.
   gait: (g) => (g.moving ? { hop: Math.abs(Math.sin(g.ph)) * 0.3, rot: Math.sign(Math.sin(g.ph)) * 0.04, pivot: 0.1, upright: 0.8 } : {}),
-  paintFace: (d) => pair(d, 0.74, 0.09, 0.62),
+  paintFace: (d) => pair(d, 0.7, 0.09, 0.62),
   print: (d) => {
     // The belly, the muzzle and the ears' insides: a light of the fur.
     tonedOval(d.s, d.f * d.W * 0.06, Y(d, 0.3), d.W * 0.24, d.H * 0.17, 14, d.lk.playerHi, d.lk.playerHi, d.lk.ink, 0, 0, 0);
     tonedOval(d.s, d.f * d.W * 0.3, Y(d, 0.6), d.W * 0.14, d.H * 0.065, 12, d.lk.playerHi, d.lk.playerHi, d.lk.ink, 0, 0, 0);
-    for (const u of [-0.32, 0.36]) tonedOval(d.s, d.f * d.W * u, Y(d, 0.88), d.W * 0.05, d.H * 0.04, 8, d.lk.playerHi, d.lk.playerHi, d.lk.ink, 0, 0, 0);
+    for (const u of [-0.32, 0.36]) tonedOval(d.s, d.f * d.W * u, Y(d, 0.84), d.W * 0.05, d.H * 0.04, 8, d.lk.playerHi, d.lk.playerHi, d.lk.ink, 0, 0, 0);
   },
   front: (d) => costume(d),
   tool: (d, hx, hy) => {
