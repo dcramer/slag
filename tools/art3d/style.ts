@@ -143,26 +143,29 @@ export const BRIEFS: Record<string, Brief> = {
       'standing idle with one foot tapping; mid-run leaning hard forward with legs a blur; curled into a tight spinning ball in mid-air, quills outward, the key sticking out of it; sliding down a wall on his right with one hand flat against it and both shoes braced; cheering with one fist up; run down flat on his back with the key standing up out of him',
   },
   elf: {
-    // The nod, each part of the read at race size: the long green cap flopping back behind the head like a
-    // tail (the silhouette people draw), the long pointed ear sticking out sideways (an elf, not a gnome),
-    // the green tunic flared at the hem with a brown belt (the colour and the hero's cut), a blond fringe,
-    // and something to fight with on his back (a hero, not a shepherd).
-    // Ours, and the joke: a hero kitted out from the bins. The cap is a long green woolly sock with a darned
-    // toe, the round shield a dented dustbin lid with its handle, the sword a sooty fireplace poker.
+    // The nod, each part of the read at race size, in any player's colour: a pointed cap on a band round the
+    // head, running back from the crown and flopping down to a point (a cap, not hair: the old smooth sock
+    // hanging back read as a tentacle ponytail in blue), the long pointed ear standing clear of it (an elf,
+    // not a gnome), the tunic flared at the hem with a belt, a blond fringe, and a round shield and a straight
+    // sword held out clear of the body (the bent poker read as a hook, the lid on his back as nothing).
+    // Ours, and the joke: a hero kitted out from the bins. The cap is a knitted stocking with a sock's ribbed
+    // cuff for its band and a darned tip, the shield a dented dustbin lid with its handle, the sword a sooty
+    // fireplace poker with a crossbar.
     // The twist and the nod lead: the image generator drops what comes late in a long prompt (the lid and
     // the poker vanished when they came last).
     character:
       'Character: a slim young elf hero, never stout. A blond fringe (#e6c25a), long pointed ears, blue eyes. ' +
-      'His cap: a very long floppy green woolly sock (#3f7a34), its long foot flopping straight back behind his head and drooping to his shoulders, a light green darn (#5a9a4a) on its toe. ' +
-      'A green tunic (#3f7a34) flared at the hem, a wide brown belt, cream sleeves and leggings, brown gloves and boots (#6b4a35). ' +
-      'On his back as a shield, a dented round steel dustbin lid (#a8adb4) with its handle; a black iron fireplace poker (#4a4a52) with a hooked tip in place of a sword, its loop handle over his shoulder. No sword, no bow.',
-    // Designed at game size: the long cap flopping back, the pointed ear, the flared tunic, the round shield on
-    // the back, and the twist as big shapes (a woolly sock for the cap, a dustbin lid, a fireplace poker).
+      'His cap: a pointed green knitted stocking cap (#3f7a34) on a wide ribbed lighter cuff band (#8fb86a) round his head, running back from the crown and flopping down to a darned point behind his head. ' +
+      'A green tunic (#3f7a34) flared at the hem, a wide brown belt, brown gloves and boots (#6b4a35). ' +
+      'Held out on his far arm as a shield, a dented round grey dustbin lid (#a8adb4) with its handle; in his near hand, a straight black iron fireplace poker (#4a4a52) with a pointed tip and a crossbar, held like a sword.',
+    // Designed at game size, made as an edit of the first design (2026-11-06, art/sprites/elf/design.prompt.txt):
+    // the pointed cap on its band, the ear clear of it, the lid and the poker held out, as big shapes.
     design:
-      'The character: a slim young elf hero in a green tunic (#3f7a34) flared at the hem over a brown belt, brown boots and gloves (#6b4a35), blond hair (#e6c25a), one long pointed ear sticking out, big eyes. ' +
-      'His cap is a long green woolly sock flopping back from his head like a tail. ' +
-      'On his back, a round dented grey dustbin lid (#a8adb4) as his shield, its handle showing; in one hand, a dark iron fireplace poker (#4a4a52) as his sword.',
-    worn: 'the toe of the sock cap is darned with a big lighter-green patch; the dustbin lid has a deep dent and a rusty hole; the poker is bent near the tip; the tunic hem is torn into two ragged points.',
+      'The character: a slim young elf hero in a green tunic (#3f7a34) flared at the hem over a brown belt, brown boots and gloves (#6b4a35), blond hair (#e6c25a), big eyes. ' +
+      'His cap is a pointed green knitted stocking cap on a wide ribbed lighter cuff band round his head; from the band it runs back from the crown, tapering, and its tip folds over and flops down to a point behind his head, never a rounded hanging tail. ' +
+      'One long pointed ear sticks straight out backwards below the band, clear of the cap. ' +
+      'Held out on his far arm, clear of his body, a round dented grey dustbin lid (#a8adb4) as his shield, its handle showing; in his near hand, held up and forward clear of his body, a straight dark iron fireplace poker (#4a4a52) with a crossbar, as his sword.',
+    worn: 'the pointed tip of the cap is darned with a big lighter-green patch; the dustbin lid has a deep dent and a rusty hole; the tunic hem is torn into two ragged points.',
     views: 'a front view, a side profile facing right, a back view showing the dustbin lid and poker on his back, and a three-quarter view facing right',
     pose: 'The sock cap flops straight back and down behind his head to the nape, clear of the arms. The dustbin lid sits flat on his back and the poker lies behind it, both clear of the arms and head.',
     poses:
