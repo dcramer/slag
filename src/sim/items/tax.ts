@@ -93,7 +93,7 @@ function stepShell(w: RunWorld, s: TaxShell): boolean {
   }
   if (!approach(s, s.dx, s.dy, TAX.dive * DT)) return true;
   // The spawn zone is cover: a dive that lands there just pops.
-  if (w.safeZone && pointInRect(s.x, s.y, w.safeZone)) return pop(w, s);
+  if (w.safeZones.some((z) => pointInRect(s.x, s.y, z.zone))) return pop(w, s);
   blast(w, s);
   return false;
 }

@@ -12,6 +12,12 @@ export type ItemKind = 'sword' | 'puck' | 'boomerang' | 'shield' | 'rocket' | 's
 
 export const ITEM_KINDS: readonly ItemKind[] = ['sword', 'puck', 'boomerang', 'shield', 'rocket', 'smoke', 'bat', 'tremor', 'tax', 'block', 'hook', 'upper'];
 
+/** What a box deals by rank (a mode's `boxes`, game/modes.ts): one table for whoever leads, one for the rest. */
+export interface ItemDeal {
+  chase: readonly ItemKind[];
+  lead: readonly ItemKind[];
+}
+
 /** What a runner holds. */
 export interface Held {
   kind: ItemKind;

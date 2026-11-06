@@ -30,6 +30,8 @@ export interface ModeDef {
   run: RunRules;
   /** How its crates are dealt (gen/props.ts `CrateMix`). */
   crate: CrateMix;
+  /** With more than one player, what the race camera frames (render/camera-follow.ts): the whole pack, or the leader and a screen behind them. */
+  camera: 'pack' | 'leader';
   /**
    * Whether a level set (theme) builds this mode's level as the mode means it. Every set should, since the engine
    * builds the level; one that doesn't yet still plays (Rising Slag in a farm is a classic climb, no loop), and the
@@ -45,6 +47,7 @@ export const MODES: Record<ModeId, ModeDef> = {
     profile: {},
     run: RACE_RUN,
     crate: RACE_CRATE,
+    camera: 'pack',
     builds: () => true,
     score: ({ slots, run, standings }) => scoreRound(slots, run.finishOrder, run.kills, standings),
   },
@@ -56,11 +59,21 @@ export const MODES: Record<ModeId, ModeDef> = {
   slag: {
     label: 'Rising Slag',
     // A looping shaft of open ledges in every set, owing no part, with boxes of its own up every lap and slag under it.
-    profile: { builder: 'shaft', loop: true, bare: true, boxes: true, tide: true },
+    // The boxes deal by rank, the way a kart racer's do: whoever is behind draws something that reaches up (the hook
+    // that trades places with the one ahead, the punch that flies up through floors, a burst upward, a step, the
+    // shell that hunts the leader), and whoever leads something to hold on with. None kills.
+    profile: {
+      builder: 'shaft',
+      loop: true,
+      bare: true,
+      boxes: { chase: ['hook', 'upper', 'upper', 'rocket', 'block', 'tax'], lead: ['shield', 'sword', 'block'] },
+      tide: true,
+    },
     run: { flag: false, lastStanding: true, ahead: 'height' },
     // A loop climbs bare, so no bridge is owed: the crate leans to what you put in each other's way, and to
     // utility, and away from building (a shortcut for whoever's ahead) and demolition (nothing needs clearing).
     crate: { bridges: false, roles: { hazard: 1.6, utility: 1.3, build: 0.6, demolish: 0.35 } },
+    camera: 'leader',
     // Every set builds a looping shaft: its tower kit (gen/level/sculptors/tall.ts).
     builds: () => true,
     score: ({ run, standings }) =>

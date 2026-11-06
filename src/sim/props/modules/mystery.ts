@@ -29,17 +29,6 @@ export function rollItem(pool: readonly ItemKind[], seed: number, uid: number, m
 }
 
 /**
- * What a Rising Slag loop's box deals by rank (gen/level/loop-boxes.ts), the way a kart racer's boxes do: whoever
- * is behind draws something that reaches up (the hook that trades places with the one ahead, the punch that flies up
- * through floors, a burst upward, a step, the shell that hunts the leader), and whoever leads something to hold on
- * with. None kills.
- */
-export const CATCH_UP: { chase: readonly ItemKind[]; lead: readonly ItemKind[] } = {
-  chase: ['hook', 'upper', 'upper', 'rocket', 'block', 'tax'],
-  lead: ['shield', 'sword', 'block'],
-};
-
-/**
  * Hit from below (head flush with the underside) or bumped from the side
  * (flush with a side face, overlapping vertically). Standing on it never counts.
  */
@@ -84,12 +73,12 @@ defineModule<'mystery'>({
       const hi = ctx.runners.findIndex((r) => r.active && touches(r, x, y));
       if (hi < 0) continue;
       // By rank: the leader as the race ranks it (sim/standing.ts), or everyone where nobody ranks the race.
-      const pool = m.catchUp ? ((ctx.leader?.() ?? hi) === hi ? CATCH_UP.lead : CATCH_UP.chase) : m.pool;
+      const pool = m.deal ? ((ctx.leader?.() ?? hi) === hi ? m.deal.lead : m.deal.chase) : m.pool;
       const kind = rollItem(pool, ctx.itemSeed ?? ctx.level.seed, ctx.r.pp.uid, ctx.mi, st.pops);
       // A loop's box hands it over, as a racer's item box does: a climb has no time to hop about after a pop, and its
       // boxes hang in open air. Any other box (or full hands) pops it out of the top, so whoever hit it has to hop up
       // for it, or a rival snatches it; under a low roof it drops out of the bottom instead.
-      if (!(m.catchUp && ctx.handItem?.(hi, kind))) {
+      if (!(m.deal && ctx.handItem?.(hi, kind))) {
         const roofed = tileAt(ctx.level, Math.floor((x + TILE / 2) / TILE), Math.floor((y - 1) / TILE)) === T_SOLID;
         ctx.spawnItem?.({ kind, x: x + TILE / 2, y: roofed ? y + TILE + 6 : y - 6, vx: 0, vy: roofed ? 60 : -190, grace: 14 });
       }

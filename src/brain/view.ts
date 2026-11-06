@@ -69,7 +69,7 @@ function boxesOf(run: RunWorld): BoxSense[] {
       const st = mysteryState(run.propState.get(rp.pp.uid), mi);
       const ready = !mysterySpent(mod, st.pops) && run.frame >= st.ready;
       const [ox, oy] = motionOffset(rp, run.frame);
-      for (const [cx, cy] of mod.cells) out.push({ tx: Math.round(cx + ox / TILE), ty: Math.round(cy + oy / TILE), ready, hands: !!mod.catchUp });
+      for (const [cx, cy] of mod.cells) out.push({ tx: Math.round(cx + ox / TILE), ty: Math.round(cy + oy / TILE), ready, hands: !!mod.deal });
     });
   return out;
 }

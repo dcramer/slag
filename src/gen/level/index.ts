@@ -285,7 +285,7 @@ export function generateLevel(seed: number, themeOverride?: ThemeId, profileOver
       // (The placer already avoids these cells; this is a safety net. Keep uids contiguous, the landmark's first.)
       // A level that asks for boxes gets mystery boxes of its own, after the builder and its set pieces (./loop-boxes.ts).
       const kept = [...fixed, ...pieces.filter(clearOfBridges)];
-      const boxes = profile.boxes ? loopBoxes(level, kept, keep, new Rng(deriveSeed(seed, lab(`loop-boxes:${attempt}`)))) : [];
+      const boxes = profile.boxes ? loopBoxes(level, kept, keep, new Rng(deriveSeed(seed, lab(`loop-boxes:${attempt}`))), profile.boxes) : [];
       level.setPieces = [...kept, ...boxes].map((p, i) => ({ ...p, uid: SET_PIECE_UID + i }));
       while (level.setPieces.length && !planHolds(level, [], bridges, cache)) level.setPieces.pop();
       if (level.rides) {

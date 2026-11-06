@@ -20,9 +20,10 @@ import {
   spawnItem,
   stepItems,
 } from './items';
-import { goalRect, killY, lapShift, type Level, offMap, spawnZone, tileAt } from './level';
+import { goalRect, killY, lapShift, type Level, offMap, spawnsOf, spawnZones, tileAt } from './level';
 import { leaderOf } from './standing';
-import { stepTide, tideStart } from './tide';
+import { tideStart } from './tide';
+import { type RunFeature, RUN_FEATURES } from './features';
 import { type Body, bodyAtCell, type CollisionWorld, firstOverlap, type Solid, stepBody } from './physics';
 import {
   type Beam,
@@ -155,6 +156,8 @@ export class RunWorld {
   endFrame = -1;
   /** Rising Slag: world y of the slag's surface (sim/tide.ts), or null on a level without one. Under it, everything burns. */
   slag: number | null;
+  /** What this race has beyond running the level (sim/features.ts), from its level and rules. */
+  readonly features: readonly RunFeature[];
   propState = new Map<number, PropState>();
   /** Set pieces first, then player props. */
   resolved: Resolved[];
@@ -167,6 +170,8 @@ export class RunWorld {
    * Falling into the pit, giving up and the race timer still apply.
    */
   readonly safeZone: Rect | null;
+  /** Every spawn cell's safe zone (Level.spawns), the first being `safeZone`. */
+  readonly safeZones: readonly { cell: { tx: number; ty: number }; zone: Rect }[];
   /** Projectiles spawned so far (ids for projectile-owned solids). */
   private seq = 0;
   /** Grabs asked for this frame; settled and emptied once everyone has moved. */
@@ -195,27 +200,34 @@ export class RunWorld {
     /** What the race is played for (the match's mode). */
     readonly rules: RunRules = RACE_RUN,
   ) {
-    const n = slots.length;
-    this.runners = slots.map((slot, i) => ({
-      slot,
-      // Fan players out over the spawn pad; tighter spacing for big lobbies.
-      body: bodyAtCell(level.spawn.tx, level.spawn.ty, (i - (n - 1) / 2) * Math.min(PLAYER_W * 0.7, 40 / Math.max(1, n - 1))),
-      alive: true,
-      finished: false,
-      finishFrame: -1,
-      deathFrame: -1,
-      killer: -1,
-      cause: null,
-      springCooldown: 0,
-      status: newStatus(),
-      items: newRunnerItems(),
-      attach: newAttach(),
-      ride: -1,
-      perch: 0,
-      pop: 0,
-      press: 0,
-      lap: 0,
-    }));
+    // Runner i starts at the i-th spawn cell, round and round (Level.spawns), fanned out over its pad with whoever
+    // shares it; tighter spacing for big lobbies.
+    const cells = spawnsOf(level);
+    const k = cells.length;
+    this.runners = slots.map((slot, i) => {
+      const cell = cells[i % k];
+      const n = Math.floor((slots.length - 1 - (i % k)) / k) + 1;
+      const j = Math.floor(i / k);
+      return {
+        slot,
+        body: bodyAtCell(cell.tx, cell.ty, (j - (n - 1) / 2) * Math.min(PLAYER_W * 0.7, 40 / Math.max(1, n - 1))),
+        alive: true,
+        finished: false,
+        finishFrame: -1,
+        deathFrame: -1,
+        killer: -1,
+        cause: null,
+        springCooldown: 0,
+        status: newStatus(),
+        items: newRunnerItems(),
+        attach: newAttach(),
+        ride: -1,
+        perch: 0,
+        pop: 0,
+        press: 0,
+        lap: 0,
+      };
+    });
     this.resolved = [...level.setPieces, ...placed].map(resolveProp);
     for (const r of this.resolved) {
       const st = newPropState();
@@ -232,7 +244,9 @@ export class RunWorld {
     };
     this.goal = goalRect(level);
     this.slag = tideStart(level);
-    this.safeZone = spawnZone(level);
+    this.features = RUN_FEATURES.filter((ft) => ft.on(this));
+    this.safeZones = spawnZones(level);
+    this.safeZone = this.safeZones[0]?.zone ?? null;
     this.killY = killY(level);
     this.buildProps(0); // A race can be drawn before its first step, and the art reads what the build reports.
   }
@@ -244,7 +258,7 @@ export class RunWorld {
 
   /** Is this runner inside the spawn safe zone (immune to props) right now? */
   isSafe(r: Runner): boolean {
-    return !!this.safeZone && overlaps(r.body, this.safeZone);
+    return this.safeZones.some((s) => overlaps(r.body, s.zone));
   }
 
   get active(): Runner[] {
@@ -313,7 +327,7 @@ export class RunWorld {
     const f = this.frame;
     this.struck.length = 0;
     this.buildProps(f);
-    if (this.slag !== null) this.slag = stepTide(this.level, this.slag, f, this.leaderFeet());
+    for (const ft of this.features) ft.step?.(this, f);
     const live = f >= RUN_COUNTDOWN && this.endFrame < 0;
     const start = contactStart(this.runners);
 
@@ -399,8 +413,10 @@ export class RunWorld {
       }
       if (b.y > this.killY) return this.kill(r, -1, 'fall');
       if (offMap(b, this.level.w)) return this.kill(r, -1, 'out');
-      // Slag burns wherever it is, the spawn zone included, as the pit takes you anywhere.
-      if (this.slag !== null && hb.y + hb.h - r.lap * (this.level.loop ?? 0) * TILE > this.slag) return this.kill(r, -1, 'hazard');
+      for (const ft of this.features) {
+        const cause = ft.kills?.(this, r, hb);
+        if (cause) return this.kill(r, -1, cause);
+      }
       if (this.rules.flag && overlaps(b, this.goal)) {
         letGo(r);
         r.finished = true;
@@ -425,13 +441,6 @@ export class RunWorld {
       if (this.active.length <= (this.rules.lastStanding && this.runners.length > 1 ? 1 : 0)) this.endFrame = f;
     }
     this.frame++;
-  }
-
-  /** The highest feet (climbed coordinates, `feetUp`) of anyone still racing, or null: where the slag's leash is tied. */
-  private leaderFeet(): number | null {
-    let top: number | null = null;
-    for (const r of this.runners) if (r.alive && !r.finished) top = Math.min(top ?? Infinity, feetUp(this.level, r));
-    return top;
   }
 
   /** Shots and loose items round a loop go a lap with whatever crosses its line, as runners do. */

@@ -1,7 +1,6 @@
 import { BotSeats } from '../../src/brain/bots';
 import { deriveSeed, Rng } from '../../src/core/rng';
 import { giveItem } from '../../src/sim/items';
-import { CATCH_UP } from '../../src/sim/props';
 import { type Personality, steady as steadyHands } from '../../src/brain/personality';
 import { type BotLevel, Match } from '../../src/game/match';
 import type { ProfileOverride } from '../../src/gen/level';
@@ -12,6 +11,7 @@ import { RUN_COUNTDOWN, TILE } from '../../src/sim/constants';
 import { feetUp } from '../../src/sim/run';
 import { leaderOf } from '../../src/sim/standing';
 import type { ModeId } from '../../src/game/modes';
+import { MODES } from '../../src/game/modes';
 import { DEFAULT_RULES } from '../../src/game/rules';
 import type { ThemeId } from '../../src/themes';
 
@@ -178,7 +178,7 @@ export function botRound(
     at?: number;
     limit?: number;
     hands?: (p: Personality) => Personality;
-    /** Every `deal` frames from GO, every empty hand gets what a loop's box deals its rank (`CATCH_UP`): items reaching everyone, as boxes on the way would. */
+    /** Every `deal` frames from GO, every empty hand gets what a loop's box deals its rank (the mode's `boxes`): items reaching everyone, as boxes on the way would. */
     deal?: number;
     mode?: ModeId;
   } = {},
@@ -198,6 +198,7 @@ export function botRound(
     return i < 0 ? -1 : run.runners[i].slot;
   };
   const dealer = new Rng(deriveSeed(seed, 'deal'));
+  const CATCH_UP = MODES.slag.profile.boxes!;
   // Who leads, changing hands only when someone has been on top for a second straight, so climbers hopping past each
   // other on one flight don't count as overtakes.
   let ahead = -1;

@@ -1,3 +1,4 @@
+import type { ItemDeal } from './items/types';
 import type { Rect } from '../core/geom';
 import type { TerrainKind, Theme } from '../gen/theme';
 import { TILE } from './constants';
@@ -59,8 +60,8 @@ export interface LevelProfile {
   loop?: boolean;
   /** Owes no part: passable bare, with no crossing that takes one (a loop climbs bare, every lap). */
   bare?: boolean;
-  /** Mystery boxes of its own up every lap, dealing by rank (gen/level/loop-boxes.ts). */
-  boxes?: boolean;
+  /** Mystery boxes of its own up every lap, dealing by rank from this table (gen/level/loop-boxes.ts). */
+  boxes?: ItemDeal;
   /** Slag rising under it from GO (Level.tide, sim/tide.ts): a climb. */
   tide?: boolean;
   /** A loop whose laps follow the difficulty curve (gen/level/difficulty.ts `LAP_TIERS`), the first gentle to hard; absent, every lap is `difficulty`. */
@@ -75,6 +76,11 @@ export interface Level {
   tiles: Uint8Array;
   /** Empty cell players spawn in (standing on the tile below). */
   spawn: { tx: number; ty: number };
+  /**
+   * More cells to spawn in (an arena with a corner each): runner i starts at the i-th of `spawn` and these, round and
+   * round. Each inside a protected rect has a safe zone of its own, as `spawn` does.
+   */
+  spawns?: { tx: number; ty: number }[];
   /** Empty cell holding the goal flag. */
   goal: { tx: number; ty: number };
   /** Tile areas where props can't be placed and bombs can't dig. */
@@ -229,7 +235,23 @@ export function goalRect(level: Level): Rect {
  * (see RunWorld). Null when the level has no protected rect around spawn.
  */
 export function spawnZone(level: Level): Rect | null {
-  const { tx, ty } = level.spawn;
+  return zoneAt(level, level.spawn);
+}
+
+/** Every cell a race spawns in: `spawn`, then any more (`Level.spawns`). */
+export const spawnsOf = (level: Level): { tx: number; ty: number }[] => [level.spawn, ...(level.spawns ?? [])];
+
+/** The safe zone round each spawn cell that has one (spawnZone's rule), with the cell. */
+export function spawnZones(level: Level): { cell: { tx: number; ty: number }; zone: Rect }[] {
+  return spawnsOf(level).flatMap((cell) => {
+    const zone = zoneAt(level, cell);
+    return zone ? [{ cell, zone }] : [];
+  });
+}
+
+/** The protected rect holding `cell`, in px, or null. */
+function zoneAt(level: Level, cell: { tx: number; ty: number }): Rect | null {
+  const { tx, ty } = cell;
   for (const r of level.protectedRects) {
     if (tx >= r.x && tx < r.x + r.w && ty >= r.y && ty < r.y + r.h) return { x: r.x * TILE, y: r.y * TILE, w: r.w * TILE, h: r.h * TILE };
   }

@@ -4,7 +4,7 @@ import type { InputFrame } from '../types';
 import { cx, cy, itemEvent, spawnDrop } from './common';
 import { placeBlock } from './pocket';
 import { launchTax } from './tax';
-import { ITEM_KINDS, type ItemKind } from './types';
+import type { ItemKind } from './types';
 import { fireUpper, throwHook } from './upward';
 
 /**
@@ -22,8 +22,6 @@ export interface ItemSpec {
   verb: string;
   /** Carrying it caps jump take-off speed (px/s). */
   jumpCap?: number;
-  /** Made for a climb, where ahead is up: only a loop's boxes deal it (`CATCH_UP`), never a race's crate. */
-  climb?: true;
   /** Fire it. Called only when `use` is pressed with uses left and no cooldown. Returns true if a use was spent. */
   use(w: RunWorld, r: Runner, inp: InputFrame): boolean;
 }
@@ -224,7 +222,6 @@ export const ITEMS: Record<ItemKind, ItemSpec> = {
     name: 'Queue Jumper',
     verb: 'Cut In',
     uses: 1,
-    climb: true,
     use: (w, r) => throwHook(w, r),
   },
   upper: {
@@ -232,7 +229,6 @@ export const ITEMS: Record<ItemKind, ItemSpec> = {
     name: 'Upper Hand',
     verb: 'Punch',
     uses: 2,
-    climb: true,
     use(w, r) {
       fireUpper(w, r);
       return true;
@@ -240,5 +236,8 @@ export const ITEMS: Record<ItemKind, ItemSpec> = {
   },
 };
 
-/** What a race's crate can deal: every item but the climb's own. */
-export const CRATE_ITEMS: readonly ItemKind[] = ITEM_KINDS.filter((k) => !ITEMS[k].climb);
+/**
+ * What a crate deals unless its mode says otherwise (`CrateMix.items`, gen/props.ts): every item but the two made for a
+ * climb (the hook and the punch upward), which only a climb's own boxes deal (game/modes.ts).
+ */
+export const CRATE_ITEMS: readonly ItemKind[] = ['sword', 'puck', 'boomerang', 'shield', 'rocket', 'smoke', 'bat', 'tremor', 'tax', 'block'];

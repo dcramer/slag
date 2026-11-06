@@ -554,7 +554,7 @@ describe('mystery crate', () => {
   it("a loop's box hands what it deals straight to empty hands, and pops it for full ones", () => {
     const def = mysteryDef(0, 20);
     const m = def.modules[0] as Extract<Module, { type: 'mystery' }>;
-    const loopBox: PropDef = { ...def, modules: [{ ...m, catchUp: true }] };
+    const loopBox: PropDef = { ...def, modules: [{ ...m, deal: { chase: m.pool, lead: m.pool } }] };
     const run = race([10], [crateAt(loopBox, 10, FLOOR - 4)]);
     const hop = (n: number) => steps(run, n, (f) => press({ jump: f % 50 < 25, jumpPressed: f % 50 === 0 }));
     hop(30);
