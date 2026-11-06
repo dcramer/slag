@@ -1005,6 +1005,27 @@ export const BRIEFS: Record<string, Brief> = {
     // loose at its end, a boot's sole flapping.
     worn: "a strip of grey tape (#9a9c98) is wrapped round the bow's curtain rod just above her hand where it snapped and was mended, the bow's curve staying the same; a big ragged notch is torn out of the fur wrap's lower edge; the end of the longest braid is frayed loose into a ragged tuft; the back boot's sole is flapping loose at the toe. Her face, the bushy hair and the bow's shape stay as they are.",
   },
+  genie: {
+    // The nod, each part of the read at race size and each a shape in outline: the ponytail as long as she is,
+    // springing up from the very top of her head and streaming out level behind her with background under it all the
+    // way along (the read: longer than any hair in the cast; from the crown and level, never the raider's braid hanging
+    // from the nape in a curve, nor the archer's bushy braids beside a mane; and never lying against her back, where it
+    // becomes part of her); the puffy harem trousers gathered at the ankle (a dancer's balloon legs, not the fighter's
+    // skirt or the raider's shorts); the small tiara on her brow; the bare midriff under a cropped top; hoop earrings.
+    // Ours, and the joke: a bathroom genie. Her ponytail is held by a white plastic shower-curtain ring, the tiara is a
+    // crumpled tin-foil crown, the hoops are curtain rings, and the trousers are net curtains, one hem snagged.
+    // The palette is neutral (Decisions 4): the top and the trousers in the player's colour, the sash a dark of it; the
+    // purple hair a fixed tone the read needs, the skin, the foil and the rings neutrals. Side on: her read is a profile.
+    // A slim figure under the ponytail read as a candle or a wisp, so she is chunky, arms out. At play size a plume swept
+    // straight back read as a squirrel's tail and a level rope as a bazooka (art/sprites/genie/design.prompt.txt); the
+    // box has height to spare, not width, so the ponytail rises from the crown in a fountain and falls back, and the
+    // trousers stand apart with background between the legs (the mock read as harem pants only with that gap).
+    design:
+      'The character: a chunky little cartoon dancer girl with a big head seen side on in profile facing right, in a playful dance pose, both arms held out to the sides, her legs a little apart. ' +
+      'Her signature, big and bold: a thick purple ponytail (#7a4ab8), as long as she is tall, springing up high from a big white plastic shower-curtain ring on the very top of her head, arching back over and falling down behind her like a fountain to a ragged split tip, with white background between it and her head and back. ' +
+      'A small crumpled tin-foil tiara (#c4c8cc) on her brow, big white curtain-ring hoop earrings. A short cropped top (#d4466c), a bare midriff, a dark sash, huge round puffy harem trousers of pink net curtain (#d4466c) much wider than her shoulders with white background between the two legs, gathered tight at the ankles, tan skin, a grin, dot eyes.',
+    worn: "the hem of the near leg of her puffy trousers is snagged and torn into a big ragged hanging strip; the tin-foil tiara has its front point bent over; a strip of grey tape (#9a9c98) is wrapped round the middle of the ponytail where it was mended; the trailing end of the dark sash hangs frayed into ragged tatters. Her face, the ponytail's length and shape straight out behind her head, the white ring at her crown and the hoop earrings stay exactly as they are.",
+  },
   bear: {
     // The nod, each part of the read at race size and each a shape in outline: the tiny top hat perched upright
     // between two round ears, with background between the hat and each ear (the read: parts that touch become one
