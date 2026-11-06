@@ -26,6 +26,7 @@ import { Fx, type Part } from './fx';
 import { frameReach, VIEW_FRAME, type ViewFrame, viewFrame } from './frame';
 import { Hud } from './hud';
 import { drawClouds, drawDrops, drawRunnerItems, itemFx } from './items';
+import { drawFists, drawHooks } from './items-climb';
 import { drawPocketBlocks, drawShells, drawShellShadows } from './items-extra';
 import { circle, flutter, type Light, light, type RC } from './kit';
 import { drawTideBody, drawTideSurface, slagEmbers } from './tide';
@@ -448,6 +449,7 @@ export class Renderer {
         const pl = m.player(r.slot);
         if (r.alive && pl) this.drawTrail(pl.character, r.slot, r.body.x + r.body.w / 2, r.body.y + r.body.h - up(r), r.body.vx, r.body.vy, dt);
       }
+      drawHooks(rc, run, up);
       for (const r of run.runners) {
         if (!r.alive) continue;
         const pl = m.player(r.slot);
@@ -482,6 +484,7 @@ export class Renderer {
       each(() => {
         drawClouds(rc, run);
         drawShells(rc, run);
+        drawFists(rc, run);
       });
     }
     this.ageFallen(dt);

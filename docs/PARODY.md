@@ -23,6 +23,8 @@ Each row gives what the item or part mocks, its silhouette (what must read at ga
 | **Tremor Brick** | The block you punch to shake every enemy off the floor | A chunky brick held overhead | A seismograph strip on its face, its red trace scribbled right off the scale. |
 | **Front-Runner Tax** | The kart racer's shell that hunts whoever is first | A spiked dome on two flapping wings | The wings are folded paper, one marked "1ST" and circled in red; it lands in a blizzard of paperwork. |
 | **Pocket Block** | Building a block where you stand, from the crafting sandbox and the battle-royale builders | A turf cube, carried by a handle like a lunchbox | Every block wears an assembly-instructions sticker (step 1), and cracks from the corners before it crumbles. |
+| **Queue Jumper** | The lead-camera racer's golden hook that swaps you with the runner ahead | A brass hook on a rope, flung out and reeled | It's the hook off a queue post, on red velvet rope: you're cutting in line. |
+| **Upper Hand** | The fighting game's rising anti-air, as a firework | A boxing glove, fist up, riding a rocket on a stick | The glove is strapped to a bottle rocket; it goes off with the punch. |
 
 ## Mystery crate
 

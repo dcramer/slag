@@ -150,6 +150,8 @@ export interface BotRound {
   pops: number;
   /** Race frames from GO to the end. */
   frames: number;
+  /** Times the lead changed hands after GO: someone else on top for a second straight. */
+  leads: number;
 }
 
 /**
@@ -197,8 +199,25 @@ export function botRound(
     return best;
   };
   const dealer = new Rng(deriveSeed(seed, 'deal'));
+  // Who leads, changing hands only when someone has been on top for a second straight, so climbers hopping past each
+  // other on one flight don't count as overtakes.
+  let ahead = -1;
+  let leads = 0;
+  let next = -1;
+  let since = 0;
   while (run.endFrame < 0 && run.frame < limit) {
     if (run.frame === RUN_COUNTDOWN + at) leader = top();
+    if (run.frame > RUN_COUNTDOWN) {
+      const now = top();
+      if (now !== next) {
+        next = now;
+        since = run.frame;
+      }
+      if (now >= 0 && now !== ahead && run.frame - since >= 60) {
+        if (ahead >= 0) leads++;
+        ahead = now;
+      }
+    }
     if (deal > 0 && run.frame > RUN_COUNTDOWN && (run.frame - RUN_COUNTDOWN) % deal === 0) {
       const lead = top();
       for (const r of run.runners) if (r.alive && !r.finished && !r.items.held) giveItem(r, dealer.pick(r.slot === lead ? CATCH_UP.lead : CATCH_UP.chase));
@@ -216,5 +235,5 @@ export function botRound(
     const at = run.runners.filter((r) => r.deathFrame === last);
     if (at.length === 1) winner = at[0].slot;
   }
-  return { leader, winner, uses, pickups, pops, frames: run.frame - RUN_COUNTDOWN };
+  return { leader, winner, uses, pickups, pops, frames: run.frame - RUN_COUNTDOWN, leads };
 }
