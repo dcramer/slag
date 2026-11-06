@@ -194,12 +194,16 @@ const ITEM_USE_CUE: Record<string, SfxName> = {
   tremor: 'piston-hiss',
   tax: 'whoosh',
   block: 'place',
+  hook: 'fire-crossbow',
+  upper: 'fire-cannon',
 };
 /** Moments that sound different from their `what`, keyed `what:kind`. */
 const ITEM_KIND_CUE: Record<string, SfxName> = {
   'hit:homer': 'piston-slam',
   'hit:tremor': 'piston-slam',
   'hit:tax': 'explosion',
+  'hit:hook': 'whoosh',
+  'hit:upper': 'piston-slam',
   'fizzle:block': 'crumble-break',
 };
 const itemName = (what: ItemEventKind, kind: string): SfxName | undefined =>

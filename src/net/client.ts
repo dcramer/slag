@@ -7,7 +7,7 @@ import { peerOf, personOf, type Wear } from './actions';
 import { acquirePeerId, clientId, kickedUntil, loadResume, markKicked, saveResume } from './identity';
 import { NetSession, type NetStatus } from './session';
 import { HttpSignal } from './signal-client';
-import { snapshotMatch } from './snapshot';
+import { type LevelSource, snapshotMatch } from './snapshot';
 import { BroadcastTransport, type Transport } from './transport';
 import { browserRtc, WebRtcTransport } from './webrtc-transport';
 
@@ -64,6 +64,8 @@ export interface ConnectOptions {
   name?: () => string;
   /** The saved look to be seated in (see `SessionOptions.wear`). */
   wear?: () => Wear | undefined;
+  /** The level worker a late join's snapshot waits on (see `SessionOptions.levels`). */
+  levels?: LevelSource;
 }
 
 /** Joining screens shorter than this aren't shown: a fresh room of our own is up before anyone could read one. */
@@ -117,6 +119,7 @@ export function connectRoom(room: string, match: Match, opts: ConnectOptions): R
     watch: params.has('watch'),
     name: opts.name,
     wear: opts.wear,
+    levels: opts.levels,
     resume: () => loadResume(room, opened, expireSeconds > 0 ? expireSeconds * 1000 : undefined), // a previous visit's state, never this one's
     client: clientId(),
     banFrames: banSeconds > 0 ? banSeconds * 60 : undefined,

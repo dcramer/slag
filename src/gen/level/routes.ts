@@ -129,8 +129,53 @@ export function lineTiles(w: number, a: number, b: number, visit: (x: number, y:
   for (let i = 0; i <= n; i++) visit(Math.round(ax + ((bx - ax) * i) / n), Math.round(ay + ((by - ay) * i) / n));
 }
 
-/** How `level`, with `bridges` placed, scores against the mostly-open rule. Pass the level's `cache` if there is one. */
-export function analyzeRoutes(level: Level, bridges: readonly BridgeHint[] = [], cache = new ReachCache(level)): Routes {
+/** A cache's last few answers, with everything each was computed from. */
+interface Answer {
+  tiles: Uint8Array;
+  ground: Uint8Array | undefined;
+  rest: string;
+  routes: Routes;
+}
+const ANSWERS_KEPT = 4;
+const answers = new WeakMap<ReachCache, Answer[]>();
+
+/** Same bytes, or both absent: a level's tiles or ground as some answer about them saw them. */
+export function sameBytes(a: Uint8Array | undefined, b: Uint8Array | undefined): boolean {
+  if (a === b) return true;
+  if (!a || !b || a.length !== b.length) return false;
+  for (let i = 0; i < a.length; i++) if (a[i] !== b[i]) return false;
+  return true;
+}
+
+/**
+ * How `level`, with `bridges` placed, scores against the mostly-open rule. Pass the level's `cache` if there is one:
+ * the pipeline asks the same question of the same terrain several times over (judge, lanes, the plan's precision),
+ * and a cache keeps its last few answers, each with every input it read, so a repeat costs a comparison.
+ */
+export function analyzeRoutes(level: Level, bridges: readonly BridgeHint[] = [], cache?: ReachCache): Routes {
+  if (!cache) return routesOf(level, bridges, new ReachCache(level));
+  const rest = JSON.stringify([
+    level.w,
+    level.gravity,
+    level.spawn,
+    level.goal,
+    level.protectedRects,
+    level.rides ?? null,
+    level.landmark?.rect ?? null,
+    level.weather ?? null,
+    bridges,
+  ]);
+  let kept = answers.get(cache);
+  if (!kept) answers.set(cache, (kept = []));
+  const hit = kept.find((a) => a.rest === rest && sameBytes(a.tiles, level.tiles) && sameBytes(a.ground, level.ground));
+  if (hit) return hit.routes;
+  const routes = routesOf(level, bridges, cache);
+  kept.unshift({ tiles: level.tiles.slice(), ground: level.ground?.slice(), rest, routes });
+  if (kept.length > ANSWERS_KEPT) kept.pop();
+  return routes;
+}
+
+function routesOf(level: Level, bridges: readonly BridgeHint[], cache: ReachCache): Routes {
   const { w, h } = level;
   const tiles = new Uint8Array(level.tiles);
   for (const b of bridges) for (let i = 0; i < BRIDGE_W; i++) tiles[b.y * w + b.x + i] = T_SOLID;

@@ -1,7 +1,7 @@
 import 'client-only';
 import { Match, rulesProfile } from '../game/match';
 import { DEFAULT_RULES } from '../game/rules';
-import { levelKey, offerLevel } from '../gen/level/pregen';
+import { offerLevel } from '../gen/level/pregen';
 import type { Level } from '../sim/level';
 import { RunWorld } from '../sim/run';
 import { Renderer } from '../render/renderer';
@@ -174,7 +174,7 @@ function stage(level: Level): Stage {
   // A stepped picture is a finished level: ink it whole, never a chunk per render.
   renderer.bakeBudgetMs = Infinity;
   // The match only carries the level and the race to the renderer. Handed a level up front, it builds none.
-  offerLevel(levelKey({ seed: level.seed, theme: level.theme.id, profile: rulesProfile(DEFAULT_RULES) }), level);
+  offerLevel({ seed: level.seed, theme: level.theme.id, profile: rulesProfile(DEFAULT_RULES) }, level);
   const match = new Match(level.seed, level.theme.id);
   return { renderer, gl, match, on: '', run: new RunWorld(level, [], []), clock: 0 };
 }

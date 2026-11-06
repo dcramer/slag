@@ -10,6 +10,7 @@ import {
   burstSmoke,
   catchShot,
   creditKill,
+  giveItem,
   type ItemWorld,
   itemInput,
   itemPostStep,
@@ -285,6 +286,13 @@ export class RunWorld {
       spawn: (p) => this.spawnProjectile(p),
       emit: (e) => this.events.push(e),
       spawnItem: (s) => spawnItem(this, s),
+      handItem: (i, kind) => {
+        const r = this.runners[i];
+        if (!r || r.items.held) return false;
+        giveItem(r, kind);
+        this.events.push({ type: 'item', what: 'pickup', kind, slot: r.slot, x: r.body.x + r.body.w / 2, y: r.body.y });
+        return true;
+      },
       itemSeed: this.itemSeed,
       solids: this.solids,
       hazards: this.out.hazards,

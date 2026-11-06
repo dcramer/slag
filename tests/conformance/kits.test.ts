@@ -35,7 +35,8 @@ const FORCE: Record<BuilderId, ProfileOverride[]> = {
   ],
   climb: [{ size: 'classic', route: 'climb' }],
   descent: [{ size: 'wide', route: 'descent' }],
-  tower: [{ size: 'tall', route: 'zigzag' }, { tide: true }],
+  tower: [{ size: 'tall', route: 'zigzag' }],
+  shaft: [{ tide: true }],
 };
 
 function ctxFor(seed: number, theme: ThemeId, p: LevelProfile, attempt = 0): SculptCtx {
@@ -55,26 +56,27 @@ describe('every builder composes every set’s kit', () => {
           it.todo(`${theme}: needs ${missing.join(', ')} (TODO 32)`);
           continue;
         }
+        const cases = FORCE[id].flatMap((force) => [1, 2].map((seed) => ({ seed, p: rollProfile(seed, theme, force) }))).filter(({ p }) => b.takes(p));
+        // A set that never rolls a level this builder takes (farm races never go tall) has nothing to build with it.
+        if (!cases.length) continue;
         it(theme, () => {
           const faults: string[] = [];
-          let built = 0;
-          for (const force of FORCE[id])
-            for (const seed of [1, 2]) {
-              const p = rollProfile(seed, theme, force);
-              if (!b.takes(p)) continue;
-              built++;
-              const shape = b.build(ctxFor(seed, theme, p), set);
-              const again = b.build(ctxFor(seed, theme, p), set);
-              const at = `seed ${seed} ${p.size} ${p.route}`;
-              if (!shape.style.startsWith(`${theme}:`) || shape.style.endsWith(':broken')) faults.push(`${at}: style ${shape.style}`);
-              if (shape.w !== p.w || shape.h !== p.h) faults.push(`${at}: ${shape.w}×${shape.h}, not the profile's ${p.w}×${p.h}`);
-              if (!shape.tiles.every((t, i) => t === again.tiles[i])) faults.push(`${at}: two different shapes from one seed`);
-            }
-          if (!built) faults.push(`none of ${JSON.stringify(FORCE[id])} rolled a level it takes`);
+          for (const { seed, p } of cases) {
+            const shape = b.build(ctxFor(seed, theme, p), set);
+            const again = b.build(ctxFor(seed, theme, p), set);
+            const at = `seed ${seed} ${p.size} ${p.route}`;
+            if (!shape.style.startsWith(`${theme}:`) || shape.style.endsWith(':broken')) faults.push(`${at}: style ${shape.style}`);
+            if (shape.w !== p.w || shape.h !== p.h) faults.push(`${at}: ${shape.w}×${shape.h}, not the profile's ${p.w}×${p.h}`);
+            if (!shape.tiles.every((t, i) => t === again.tiles[i])) faults.push(`${at}: two different shapes from one seed`);
+          }
           expect(faults).toEqual([]);
         });
       }
     });
+});
+
+it('every set builds every mode: a Rising Slag shaft in each', () => {
+  for (const theme of THEME_IDS) expect(BUILDERS.shaft.takes(rollProfile(1, theme, { tide: true })), theme).toBe(true);
 });
 
 describe('builders never read the theme', () => {

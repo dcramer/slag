@@ -29,7 +29,7 @@ describe('levels built ahead', () => {
     const req = { seed: 991, theme: 'farm' as const, profile: {} };
     const key = levelKey(req);
     const level = overTheWire(generateLevel(req.seed, req.theme, req.profile));
-    offerLevel(key, level);
+    offerLevel(req, level);
     expect(hasLevel(key)).toBe(true);
     expect(buildLevel(req.seed, req.theme, req.profile)).toBe(level);
     expect(hasLevel(key)).toBe(false);
@@ -70,7 +70,7 @@ describe('levels built ahead', () => {
     const plain = new Match(9001);
     const ahead = new Match(9001);
     const [next] = ahead.upcoming();
-    offerLevel(levelKey(next), overTheWire(generateLevel(next.seed, next.theme, next.profile)));
+    offerLevel(next, overTheWire(generateLevel(next.seed, next.theme, next.profile)));
     const down: Record<string, InputFrame> = { kb1: { ...NO_INPUT, downPressed: true } };
     for (const m of [plain, ahead]) {
       m.join('kb1');
