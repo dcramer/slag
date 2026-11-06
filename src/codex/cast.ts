@@ -54,6 +54,10 @@ export const CAST_NOTES: Record<Kind, string> = {
   archer: 'Hunts the robot vacuum. It is winning.',
   slime: 'One poke from the end.',
   bear: 'Sings on the hour. Not your hour.',
+  mech: 'Wins on the spin cycle.',
+  genie: 'Never had a bad hair day. Gave several.',
+  mushroom: 'Sure the princess is in the next one.',
+  boxer: 'Punches up. Always up.',
 };
 
 export interface CastEntry {
