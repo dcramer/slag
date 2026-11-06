@@ -94,7 +94,7 @@ What we borrow: short rounds, last one standing, items from boxes knocked from b
 | Catch-up | none found | none | none at first (the crossover brawler has an optional underdog boost [Smash-rules]) |
 | Sudden death | crossover brawler: 300% damage, a shrinking blast zone [Smash-sd] | slag pours in from below 25 s in | the same |
 
-The arena is a classic one-screen level that owes no part (`bare`), everyone starting from its two ends (`ends`), deadly by default: up to six set pieces from the nastiest of its set's mix (`hazards: 6`, `danger: 0.9`; about 4.7 fit), against 4 of the usual mix, runners out before the slag in round 1 went from 0.54 a round to 0.75. Bots go for the nearest rival and shove, use what the boxes hand them, and climb out of the slag; they rarely knock anyone into a hazard yet (4 credited kills in 24 round-1 rounds of four).
+The arena is a classic one-screen level that owes no part (`bare`), everyone starting from its two ends (`ends`), deadly by default: up to six set pieces from the nastiest of its set's mix (`hazards: 6`, `danger: 0.9`; about 4.7 fit), against 4 of the usual mix, runners out before the slag in round 1 went from 0.54 a round to 0.75. Bots go for the nearest rival and shove, use what the boxes hand them, and climb out of the slag; they rarely knock anyone into a hazard yet: 8 credited kills in 24 round-1 rounds of four, from 4 before the boxes dealt only knockers and the Sucker Punch.
 
 ---
 

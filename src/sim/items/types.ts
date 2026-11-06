@@ -8,9 +8,23 @@
  * "attached to a prop" state can be added next to both without touching them.
  */
 
-export type ItemKind = 'sword' | 'puck' | 'boomerang' | 'shield' | 'rocket' | 'smoke' | 'bat' | 'tremor' | 'tax' | 'block' | 'hook' | 'upper';
+export type ItemKind = 'sword' | 'puck' | 'boomerang' | 'shield' | 'rocket' | 'smoke' | 'bat' | 'tremor' | 'tax' | 'block' | 'hook' | 'upper' | 'glove';
 
-export const ITEM_KINDS: readonly ItemKind[] = ['sword', 'puck', 'boomerang', 'shield', 'rocket', 'smoke', 'bat', 'tremor', 'tax', 'block', 'hook', 'upper'];
+export const ITEM_KINDS: readonly ItemKind[] = [
+  'sword',
+  'puck',
+  'boomerang',
+  'shield',
+  'rocket',
+  'smoke',
+  'bat',
+  'tremor',
+  'tax',
+  'block',
+  'hook',
+  'upper',
+  'glove',
+];
 
 /** What a box deals by rank (a mode's `boxes`, game/modes.ts): one table for whoever leads, one for the rest. */
 export interface ItemDeal {
@@ -34,7 +48,7 @@ export interface RunnerItems {
   swing: number;
   /** Bitmask of runner indices the current swing already hit. */
   swingHits: number;
-  /** What's swinging (the noodle or the bat), and its knock as a multiple of the noodle's. */
+  /** What's swinging (the noodle, the bat or the glove), and its knock as a multiple of the noodle's. */
   swingKind: ItemKind;
   swingPower: number;
   /** Frames into a bat wind-up (0: not winding). The swinger is rooted until it lets go. */
