@@ -1,6 +1,6 @@
 # The little purple dragon
 
-- **Kind:** `dragon` · **Name:** Spiro
+- **Kind:** `dragon` · **Name:** Spyrella
 - **A stranger should say:** "the little purple dragon."
 - **Silhouette:** small and low on four stubby legs, seen from the side, with no neck: a big round head with two long horns swept straight back off it, longer than the head, stubby wings standing up off the shoulders, a ridge of small spines along the back, and a long tail out behind ending in an arrowhead tip. Lower and smaller than the horse, never upright like the dino.
 - **Traits:** long horns swept back; a short blunt snout and one big eye side on; stubby wings; a pale belly; a ridge of small spines down the back; an arrowhead tail tip.

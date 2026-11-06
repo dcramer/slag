@@ -1,6 +1,6 @@
 # The armored bounty hunter
 
-- **Kind:** `hunter` · **Name:** Sammus
+- **Kind:** `hunter` · **Name:** Samosa
 - **A stranger should say:** "the bounty hunter in the orange power suit."
 - **Silhouette:** the tallest of the cast, about five helmets tall: two huge round shoulder pads, each bigger than the helmet and wider than anything else on it, a helmet with a visor band between them, a narrow waist, long thick armoured legs (half its height, no big boots), and an arm cannon held straight out from the shoulder, reaching far past the body. The robot boy is small, round-helmeted and big-booted; the hunter is none of those.
 - **Traits:** an armored suit; huge spherical shoulder pads; a wide visor band across the helmet; an arm cannon; long legs with round knee joints.

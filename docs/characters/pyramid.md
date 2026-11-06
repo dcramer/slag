@@ -2,7 +2,7 @@
 
 A kind of the cast: [CHARACTERS.md](../CHARACTERS.md) has the rules every kind follows.
 
-- **Kind:** `pyramid` · **Name:** Pyramid Ted
+- **Kind:** `pyramid` · **Name:** Pyramid Fred
 - **A stranger should say:** "the hulking executioner with the huge triangle helmet and the giant blade."
 - **Silhouette:** a hulking figure, the head one tall upright rusty pyramid sitting straight down on his broad square shoulders, its point straight up, as tall as his torso and its base a little narrower than his shoulders, which show level on both sides of it (no neck, no brim, nothing sticking out sideways); an apron to the knees over two thick legs apart; bare thick arms; a long flat blade dragged behind him, a steep diagonal from his fist to the floor.
 - **Traits:** a huge triangle helmet for a head, its point straight up; an apron; thick arms; a giant flat blade dragged behind; a slow, heavy walk.

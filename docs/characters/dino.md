@@ -1,6 +1,6 @@
 # The green saddled dino
 
-- **Kind:** `dino` · **Name:** Yoshee
+- **Kind:** `dino` · **Name:** Noshasaurus
 - **A stranger should say:** "the green dinosaur with the saddle."
 - **Silhouette:** upright, with a huge round snout well out in front, eyes high on top of the head, a long tail straight out behind at the hips, a saddle low on its back, and big boots. The tail is what tells the head and snout from a cap and its bill: with a short tail and the seat up behind the head, a blind reader saw "a capped hero".
 - **Traits:** a bulbous round snout; a white belly and cheeks; a saddle; spikes down the back of the head; boots; big eyes on top of the head.

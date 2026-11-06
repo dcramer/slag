@@ -1,6 +1,6 @@
 # The voxel miner
 
-- **Kind:** `miner` · **Name:** Stove
+- **Kind:** `miner` · **Name:** Treeve
 - **A stranger should say:** "the blocky guy from the block-building game."
 - **Silhouette:** every part a box: a cube head as wide as the body, a rectangular torso, square arms and legs, and a pickaxe. No curve anywhere, which no other kind has.
 - **Traits:** a cube head with a flat square face; short square-cut brown hair; a cyan T-shirt; blue trousers; grey shoes; a square pickaxe.

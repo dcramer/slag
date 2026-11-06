@@ -1,6 +1,6 @@
 # The jellyfish parasite
 
-- **Kind:** `jelly` · **Name:** Meltroid
+- **Kind:** `jelly` · **Name:** Wobbletroid
 - **A stranger should say:** "the floating jellyfish thing from the space game."
 - **Silhouette:** a dome with four fangs hooked underneath: two big ones under its middle curving in to a pincer, a small one each side; it floats and never touches the floor.
 - **Traits:** a see-through green membrane; three red nuclei inside it; a pale rim; four ivory fangs.

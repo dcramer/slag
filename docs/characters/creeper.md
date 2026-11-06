@@ -2,7 +2,7 @@
 
 A kind of the cast: [CHARACTERS.md](../CHARACTERS.md) has the rules every kind follows.
 
-- **Kind:** `creeper` · **Name:** Creepah
+- **Kind:** `creeper` · **Name:** Creepbox
 - **A stranger should say:** "the green blocky creeper that sneaks up on you."
 - **Silhouette:** a tall upright block for a body with a square block head the same width on top, four short square legs under it, two at the front and two at the back, and no arms at all; a frowning face of square holes cut right through him.
 - **Traits:** a square head and a tall square body, the same width; four stubby block legs; no arms; a face of four square holes, two eyes and a frown; a lit fuse.

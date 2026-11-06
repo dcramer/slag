@@ -1,6 +1,6 @@
 # The rapping paper puppy
 
-- **Kind:** `rapper` · **Name:** Parapper
+- **Kind:** `rapper` · **Name:** Paperappa
 - **A stranger should say:** "the rapping dog in the beanie."
 - **Silhouette:** side on, a big dog's head on a skinny little body cut out of card, the card's brown edge showing round his outline: a tall thumb of a knit beanie standing straight up on top, round and with no brim or pompom; a long snout jutting far forward from the lower half of his face, a big round nose on its tip well past the face, the jaw dropped open under it rapping; a short floppy ear hanging straight down behind his head; a tee, shorts and big trainers; a microphone held out in front of him in his fist.
 - **Traits:** a tall knit beanie with a snug ribbed band; a long snout with a big round nose; the open rapping mouth; a short floppy ear; a tee, shorts and big trainers; a microphone held out; the body flat as card, with an edge.
