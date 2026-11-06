@@ -832,7 +832,7 @@ export const BRIEFS: Record<string, Brief> = {
       'Its body is one tall upright box with crisp sharp square corners, twice as tall as it is wide. On top sits a big cube head exactly as wide as the body, no neck. ' +
       'Under the body four short square block feet, two at the front and two at the back peeking out at the sides, white background between them. No arms at all. ' +
       'The front of the head is a big black frowning face filling most of it: two large square black eyes near its top corners and, under the gap between them, a long black down-turned mouth, a tall block in the middle with a leg stepping down on each side. ' +
-      "A short stubby birthday candle stands on top of the head, its small flame lit. The top back corner of the head is dented in. No stripes, no bands, no tape.",
+      'A short stubby birthday candle stands on top of the head, its small flame lit. The top back corner of the head is dented in. No stripes, no bands, no tape.',
     // The design came back as the original redrawn with a candle on, so the edit carries the twist with the wear: the
     // crumpled corner, the torn corner's corrugated brown, the crooked candle. Nothing on the face, which is the read, and
     // no tape, which read as a stripe. A second edit took the wax drips off the head's edges: they traced as horns.
