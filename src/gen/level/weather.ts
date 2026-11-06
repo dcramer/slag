@@ -122,6 +122,7 @@ export function gustHolds(level: Level, air: number): boolean {
 export function rollWeather(seed: number, theme: Theme, level: Level, force?: WeatherKind): Weather {
   const kind = force ?? rollKind(seed, theme.id);
   const w = spec(seed, kind);
+  if (!force && level.profile?.noWeather?.includes(kind)) return CLEAR;
   if (force || kind === 'clear' || kind === 'mist') return w;
   if (kind !== 'wind') return footingHolds(level, w) ? w : CLEAR;
   const heading = [w.dir, w.dir > 0 ? -1 : 1] as const;
