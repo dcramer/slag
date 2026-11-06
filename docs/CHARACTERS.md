@@ -41,7 +41,7 @@ Each kind's entry is its own file in [characters/](characters/): what a stranger
 | [hunter](characters/hunter.md) | the armored bounty hunter | tall and long-legged, huge round shoulder pads wider than anything else, a helmet with a wide visor band, the forearm a cannon held straight out from the shoulder; tucks into a ball | costume: the suit, the buoys a dark of it, the cannon a light |
 | [zapmouse](characters/zapmouse.md) | the yellow electric mouse | yellow, long ears with black tips, red cheeks, a lightning-bolt tail | costume: the fur; the cheeks keep their red (a face mark), the tin tail and the cord are neutral |
 | [impostor](characters/impostor.md) | the impostor crewmate | a bean on stubby legs, a wide pale visor standing proud, a backpack | costume: the bean, and the pack a dark of it |
-| [puffball](characters/puffball.md) | the pink puffball | a ball on big feet, stubby arms, tall eyes with a shine, blush; puffs up in the air | costume: the ball, and the feet a dark of it |
+| [puffball](characters/puffball.md) | the pink puffball | a ball on big feet, stubby arms, blush; a cheap knock-off with mismatched googly eyes whose loose pupils roll askew and never shut; puffs up in the air | costume: the ball, and the feet a dark of it |
 | [jelly](characters/jelly.md) | the jellyfish parasite | a dome, three nuclei inside, four fangs under it (two big ones a pincer), a hovering bob | costume: the dome, the nuclei and rim in tones of it |
 | [goose](characters/goose.md) | the goose up to no good | white, a tan beak and feet, an S of a neck; on the run the honk pose, neck flat out and wings up | costume: the vest; the beak and feet a neutral tan |
 | [engineer](characters/engineer.md) | the team shooter's engineer | tall and square with a small head; a hard rectangular toolbox in one hand and a huge wrench held low in the other, a dome hard hat with a rim all round and goggles on it, a square jaw, a work shirt, khaki trousers, leather gloves | costume: the shirt, the hat and toolbox in tones of it |
@@ -121,7 +121,7 @@ The strongest reads first. **Keyed** marks the non-humanoids, the riskiest to dr
 | 3 | chomper | Snack-Man | generated, no limbs | drawn flat |
 | 4 | zapmouse | Kilowatchu | **keyed**, quadruped | drawn flat |
 | 5 | elf | Sir Clinkalot | humanoid | drawn flat |
-| 6 | puffball | Squirby | **keyed**, ball and feet | drawn flat |
+| 6 | puffball | Squirby | **keyed**, ball and feet | drawn flat, the googly-eyed knock-off (2026-11-06); the blind read passes (named at medium and low, paired only with stand-ins), and in colour, for its mismatched googly eyes, "a lumpy, scruffy, off-brand Kirby" and "a lumpy, slightly melted Kirby" |
 | 7 | miner | Treeve | humanoid, stiff | drawn flat |
 | 8 | impostor | Sussy | **keyed**, legs only | drawn flat |
 | 9 | ape | Clonkey Kang | humanoid, gallop keyed | drawn flat |

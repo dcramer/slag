@@ -204,12 +204,16 @@ export const BRIEFS: Record<string, Brief> = {
       'The joke: it is a cheap vinyl squeeze toy. A raised moulding seam ridge runs right round its middle like an equator, plainly visible across its front, sides and back, the two halves a hair out of line. ' +
       "A white plastic squeaker valve (#f4efe6), a short stubby nozzle with a round cap, sticks straight out of the middle of its back and breaks the ball's round outline in the side view. " +
       'A mould number is stamped on the sole of one foot. Soft matte vinyl, cheerful and squishy.',
-    // Designed at game size: the ball, the big oval feet, the stubby arms, the tall oval eyes and the blush,
-    // and the twist as big shapes (the moulding seam round its middle, the squeaker valve on its back).
+    // Designed at game size (the second twist, 2026-11-06: the vinyl toy's seam and valve were cut as misreads, and
+    // what was left was the original's own shape and face). The nod: the ball, the big feet darker than it, a sweet
+    // face (blush, a small smile). Ours, and the joke: a cheap knock-off with stuck-on googly craft eyes, white
+    // discs of two sizes whose loose pupils roll two ways, in place of the original's tall ovals. A keyring on its
+    // crown was drawn first and cut before the poses: in silhouette, tall it read as the floating-ball pet and
+    // small as a bomb's fuse; the ball's outline stays the original's.
     design:
-      'The character: a round pink puffball (#f2a0bc), a near-perfect ball for a body with no neck or legs, two stubby round arms, two big red oval feet (#c9473f), two tall black oval eyes with a white shine at the top, pink blush under them, a small smile. ' +
-      'It is a cheap vinyl squeeze toy: a clear moulding seam runs right round its middle, and a white squeaker valve (#f4efe6) pokes out high on its back, the one bump on the ball.',
-    worn: 'a big cross of grey tape patches a puncture on its side; the toe of the front foot is scuffed flat and pale; the squeaker valve is bent over to one side; one stubby arm has a bite mark nibbled out of it.',
+      'The character: a cheap knock-off of a round pink puffball (#f2a0bc), a near-perfect ball for a body with no neck or legs, two stubby round arms, two big red oval feet (#c9473f), pink blush, a small smile. ' +
+      'Its eyes are two big stuck-on googly craft eyes, side by side and almost touching, mismatched, the one on the left plainly smaller than the one on the right: round flat white plastic discs with a dark rim, each with a loose round black pupil, the pupils rolled two different ways, one slid down to the bottom of its disc and the other up into the top corner.',
+    worn: 'the toe of the front foot is scuffed flat and pale; one stubby arm has a big bite mark nibbled out of it. The googly eyes, their pupils and the keyring stay exactly as they are.',
     views: 'a front view, a side profile facing right, a back view showing the squeaker valve and the seam, and a three-quarter view facing right',
     pose: 'The arms are short nubs held straight out to the sides, clear of the ball. The squeaker valve sticks straight out of its back.',
     poses:
