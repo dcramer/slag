@@ -402,6 +402,9 @@ export const BRIEFS: Record<string, Brief> = {
     // in three-quarter view with its top corner crushed and its flaps flared, failed the blind read as "a
     // shaggy, hunched" ape (2026-11-04), its slanted top and torn corner rounding the box into a blob and its
     // flaps a skirt over the legs. So the wear keeps the box's outline square.
+    // In the game the box stays cardboard (a neutral) and the suit and bandana take the player's colour: a box in
+    // the player's colour read as a creature with a face (2026-11-06). The dark eye slot and the "!" over the box
+    // are painted onto the drawings after.
     design:
       'The character, seen from the side in profile facing right: a soldier hiding inside a big plain brown cardboard box (#c49a62) worn upside down over his whole head and body, down to his knees. The box is the whole figure: a crisp upright rectangle with straight edges and sharp square corners, a little taller than it is wide, its bottom edge straight and level, no flaps showing. ' +
       'Below it only his two short legs show, in a grey-blue sneaking suit (#4d5a66), apart in a low crouching step with a clear gap of white background between them, in big dark boots (#2a2a30). No arms and no head show outside the box. ' +
