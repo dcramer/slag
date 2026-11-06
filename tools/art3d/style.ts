@@ -923,6 +923,25 @@ export const BRIEFS: Record<string, Brief> = {
     // stands up like the zapmouse's), the papers sliding out of a broken clipboard, a dented bell. Nothing on the face.
     worn: "her front hand now holds the clipboard out in front of her at arm's length, level, clear of her body with white background all round it, its top corner cracked and patched with grey tape, three loose white papers sliding out of it; the near floppy ear is folded inside out at its tip, its pale inside (#f8e4a8) showing, still hanging down; the silver bell has a big dent in its side; the short skirt flares out wider, its hem torn into a big ragged notch. Her face, the tall tuft and the bell stay exactly where they are.",
   },
+  archer: {
+    // The nod, each part of the read at race size and each a shape in outline: the bow drawn and held out level at
+    // arm's length ahead of her, as tall as she is, with background all round it (the read: nobody else in the cast
+    // holds one; a thin curve with a string, never a block like the hunter's cannon or the raider's pistols); the
+    // huge bushy red hair puffing out behind her head with thick braids flying off it (her, not the raider's one
+    // tight rope); the fur wrap over her shoulders and back (the tribal hunter's bulk); a low hunter's crouch.
+    // Ours, and the joke: her quarry is household robots. The bow is a bent wooden curtain rod with a round knob on
+    // each end, strung with a bungee cord, and the arrows are suction-cup darts.
+    // The palette is neutral (Decisions 4): the leathers and leg wraps in the player's colour, the fur a light of it;
+    // the hair red-brown (a neutral the read needs), the skin, the rod's wood, the boots and the darts neutrals.
+    // Side on: her read is a profile. The design read (black, among seven cast silhouettes) named her twice, at medium
+    // and medium-high (art/sprites/archer/design.prompt.txt).
+    design:
+      "The character: a young huntress seen side on in profile facing right, in a low crouch, drawing a big bow held out level at arm's length ahead of her with white background all round it: the bow is a thick bent wooden curtain rod (#a0703f) with a round knob on each end, as tall as she is, strung with a black bungee cord, a suction-cup dart on the string. " +
+      'Huge bushy red-brown hair (#b0482a) puffing out far behind her head in thick braids. Green leather tunic and leg wraps (#4f8a5e), a big cream fur wrap on one shoulder (#e8dcc0), a quiver of darts on her back, brown boots, tan skin, dot eyes.',
+    // Off the face and off the bow's curve: tape on the rod where it snapped, a notch out of the fur, a braid frayed
+    // loose at its end, a boot's sole flapping.
+    worn: "a strip of grey tape (#9a9c98) is wrapped round the bow's curtain rod just above her hand where it snapped and was mended, the bow's curve staying the same; a big ragged notch is torn out of the fur wrap's lower edge; the end of the longest braid is frayed loose into a ragged tuft; the back boot's sole is flapping loose at the toe. Her face, the bushy hair and the bow's shape stay as they are.",
+  },
 };
 
 function brief(kind: string): Brief {
