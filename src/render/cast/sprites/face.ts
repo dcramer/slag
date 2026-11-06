@@ -161,6 +161,19 @@ export const EYES: Record<EyeStyle, EyeArt> = {
       poly(s, oval(f * rx * 0.24, -ry * 0.26, rx * 0.42, ry * 0.4, 8), CORE);
     },
   },
+  // A lit bulb in an inked socket, a pinprick pupil staring out of it: the animatronic bear's. The glow alone sank
+  // into a light fur; the socket's ink keeps it a shape on any colour. A stare, so it narrows only a little into the
+  // run, and the pinprick shrinks on a fall.
+  bulb: {
+    extent: [1, 1.05],
+    brow: true,
+    open(s, r, m, f, iris) {
+      const pts = oval(0, 0, r * wideOf(m), r * 1.05 * (m === 'run' ? 0.88 : m === 'fall' ? 1.12 : 1), 12);
+      inked(s, pts, iris, INK, r * RIM_THICK, r * RIM_THICK * 1.4);
+      const p = r * (m === 'fall' ? 0.16 : 0.24);
+      poly(s, oval(f * r * 0.12, lookY(m) * r * 0.6, p, p, 7), INK);
+    },
+  },
   // A tall white with a tall pupil toward the front: the plumber's, the saddled dino's.
   pill: {
     extent: [0.78, 1.5],
