@@ -70,7 +70,7 @@ Each kind's entry is its own file in [characters/](characters/): what a stranger
 | [tophat](characters/tophat.md) | the little girl in the tall top hat | a tin-can top hat as tall as the rest of her, a short cape with a high collar, a ponytail out the back, a huge cocktail umbrella | costume: the hat and cape; the hair tie and the lining a light of it |
 | [pyramid](characters/pyramid.md) | the triangle-helmeted executioner | a huge rusty wedge of a helmet, its point out past his shoulder, no face, a butcher's apron with a pig on it, thick bare arms, a giant cheese slicer dragged behind | costume: the apron, the pig a light of it |
 | [invader](characters/invader.md) | the pixel crab from space | wider than tall and cut from square pixels, two antennae, side claws raised, stubby legs that shuffle in and out, two square eye holes | costume: the body |
-| [vampire](characters/vampire.md) | the giant vampire lady in the big hat | as tall as the box allows, a wide flat-crowned hat, a long gown to the floor, long claws, pearls | costume: the gown |
+| [vampire](characters/vampire.md) | the giant vampire lady in the big hat | the tallest and slimmest of the cast, a wide flat-crowned sun hat drooping at the back over a small head, a long gown to the floor hiding her feet, one hand raised clear of her with long false nails, pearls | costume: the gown; the hat a dark neutral |
 | [assistant](characters/assistant.md) | the town assistant dog with the bell in her hair | a small yellow dog upright, floppy ears, a top-knot with a bell, a vest and skirt, a clipboard | costume: the fur, the vest a dark of it |
 | [sim](characters/sim.md) | the lady with the green diamond over her head | a slim woman with a black bob in a dress, a green double-pointed diamond floating clear above her head | costume: the dress; the diamond keeps its green |
 
@@ -143,7 +143,7 @@ The strongest reads first. **Keyed** marks the non-humanoids, the riskiest to dr
 | 33 | tophat | Hat Kidd | humanoid, small | drawn flat; the blind read passes (the hat, a clean tin cylinder on a wide brim, with the umbrella held out low, clear of it) |
 | 34 | pyramid | Pyramid Ted | humanoid, big + blade | drawn flat, no face; the blind read not passed (one reader of two names him, the other reads the mage's pointed hat: the cowl overhanging his shoulders is a brim at play size) |
 | 35 | invader | Invayda | **keyed**, legs only, pixel edge | high: the pixel crab; the creeper's blocks and the crewmate's legs to watch |
-| 36 | vampire | Lady Dimitreskew | humanoid, tall, gowned | medium: the height and the hat; the mage's and the top-hat girl's hats to watch |
+| 36 | vampire | Lady Dimitreskew | humanoid, tall, gowned | drawn flat; the blind read passes (named at medium by both on the first sheet: the height under the wide flat hat, the gown to the floor) |
 | 37 | assistant | Izzabelle | humanoid, small, dog | medium: the bell top-knot; the zapmouse and the rapping puppy to watch |
 | 38 | sim | Bella Gauche | humanoid + floating diamond | medium: the diamond, only while it floats clear |
 
