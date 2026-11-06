@@ -126,7 +126,9 @@ export const kind: FlatKind = {
     'air-1': {
       pose: 'a rising jumping uppercut, the upper glove punched straight up high above and ahead of his head, the lower glove out ahead of his belly, the near knee raised, the two huge green oven-mitt gloves, each bigger than his head, with wide white gaps between the two gloves, between each glove and his head and between each glove and his body; the grey tape at both wrists, the checked tea towel, the black tank top and baggy black shorts, the grey boots.',
     },
-    'air-2': { pose: `falling, both boots reaching down and apart, both gloves thrown out wide to the sides for balance, eyes wide, the two huge green oven-mitt gloves, each bigger than his head, with a wide white gap between each glove and his head.` },
+    'air-2': {
+      pose: `falling, both boots reaching down and apart, both gloves thrown out wide to the sides for balance, eyes wide, the two huge green oven-mitt gloves, each bigger than his head, with a wide white gap between each glove and his head.`,
+    },
     wall: {
       pose: 'seen from his side, facing right: he is sliding down a tall wall on the right edge of his space (do not draw the wall), one glove and both boots braced flat against it, knees bent, his other glove held out to the left, his head turned to look back at us, his eyes open.',
       far: true,
