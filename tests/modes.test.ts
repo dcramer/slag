@@ -5,17 +5,20 @@ import { DEFAULT_RULES } from '../src/game/rules';
 import { generateCrate } from '../src/gen/props';
 import { leaderOf as leaderIndex } from '../src/sim/standing';
 import { POINTS, scoreSurvival, SURVIVE_PLACES } from '../src/game/scoring';
-import { generateLevel } from '../src/gen/level';
+import { generateLevel, planHolds } from '../src/gen/level';
+import { GATE_AT, GATE_HOLD } from '../src/gen/level/loop-gates';
 import { LOOP_ROWS, LOOP_W, rollProfile } from '../src/gen/level/profile';
 import { LOOP_HEAD_START } from '../src/gen/level/tide';
 import { generateTheme } from '../src/gen/theme';
 import { hashMatch, restoreMatch, snapshotMatch } from '../src/net/snapshot';
 import { FPS, LEVEL_H, LEVEL_W, POP_HOLD, RUN_COUNTDOWN, TILE } from '../src/sim/constants';
-import { isProtected, lapShift, type Level, LOOP_BAND, LOOP_SPAWN } from '../src/sim/level';
-import { moduleSim, newPropState } from '../src/sim/props';
+import { isProtected, lapShift, type Level, LOOP_BAND, LOOP_SPAWN, T_SOLID } from '../src/sim/level';
+import { barrierOf, footprintCells, MIN_OPENING, type ModuleOf, moduleSim, newPropState, phaseCycle, type PlacedProp, resolveProp } from '../src/sim/props';
 import { bodyAtCell } from '../src/sim/physics';
-import { RunWorld } from '../src/sim/run';
-import { firstOut, leashRows, stepTide, type Tide } from '../src/sim/tide';
+import { feetUp, RunWorld } from '../src/sim/run';
+import { BotSeats } from '../src/brain/bots';
+import { firstOut, gateShut, leashRows, stepTide, type Tide } from '../src/sim/tide';
+import { analyzeReach } from '../src/sim/reach';
 import { type InputFrame, NO_INPUT } from '../src/sim/types';
 import { THEME_IDS } from '../src/themes';
 
@@ -303,6 +306,97 @@ describe("a loop's mystery boxes", () => {
       expect(box.deal.chase).toContain(knock(uid, 500, 100));
       expect(box.deal.lead).toContain(knock(uid, 100, 500));
     }
+  });
+});
+
+describe("a loop's regroup gates", () => {
+  const lv = generateLevel(2, 'mine', MODES.slag.profile);
+  const gates = lv.setPieces.filter((p) => p.def.key === 'loop-gate');
+  const phase = (pp: PlacedProp) => pp.def.modules[0] as ModuleOf<'phase'>;
+
+  it('shut across the shaft from wall to wall, every lap, on the cycle the slag reads', () => {
+    expect(gates.length).toBe(GATE_AT.length);
+    expect(lv.tide!.gates!.map((g) => g.row)).toEqual(gates.map((p) => phase(p).cells[0][1]));
+    for (const [i, pp] of gates.entries()) {
+      const g = lv.tide!.gates![i];
+      // Every cell of its row between the walls is the gate's or rock: shut, nothing gets up past it.
+      const cells = new Set(pp.def.modules.flatMap((m) => (m as ModuleOf<'phase'>).cells.map(([x]) => x)));
+      for (let x = 1; x < lv.w - 1; x++) expect(cells.has(x) || lv.tiles[g.row * lv.w + x] === T_SOLID, `x ${x}`).toBe(true);
+      // Open at the start, then on the race clock: its blink blocks and the slag agree on every frame.
+      const r = resolveProp(pp);
+      expect(gateShut(g, 0)).toBe(false);
+      let shut = 0;
+      for (let f = 0; f < 2 * (g.shut + g.open); f++) {
+        for (const m of pp.def.modules) expect(phaseCycle(m as ModuleOf<'phase'>, f, r.phase).seg === 0).toBe(gateShut(g, f));
+        if (gateShut(g, f)) shut++;
+      }
+      expect(shut).toBe(2 * g.shut);
+    }
+  });
+
+  it('holds the slag while the leader waits under one that is shut, and not once it opens', () => {
+    const g = lv.tide!.gates![0];
+    const go = RUN_COUNTDOWN + 10 * FPS;
+    const shut = Array.from({ length: g.shut + g.open }, (_, i) => go + i).find((f) => gateShut(g, f))!;
+    const open = Array.from({ length: g.shut + g.open }, (_, i) => go + i).find((f) => !gateShut(g, f))!;
+    // Feet on a ledge two rows under the gate's cells, a lap up as well as in the first.
+    for (const lap of [0, 1]) {
+      const feet = (g.row + 3 - lap * lv.loop!) * TILE;
+      const line = feet + 5 * TILE;
+      expect(stepTide(lv, line, shut, feet)).toBe(line);
+      expect(stepTide(lv, line, open, feet)).toBeLessThan(line);
+    }
+  });
+
+  it('the proof climbs through it as open air only while it opens long enough to', () => {
+    // Open more than MIN_OPENING frames a cycle: no barrier, and the lap is still proven bare.
+    for (const pp of gates) expect(barrierOf(lv, pp)).toEqual({ ground: [], noGo: [] });
+    expect(planHolds(lv, [], [])).toBe(true);
+    // Shut, it seals the shaft: written in as rock, no lap is proven.
+    const sealed = lv.tiles.slice();
+    for (const pp of gates) for (const [x, y] of footprintCells(pp)) sealed[y * lv.w + x] = T_SOLID;
+    expect(analyzeReach({ ...lv, tiles: sealed }).goalReached).toBe(false);
+    // A gate that opened for less than MIN_OPENING frames would be a barrier, and the proof wouldn't climb through it.
+    const brief: PlacedProp = {
+      ...gates[0],
+      def: { ...gates[0].def, modules: gates[0].def.modules.map((m) => ({ ...(m as ModuleOf<'phase'>), off: MIN_OPENING - 5 })) },
+    };
+    expect(barrierOf(lv, brief).noGo.length).toBeGreaterThan(0);
+    expect(planHolds({ ...lv, setPieces: lv.setPieces.map((p) => (p === gates[0] ? brief : p)) }, [], [])).toBe(false);
+  });
+
+  it('bots wait under a shut gate and climb through it once it opens', { timeout: 60_000 }, () => {
+    const m = new Match(2, 'mine', SLAG);
+    const bots = new BotSeats();
+    for (let i = 0; i < 4; i++) m.join(bots.add(m));
+    m.startMatch();
+    m.startRun();
+    const run = m.run!;
+    const L = m.level.loop!;
+    const gs = m.level.tide!.gates!;
+    // Rows a runner's feet stand under a gate's cells, folded by the lap.
+    const under = (r: (typeof run.runners)[number], row: number) => (((feetUp(m.level, r) / TILE - (row + 1)) % L) + L) % L;
+    let waited = 0;
+    let through = 0;
+    const was = new Map<number, number[]>();
+    while (run.endFrame < 0 && run.frame < RUN_COUNTDOWN + 25 * FPS) {
+      for (const r of run.runners.filter((x) => x.alive)) {
+        const now = gs.map((g) => under(r, g.row));
+        gs.forEach((g, i) => {
+          if (gateShut(g, run.frame) && now[i] <= GATE_HOLD && r.body.onGround) waited++;
+          // Up through the gate's row: it was open.
+          const before = was.get(r.slot)?.[i];
+          if (before !== undefined && before <= GATE_HOLD && now[i] > L - 4) {
+            expect(gateShut(g, run.frame), `slot ${r.slot} frame ${run.frame}`).toBe(false);
+            through++;
+          }
+        });
+        was.set(r.slot, now);
+      }
+      m.step(bots.frames(m));
+    }
+    expect(waited).toBeGreaterThan(FPS);
+    expect(through).toBeGreaterThanOrEqual(4);
   });
 });
 

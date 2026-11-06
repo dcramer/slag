@@ -11,11 +11,17 @@ import type { FlatKind } from '../kinds';
  * drawing with the slot has it painted white with two pupils at fixed places across it, and cut through
  * (`holes`), so the box shows a slit in silhouette: without it, the blind read saw a meat cube. Drawn, the
  * pupils touched the slot's dark cut end and traced as one blob, and the face kit found no pair.
+ * The clean colour read (2026-11-06) saw the box in the player's colour, its white slot and two pupils, as a
+ * creature with a face. So every drawing's slot is now painted a dark gap (`slot`) with two eye whites at fixed
+ * places across it (`eyewhite`, where the face kit puts its eyes), the box is cardboard, and a red "!" is painted
+ * over the box in the freeze and the jump (`alert`, loose so it doesn't size the body). The fall has none: with
+ * it, the jump's stretch put the frame over the shared box's top. The slot and the "!" were painted onto the
+ * drawings by a script (pure colours: blue slot, magenta eyes, red mark), not drawn again.
  */
 export const kind: FlatKind = {
   body: 216,
   map: {
-    roles: ['box', 'boxside', 'tape', 'tail', 'stripe', 'suit', 'boot', 'skin', 'dark'],
+    roles: ['box', 'boxside', 'tape', 'tail', 'stripe', 'suit', 'boot', 'skin', 'dark', 'slot', 'eyewhite', 'alert'],
     families: [
       ['box', [189, 147, 89]],
       ['box', [183, 139, 82]],
@@ -60,9 +66,13 @@ export const kind: FlatKind = {
       ['dark', [81, 51, 24]],
       ['dark', [57, 37, 21]],
       ['dark', [66, 56, 49]],
+      // Painted in every drawing: the eye slot a dark gap, the two eyes peeking out of it, and the alert over the box.
+      ['slot', [0, 0, 255]],
+      ['eyewhite', [255, 0, 255]],
+      ['alert', [220, 40, 40]],
     ],
     line: 'dark',
-    thin: ['box', 'boxside', 'tape', 'tail', 'stripe', 'suit', 'boot', 'skin'],
+    thin: ['box', 'boxside', 'tape', 'tail', 'stripe', 'suit', 'boot', 'skin', 'slot', 'eyewhite', 'alert'],
     fringe: 5,
     stroke: 3.6,
     // No corner cutting: smoothed, the box traced as a rounded slab, and read as a bean.
@@ -71,24 +81,30 @@ export const kind: FlatKind = {
     // silhouette. Over the stripes' size.
     holes: 2,
     feet: ['boot'],
-    loose: ['tail', 'stripe'],
+    loose: ['tail', 'stripe', 'alert'],
     min: { dark: 0.12 },
   },
   roles: [
-    // The box is the costume, in the player's colour; its back end, the tape and the arrow tones of it.
-    { name: 'box', color: '#c49a62', slot: 'player' },
+    // The box is cardboard, a neutral like wood: in the player's colour it read as a creature with a face (clean
+    // colour audit, 2026-11-06). A colourway is the cardboard (VARIETY.palette); its back end, the tape and the
+    // arrow are tones of it, and so is its wear.
+    { name: 'box', color: '#c49a62', alts: ['#ab8152', '#d3b27f'], vary: 6 },
     { name: 'boxside', color: '#808080', on: 0, tone: -18 },
     { name: 'tape', color: '#808080', on: 0, tone: 18 },
     { name: 'arrow', color: '#808080', on: 0, tone: -32 },
-    // The bandana, a dark of it too: cloth off the box, and the player's colour from across a room.
-    { name: 'tail', color: '#808080', on: 0, tone: -38 },
+    // The soldier under it wears the player's colour: the sneaking suit, and the bandana a dark of it.
+    { name: 'suit', color: '#4d5a66', slot: 'player' },
+    { name: 'tail', color: '#808080', on: 4, tone: -22 },
     { name: 'stripe', color: '#f4efe6' },
-    // A colourway is the sneaking suit (VARIETY.palette), in cloth greys.
-    { name: 'suit', color: '#6a7078', alts: ['#6e6c5e', '#858a90'], vary: 6 },
     { name: 'boot', color: '#3a3a40' },
     { name: 'skin', color: '#d9b08c' },
     { name: 'dark', color: '#2a1f1a' },
-    // Wear on the box, in tones of the player's colour: a scuffed patch, and soot.
+    // The eye slot, a dark gap, and the eyes peeking out of it (the face kit draws its eyes over these).
+    { name: 'slot', color: '#1c1512' },
+    { name: 'eyewhite', color: '#f4efe6' },
+    // The alert popping up over the box as he jumps or freezes: an expression, like a blush, so a fixed warm red.
+    { name: 'alert', color: '#d8382f' },
+    // Wear on the box, in tones of the cardboard: a scuffed patch, and soot.
     { name: 'scuff', color: '#808080', on: 0, tone: 12 },
     { name: 'scorch', color: '#808080', on: 0, tone: -18 },
     { name: 'sticker', color: '#e9d3b0' },
@@ -97,7 +113,7 @@ export const kind: FlatKind = {
     { name: 'sticker', vary: 1, options: 2 },
     { name: 'wear', vary: 11, options: 3 },
   ],
-  eyes: { role: 'dark', from: 'map', area: [0.06, 1.6], band: [0.05, 0.5], gap: [1.1, 4], specks: { dark: 2.2, stripe: 2.5 } },
+  eyes: { role: 'eyewhite', from: 'map', area: [0.06, 1.6], band: [0.05, 0.5], gap: [1.1, 4], specks: { eyewhite: 2.5 } },
   // The slate under the box is the suit, and the dark fill on the box below the eyes is the printed arrow.
   recolour: [
     { from: 'tail', to: 'suit', below: 9.5, lying: [99, 0] },

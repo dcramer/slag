@@ -1,50 +1,53 @@
 import type { FlatKind } from '../kinds';
 
+// Every pose keeps what reads in any player's colour (the clean colour audit, 2026-11-06: in purple, with one ear
+// bent down and a crumpled tail, "a cat-like body", "a horned creature"): both long ears up in a V with their
+// black tips, the tin bolt out behind clear of the body, the cord belt.
+const KEEP =
+  'both long black-tipped ears always standing up in a V clear of its arms, the grey tin zigzag tail always out behind it clear of its body, the brown cord belt and grey plug always on';
+
 export const kind: FlatKind = {
-  body: 157,
+  body: 146,
   map: {
-    roles: ['fur', 'dark', 'cheek', 'tin', 'plug', 'eartape'],
+    roles: ['fur', 'dark', 'cheek', 'tin', 'cord', 'eartape'],
+    // Sampled from the sixth round's design (art/sprites/zapmouse/design.prompt.txt). Its pen is a dark olive
+    // brown, its ear tips near black; both are the ink. The plug is the tail's grey and folds into the tin.
     families: [
-      ['fur', [240, 196, 40]],
-      ['fur', [186, 124, 30]],
-      ['fur', [222, 170, 30]],
-      ['tin', [170, 186, 188]],
-      ['tin', [126, 140, 142]],
-      ['tin', [192, 192, 196]],
-      // The tail's crumpled highlights are cool and the plug warm: one pale family took both, and orange
-      // plugs left orange slivers along the tail.
-      ['tin', [218, 222, 228]],
-      // The tail's bolt plate, a cooler grey than the ear's tape.
-      ['tin', [144, 149, 155]],
-      ['tin', [204, 204, 206]],
-      // The ear's tape is a neutral grey (the fur's highlight a pale yellow: both were nearest the plug's shade).
-      // In the tail's tin it read as a wrong fill; in a role of its own it's drawn as the crown's tape.
-      ['eartape', [164, 167, 170]],
-      ['eartape', [124, 128, 128]],
-      ['fur', [246, 222, 124]],
-      ['cheek', [216, 76, 54]],
-      ['plug', [216, 210, 194]],
-      ['plug', [190, 178, 158]],
-      ['dark', [30, 20, 16]],
+      ['fur', [238, 193, 27]],
+      ['fur', [194, 141, 26]],
+      ['fur', [190, 138, 30]],
+      ['fur', [184, 138, 27]],
+      ['fur', [234, 195, 51]],
+      ['fur', [235, 207, 112]],
+      ['fur', [225, 194, 75]],
+      ['fur', [208, 176, 89]],
+      ['tin', [168, 172, 178]],
+      ['tin', [154, 155, 157]],
+      ['tin', [178, 179, 183]],
+      // The ear's tape, a paler grey than the tin, so it is a shape of its own (drawn as the crown's tape).
+      ['eartape', [194, 195, 202]],
+      ['eartape', [205, 205, 208]],
+      ['cheek', [218, 66, 52]],
+      ['cheek', [166, 63, 34]],
+      ['cord', [144, 99, 57]],
+      ['cord', [139, 96, 55]],
+      ['cord', [111, 73, 47]],
+      ['dark', [42, 30, 21]],
+      ['dark', [78, 47, 9]],
+      ['dark', [107, 71, 14]],
+      ['dark', [100, 64, 8]],
+      ['dark', [116, 78, 15]],
     ],
     line: 'dark',
-    thin: ['tin', 'eartape'],
+    thin: ['fur', 'tin', 'eartape', 'cheek', 'cord'],
+    fringe: 5,
     feet: ['fur'],
     loose: ['tin', 'eartape'],
-    // The cord seen behind the arm at the tail's root (0.3 to 1.5 world px²) was a loose brown speck: under 1.6
-    // a dark goes into what's round it. The tail's tip (1.7 and up) and the ear tips stay; the eyes come from the map.
-    // The far cheek in both cheers is squeezed against the raised arm, a red sliver mid-face that read as a rash.
-    // It's the smallest far cheek (traced, cheer's under 0.85 world px² and cheer2's 0.86, the wall's 0.875,
-    // the rest 0.9 and up): under 0.87 a cheek goes into the fur, and so does air-2's tongue. A close cut, so
-    // check every pose's part count when a drawing or a family changes. The head's outline past that cheek, where
-    // the raised arm overlaps the face, is painted out of both cheer drawings (its ring kept, so the cheek stays
-    // small enough to go): one colour either side, it was kept as a stroke, a scratch and a tick mid-face.
-    min: { dark: 1.6, cheek: 0.87, plug: 0.8 },
+    // The bolt's corners are the read: no corner cutting, or its points trace round.
+    smooth: 0,
+    min: { dark: 1.6, cheek: 0.87, cord: 0.5 },
   },
-  eyes: { role: 'dark', area: [0.06, 0.85], gap: [2, 5.5], specks: { dark: 1.2, cheek: 0.35 }, from: 'map' },
-  // Every drawing's cord belt is grown 7 px into the fur: half a world px wide, under the tracer's tolerance, it
-  // traced as a ragged wedge with drips, a mud smear.
-  recolour: { from: 'dark', to: 'cord', below: 2.5, lying: [0.4, -4] },
+  eyes: { role: 'dark', area: [0.06, 1.3], gap: [2, 5.5], specks: { dark: 1.2, cheek: 0.35 }, from: 'map' },
   wear: {
     on: ['fur'],
     chin: 4.5,
@@ -55,10 +58,7 @@ export const kind: FlatKind = {
   roles: [
     { name: 'tin', color: '#a9afb7' },
     { name: 'fur', color: '#f2c62a', slot: 'player' },
-    // A colourway is the cord and its plug together (VARIETY.palette), in neutrals: a brown flex on a steel plug,
-    // a slate one on a pale grey plug, a taupe one on black plastic. Never a white plug: on the fur it read as a
-    // pale hole at the groin, not a pendant.
-    { name: 'plug', color: '#7c848d', alts: ['#b3aa9b', '#5a5e66'], vary: 6 },
+    // A colourway is the cord (VARIETY.palette), in neutrals: a brown flex, a slate one, a taupe one.
     { name: 'cord', color: '#7a5236', alts: ['#4b5560', '#857a6e'], vary: 6 },
     { name: 'cheek', color: '#e0473b' },
     { name: 'dark', color: '#2a1f1a' },
@@ -79,32 +79,32 @@ export const kind: FlatKind = {
     idle2: { frames: ['idle2', 'idle'], loop: true, holds: [1.6, 2.4] },
     walk: { frames: ['walk-1', 'walk-2'], loop: true, stride: 30 },
     run: { frames: ['run-1', 'run-2'], loop: true, stride: 44 },
-    air: { frames: ['air-1', 'air-2'], loop: false, vy: [-200, 200] },
-    wall: { frames: ['wall'], loop: true, fps: 1 },
+    air: { frames: ['air-1', 'air-2'], loop: false, vy: [-200, 200], scale: 0.95 },
+    wall: { frames: ['wall'], loop: true, fps: 1, scale: 0.94 },
     cheer: { frames: ['cheer', 'idle'], loop: true, holds: [0.5, 0.25] },
     cheer2: { frames: ['cheer2', 'idle'], loop: true, holds: [0.45, 0.3] },
     death: { frames: ['death'], loop: false, fps: 1, eyes: false, centre: 'box' },
   },
+  // Drawn three to a 16:9 image and cut apart (README → 3. Poses); the sheets' prompts are in
+  // art/sprites/zapmouse/design.prompt.txt. These are each pose alone, for a redraw.
   poses: {
-    idle2: { pose: 'standing, looking back over its shoulder at its tin tail, one hand raised to scratch its taped ear.' },
-    'walk-1': { pose: 'walking to the right, mid-step: the near foot forward, the far foot back, the arms swinging the other way.' },
-    'walk-2': { pose: 'walking to the right, the legs passing under the body: one foot planted, the other lifted a little.' },
+    idle2: { pose: `standing, looking back over its shoulder at its tin tail, one paw raised to scratch its taped ear, ${KEEP}.` },
+    'walk-1': { pose: `walking to the right, mid-step, the near foot forward and the far foot back, the stubby arms swinging the other way, ${KEEP}.` },
+    'walk-2': { pose: `walking to the right, the legs passing under the body, one foot planted and the other lifted a little, ${KEEP}.` },
     'run-1': {
-      pose: 'running fast to the right, leaning well forward, the legs wide apart in a long stride, the arms pumping, the tail streaming out behind.',
+      pose: `running fast to the right, leaning well forward, the legs wide apart in a long stride, the stubby arms pumping, the ears swept back a little, ${KEEP}.`,
     },
-    'run-2': {
-      pose: 'running fast to the right, leaning well forward, both feet off the ground with the legs gathered under the body, the tail streaming out behind.',
-    },
-    'air-1': { pose: 'jumping straight up, both arms raised over its head, the legs tucked under it.' },
-    'air-2': { pose: 'falling, both arms flung up and out, the legs dangling, the mouth open in alarm.' },
+    'run-2': { pose: `running fast to the right, leaning well forward, both feet off the ground with the legs gathered under the body, ${KEEP}.` },
+    'air-1': { pose: `jumping straight up, both stubby arms raised a little above its shoulders, the legs tucked under it, ${KEEP}.` },
+    'air-2': { pose: `falling, both stubby arms flung out to the sides, the legs dangling, the mouth open in alarm, ${KEEP}.` },
     wall: {
-      pose: 'seen from its side, it is sliding down a tall wall on the right edge of the picture (do not draw the wall), its front pressed against it, both palms and one sole flat on it, the other leg hanging, its head turned to look back at us.',
+      pose: 'seen from its side, it is sliding down a tall wall that is just to its right (do not draw the wall), its front pressed against it, both paws and one foot flat on it, the other leg hanging, its head turned to look back at us, both ears standing up, the tin tail out behind it to the left.',
       far: true,
     },
-    cheer: { pose: 'cheering, both arms thrown high over its head, up on its toes, a big open grin.' },
-    cheer2: { pose: 'jumping for joy with one fist punched straight up into the air, the other arm swinging back.' },
+    cheer: { pose: `cheering, both stubby arms thrown up and out wide in a V, up on its toes, a big open grin, ${KEEP}.` },
+    cheer2: { pose: `jumping for joy with one fist punched straight up into the air, the other arm swinging back, a big grin, ${KEEP}.` },
     death: {
-      pose: 'it has been knocked out and lies flat on its back on the floor, the whole body horizontal across the picture, head on the left and feet on the right, arms and legs splayed limp, eyes shut. Seen from the side.',
+      pose: 'it has been knocked out and lies flat on its back on the floor, the whole body horizontal, head on the left and feet on the right, arms and legs splayed limp, eyes shut, the long ears lying flat out to the left past its head, the tin tail flat on the floor below it. Seen from the side.',
       far: true,
     },
   },

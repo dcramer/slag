@@ -81,6 +81,8 @@ Every game design decision, preference and direction the owner has given, groupe
   2026-11-06 · `done` (as built: items shove and daze, the level kills) · DESIGN.md → Modes · Considered: a pure shove with no daze.
 - **A brawl's items are ones that bop people into things, and not ones that only move you.** "we probably want more items that will like bop people (like the sword) to push them in this mode, and less of the items that are movement based?"
   2026-11-06 · `done` (the brawl's boxes deal swings, throws and slams only, and a new Sucker Punch, a long swing that throws sideways) · DESIGN.md → Parts, Modes · Replaced: smoke and Bubble Wrap in the brawl's deal.
+- **A brawl plays several bouts on one placement: N fights in the same arena with the same parts, then pick and place again. N is a lobby rule.** Picked so picking and placing (up to 30 s) don't outlast the fighting (about 28 s a bout with bots). "we could def do like N rounds per placement and have that be a configurable thing"
+  2026-11-06 · `planned` · DESIGN.md → Modes, MODES.md → Brawl
 - **A brawl's arena is deadly by default.** "also the arena could be a little deadly by default, thats a thing we can tweak"
   2026-11-06 · `done` (up to six set pieces from the nastiest mix) · DESIGN.md → Modes, MODES.md · Replaced: four of the usual mix.
 - **In a brawl, if everyone left goes out at once, nobody wins the round.** "Highest one wins" / "actually if you all die no winners maybe?"
@@ -121,7 +123,7 @@ Every game design decision, preference and direction the owner has given, groupe
 - **Rising Slag stays vertical; its level design is most of what keeps it from being fun.** The shaft is floors with two holes each, so the climb runs single file. "so maybe we keep vertical and try to figure out how to make it a more fun game?" / "yeah i think level design is a huge part of the problem, agreed"
   2026-11-05 · `done` for the open shaft and a wall-jump chimney (`src/gen/level/builders/shaft.ts`) and bumping the runner above from below (`BUMP`, src/sim/collide.ts: "Build the bump next"); catch-up again `planned` · DESIGN.md → Modes, TODO.md → 31 · Replaced: storeys with two ways up each, and perch flights on harder shafts. Considered: a horizontal looping track like the lead-camera racer's.
 - **Rising Slag catches the pack up with a regroup gate: a hatch across the shaft on a cycle that the leader has to wait at, so the ones behind close in.** Picked over items that cost the leader seconds, after bots of equal skill with no items kept the 15 s leader on top 64% of the time. "Pack-regroup gate"
-  2026-11-06 · `planned` · MODES.md → Rising Slag, TODO.md → 31
+  2026-11-06 · `done` (two gates a lap, shut 4 s and open 2 s on one clock, the slag's floor pace waiting while the leader is under a shut one: `src/gen/level/loop-gates.ts`, the `phase` module's `clock` and `look: 'gate'`; the early leader wins 50 / 47 / 54% with boxes / items / bare, from 64 / 59 / 66%) · MODES.md → Rising Slag, DESIGN.md → Modes
 - **A rule the level is built from (gravity, weather) rebuilds the lobby's level for everyone at once.**
   2026-11-02 · git `e64c3e5` · `done` · DESIGN.md → Rules
 
