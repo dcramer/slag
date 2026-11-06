@@ -51,3 +51,26 @@ sheets/sheetB-1.png -> flat/run-1, air-1; sheets/sheetB-2.png -> flat/run-2
 sheets/sheetC-1.png -> flat/air-2, cheer, cheer2
 sheets/sheetD-1.png -> flat/death; sheets/sheetD-2w.png (its wall line whitened) -> flat/wall
 The image model stood the leg up again in six of them (run-1, run-2, air-1, air-2, cheer, cheer2: drawn/upright/), so levelpose.py turns each one's stick (the meat and its bone, by colour) level about the fist.
+
+Round 4's set (design.png, flat/, sheets/, level.py and levelpose.py) moved to r4/ when round 5 shipped.
+
+Round 5 (2026-11-05, TODO 31: round 4 read "Wario or Mario punching" and "unsure, a fist thrust forward", the roast leg's round end a fist). 20 images, 40 credits. The shipped set; every candidate is in r5/, the poses as cut in drawn/r5-cut/.
+
+1. Designs, side on, each prompt led by the belly or the head (2 drawn each, no reference; the black silhouette of each traced at blind-sheet size beside the king, the merc, the engineer, the mage, the ape, the fighter and the plumber and read by fresh readers before any pose):
+   d1 (a knobbly club held out level, a long drooping moustache, a low dome with a flat rim): the rim came back a brim.
+   d2 (the club at shoulder height, a wide bushy moustache, a snug dome): "unsure... a long horizontal arm or stick with a rounded end (club? blaster? arm cannon?)"; then "Mega Man, medium... one arm stretched straight out as a long barrel" from both of two more readers.
+   d3 (leaning back, fists on hips, the belly a giant ball, a spiked dome, a sword at the hip): "Link, medium. Pointed cap, round shield" from both readers: the belly read as a shield.
+   d4 (the belly a giant ball, a spiked dome, a broad sword held out level at belly height, a wide crossguard; the second kept): "unsure (maybe a knight or soldier with a lance or gun), low" and "unsure. Maybe a squat helmeted gunner or knight (low)", paired with nothing.
+   d4's prompt:
+Cartoon game character for a tiny 2D platformer sprite, full body, seen exactly side on in profile facing right, plain flat white background, no ground, no text. Flat colours, thin dark ink line, no gradients. A short, enormously fat warrior: his huge round belly is a giant ball, the biggest shape, bulging far out in front past his face, in a short red tunic (#c9473f) with a brown belt; short thick legs apart in big brown boots. A round bald head (#efc9a4) sits on top, a big round nose and a bushy dark moustache (#5a4030) sticking out in front. On his crown a small round iron helmet (#8e949a), a low dome with a short spike on top, narrower than his head. His front hand holds a broad straight sword (#c4c8ce) out level in front of him at belly height, pointing forward, a wide crossguard at his fist, white space all round the blade. His free fist rests on his hip.
+
+2. Wear (`node tools/art3d/style.ts worn warrior`; 2 drawn from d4-2, the first kept as design.png: the second's pot came down over his eyes).
+
+3. Poses, three to a 16:9 image (two on sheet D), each sheet drawn twice, every figure with "the small dented iron pot with its spike always on top of his bald head, his big nose and bushy moustache sticking out in front, his huge round belly always bulging out in front, the sword always in his front fist held out level in front of him pointing forward, clear of his body, never raised, his eye open" (the prompts in full: `poses` in tools/art3d/flat/kinds/warrior.ts):
+sheets/sheetA-1.png -> flat/walk-1, walk-2 (both sheets' third, patting the belly, dropped the sword)
+sheets/sheetB-2.png -> flat/run-1 (B-1's jump held the sword with no hand)
+sheets/sheetE-1.png -> flat/idle2, run-2; sheets/sheetE-2.png -> flat/air-1 (E: idle2, the jump and the run drawn again, the sword in the fist)
+sheets/sheetC-2.png -> flat/air-2; sheets/sheetC-1.png -> flat/cheer, cheer2 (C-2 raised the sword in both cheers)
+sheets/sheetD-1w.png (D-1 with its drawn wall line whitened) -> flat/wall; sheets/sheetD-2.png -> flat/death
+
+4. The first blind read of the drawn set: "Mario or Wario: low. Short round body, cap, one arm stuck out" and "Mario or Luigi with a vacuum or gun, low (stout body, cap, a tube pointing forward)", both pairing him with the plumber and the fighter: the drawn spike was a pixel at play size and the pot read as a cap. So the spike on the design and every pose but the death is stretched to 2.2 times its length on its own axis by hand (spike.py, `--k 2.2`; air-2 and cheer2, their heads tilted, with `--angle` and `--tipx`/`--tipy`), the design padded first so the spike fits. Read again: "unsure (stout figure in a pointed helmet, maybe a knight or Wario); low" and "unsure. Round body under a small pointed top, with one arm or tool sticking out", paired with nothing.

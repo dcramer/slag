@@ -1,77 +1,78 @@
 import type { FlatKind } from '../kinds';
 
-// The round warrior, side on (round 4): his head is a shape of its own, the read the three-quarter rounds never had:
-// a big round bald head with the nose and the bushy moustache sticking out past the body's line and the chin clear
-// of the chest, and on its crown a small iron pot of a helmet, a low dome narrower than the head with a knob on top
-// and a step at its rim (the twist: a cooking pot, its loop handles at the sides). Under it the huge round belly out
-// in front, and the roast leg held out level in his fist, clear of everything: raised, it was the penguin king's
-// hammer. The poses were drawn three to a 16:9 image with the design as the reference and cut apart
-// (art/sprites/warrior/design.prompt.txt); where the image model stood the leg up again, levelpose.py there turned
-// it level about the fist. The leg held out reaches the box's edge, so the body is a little small (183).
+// The round warrior, side on (round 5): the belly is the outline, a huge ball out in front, wider than the head,
+// on short legs in big boots; on top a round bald head with the big nose and the bushy moustache in profile, and
+// on its crown a small dented iron pot of a helmet, a low dome narrower than the head with a tall spike on top
+// and two little loop handles (the twist: a cooking pot). His broad straight sword, the comic's own weapon, is
+// held out level in front at belly height with background all round the blade: the roast leg of round 4 read at
+// play size as a fist (a fat man punching, the plumber's rival), and a club as an arm cannon. The poses were drawn
+// three to a 16:9 image with the design as the reference and cut apart (art/sprites/warrior/design.prompt.txt), and
+// the spike on the pot stretched on each by art/sprites/warrior/spike.py: drawn, it was a pixel at play size and the
+// pot read as the plumber's cap.
 const KEEP =
-  'seen exactly side on, his big round bald head with the big nose and the bushy moustache sticking out in front and the chin clear of his chest, the small dented iron pot always perched on top of his head, a low dome narrower than the head with its knob on top, his huge round belly always bulging out in front, the roast leg always in his front fist held out level, never raised over his head, his eye open';
+  'the small dented iron pot with its spike always on top of his bald head, his big nose and bushy moustache sticking out in front, his huge round belly always bulging out in front, the sword always gripped in his front fist held out level in front of him pointing forward, clear of his body, never raised, his eye open';
 
 export const kind: FlatKind = {
-  body: 183,
+  body: 193,
   map: {
-    roles: ['tunic', 'tshade', 'skin', 'iron', 'mous', 'leather', 'cloth', 'meat', 'bone', 'mouth', 'dark'],
+    roles: ['tunic', 'tshade', 'skin', 'iron', 'mous', 'leather', 'steel', 'dark'],
     // Sampled from the design (art/sprites/warrior/design.png, `swatch.py`) and its poses.
     families: [
-      ['tunic', [183, 60, 52]],
-      ['tunic', [166, 53, 46]],
-      // The tunic's shadow side and the patch on the belly, one dark red in the drawing: a dark of the costume, so
-      // the patch stays a shape.
-      ['tshade', [135, 43, 38]],
-      ['skin', [239, 187, 139]],
-      ['skin', [237, 201, 168]],
-      ['skin', [248, 212, 178]],
-      // The skin's shade, a shape of its own in the drawing, folded in: the figure is flat.
-      ['skin', [206, 140, 100]],
-      ['iron', [144, 148, 150]],
-      ['iron', [108, 114, 118]],
-      ['iron', [140, 128, 114]],
+      ['tunic', [185, 61, 51]],
+      ['tunic', [176, 56, 44]],
+      ['tunic', [168, 56, 48]],
+      ['tunic', [176, 74, 64]],
+      ['tunic', [181, 67, 57]],
+      // The patch on the belly: a dark of the costume, so it stays a shape.
+      ['tshade', [130, 38, 33]],
+      ['tshade', [120, 32, 32]],
+      ['skin', [244, 194, 147]],
+      ['skin', [240, 184, 136]],
+      ['skin', [242, 199, 160]],
+      ['skin', [232, 184, 136]],
+      ['iron', [140, 145, 147]],
+      ['iron', [133, 129, 129]],
+      ['iron', [128, 136, 136]],
       // The moustache and the brow.
-      ['mous', [80, 60, 40]],
+      ['mous', [86, 63, 45]],
+      ['mous', [88, 60, 40]],
       // The belt, the boots and the scabbard, and their shade.
-      ['leather', [105, 69, 41]],
-      ['leather', [114, 69, 40]],
-      ['leather', [96, 61, 39]],
-      ['leather', [132, 84, 48]],
-      ['leather', [151, 99, 68]],
-      ['leather', [74, 47, 34]],
-      ['cloth', [128, 110, 96]],
-      ['cloth', [100, 84, 68]],
-      ['meat', [172, 92, 46]],
-      ['meat', [188, 114, 71]],
-      ['meat', [140, 64, 30]],
-      ['bone', [232, 214, 186]],
-      ['dark', [64, 29, 21]],
-      ['dark', [54, 27, 20]],
-      ['dark', [75, 27, 19]],
-      // The eye's white and its glint: the kit draws the eye.
+      ['leather', [117, 78, 44]],
+      ['leather', [104, 72, 40]],
+      ['leather', [103, 71, 47]],
+      ['leather', [128, 74, 49]],
+      // The blade, the crossguard and the pommel, and their shade.
+      ['steel', [216, 219, 224]],
+      ['steel', [194, 190, 191]],
+      ['steel', [184, 186, 194]],
+      ['dark', [51, 20, 21]],
+      ['dark', [44, 11, 11]],
+      ['dark', [75, 31, 25]],
+      ['dark', [24, 0, 0]],
+      // The eye's glint: the kit draws the eye.
       ['dark', [255, 255, 255]],
     ],
     line: 'dark',
-    thin: ['tunic', 'tshade', 'skin', 'iron', 'mous', 'leather', 'cloth', 'meat', 'bone', 'mouth'],
+    thin: ['tunic', 'tshade', 'skin', 'iron', 'mous', 'leather', 'steel'],
     fringe: 5,
     stroke: 2.4,
-    feet: ['leather', 'cloth'],
-    min: { dark: 0.12, mouth: 0.2, bone: 0.2, mous: 0.3, tshade: 0.4 },
+    ink: 7,
+    // The spike on the pot is a point, and the sword's tip: corner cutting rounds both into leaves.
+    smooth: 0,
+    feet: ['leather'],
+    min: { dark: 0.12, mous: 0.3, tshade: 0.4, steel: 0.3 },
   },
   roles: [
-    // The tunic is the costume (Decisions 4); its shadow side and the patch a dark of it.
+    // The tunic is the costume (Decisions 4); the patch on the belly a dark of it.
     { name: 'tunic', color: '#b83a31', slot: 'player' },
-    { name: 'tshade', color: '#808080', on: 0, tone: -22 },
+    { name: 'tshade', color: '#808080', on: 0, tone: -24 },
     { name: 'skin', color: '#efbb8b' },
     { name: 'iron', color: '#8e949a' },
     // Lighter than the drawing's near-black: a dark under the face reads as a mouth.
     { name: 'mous', color: '#5e4230' },
-    // A colourway is the leather (VARIETY.palette): the belt, boots and scabbard together, brown, slate or tan.
+    // A colourway is the leather (VARIETY.palette): the belt and the boots together, brown, slate or tan.
     { name: 'leather', color: '#6e4628', alts: ['#5a5450', '#a88458'], vary: 6 },
-    { name: 'cloth', color: '#7d7068' },
-    { name: 'meat', color: '#ac5c2e' },
-    { name: 'bone', color: '#ecdcb8' },
-    { name: 'mouth', color: '#9a3d36' },
+    { name: 'steel', color: '#d2d5da' },
     { name: 'dark', color: '#2a1f1a' },
     // Wear on the tunic, in tones of the player's colour: a faded streak, and soot.
     { name: 'scuff', color: '#808080', on: 0, tone: 12 },
@@ -89,18 +90,19 @@ export const kind: FlatKind = {
     chin: 3,
     marks: [
       [
-        ['scuff', 0.5, 0.45, 0.4],
-        ['scuff', 0.45, 0.62, 0.3],
+        ['scuff', 0.35, 0.45, 0.4],
+        ['scuff', 0.3, 0.62, 0.3],
       ],
       [
-        ['scorch', 0.55, 0.4, 0.45],
-        ['scorch', 0.3, 0.72, 0.4],
+        ['scorch', 0.4, 0.4, 0.45],
+        ['scorch', 0.3, 0.7, 0.4],
       ],
     ],
   },
   accessories: [{ slot: 'plaster', role: 'plaster', at: 'cheek', size: [2.2, 0.9], offset: [-0.3, -0.6] }],
-  // A heavy lid over a round eye: the boaster's half-shut look, lifted on a jump, gone on a fall.
-  face: { r: 0.85, iris: '#4a3428', mark: 1.1, eye: 'heavy' },
+  // A small round eye under the brow, as drawn: the heavy lid at 0.85 closed the eye, the brow and the moustache
+  // into one dark band across the face at play scale (sunglasses, a pug's mask).
+  face: { r: 0.7, iris: '#4a3428', mark: 1.1, eye: 'round' },
   gait: { bounce: [0.15, 0.8], lean: [0, 0.03] },
   clips: {
     idle: { frames: ['idle'], loop: true, fps: 1 },
@@ -116,33 +118,29 @@ export const kind: FlatKind = {
   // Drawn three to a 16:9 image and cut apart (README → 3. Poses); the sheets' prompts are in
   // art/sprites/warrior/design.prompt.txt. These are each pose alone, for a redraw.
   poses: {
-    idle2: { pose: `standing smug and boastful, his chin up, his free hand patting his huge belly, the roast leg held out level in front; ${KEEP}.` },
-    'walk-1': {
-      pose: `waddling heavily and proudly to the right, mid-step, his belly leading, the near boot forward and the far boot back, his free arm swinging; ${KEEP}.`,
-    },
-    'walk-2': {
-      pose: `waddling to the right, the legs passing under the belly, one boot planted flat and the other lifted a little, his free arm swinging; ${KEEP}.`,
-    },
+    idle2: { pose: `standing smug and boastful, his chin up, his boots together, his other hand on his hip; ${KEEP}.` },
+    'walk-1': { pose: `waddling heavily and proudly to the right, mid-step, his belly leading, the near boot forward and the far boot back; ${KEEP}.` },
+    'walk-2': { pose: `waddling to the right, the legs passing under the belly, one boot planted flat and the other lifted a little; ${KEEP}.` },
     'run-1': {
       pose: `running fast to the right, leaning forward, his belly bouncing, one short leg reaching forward and the other pushing off behind, the free arm pumping behind; ${KEEP}.`,
     },
-    'run-2': { pose: `running fast to the right, leaning forward, both boots off the ground with the short legs gathered up under the belly; ${KEEP}.` },
-    'air-1': { pose: `jumping up and forward, both short legs tucked up under his belly, the free arm flung out behind, determined; ${KEEP}.` },
+    'run-2': { pose: `running fast to the right, both boots off the ground with the short legs gathered up under the belly; ${KEEP}.` },
+    'air-1': { pose: `jumping up and forward, both short legs tucked up under his belly, the other arm flung out behind; ${KEEP}.` },
     'air-2': {
-      pose: `falling, his short legs reaching down apart, the free arm flailing out behind, his eye wide and his mouth open in alarm under the moustache; ${KEEP}.`,
+      pose: `falling, his short legs reaching down apart, the free arm flailing out, his eye wide and his mouth open in alarm under the moustache; ${KEEP}.`,
     },
     wall: {
-      pose: 'seen exactly side on, facing right: he is sliding down a tall wall on the right edge of his space (do not draw the wall, no line), his belly and one free hand pressed flat against it and both boots braced on it, the roast leg held out behind him in his other hand, the small iron pot on his head, his eye open.',
+      pose: 'seen exactly side on, facing right: he is sliding down a tall wall on the right edge of his space (do not draw the wall, no line), his belly and one free hand pressed flat against it and both boots braced on it, the sword held out behind him in his other hand, the small iron pot on his head, his eye open.',
       far: true,
     },
     cheer: {
-      pose: `cheering in triumph, up on his toes, his free fist on his hip, the roast leg thrust out level in front, a huge open grin under the moustache; ${KEEP}.`,
+      pose: `cheering in triumph, up on his toes, his free fist raised by his shoulder, the sword thrust out level in front, a huge open grin under the moustache; ${KEEP}.`,
     },
     cheer2: {
-      pose: `laughing a big belly laugh, leaning back, his free hand slapping his huge belly, the roast leg held out level in front, his eye squeezed shut; ${KEEP}.`,
+      pose: `laughing a big belly laugh, leaning back, his free hand slapping his huge belly, the sword held out level low in front, his eye squeezed shut; ${KEEP}.`,
     },
     death: {
-      pose: 'he has been knocked out and lies flat on his back on the floor, the whole body horizontal, his head on the left and his boots on the right, his huge belly sticking up like a hill, his arms and legs splayed limp, the pot still on his head, the roast leg dropped beside him, his eyes shut. Seen from the side.',
+      pose: 'he has been knocked out and lies flat on his back on the floor, the whole body horizontal, his head on the left and his boots on the right, his huge belly sticking up like a hill, his arms and legs splayed limp, the pot still on his head, the sword still in his hand lying flat beside him, his eyes shut. Seen from the side.',
       far: true,
     },
   },
