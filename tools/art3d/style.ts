@@ -1103,6 +1103,29 @@ export const BRIEFS: Record<string, Brief> = {
     // towel's corner frayed, a boot's lace trailing.
     worn: "the near oven-mitt glove has a big dark brown scorch mark on its side; the grey tape on the near wrist has come loose and one end flaps out; one corner of the tea towel is frayed ragged; the back boot's lace has come undone and trails. Both gloves stay big and round, held up in front of his chin with white background between them and his face. His face stays as it is.",
   },
+  junior: {
+    // No homage and no twist: Junior is Sentry's own robot, which the owner's team made (docs/characters/junior.md), so
+    // the design is the reference (art/sprites/junior/reference.png) redrawn flat, every trait kept: the square yellow
+    // box head with one huge eye and a big grin (the face, and the head nobody else in the cast has: the robot boy's is
+    // a round helmet, the miner's and the creeper's cubes have two eyes); the cap on backwards, its bill out behind;
+    // the zigzag antennae with ball tips springing up and out (they stand clear of the cap, or they join it); the round
+    // headphone ears; the long arm ending in a claw, held out clear of the body; the phone in the other hand; the thin
+    // legs on roller skates.
+    // At play size the reference's own sizes were lost (a colour read against it saw "bone-shaped blobs", "round yellow
+    // mitts" and no phone), so the props are bigger than its: one big zigzag to each antenna with a big ball tip, a pincer
+    // as big as the head, a phone as tall as it, a longer bill, steel wheels (art/sprites/junior/design.prompt.txt). The
+    // drawings keep only the antenna off the cap (art/sprites/junior/prune.py): three read in black as spiky hair or horns.
+    // The palette is neutral (Decisions 4): the hoodie in the player's colour, the cap and the skates a dark of it;
+    // the head, the arms and the ankle bands Junior's own yellow; the antennae and wheels a light steel, the legs and the
+    // headphones a dark purple-grey. The first image is an edit of the reference (`--ref`), not a new design.
+    design:
+      'The same robot character exactly as in the reference image, redrawn as a simple flat cartoon sprite design, full body, three-quarter view facing right. ' +
+      'A square yellow box head (#fdb819), as wide as the shoulders, with one huge round eye and a big toothy grin; a purple baseball cap (#8a3f8c) worn backwards, its long bill sticking far out behind; three light steel-grey wire antennae (#aaa6b4), each with one big sharp zigzag and a big round ball tip, one off the crown of the cap and one springing out from each round dark headphone ear (#4a4058), clear of the cap. ' +
+      'A pink hoodie (#ee4d9b). One long yellow arm held out low ending in a big open yellow pincer claw as big as his head, clear of his body; the other yellow hand holds a phone as tall as his head out to the side. ' +
+      'Thin dark purple-grey legs (#4a4058) with yellow ankle bands, white socks and purple roller skates (#6c3a78) on big light steel-grey wheels.',
+    // Off the face, the antennae and the cap: a torn hem, tape at the claw arm's elbow.
+    worn: "the hoodie's hem has a big ragged tear at one side; a wide band of grey tape (#9a9c98) is wrapped round the elbow of the long claw arm; the near roller skate has lost its front wheel and tips a little. The head, the eye, the grin, the cap, the antennae, the claw and the phone stay exactly as they are.",
+  },
 };
 
 function brief(kind: string): Brief {

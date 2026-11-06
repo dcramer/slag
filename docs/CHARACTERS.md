@@ -163,7 +163,7 @@ The strongest reads first. **Keyed** marks the non-humanoids, the riskiest to dr
 | 44 | genie | Shampootae | humanoid, side on | drawn flat; passes the clean colour read ("Shantae, high" three times); black fails |
 | 45 | mushroom | Toadmund | humanoid, small, capped | drawn flat; the blind read passes (named by both readers, at medium and medium-high, unpaired: the huge dome cap over a small body) |
 | 46 | boxer | Little Smack | humanoid, small | drawn flat; passes the clean colour read ("Little Mac (Punch-Out!!), high" twice); black fails |
-| 47 | junior | Junior | humanoid, robot; an egg (about 1 look in 100) | to draw from the reference; no blind read (the owner checks it) |
+| 47 | junior | Junior | humanoid, robot; an egg (about 1 look in 100) | drawn flat from the reference, its props bigger than the reference's (a pincer as big as the head, a big phone, steel wheels) and one antenna; in colour the eye, claw and skates read, the phone mostly, the grin, backwards bill and zigzag partly; in black one reader of two pairs it with the elf (the antenna as a pointed cap); owner to decide |
 
 **What to check.** No two kinds may rhyme. Watch these pairs:
 
