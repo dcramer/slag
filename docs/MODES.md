@@ -26,7 +26,7 @@ What we borrow: the pick, place, run loop; parts persist; scoring that punishes 
 | Finishers per round, 4 players | not documented | 1.85 | 1.5–2.5 |
 | First to finish | +1/5 of a finish [UCH-rules] | +4/10 | keep |
 | Trap kill | +1/5 a victim [UCH-rules] | +2/10, finishers only | keep |
-| Comeback (behind for 2+ rounds, then finish) | +4/5 [UCH-rules] | underdog +3/10 after 2 scoreless rounds | consider raising toward +8 |
+| Comeback (behind for 2+ rounds, then finish) | +4/5 [UCH-rules] | underdog +8/10 after 2 scoreless rounds (owner decision; was +3) | keep |
 | Only finisher (3–4 players) | Solo +3/5 [UCH-rules] | none | consider adding (+6) |
 | Crate size, 4 players | "4–6 items", a review's estimate [UCH-box] | players + 2: 6 | the same |
 | Lone bot's finish rate by tier (gentle, medium, hard) | n/a | Easy 73/58/58, Normal 93/65/60, Hard 93/78/88 | Easy 75/50/30, Normal 90/70/50, Hard 95/85/70 (`PASS_TARGETS`) |
@@ -94,7 +94,7 @@ What we borrow: short rounds, last one standing, items from boxes knocked from b
 | Catch-up | none found | none | none at first (the crossover brawler has an optional underdog boost [Smash-rules]) |
 | Sudden death | crossover brawler: 300% damage, a shrinking blast zone [Smash-sd] | slag pours in from below 25 s in | the same |
 
-The arena is a classic one-screen level that owes no part (`bare`), everyone starting from its two ends (`ends`), deadly by default: up to six set pieces from the nastiest of its set's mix (`hazards: 6`, `danger: 0.9`; about 4.7 fit), against 4 of the usual mix, runners out before the slag in round 1 went from 0.54 a round to 0.75. Bots go for the nearest rival and shove, use what the boxes hand them, and climb out of the slag; they rarely knock anyone into a hazard yet (4 credited kills in 24 round-1 rounds of four).
+The arena is a classic one-screen level that owes no part (`bare`), everyone starting from its two ends (`ends`), deadly by default: up to six set pieces from the nastiest of its set's mix (`hazards: 6`, `danger: 0.9`; about 4.7 fit), against 4 of the usual mix, runners out before the slag in round 1 went from 0.54 a round to 0.75. Bots go for the nearest rival and shove, use what the boxes hand them, and climb out of the slag; they rarely knock anyone into a hazard yet: 8 credited kills in 24 round-1 rounds of four, from 4 before the boxes dealt only knockers and the Sucker Punch.
 
 ---
 

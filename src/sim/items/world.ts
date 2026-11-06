@@ -9,7 +9,7 @@ import type { DeathCause, Runner, RunWorld } from '../run';
 import { type InputFrame, NO_INPUT } from '../types';
 import { bonk, cx, cy, giveOrDrop, isActive, itemEvent, launch, moveBox, spawnDrop } from './common';
 import { stepBlocks } from './pocket';
-import { BAT, ITEMS, ROCKET, SHIELD, SMOKE, SWORD, swingBat, TREMOR, tossHeld } from './roster';
+import { BAT, GLOVE, ITEMS, ROCKET, SHIELD, SMOKE, SWORD, swingBat, TREMOR, tossHeld } from './roster';
 import { stepShells } from './tax';
 import { stepFists, stepHooks } from './upward';
 import { DROP_HALF, DROP_LIFE, type ItemKind, type ItemSpawn, type RunnerItems } from './types';
@@ -95,7 +95,8 @@ const tick = (n: number) => (n > 0 ? n - 1 : 0);
 
 function bladeBox(r: Runner): Rect {
   const b = r.body;
-  const reach = r.items.swingKind === 'bat' ? BAT.reach : SWORD.reach;
+  const kind = r.items.swingKind;
+  const reach = kind === 'bat' ? BAT.reach : kind === 'glove' ? GLOVE.reach : SWORD.reach;
   return { x: b.facing > 0 ? b.x + b.w - 2 : b.x + 2 - reach, y: b.y - 6, w: reach, h: b.h + 6 };
 }
 
@@ -195,7 +196,7 @@ function swingSwords(w: RunWorld): void {
       const k = knocks[vi];
       const power = it.swingPower;
       k.vx += a.body.facing * SWORD.knockVx * power;
-      k.vy = Math.max(k.vy, SWORD.knockVy * Math.min(power, BAT.lift));
+      k.vy = Math.max(k.vy, SWORD.knockVy * Math.min(power, it.swingKind === 'glove' ? GLOVE.lift : BAT.lift));
       if (it.swingKind === 'bat' && power >= BAT.full) k.homer = true;
       if (k.by < 0 || a.slot < k.by) {
         k.by = a.slot;
