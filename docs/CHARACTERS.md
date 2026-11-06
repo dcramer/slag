@@ -151,7 +151,7 @@ The strongest reads first. **Keyed** marks the non-humanoids, the riskiest to dr
 | 37 | assistant | Jinglebelle | humanoid, small, dog | drawn flat; the blind read not passed (unpaired as "Pikmin" while the tuft stood on a stalk, then a nameless small figure with a tuft or hat; a side-on redraw with a snout, round 3, read the same and worse in colour, not shipped): in black her head is a hat; accepted as a colour read (2026-11-06) |
 | 38 | sim | Bella Gauche | humanoid + floating diamond | drawn flat; the blind read passes (both readers named her at high once the diamond's points survived the tracer: rounded, it was a Pikmin's leaf) |
 | 39 | succubus | Moribund | humanoid, winged head | medium: the head wings, only standing clear of the hair; the stinger's horns and the vampire to watch |
-| 40 | archer | Aloof | humanoid, side on | medium: the bow drawn ahead; the raider and the elf to watch |
+| 40 | archer | Aloof | humanoid, side on | drawn flat; named by both blind readers at medium in the first round, paired with nobody (the bow drawn in every pose, the bushy mane) |
 | 41 | slime | Slimple | **keyed**, limbless | high: the curled teardrop; the jelly and the chomper to watch |
 | 42 | bear | Creaky Buzzbear | humanoid, stocky | medium: the tiny hat between round ears; the top-hat girl and the ape to watch |
 
