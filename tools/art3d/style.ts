@@ -692,28 +692,24 @@ export const BRIEFS: Record<string, Brief> = {
     worn: "one broken spoke pokes out sideways from the umbrella's furled cloth by his shoulder, its crook still a clean J; the hem of the coat is torn into a big ragged notch on one side; there is a big notch chipped out of the edge of the sword in his hand; one boot's sole is flapping loose at the toe. The face, the hair and the bottle cap stay as they are.",
   },
   fighter: {
-    // The nod, each part of the read at race size and each a shape in outline: the two round hair buns standing out
-    // either side of the head like ox horns (the read: nobody else in the cast has them, so the head is turned
-    // toward us, or side on would hide the far one); the puffed shoulders and the spiked bracelets (the fighter's
-    // costume, the spikes standing proud of the wrists); thick strong legs under a short dress, always in a
-    // fighting stance or a kick (the slayer's slim figure in a long garment read as a princess's gown).
+    // The nod, each part of the read at race size and each a shape in outline, her pose and outfit before her hair:
+    // a deep, wide fighting stance, knees bent far apart over thick strong thighs (the read's first half: a fighting
+    // game's fighter), huge round puffed shoulders wider than her small head, a short skirt flaring out over the
+    // thighs (her outfit, never a gi), one fist forward in guard, a high kick for a cheer; then the two round hair
+    // buns, clean balls up and out on the top corners of a small head with background between each and the crown
+    // (the read's second half: her, not the headbanded fighter; round buns on a big round head are a bear's ears).
     // Ours, and the joke: the bun covers are two rolled-up socks, the spiked bracelets are dog collars, and the
     // sash is a fluffy dressing-gown cord.
     // The palette is neutral (Decisions 4): the dress in the player's colour, its trim a light of it; the skin,
     // hair, socks, boots, collars and cord neutrals.
-    // What ships came from two more edits of the worn design (art/sprites/fighter/design.prompt.txt): big buns on top
-    // of the big head read as a bear's ears and at the temples they sank into the head, so they are smaller, at the
-    // head's top corners, the socks' toes flopping under them. Not yet read blind as her (a nameless fighter, or, with
-    // the buns clear of the head, a bear): the next design wants a smaller head and the buns straight out sideways.
+    // The image model keeps the buns snug on the head and hangs ribbons under them; what ships is an edit of the
+    // design, and the drawings' buns pushed further out (art/sprites/fighter/design.prompt.txt, buns.py).
     design:
-      'The character: a strong, stocky cartoon martial-artist woman in a wide fighting stance, body facing right, her head turned toward us so both hair buns show. ' +
-      'Colours: a blue dress (#3f6fb5) with pale blue trim (#a8c4e8), peach skin (#efc9a4), dark brown hair (#3a2a20), white socks and boots (#f2f0ea), black collars (#2e2a2a) with steel spikes (#b8bcc4). ' +
-      'Her signature: two big round hair buns, one on each side of the top of her head like ox horns, each half the size of her head and sticking out clear of it, each covered by a rolled-up white sock. ' +
-      'A short high-collared dress with big round puffed shoulders, ending above the knee, tied at the waist with a fluffy dressing-gown cord. ' +
-      'Thick muscular legs, knees bent wide apart, white boots. Fists up in guard, a black dog collar with big steel spikes round each wrist.',
-    // The design drew the spiked collar round her neck, a dark band under the face (it reads as a mouth at play
-    // size), and none on the wrists, so the edit moves it there with the wear.
-    worn: "the spiked collar is gone from her neck, the dress's high collar shows there; instead a thick black dog collar (#2e2a2a) with big steel spikes sticking out all round goes round each wrist; the toe end of each rolled-up sock has come loose and flops down from under its bun like a short ribbon; the dress's hem is torn into a big ragged notch at the side; the front boot's sole is flapping loose at the toe. Both buns stay big and round, one each side of her head.",
+      'A strong martial-artist woman in a very deep, wide fighting stance: knees bent and far apart, thick muscular thighs, white boots. ' +
+      'A blue high-collared dress (#3f6fb5, pale blue trim #a8c4e8) with huge round puffed shoulders much wider than her head, its short skirt flaring out wide over her thighs, tied with a fluffy white dressing-gown cord. ' +
+      'Front arm held forward in guard, back fist at her hip, a black spiked dog collar on each wrist. ' +
+      'A small head, dark brown hair (#3a2a20), dot eyes; two small round hair buns on the top corners of her head, each in a white rolled-up sock.',
+    worn: "the skirt's hem is torn into a big ragged notch at one side; the front boot's sole is flapping loose at the toe. Both buns stay round, one on each top corner of her head.",
   },
   stinger: {
     // The nod, each part of the read at race size and each a shape in outline: the white mask with two long horns
