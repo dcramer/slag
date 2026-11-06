@@ -889,7 +889,7 @@ export const BRIEFS: Record<string, Brief> = {
       'Shorts, grey-and-white striped socks, little dark boots. Her front hand leans on a closed, furled cream paper cocktail umbrella with a curved hook handle, its point on the floor, like a cane.',
     // The drawn design is the 2026-11-05 one edited twice (art/sprites/tophat/design.prompt.txt): the wear is the tin
     // can's dent, the cape's torn hem and the slipped sock.
-    worn: "the top hat is now clearly an old tin can: two raised ridged rings run round it near its top, and a big dent is knocked into its side, its brim still wide and flat and the hat still straight up; its wide band is a fat lilac hair tie (#e0b0dc) knotted at the side in a bow; the hem of the short cape is torn into a big ragged notch; one striped sock has slipped down round her boot. Her face, the long ponytail and the closed umbrella stay as they are.",
+    worn: 'the top hat is now clearly an old tin can: two raised ridged rings run round it near its top, and a big dent is knocked into its side, its brim still wide and flat and the hat still straight up; its wide band is a fat lilac hair tie (#e0b0dc) knotted at the side in a bow; the hem of the short cape is torn into a big ragged notch; one striped sock has slipped down round her boot. Her face, the long ponytail and the closed umbrella stay as they are.',
   },
   vampire: {
     // The nod, each part of the read at race size and each a shape in outline: her height, the tallest and slimmest

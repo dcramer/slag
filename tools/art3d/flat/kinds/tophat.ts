@@ -10,7 +10,7 @@ const KEEP =
   'the tall tin-can top hat always standing straight up off her head with its wide lilac band and its wide flat brim level, white background above and beside it, the short cape flaring off her shoulders, the long ponytail out of the back under the brim, and the closed furled cream umbrella with its hook handle in her front hand';
 // The air poses, drawn on a sheet of their own so the model keeps the umbrella open in every figure.
 const OPEN =
-  "the tall tin-can top hat always standing straight up off her head with its wide lilac band and its wide flat brim level, the short cape flaring off her shoulders, the long ponytail out of the back under the brim; in every figure her umbrella is wide open: a big round cream paper cocktail umbrella with its dome canopy and thin ribs, on a long wooden toothpick stick, held up in her raised front hand so the open dome floats above and in front of the top of her hat, clear of the hat with white background between them";
+  'the tall tin-can top hat always standing straight up off her head with its wide lilac band and its wide flat brim level, the short cape flaring off her shoulders, the long ponytail out of the back under the brim; in every figure her umbrella is wide open: a big round cream paper cocktail umbrella with its dome canopy and thin ribs, on a long wooden toothpick stick, held up in her raised front hand so the open dome floats above and in front of the top of her hat, clear of the hat with white background between them';
 
 export const kind: FlatKind = {
   body: 183,
@@ -131,7 +131,9 @@ export const kind: FlatKind = {
   // Drawn three to a 16:9 image and cut apart (README → 3. Poses), the closed-umbrella poses and the open ones on
   // sheets of their own; the sheets' prompts are in art/sprites/tophat/design.prompt.txt. These are each pose alone.
   poses: {
-    idle2: { pose: `standing with a smug grin, her free fist on her hip, leaning on the closed umbrella like a cane, its point on the floor in front of her, ${KEEP}.` },
+    idle2: {
+      pose: `standing with a smug grin, her free fist on her hip, leaning on the closed umbrella like a cane, its point on the floor in front of her, ${KEEP}.`,
+    },
     'walk-1': {
       pose: `skipping to the right with a bouncy confident step, the near leg forward and the far leg back, swinging the closed umbrella out in front of her like a baseball bat, angled up and forward, clear of her body and below the brim, ${KEEP}.`,
     },
@@ -145,7 +147,9 @@ export const kind: FlatKind = {
       pose: `running to the right, both boots off the ground, the legs split wide apart front and back, the cape and ponytail flying out behind, the closed umbrella held out in front like a baseball bat, angled up and forward, ${KEEP}.`,
     },
     'air-1': { pose: `jumping up, both knees tucked under her, eyes open, holding the open umbrella up over her, ${OPEN}.` },
-    'air-2': { pose: `floating down under the open umbrella held up high, both legs dangling straight down and apart, the ponytail and cape blown up, eyes wide, ${OPEN}.` },
+    'air-2': {
+      pose: `floating down under the open umbrella held up high, both legs dangling straight down and apart, the ponytail and cape blown up, eyes wide, ${OPEN}.`,
+    },
     wall: {
       pose: 'seen from her side, facing right, she clings to a tall wall on the right edge of her space (do not draw the wall), both boots and her free hand braced flat against it, knees bent, the tall tin-can top hat with its wide lilac band still standing straight up off her head, the long ponytail and short cape hanging behind her, the closed furled cream umbrella with its hook handle held out low away from the wall to the left, her face turned to look back at us, eyes open.',
       far: true,
