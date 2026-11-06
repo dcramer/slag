@@ -80,7 +80,7 @@ Each kind's entry is its own file in [characters/](characters/): what a stranger
 | [mech](characters/mech.md) | the girl gamer in the pink mech with the bunny on it | a wide flat mech much wider than tall on thick mech legs, two long duct cannons forward with a gap between them, a bunny decal, the pilot's head in headphones over the top | costume: the mech shell; its front and strips lights of it |
 | [genie](characters/genie.md) | the half-genie who whips her long ponytail | a slim dancer, a ponytail as long as she is whipped out level from her crown, a tiara, harem trousers, hoop earrings | costume: the top and trousers; the sash a dark of it |
 | [mushroom](characters/mushroom.md) | the little mushroom retainer in the spotted cap | small and stubby under a huge round spotted lampshade cap wider than him, a dome with a rolled lip, a vest with a crooked race plate, puffy trousers, a chequered flag on a taped broom handle held out ahead | costume: the spots and the vest; the vest's trim a dark of it |
-| [boxer](characters/boxer.md) | the tiny boxer with the huge green gloves | small and wiry in a high guard, two huge round gloves up, a tank top, baggy shorts, a towel round his neck | costume: the gloves; their cuffs a dark of it |
+| [boxer](characters/boxer.md) | the tiny boxer with the huge green gloves | small and wiry, two huge round gloves each bigger than his head held far apart ahead of him, one at his face and one at his belly, with background round each, a tank top, baggy shorts, a tea towel round his neck; jumps in a rising uppercut | costume: the gloves; the scorch a dark of it |
 
 **Reserves**, if a kind won't read: the spinning bandicoot (its tuft and grin rhyme with the speedster), the shovel-wielding knight, the red-haired mountain climber, the falling-block party bean (rhymes with the crewmate). The space marine in green armour reads as a generic soldier at 20 px; the plumber's tall brother, the ape's red-capped nephew and the king's turtle foot soldiers rhyme with kinds already in.
 
@@ -161,7 +161,7 @@ The strongest reads first. **Keyed** marks the non-humanoids, the riskiest to dr
 | 43 | mech | D.Wash | **keyed**, mech on legs | drawn flat; the blind read fails, owner to decide (two rounds: a hunched stocky figure, then the ape, paired with it; never with the robot boy or the hunter): black at 22 px a rider or a walker is the best read, and the pink shell, bunny and headphones carry her in colour |
 | 44 | genie | Shampootae | humanoid, side on | medium: the ponytail out level; the raider and the archer to watch |
 | 45 | mushroom | Toadmund | humanoid, small, capped | drawn flat; the blind read passes (named by both readers, at medium and medium-high, unpaired: the huge dome cap over a small body) |
-| 46 | boxer | Little Smack | humanoid, small | medium: the gloves held up; the fighter and the ape to watch |
+| 46 | boxer | Little Smack | humanoid, small | drawn flat, side on, redrawn with bigger gloves held far apart; the blind read not passed (fresh readers outside the repository: "unsure – round head with a big puffy hand or arm", "unsure; figure with something big and round on its back or arm"; the first design, "a small figure with a big hairdo"); round gloves on thin arms read as balloons; the design read alone named him at medium and medium-high |
 
 **What to check.** No two kinds may rhyme. Watch these pairs:
 
