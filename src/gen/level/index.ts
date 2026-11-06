@@ -8,6 +8,7 @@ import { type Concept, conceptName, fits, type Landmark, landmarkFaults, rollCon
 import { generateTheme, type Theme } from '../theme';
 import { ReachCache } from '../../sim/reach';
 import { loopBoxes } from './loop-boxes';
+import { GATE_HOLD, loopGates } from './loop-gates';
 import { slagTide } from './tide';
 import { footing } from '../../sim/weather';
 import { openUp } from './lanes';
@@ -285,8 +286,12 @@ export function generateLevel(seed: number, themeOverride?: ThemeId, profileOver
       // (The placer already avoids these cells; this is a safety net. Keep uids contiguous, the landmark's first.)
       // A level that asks for boxes gets mystery boxes of its own, after the builder and its set pieces (./loop-boxes.ts).
       const kept = [...fixed, ...pieces.filter(clearOfBridges)];
-      const boxes = profile.boxes ? loopBoxes(level, kept, keep, new Rng(deriveSeed(seed, lab(`loop-boxes:${attempt}`))), profile.boxes) : [];
-      level.setPieces = [...kept, ...boxes].map((p, i) => ({ ...p, uid: SET_PIECE_UID + i }));
+      // A loop that asks for gates gets them across its shaft before the boxes, which keep off their rows (./loop-gates.ts).
+      const gated = profile.gates ? loopGates(level, kept, keep) : null;
+      if (gated?.gates.length && level.tide) level.tide = { ...level.tide, gates: gated.gates, hold: GATE_HOLD };
+      const fitted = [...kept, ...(gated?.pieces ?? [])];
+      const boxes = profile.boxes ? loopBoxes(level, fitted, keep, new Rng(deriveSeed(seed, lab(`loop-boxes:${attempt}`))), profile.boxes) : [];
+      level.setPieces = [...fitted, ...boxes].map((p, i) => ({ ...p, uid: SET_PIECE_UID + i }));
       while (level.setPieces.length && !planHolds(level, [], bridges, cache)) level.setPieces.pop();
       if (level.rides) {
         // A ride is only as good as its carrier.

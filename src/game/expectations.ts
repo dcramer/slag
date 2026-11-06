@@ -31,15 +31,17 @@ export const PASS_BANDS: Partial<Record<ModeId, Record<BotLevel, Record<Difficul
     normal: { gentle: [0.8, 1], medium: [0.55, 0.82], hard: [0.5, 0.8] },
     hard: { gentle: [0.88, 1], medium: [0.68, 0.92], hard: [0.7, 0.95] },
   },
-  // Measured lap by lap round the open shaft (seeds 1–32; gen/level/builders/shaft.ts): Easy 91 86 80, Normal 94 83 100,
-  // Hard 100 84 96, the slag 4.5, 3.5 and 2.5 s of climb behind the leader (gen/level/tide.ts). Every tier passes above
-  // its target: a Normal bot falls a rise or more about once in four laps on bricks (a medium shaft) and twice in three
-  // (a hard one), seldom further than the hard lap's 14 rows, so it's the squeeze that ends a lone climb. A few seeds
-  // swing a lap 20 points. Laps that cost a slip as the targets ask are open (docs/TODO.md → 31).
+  // Measured lap by lap round the open shaft with its regroup gates (seeds 1–32; gen/level/builders/shaft.ts,
+  // gen/level/loop-gates.ts): Easy 91 83 58, Normal 97 87 81, Hard 97 71 77, the slag 4.5, 3.5 and 2.5 s of climb behind
+  // the leader (gen/level/tide.ts). Before the gates, Easy 91 86 80, Normal 94 83 100, Hard 100 84 96: a lone bot waits
+  // at a shut gate with the slag, but the squeeze runs on the clock, so the third lap comes later and tighter. A Normal
+  // bot falls a rise or more about once in four laps on bricks (a medium shaft) and twice in three (a hard one), seldom
+  // further than the hard lap's 14 rows. Hard's medium lap sits under its target; every other tier passes above it. A
+  // few seeds swing a lap 20 points. Laps that cost a slip as the targets ask are open (docs/TODO.md → 31).
   slag: {
-    easy: { gentle: [0.76, 1], medium: [0.7, 1], hard: [0.62, 0.98] },
-    normal: { gentle: [0.8, 1], medium: [0.68, 0.98], hard: [0.78, 1] },
-    hard: { gentle: [0.86, 1], medium: [0.7, 0.98], hard: [0.8, 1] },
+    easy: { gentle: [0.76, 1], medium: [0.68, 0.98], hard: [0.42, 0.76] },
+    normal: { gentle: [0.84, 1], medium: [0.72, 1], hard: [0.64, 0.98] },
+    hard: { gentle: [0.84, 1], medium: [0.56, 0.88], hard: [0.6, 0.94] },
   },
 };
 
@@ -47,17 +49,18 @@ export const PASS_BANDS: Partial<Record<ModeId, Record<BotLevel, Record<Difficul
  * Catch-up in Rising Slag: the share of rounds the runner highest 15 s after GO (`at`, frames) goes on to win, four
  * Normal bots on a bare loop (seeds 1–128, the rounds where both are known; tests/stats/slag-catch-up.test.ts).
  * `boxes`: the loop's own boxes as built. `items` and `bare`: what those boxes deal by rank put in every empty hand
- * every 5 s, then used by the bots' item tactics, or never used. Measured 56, 57 and 64 (512 seeds: 64, 59, 66), from
- * 66, 50 and 69 when a third of rounds were over by 15 s (512 seeds: 69, 58, 66). About 115 rounds are judged in each,
- * so ±5. The lead changes hands about 1.5 times a round (2 with items in every hand). The target, from the lead-camera
- * racer, is the early leader winning about half the time (docs/MODES.md); these bands only catch a regression.
+ * every 5 s, then used by the bots' item tactics, or never used. Measured 43, 50 and 49 with two regroup gates a lap
+ * (gen/level/loop-gates.ts; 512 seeds: 50, 47, 54), from 56, 57 and 64 before them (512: 64, 59, 66). About 120 rounds
+ * are judged in each, so ±5. The lead changes hands about 3 times a round, from 1.5 (2 with items in every hand) before
+ * the gates. The target, from the lead-camera racer, is the early leader winning about half the time (docs/MODES.md);
+ * these bands only catch a regression.
  */
 export const LEAD_HOLDS = {
   at: 15 * 60,
   bands: {
-    boxes: [0.44, 0.68],
-    items: [0.45, 0.69],
-    bare: [0.52, 0.76],
+    boxes: [0.31, 0.55],
+    items: [0.38, 0.62],
+    bare: [0.37, 0.61],
   },
 } as const satisfies { at: number; bands: Record<string, readonly [number, number]> };
 
@@ -86,6 +89,7 @@ export const BRAWL_ROUNDS = {
 /**
  * How long a Rising Slag round lasts, the same four bots and loop's boxes (tests/stats/slag-catch-up.test.ts): at most
  * `early` of rounds over by 15 s after GO, and the median round inside `median` seconds, the lead-camera racer's short
- * round. Measured 8% and 25.5 s (from 41% and 16 s, before the leash opened long and the field started spread out).
+ * round. Measured 4% and 30.8 s with the regroup gates (512 seeds: 4% and 28.8 s), from 8% and 25.5 s before them, and
+ * 41% and 16 s before the leash opened long and the field started spread out.
  */
 export const SLAG_ROUNDS = { early: 0.15, median: [20, 40] } as const;

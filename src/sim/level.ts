@@ -62,6 +62,8 @@ export interface LevelProfile {
   bare?: boolean;
   /** Mystery boxes of its own up every lap, dealing by rank from this table (gen/level/loop-boxes.ts). */
   boxes?: ItemDeal;
+  /** Gates across a loop's shaft that shut on a cycle, so a leader waits and the pack closes in (gen/level/loop-gates.ts). */
+  gates?: boolean;
   /**
    * Slag rising under it (Level.tide, sim/tide.ts): `true` for a climb's, on a leash to the leader and squeezing late;
    * or a pour of the mode's own pace with no leash (a brawl's arena closing in from below).

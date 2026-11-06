@@ -121,7 +121,7 @@ Every game design decision, preference and direction the owner has given, groupe
 - **Rising Slag stays vertical; its level design is most of what keeps it from being fun.** The shaft is floors with two holes each, so the climb runs single file. "so maybe we keep vertical and try to figure out how to make it a more fun game?" / "yeah i think level design is a huge part of the problem, agreed"
   2026-11-05 · `done` for the open shaft and a wall-jump chimney (`src/gen/level/builders/shaft.ts`) and bumping the runner above from below (`BUMP`, src/sim/collide.ts: "Build the bump next"); catch-up again `planned` · DESIGN.md → Modes, TODO.md → 31 · Replaced: storeys with two ways up each, and perch flights on harder shafts. Considered: a horizontal looping track like the lead-camera racer's.
 - **Rising Slag catches the pack up with a regroup gate: a hatch across the shaft on a cycle that the leader has to wait at, so the ones behind close in.** Picked over items that cost the leader seconds, after bots of equal skill with no items kept the 15 s leader on top 64% of the time. "Pack-regroup gate"
-  2026-11-06 · `planned` · MODES.md → Rising Slag, TODO.md → 31
+  2026-11-06 · `done` (two gates a lap, shut 4 s and open 2 s on one clock, the slag's floor pace waiting while the leader is under a shut one: `src/gen/level/loop-gates.ts`, the `phase` module's `clock` and `look: 'gate'`; the early leader wins 50 / 47 / 54% with boxes / items / bare, from 64 / 59 / 66%) · MODES.md → Rising Slag, DESIGN.md → Modes
 - **A rule the level is built from (gravity, weather) rebuilds the lobby's level for everyone at once.**
   2026-11-02 · git `e64c3e5` · `done` · DESIGN.md → Rules
 
