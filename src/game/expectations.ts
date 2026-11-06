@@ -61,3 +61,25 @@ export const LEAD_HOLDS = {
     bare: [0.56, 0.82],
   },
 } as const satisfies { at: number; bands: Record<string, readonly [number, number]> };
+
+/**
+ * Brawl with bots (tests/stats/brawl.test.ts, docs/MODES.md → Brawl): four Normal bots on the bare arena (round 1
+ * before any part, seeds 1–48) and through the first four rounds of a match as the parts pile up (seeds 1–16).
+ * `draws`: the share of rounds nobody wins (the last ones out on one frame, or the time out). `seconds`: a round's
+ * mean length from GO. `knocked`: the share of deaths with a rival's knock still credited (sim/items/common.ts
+ * `BONK_CREDIT`), thrown or bumped into the level. Measured bare 6%, 27.5 s and 35%; placed 6%, 28.5 s and 22%
+ * (from 63%, 39.6 s, 11% and 59%, 38.1 s, 9% before bots lined rivals up and fetched boxes from anywhere). Placed parts
+ * take more of the deaths on their own: a bot walking into one isn't knocked. Earlier or faster pours shortened rounds
+ * and added draws. The targets are the owner's, from the party brawler: draws rare, rounds of 20–40 s. The bands
+ * only catch a regression.
+ */
+export const BRAWL_ROUNDS = {
+  targets: { draws: 0.2, seconds: [20, 40] },
+  bands: {
+    bare: { draws: [0, 0.15], seconds: [24, 31], knocked: [0.26, 0.45] },
+    placed: { draws: [0, 0.18], seconds: [24, 33], knocked: [0.14, 0.32] },
+  },
+} as const satisfies {
+  targets: { draws: number; seconds: readonly [number, number] };
+  bands: Record<string, Record<'draws' | 'seconds' | 'knocked', readonly [number, number]>>;
+};

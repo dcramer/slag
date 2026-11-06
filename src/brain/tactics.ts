@@ -206,11 +206,20 @@ function noGoMask(v: BrainView): Uint8Array {
   if (!m) {
     m = new Uint8Array(v.level.w * v.level.h);
     for (const p of v.props) for (const c of p.noGo) m[c] = 1;
-    // A mystery box is a set piece too, and only pops an item when it's hit.
-    for (const b of v.boxes) m[b.ty * v.level.w + b.tx] = 0;
     noGoMasks.set(v.props, m);
   }
   return m;
+}
+
+/** Whether a part or a set piece hurts at cell (x, y) of `mask`; a mystery box is one too, and only pops an item when it's hit. */
+const harms = (v: BrainView, mask: Uint8Array, x: number, y: number) => mask[y * v.level.w + x] === 1 && !v.boxes.some((b) => b.tx === x && b.ty === y);
+
+/** Whether stand cell (tx, ty) is in a part's or a set piece's way: what hurts, pushes or moves there. */
+export function hurtsAt(v: BrainView, tx: number, ty: number): boolean {
+  const { w, h } = v.level;
+  if (tx < 0 || tx >= w) return false;
+  const mask = noGoMask(v);
+  return (ty >= 0 && ty < h && harms(v, mask, tx, ty)) || (ty >= 1 && ty <= h && harms(v, mask, tx, ty - 1));
 }
 
 /** The slag's row as `me` sees it (rows down from its feet), or Infinity with none. */
@@ -249,7 +258,7 @@ export function knockKills(v: BrainView, x: number, y: number, vx: number, vy: n
       ny = py;
     }
     if (ny >= h * TILE || ny / TILE > slag) return true;
-    for (let ty = Math.max(0, top); ty <= Math.min(h - 1, bottom); ty++) if (mask[ty * w + cx]) return true;
+    for (let ty = Math.max(0, top); ty <= Math.min(h - 1, bottom); ty++) if (harms(v, mask, cx, ty)) return true;
     // Coming down onto a floor: it's down, and safe.
     const row = Math.floor(ny / TILE);
     if (sy > 0 && py <= row * TILE && floorAt(v, cx, row)) return false;
@@ -270,7 +279,7 @@ export function knockedInto(v: BrainView, me: SelfSense, r: RunnerSense, dir: -1
     const x = Math.floor(r.x) + dir * i;
     if (x < 0 || x >= v.level.w) return true;
     if (tile(v, x, ty) === T_SOLID) return false;
-    if (ty >= 0 && mask[ty * v.level.w + x]) return true;
+    if (ty >= 0 && harms(v, mask, x, ty)) return true;
     if (!floorAt(v, x, ty + 1)) return knockKills(v, x + 0.5, r.y, dir * SHOVE.vx, 0, slagRow(me));
   }
   return false;

@@ -1,4 +1,4 @@
-import { floorAt, ITEM_TACTICS, KNOCKS, knockedInto, slagRow, tile } from '../tactics';
+import { floorAt, hurtsAt, ITEM_TACTICS, KNOCKS, knockedInto, slagRow, tile } from '../tactics';
 import type { ItemKind } from '../../sim/items/types';
 import type { BrainView, Cell, Intent, RunnerSense, SelfSense } from '../types';
 import { aimOf } from './headway';
@@ -13,6 +13,8 @@ const LOOK_ACROSS = 16;
 const LOOK_UP = 12;
 /** Frames between looks for higher ground. */
 const REFUGE_EVERY = 15;
+/** Frames it gives a spot of high ground before it gives up on getting there. */
+const REFUGE_FRAMES = 4 * 60;
 /** The arena is one screen and its boxes are what it fights with: it goes anywhere it can get to for one (a detour, to a race, is there and back to the far end). */
 const BRAWL_ERRANDS: Errands = { across: Infinity, rows: Infinity, detour: Infinity, slag: false, shun: true };
 /** Frames between looks for a hit, staggered by seat. */
@@ -31,16 +33,17 @@ const STALEMATE = 3 * 60;
 const SHUN_FRAMES = 3 * 60;
 
 /**
- * The highest stand cell near it, a few rows over its own, that it can get to (`detour` finite), or null. The first
+ * The highest stand cell near it, a few rows over its own, out of the parts' way, that it can get to (`detour`
+ * finite) and hasn't given up on (`banned`), or null. The first
  * ask about a cell costs the route a field (tens of ms) and later ones are free, so it asks about one new cell a look
  * (`priced` holds the ones it has asked about), highest first.
  */
-function highGround(v: BrainView, me: SelfSense, priced: Set<number>): Cell | null {
+function highGround(v: BrainView, me: SelfSense, priced: Set<number>, banned: ReadonlySet<number>): Cell | null {
   for (let ty = Math.max(1, me.ty - LOOK_UP); ty < me.ty - 1; ty++)
     for (let dx = 0; dx <= LOOK_ACROSS; dx++)
       for (const tx of dx ? [me.tx - dx, me.tx + dx] : [me.tx]) {
-        if (tile(v, tx, ty) !== 0 || !floorAt(v, tx, ty + 1)) continue;
         const k = ty * v.level.w + tx;
+        if (tile(v, tx, ty) !== 0 || !floorAt(v, tx, ty + 1) || banned.has(k) || hurtsAt(v, tx, ty)) continue;
         const fresh = !priced.has(k);
         priced.add(k);
         if (Number.isFinite(v.detour(tx, ty))) return { tx, ty };
@@ -110,11 +113,11 @@ function threat(v: BrainView, me: SelfSense): Threat | null {
   return null;
 }
 
-/** Away from a rival lined up to throw it into something: round them, over them if they're in the way. */
-function dodge(v: BrainView, me: SelfSense, t: Threat): Intent | null {
+/** Away from a rival lined up to throw it into something: round to their other side, by the motor's own safe moves. */
+function dodge(v: BrainView, t: Threat): Intent | null {
   const c = standNear(v, t.r.x - t.d * 1.5, standOf(t.r).ty);
   if (!c) return null;
-  return Math.abs(t.r.x - me.x) < 1.5 && me.grounded ? { do: 'leap', ...c } : { do: 'goTo', ...c };
+  return { do: 'goTo', ...c };
 }
 
 /**
@@ -137,6 +140,8 @@ export const brawlStrategy: StrategyDef = {
     let heldSince = -1;
     let refuge: Cell | null = null;
     const priced = new Set<number>();
+    const banned = new Set<number>();
+    let since = 0;
     let looked = -Infinity;
     let close = 0;
     let shun = -1;
@@ -156,15 +161,29 @@ export const brawlStrategy: StrategyDef = {
       return frame - heldSince > PATIENCE && rng.chance(traits.knack * LOOSE_KNACK) ? use : null;
     }
 
-    /** Up out of the slag's way once it pours: the highest ground in reach, looked for again now and then. */
+    /**
+     * Up out of the slag's way once it pours: the highest ground in reach, looked for again now and then, and given up
+     * on if it isn't there in a few seconds (the way can be blocked, or crowded).
+     */
     function climb(v: BrainView, me: SelfSense): Cell | null {
       if (!pouring || me.slag === null || me.slag >= SLAG_CLOSE) return (refuge = null);
+      if (refuge && frame - since > REFUGE_FRAMES && (refuge.tx !== me.tx || refuge.ty !== me.ty)) {
+        banned.add(refuge.ty * v.level.w + refuge.tx);
+        refuge = null;
+      }
       if (frame - looked >= REFUGE_EVERY && me.grounded) {
         looked = frame;
-        const higher = highGround(v, me, priced);
-        if (higher && (!refuge || higher.ty < refuge.ty)) refuge = higher;
+        const higher = highGround(v, me, priced, banned);
+        if (higher && (!refuge || higher.ty < refuge.ty)) {
+          refuge = higher;
+          since = frame;
+        }
       }
-      return refuge && (refuge.tx !== me.tx || refuge.ty !== me.ty) ? refuge : null;
+      if (!refuge || (refuge.tx === me.tx && refuge.ty === me.ty)) {
+        since = frame;
+        return null;
+      }
+      return refuge;
     }
 
     return {
@@ -178,10 +197,11 @@ export const brawlStrategy: StrategyDef = {
         if (up) return { do: 'goTo', ...up };
         // Lined up itself: hit them first, or get round them, so a hit throws it clear.
         const t = threat(v, me);
-        const hit = strike(v, me, t !== null);
+        // With the slag closing in, any hit throws someone toward it: no waiting for a better one.
+        const hit = strike(v, me, t !== null || (pouring && me.slag !== null && me.slag < SLAG_CLOSE));
         if (hit) return hit;
         if (t && t.r.held) {
-          const away = dodge(v, me, t);
+          const away = dodge(v, t);
           if (away) return away;
         }
         if (!me.held) {
@@ -189,7 +209,7 @@ export const brawlStrategy: StrategyDef = {
           if (side) return side;
         }
         if (t && Math.abs(t.r.x - me.x) < 1.5) {
-          const away = dodge(v, me, t);
+          const away = dodge(v, t);
           if (away) return away;
         }
         let r = v.runners.find((q) => q.slot === mark && q.alive && !q.finished) ?? null;
@@ -217,7 +237,6 @@ export const brawlStrategy: StrategyDef = {
         const wrong = sideOf(me.x, r.x) !== d;
         if (!kind && !wrong && Math.abs(r.x - me.x) >= 0.75) return { do: 'goTo', ...at };
         const c = standNear(v, r.x - d * Math.max(gap, 1.5), at.ty) ?? at;
-        if (wrong && Math.abs(r.x - me.x) < 1.5 && me.grounded) return { do: 'leap', ...c };
         return { do: 'goTo', ...c };
       },
     };

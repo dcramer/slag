@@ -191,13 +191,13 @@ export function botRound(seed: number, opts: BotRoundOptions = {}): BotRound {
 
 /**
  * `players` bots of `level` playing the first `rounds` rounds of a `mode` match (Brawl by default) on `seed`'s level,
- * picking and placing their parts as a match does (no timers: bots take a few seconds), each round measured as
+ * picking and placing their parts as a match does (bots take a few seconds; the timers catch one that finds no spot), each round measured as
  * `botRound` measures one: how a level gets nastier as its parts pile up.
  */
 export function botRounds(seed: number, rounds: number, opts: BotRoundOptions = {}): BotRound[] {
   const { players = 4, level = 'normal', hands = (p) => p, mode = 'brawl' } = opts;
   const { m, bots } = botMatch(seed, undefined, undefined, players, level, undefined, hands, mode);
-  m.rules = { ...m.rules, pickSeconds: 0, placeSeconds: 0, targetScore: 1e6, maxRounds: rounds };
+  m.rules = { ...m.rules, targetScore: 1e6, maxRounds: rounds };
   m.startMatch();
   const out: BotRound[] = [];
   while (out.length < rounds) {
