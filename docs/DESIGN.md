@@ -34,7 +34,7 @@ What it explains: themes are melted-down levels (game-like places, slightly off)
 ## Scoring
 - Finishing earns +10 points. The first player to finish gets an extra +4.
 - If you finish, each rival killed by your prop, or by the level right after your bonk, earns you +2. Traps alone don't pay: you have to reach the flag too.
-- If you finish while trailing the leader, after 2 or more rounds in a row without a point, you earn an underdog bonus of +3.
+- If you finish while trailing the leader, after 2 or more rounds in a row without a point, you earn an underdog bonus of +8, most of a finish again, as the reference game pays its comeback (docs/MODES.md → Race). In Rising Slag and Brawl a trailing scorer's bonus stays +3.
 - If everyone finishes, nobody scores ("too easy"). If nobody finishes, nobody scores either.
 - Solo play just rewards finishing.
 - A match always ends: scoreless rounds can run forever, so the round limit has no "off" setting.

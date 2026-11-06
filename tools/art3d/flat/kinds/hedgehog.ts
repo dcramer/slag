@@ -1,96 +1,89 @@
 import type { FlatKind } from '../kinds';
 
+// The tin wind-up toy speedster (2026-11-06): the big key out of his hip is the twist and the joke; his head is a
+// pressed-tin box with a grey flange round its seam and a square snout block, the quills three fat tin strips with a
+// pale folded edge, the shoes boxy tin blocks on grey soles.
 export const kind: FlatKind = {
-  body: 229,
+  body: 273,
   map: {
-    roles: ['blue', 'peach', 'shoe', 'scarf', 'grey', 'brown', 'white', 'dark', 'iris', 'sole', 'tape'],
+    roles: ['blue', 'edge', 'peach', 'shoe', 'steel', 'white', 'dark', 'iris'],
     families: [
-      ['blue', [60, 98, 181]],
-      ['blue', [45, 72, 134]],
-      ['blue', [47, 63, 107]],
-      ['blue', [82, 102, 156]],
-      ['blue', [62, 92, 167]],
-      ['peach', [247, 188, 131]],
-      ['peach', [223, 188, 148]],
-      ['peach', [194, 159, 125]],
-      ['peach', [239, 191, 125]],
-      ['shoe', [192, 54, 39]],
-      ['shoe', [101, 39, 29]],
-      ['scarf', [237, 201, 97]],
-      ['grey', [141, 142, 134]],
-      // The tape round the back quill: a role of its own, drawn in the quills' colour (grey, it was a lump behind
-      // the head at play size).
-      ['tape', [172, 166, 158]],
-      ['tape', [130, 126, 116]],
-      ['brown', [137, 86, 59]],
-      ['brown', [105, 74, 53]],
-      // The scarf's dark stripes fold into its cloth: at play size a hazard stripe is a dark mottle on the chest.
-      ['scarf', [76, 66, 54]],
-      // The flapping sole's dark underside: a role of its own, or (as the stripes' cloth) the shoe opens in the scarf's colour.
-      ['sole', [64, 64, 64]],
+      ['blue', [74, 98, 153]],
+      ['blue', [60, 81, 130]],
+      ['blue', [64, 81, 132]],
+      ['blue', [71, 86, 134]],
+      ['blue', [57, 68, 100]],
+      ['blue', [75, 101, 151]],
+      ['blue', [86, 85, 110]],
+      // The quills' folded tin edge: a light of the quills, or the strips trace as one blue mass. Drawn in the eye
+      // whites' off-white, it is painted light blue in every drawing first (art/sprites/hedgehog/edges.py).
+      ['edge', [176, 198, 232]],
+      ['edge', [128, 144, 163]],
+      ['peach', [246, 161, 105]],
+      ['peach', [248, 167, 113]],
+      ['peach', [235, 159, 109]],
+      ['peach', [226, 181, 151]],
+      ['peach', [203, 168, 146]],
+      // A rivet on the peach plates folds into them.
+      ['peach', [147, 132, 126]],
+      ['shoe', [165, 30, 24]],
+      ['shoe', [158, 39, 31]],
+      ['shoe', [78, 22, 15]],
+      // The key, the head's flange, the soles and the shoes' straps.
+      ['steel', [132, 132, 133]],
+      ['steel', [152, 150, 151]],
+      ['steel', [109, 107, 110]],
+      ['steel', [120, 125, 129]],
       ['white', [255, 255, 252]],
-      // The eye white's shade under the brow: white, or a grey scrap over the eye.
-      ['white', [180, 188, 196]],
-      ['dark', [42, 16, 10]],
-      ['dark', [59, 31, 23]],
-      // The soot on the quill tips: dark, or it's grey chips on them.
-      ['dark', [48, 48, 48]],
-      // The green irises: a role of their own, so the face kit finds the eye and nothing else (as brown or
-      // dark, a scarf stripe or a quill's soot won, and the kit's eyes rode the chest or the back of the head).
+      // The eye whites and the grin's teeth, drawn a step off white (and tinted so in every drawing,
+      // art/sprites/hedgehog/whites.py) so `holes` cuts the key's two holes and never the face.
+      ['white', [218, 210, 198]],
+      ['white', [238, 234, 224]],
+      ['dark', [50, 30, 27]],
+      ['dark', [34, 11, 10]],
+      ['dark', [51, 42, 47]],
+      ['dark', [37, 28, 31]],
+      ['dark', [75, 51, 48]],
       ['iris', [88, 140, 68]],
     ],
     line: 'dark',
-    thin: ['blue', 'peach', 'shoe', 'scarf', 'grey', 'brown', 'white', 'sole', 'tape'],
+    thin: ['blue', 'edge', 'peach', 'shoe', 'steel', 'white'],
     fringe: 5,
     stroke: 2.4,
-    // The neckerchief's and gloves' outlines stay line, not scraps of ink on them. Over 13: the knot behind the neck,
-    // its stripes' shade wrapped in thick ink, stayed a solid black blob there in every pose.
-    ink: 19,
-    feet: ['shoe', 'grey'],
-    // The face's stray specks fold away: a white gap by the glove, scraps of the grin and of the scarf's dark
-    // (painted over, a speck leaves a rim). The tape's light grey on the soles folds into the shoe.
-    min: { dark: 0.85, white: 0.8, iris: 0.1, tape: 3.5 },
+    feet: ['shoe', 'steel'],
+    // The key's two holes, and the gaps between the legs: traced white, they were white dots on the bow.
+    holes: 0.4,
+    // The rivets on the blue tin are specks at play size: they fold away (the steel's smallest real part is a
+    // shoe strap).
+    min: { dark: 0.85, white: 0.8, iris: 0.1, steel: 0.6, edge: 0.4 },
   },
   roles: [
     { name: 'blue', color: '#2f5bd0', slot: 'player' },
+    // The quills' folded edge, a light of them: the tin strips stay strips at play size.
+    { name: 'edge', color: '#808080', on: 0, tone: 30 },
     { name: 'peach', color: '#f0c99c' },
-    // The sneakers, a dark of the quills: far enough off them that the legs end in shoes.
+    // The tin shoes, a dark of the quills: far enough off them that the legs end in shoes.
     { name: 'shoe', color: '#808080', on: 0, tone: -22 },
-    // The neckerchief, a dark of the quills: its tails cross them behind the neck. A light of them was the
-    // muzzle's peach on an orange hedgehog, and the neckerchief and the chin drew as one shape.
-    { name: 'scarf', color: '#808080', on: 0, tone: -15 },
-    // The strap, told from the neckerchief (one yellow in the drawing) by where it is (`recolour`).
-    { name: 'strap', color: '#ebe5d6' },
-    // The toecaps.
-    { name: 'grey', color: '#9a9894' },
-    // A colourway is the gloves (VARIETY.palette): brown, black or tan leather.
-    { name: 'brown', color: '#7a5236', alts: ['#45403c', '#a8794a'], vary: 6 },
+    // A colourway is the key (VARIETY.palette): steel, bright tin or dark iron, the soles and straps with it.
+    // Greys only: brass and copper keys sank into an orange or tan player's tin and the twist went.
+    { name: 'steel', color: '#9a9d9f', alts: ['#bcbfc0', '#76797c'], vary: 6 },
     { name: 'white', color: '#fbf8f2' },
     { name: 'dark', color: '#2a1f1a' },
     { name: 'iris', color: '#3a9a46' },
-    { name: 'sole', color: '#4c4236' },
-    // The taped quill is the quills' colour, its wrap lines left to say tape.
-    { name: 'tape', color: '#2f5bd0', on: 0, tone: 0 },
-    { name: 'scuff', color: '#808080', on: 1, tone: 10 },
-    { name: 'scorch', color: '#808080', on: 1, tone: -16 },
+    { name: 'scuff', color: '#808080', on: 2, tone: 10 },
+    { name: 'scorch', color: '#808080', on: 2, tone: -16 },
     { name: 'plaster', color: '#e9d3b0' },
   ],
   slots: [
     { name: 'plaster', vary: 0, options: 2 },
     { name: 'wear', vary: 11, options: 3 },
   ],
-  // The strap: the drawing's yellow under the face; lying or spun, the yellow right of the neckerchief, less
-  // the spin's streak of neckerchief on the right (2.7 world px², a strap at most 1.9, by the lying shoe's 3.9).
-  recolour: [
-    { from: 'scarf', to: 'strap', below: 7, lying: [0.5, -2] },
-    { from: 'strap', to: 'scarf', below: 99, lying: [2.2, 1] },
-  ],
   eyes: { role: 'iris', area: [0.05, 1.5], gap: [1, 4.5], specks: { dark: 1.6, white: 4, iris: 2 }, band: [0.1, 0.45] },
   wear: {
     on: ['peach'],
     chin: 3,
-    // One quiet streak each on the belly: two, or a strong tone, read as a rash on the tan.
-    marks: [[['scuff', 0.5, 0.62, 0.6]], [['scorch', 0.5, 0.62, 0.6]]],
+    // One quiet streak each on the belly: two, or a strong tone, read as a rash on the peach.
+    marks: [[['scuff', 0.5, 0.6, 0.45]], [['scorch', 0.5, 0.6, 0.45]]],
   },
   accessories: [{ slot: 'plaster', role: 'plaster', at: 'cheek', size: [2.2, 0.9] }],
   face: { r: 0.9, iris: '#3a9a46', mouth: [1.4, 2.7] },
@@ -100,35 +93,36 @@ export const kind: FlatKind = {
     idle2: { frames: ['idle2', 'idle'], loop: true, holds: [1.8, 2.4] },
     walk: { frames: ['walk-1', 'walk-2'], loop: true, stride: 30 },
     run: { frames: ['run-1', 'run-2'], loop: true, stride: 48 },
-    // The jump is the spin ball, all the way up and down, with no face; centred on itself, since its feet are
-    // wherever the spin left them.
+    // The jump is the spin ball, all the way up and down, with no face, the key turning round it; centred on
+    // itself, since its feet are wherever the spin left them.
     air: { frames: ['air-1', 'air-1b'], loop: true, fps: 12, eyes: false, centre: 'box' },
     wall: { frames: ['wall'], loop: true, fps: 1, centre: 'box' },
-    cheer: { frames: ['cheer', 'idle'], loop: true, holds: [0.5, 0.25] },
+    // The punch's eyes are drawn squeezed shut: the drawing's own, not the kit's.
+    cheer: { frames: ['cheer', 'idle'], loop: true, holds: [0.5, 0.25], eyes: false },
     cheer2: { frames: ['cheer2', 'idle'], loop: true, holds: [0.7, 0.3] },
-    death: { frames: ['death'], loop: false, fps: 1, eyes: false, centre: 'box' },
+    // Run down: flat on his back, the key standing up out of him.
+    death: { frames: ['death'], loop: false, fps: 1, eyes: false, centre: 'box', scale: 0.92 },
   },
   poses: {
     idle2: { pose: 'standing with his arms folded across his chest, tapping one toe, smirking.' },
-    'walk-1': { pose: 'walking to the right, mid-step: the near sneaker forward, the far one back, the arms swinging the other way.' },
-    'walk-2': { pose: 'walking to the right, the legs passing under the body: one sneaker planted, the other lifted a little.' },
-    'run-1': {
-      pose: 'running flat out to the right, leaning hard forward, the legs a long blur of a stride, the arms swept back, the quills streaming behind.',
+    'walk-1': { pose: 'walking to the right, mid-step: the near shoe forward, the far one back, the arms swinging the other way.' },
+    'walk-2': { pose: 'walking to the right, the legs passing under the body: one shoe planted, the other lifted a little.' },
+    'run-1': { pose: 'running flat out to the right, leaning hard forward, the legs in a long stride, the arms swept back, the quills streaming behind.' },
+    'run-2': { pose: 'running flat out to the right, leaning hard forward, both shoes off the ground with the legs gathered under him, the arms swept back.' },
+    'air-1': {
+      pose: 'curled up tight into a round spinning ball in mid-air, the tin quills all round the outside, no face showing, the grey wind-up key sticking straight out of the ball.',
+      far: true,
     },
-    'run-2': {
-      pose: 'running flat out to the right, leaning hard forward, both sneakers off the ground with the legs gathered under him, the arms swept back.',
-    },
-    'air-1': { pose: 'curled up tight into a spinning ball in mid-air, the quills all round the outside, no face showing.', far: true },
+    'air-1b': { pose: 'the same spinning ball turned a little further round, the key sticking out at another angle.', far: true },
     wall: {
-      pose: 'seen from his side, he is sliding down a tall wall on the right edge of the picture (do not draw the wall), one glove flat against it and both sneakers braced on it, his head turned to look back at us.',
+      pose: 'seen from his side, he is sliding down a tall wall that is just to his right (do not draw the wall), one hand flat against it and both shoes braced on it, his head turned to look back at us, the key sticking out behind him.',
       far: true,
     },
     cheer: { pose: 'cheering, one fist punched high over his head, a big grin.' },
     cheer2: { pose: 'stretching with both fists high over his head, up on his toes, his eyes wide open and looking ahead, grinning.' },
     death: {
-      pose: 'he has been knocked out and lies flat on his back on the floor, the whole body horizontal across the picture, head on the left and sneakers on the right, arms and legs splayed limp, eyes shut. Seen from the side.',
+      pose: 'he has run down and lies flat on his back on the floor, the whole body horizontal, head on the left and shoes on the right, arms and legs splayed limp, eyes shut, the key sticking up out of his hip.',
       far: true,
     },
-    'air-1b': { pose: 'curled up tight into a spinning ball in mid-air, the quills all round the outside, no face showing.', far: true },
   },
 };
