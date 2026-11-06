@@ -28,7 +28,7 @@ Online play is on `main`, verified by real-browser checks in `pnpm online-test` 
 - Two guests that lose a live host at the same moment still move the room to the next peer, as if the host had died. The brief second host steps down within about 3 s.
 
 ## 3. Level follow-ups
-- Race scoring against its reference (docs/MODES.md → Race): we have no Solo bonus (the reference pays a lone finisher among three or four three fifths of a finish), and our underdog bonus (+3) is under half the reference's comeback (+8 at our scale). Both are owner calls.
+- Race scoring against its reference (docs/MODES.md → Race): we have no Solo bonus (the reference pays a lone finisher among three or four three fifths of a finish). Owner call.
 - The winnability proof assumes timed hazards can be passed in their 30-frame openings, and only uses 2-bridge plans.
 - Hard levels land in their band (two or more tight jumps on the more forgiving route) only about half the time, so bots finish them about as often as medium ones and miss their hard-level targets (DESIGN.md → AI players): a level has little room for tight jumps besides its part's crossing, and its second route walks round them. A layout family built for hard levels (islands and perches over the void) is the real fix. Static hazards hugging landings and jump arcs with proven clearance, and a wall-jump shaft the route needs now and then, would add to it.
 - The castle chandelier and the volcano lava tube's drips are the same hazard (a dropper from the ceiling), so the chandelier's `unique` check is waived. Decide which keeps it.
