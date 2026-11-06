@@ -4,8 +4,8 @@ import { type D, type KindArt, mark, oval, poly, toned, tonedOval, Y } from '../
 
 /**
  * The half-genie who whips her ponytail (docs/characters/genie.md), a bathroom genie: side on, a chunky little
- * dancer, her purple ponytail as long as she is springing up from her crown and streaming out level behind her with
- * background under it (the read: the raider's braid hangs from the nape, the archer's braids bush out of a mane), a
+ * dancer, her purple ponytail springing up from her crown in a fountain and falling back behind her with background
+ * between it and her (the read: the raider's braid hangs from the nape, the archer's braids bush out of a mane), a
  * white shower-curtain ring at its root and a tin-foil tiara on her brow, a cropped top, a bare midriff over a dark
  * sash, two big balloon harem trousers gathered at the ankles, arms out. The top and trousers are the player's
  * colour, the sash a dark of it; the hair, skin, ring and foil are neutrals. A rendered kind draws from its frames
@@ -19,20 +19,42 @@ const RING = '#eceff6';
 const FOIL = '#c4c8cc';
 
 /**
- * The ponytail: a straight tight rope from the ring on her crown, out level behind her to a split tip, with
- * background above and below it all along (a plume swept down to the back of her head read as a squirrel's tail).
+ * The ponytail: a fountain from the ring on her crown, up high over her head, arching back and falling behind her to
+ * a split tip, with background between it and her head and back. Swept straight back to the back of her head it read
+ * as a squirrel's tail, and as a level rope as a bazooka: the box has height to spare, not width.
  */
 function ponytail(d: D) {
   const b = -d.f;
-  // A jump flicks it up behind her, a fall throws it higher; on the run it streams flat.
-  const lift = d.m === 'up' ? -2.6 : d.m === 'fall' ? -4 : 0;
+  // A jump flicks the fall of it up behind her, a fall throws it higher; on the run it streams further back.
+  const lift = d.m === 'up' ? -2.2 : d.m === 'fall' ? -3.4 : d.m === 'run' ? -1 : 0;
   const sw = d.wob * 0.4;
   const root: P = { x: d.bx(1) - d.f * d.W * 0.06, y: Y(d, 0.98) };
-  const at = (u: number, v: number): P => ({ x: root.x + b * u, y: root.y + v + (lift + sw) * (u / 10) });
-  const pts = [at(-0.4, -0.75), at(8.4, -0.75), at(10.4, -1.9), at(9.4, 0), at(10.4, 1.9), at(8.4, 0.75), at(-0.4, 0.75)];
-  toned(d.s, pts, HAIR, HAIR_SH, d.lk.ink, 0.3, 0.7 * d.k, 0.3);
+  // The far end follows `lift` and the sway; the root stays on the ring.
+  const at = (u: number, v: number): P => ({ x: root.x + b * u, y: root.y + v + (lift + sw) * Math.max(0, u - 4) * 0.18 });
+  const pts = [
+    at(-0.5, 0.3),
+    at(0, -3.5),
+    at(1.5, -6),
+    at(4, -6.8),
+    at(6.5, -5.8),
+    at(8.2, -3.5),
+    at(9, -0.5),
+    at(9.4, 2.5),
+    at(10.2, 4.6),
+    at(9, 3.9),
+    at(8.6, 5.2),
+    at(7.8, 3.6),
+    at(7.4, 1.5),
+    at(7, -1.5),
+    at(5.8, -3.8),
+    at(4, -4.6),
+    at(2.3, -4),
+    at(1.3, -2.4),
+    at(1.1, 0.4),
+  ];
+  toned(d.s, pts, HAIR, HAIR_SH, d.lk.ink, 0.3, 0.7 * d.k, 0.35);
   // The tape where it was mended.
-  if (d.detail) mark(d.s, FOIL, [at(4.4, -0.8), at(4.4, 0.8)], 0.7, 3, [0.1, 0.1]);
+  if (d.detail) mark(d.s, FOIL, [at(5.6, -6.4), at(5.2, -4.3)], 0.7, 3, [0.1, 0.1]);
 }
 
 /** An arm held out to the side, bare, from the shoulder: `side` 1 ahead of her, -1 behind. */

@@ -1,17 +1,16 @@
 import type { FlatKind } from '../kinds';
 
-// Side on, a chunky little dancer with the purple ponytail as long as she is, a straight tight rope from the ring on
-// her crown out level behind her with background above and below it all the way; the huge round harem trousers, the
-// cropped top, the tin-foil tiara. The ponytail is the read: nobody else's hair leaves the crown and flies level (the
-// raider's braid hangs from the nape in a curve, the archer's braids bush out of a mane). Drawn first as a big plume
-// swept back from the crown, it read at play size as a squirrel's tail on a small body (art/sprites/genie/r1/); a
-// rope reads as hair. Drawn three to a 16:9 image with the design as the reference and cut apart
-// (art/sprites/genie/design.prompt.txt).
+// Side on, a chunky little dancer at the cast's size, her thick purple ponytail springing up high from the ring on her
+// crown and falling back behind her like a fountain, background between it and her head and back; two balloon harem
+// trousers with background between the legs, the cropped top, the tin-foil tiara. The cast's box has height to spare,
+// not width: a plume swept straight back read at play size as a squirrel's tail and a level rope as a bazooka, both on
+// a body half the cast's (art/sprites/genie/r1/, r2/). Drawn three to a 16:9 image with the design as the reference
+// and cut apart (art/sprites/genie/design.prompt.txt).
 const KEEP =
-  'her ponytail a long straight tight rope of purple hair of even thickness with a split tip, springing from the white ring on top of her head, white background all round it, never against her back; the foil tiara, the huge round pink harem trousers, her eyes open';
+  'her thick purple ponytail springing up high from the white ring on top of her head, arching back over and falling behind her like a fountain, with white background between it and her head and back; the foil tiara, the huge round pink harem trousers with a white gap between the two legs, her eyes open';
 
 export const kind: FlatKind = {
-  body: 88,
+  body: 112,
   map: {
     roles: ['hair', 'cloth', 'sash', 'skin', 'foil', 'white', 'eye', 'dark'],
     // Sampled from the design (art/sprites/genie/design.png, `swatch.py`).
@@ -104,7 +103,6 @@ export const kind: FlatKind = {
     specks: { eye: 2, dark: 1.5, white: 1 },
     band: [0.15, 0.6],
     edge: 0.2,
-    at: { 'air-2': [0.475, 0.553] },
   },
   wear: {
     on: ['cloth'],
@@ -120,16 +118,16 @@ export const kind: FlatKind = {
     idle: { frames: ['idle'], loop: true, fps: 1 },
     idle2: { frames: ['idle2', 'idle'], loop: true, holds: [1.8, 2.4] },
     // A bouncy dancer's skip.
-    walk: { frames: ['walk-1', 'walk-2'], loop: true, stride: 28 },
-    run: { frames: ['run-1', 'run-2'], loop: true, stride: 40 },
+    walk: { frames: ['walk-1', 'walk-2'], loop: true, stride: 28, scale: 0.93 },
+    run: { frames: ['run-1', 'run-2'], loop: true, stride: 40, scale: 0.92 },
     // Her jump flicks the ponytail up behind; the fall throws it straight up over her.
     // Smaller in the air: the fall's ponytail flies straight up over the box's top.
-    air: { frames: ['air-1', 'air-2'], loop: false, vy: [-200, 200], scale: 0.92 },
-    wall: { frames: ['wall'], loop: true, fps: 1, centre: 'box' },
+    air: { frames: ['air-1', 'air-2'], loop: false, vy: [-200, 200], scale: 0.8 },
+    wall: { frames: ['wall'], loop: true, fps: 1, centre: 'box', scale: 0.86 },
     // The hair whip: the ponytail cracked out straight and level, her eyes squeezed shut.
     // A little smaller: the cracked ponytail reaches past the box's side.
-    cheer: { frames: ['cheer', 'idle'], loop: true, holds: [0.6, 0.3], eyes: false, scale: 0.94 },
-    cheer2: { frames: ['cheer2', 'idle'], loop: true, holds: [0.8, 0.4], scale: 0.96 },
+    cheer: { frames: ['cheer', 'idle'], loop: true, holds: [0.6, 0.3], eyes: false },
+    cheer2: { frames: ['cheer2', 'idle'], loop: true, holds: [0.8, 0.4] },
     death: { frames: ['death'], loop: false, fps: 1, eyes: false, centre: 'box', scale: 0.8 },
   },
   // Drawn three to a 16:9 image and cut apart (README → 3. Poses); the sheets' prompts are in

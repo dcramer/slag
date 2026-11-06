@@ -973,13 +973,14 @@ export const BRIEFS: Record<string, Brief> = {
     // crumpled tin-foil crown, the hoops are curtain rings, and the trousers are net curtains, one hem snagged.
     // The palette is neutral (Decisions 4): the top and the trousers in the player's colour, the sash a dark of it; the
     // purple hair a fixed tone the read needs, the skin, the foil and the rings neutrals. Side on: her read is a profile.
-    // A slim figure under the ponytail read as a candle or a wisp, so she is chunky, arms out; the ponytail drawn as a
-    // big plume swept back from the crown read at play size as a squirrel's tail (art/sprites/genie/design.prompt.txt),
-    // so it is a straight rope of even thickness, background above and below it.
+    // A slim figure under the ponytail read as a candle or a wisp, so she is chunky, arms out. At play size a plume swept
+    // straight back read as a squirrel's tail and a level rope as a bazooka (art/sprites/genie/design.prompt.txt); the
+    // box has height to spare, not width, so the ponytail rises from the crown in a fountain and falls back, and the
+    // trousers stand apart with background between the legs (the mock read as harem pants only with that gap).
     design:
-      'The character: a chunky little cartoon dancer girl with a big head seen side on in profile facing right, in a playful dance pose, both arms held out to the sides. ' +
-      'Her signature, big and bold: a long straight tight rope of purple hair (#7a4ab8) of even thickness, as long as she is tall, springing from a big white plastic shower-curtain ring on the very top of her head and running straight out level behind her, ending in a small split tip, with white background above and below it all the way. ' +
-      'A small crumpled tin-foil tiara (#c4c8cc) on her brow, big white curtain-ring hoop earrings. A short cropped top (#d4466c), a bare midriff, a dark sash, huge round puffy harem trousers of pink net curtain (#d4466c) much wider than her shoulders, gathered tight at the ankles, tan skin, a grin, dot eyes.',
+      'The character: a chunky little cartoon dancer girl with a big head seen side on in profile facing right, in a playful dance pose, both arms held out to the sides, her legs a little apart. ' +
+      'Her signature, big and bold: a thick purple ponytail (#7a4ab8), as long as she is tall, springing up high from a big white plastic shower-curtain ring on the very top of her head, arching back over and falling down behind her like a fountain to a ragged split tip, with white background between it and her head and back. ' +
+      'A small crumpled tin-foil tiara (#c4c8cc) on her brow, big white curtain-ring hoop earrings. A short cropped top (#d4466c), a bare midriff, a dark sash, huge round puffy harem trousers of pink net curtain (#d4466c) much wider than her shoulders with white background between the two legs, gathered tight at the ankles, tan skin, a grin, dot eyes.',
     worn: "the hem of the near leg of her puffy trousers is snagged and torn into a big ragged hanging strip; the tin-foil tiara has its front point bent over; a strip of grey tape (#9a9c98) is wrapped round the middle of the ponytail where it was mended; the trailing end of the dark sash hangs frayed into ragged tatters. Her face, the ponytail's length and shape straight out behind her head, the white ring at her crown and the hoop earrings stay exactly as they are.",
   },
   bear: {

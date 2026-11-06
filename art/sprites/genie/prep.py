@@ -10,9 +10,9 @@ from pathlib import Path
 ART = Path('art/sprites/genie')
 EYES = 'art/sprites/genie/eyes.py'
 # Poses whose eye the blob test misses get the eye's place by hand (`--at`, image px of the drawn/ file).
-AT = {'walk-2': '741,302', 'air-2': '552,665,595,662'}
+AT = {'wall': '725,493', 'air-2': '600,662'}
 # The fall's wide eyes are small pupils in whites, too small for the usual opening.
-R = {'air-2': '1'}
+R = {}
 # Poses with shut eyes: nothing to repaint.
 SHUT = {'cheer', 'death'}
 
