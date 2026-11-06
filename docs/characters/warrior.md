@@ -2,7 +2,7 @@
 
 A kind of the cast: [CHARACTERS.md](../CHARACTERS.md) has the rules every kind follows.
 
-- **Kind:** `warrior` · **Name:** Kakosh
+- **Kind:** `warrior` · **Name:** Potkosz
 - **A stranger should say:** "the fat warrior from the Polish comic." The nod is the comic's big, round, boastful half of the pair, never his slim partner.
 - **Silhouette:** side on: a huge round belly, a ball out in front on short legs apart; a round bald head on top, the big nose and the bushy moustache sticking out past the face; a small helmet on its crown, a low dome narrower than the head with a tall spike on top, never a cone or a brim; thick bare arms; a broad straight sword held out level in front at belly height, background all round the blade, never raised.
 - **Traits:** checked against the comic (2026-11-04): he's bald, with a big round nose and a short, bushy dark moustache (the big drooping red one belongs to the castellan, not to him); his helmet is a small round iron dome with a knob or short spike on top, too small for his head; a short red tunic with a belt, dark trousers, boots, thick bare arms, a sword; gluttonous, boastful and a little cowardly. Kept at play size: the belly, the small helmet on the bald head, the moustache.

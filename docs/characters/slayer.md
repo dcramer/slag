@@ -1,6 +1,6 @@
 # The white-haired monster slayer
 
-- **Kind:** `slayer` · **Name:** Gerald
+- **Kind:** `slayer` · **Name:** Gerry Drizzle
 - **A stranger should say:** "the white-haired monster hunter with two swords."
 - **Silhouette:** heavy-set and hunched low in a wide side-on fencing guard, knees bent far apart, his head forward of his shoulders; the long straight sword held level in both hands, its point forward, a straight line out ahead of him as long as he is; two blades crossed in an X on his back, their hilts with cross-guards behind his back shoulder, clear of his head; a short tight jacket to the belt, trousers and tall boots, nothing that flares; the white hair tied back in a tail sticking out behind. Never upright with something over his back (the elf's outline) or in a long coat (a princess's gown).
 - **Traits:** white hair tied back; two blades (one level in his hands, one crossed with the umbrella on his back); a wolf's-head medallion on a chain; cat's eyes, yellow with slit pupils; a scar down over one eye; a leather jacket, gloves and tall boots; a grim mouth.

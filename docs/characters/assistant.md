@@ -2,7 +2,7 @@
 
 A kind of the cast: [CHARACTERS.md](../CHARACTERS.md) has the rules every kind follows.
 
-- **Kind:** `assistant` · **Name:** Izzabelle
+- **Kind:** `assistant` · **Name:** Jinglebelle
 - **A stranger should say:** "the little yellow dog from the village game, the assistant with the bell in her hair."
 - **Silhouette:** small and upright: a round head with two floppy ears hanging down, a tuft of hair tied up on top of her head into a top-knot with a bell on it, a vest over a shirt, a short skirt, a clipboard hugged to her chest.
 - **Traits:** the top-knot with the bell; the floppy ears; the fluffy fur; the vest and skirt; the clipboard; a cheerful, eager face.
