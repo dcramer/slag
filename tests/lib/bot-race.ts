@@ -157,6 +157,8 @@ export interface BotRound {
   bumps: number;
   /** How the runners who went out went out (`DeathCause`), with `+` where a rival got the credit. */
   causes: Record<string, number>;
+  /** Runners out within `at` frames of GO. */
+  early: number;
 }
 
 /**
@@ -245,5 +247,16 @@ export function botRound(
     const at = run.runners.filter((r) => r.deathFrame === last);
     if (at.length === 1) winner = at[0].slot;
   }
-  return { leader, winner, uses, pickups, pops, frames: run.frame - RUN_COUNTDOWN, leads, bumps, causes: causesOf(run) };
+  return {
+    leader,
+    winner,
+    uses,
+    pickups,
+    pops,
+    frames: run.frame - RUN_COUNTDOWN,
+    leads,
+    bumps,
+    causes: causesOf(run),
+    early: run.runners.filter((r) => !r.alive && r.deathFrame < RUN_COUNTDOWN + at).length,
+  };
 }

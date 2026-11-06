@@ -101,7 +101,9 @@ export const MODES: Record<ModeId, ModeDef> = {
       route: 'ltr',
       bare: true,
       ends: true,
-      hazards: 4,
+      // Deadly from round 1: as many set pieces as fit, from the nastiest of the set's mix.
+      hazards: 6,
+      danger: 0.9,
       boxes: { chase: [...BRAWL_ITEMS], lead: [...BRAWL_ITEMS] },
       tide: { wait: 25, speed: 0.4, gain: 0.04 },
     },
