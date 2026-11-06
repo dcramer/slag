@@ -181,18 +181,17 @@ describe('standing on a runner', () => {
     expect(rs.every((r) => r.alive && r.items.daze === 0 && r.status.frozen === 0)).toBe(true);
   });
 
-  it('never tunnels: a fast-fall meeting a jump stops on the head, and is bucked off it', () => {
-    const { run, bs } = lineup(2);
+  it('a jump into a fast-fall bumps the faller: stars, a knock sideways, and no lift', () => {
+    const { run, rs, bs } = lineup(2);
     dropOn(bs[1], bs[0], 30);
     bs[1].vy = PHYS.fastFallMax;
     run.step([JUMP, press({ down: true })]);
-    let bucked = false;
-    for (let f = 0; f < 6; f++) {
-      run.step([HOLD_JUMP, press({ down: true })]);
-      expect(feet(bs[1])).toBeLessThanOrEqual(bs[0].y + 1e-6);
-      bucked ||= bs[1].vy < bs[0].vy - PERCH.pop / 2;
-    }
-    expect(bucked).toBe(true);
+    for (let f = 0; f < 6 && !rs[1].items.daze; f++) run.step([HOLD_JUMP, press({ down: true })]);
+    expect(rs[1].items.daze).toBeGreaterThan(0);
+    expect(rs[1].items.bonkedBy).toBe(0);
+    expect(rs[1].ride).toBe(-1);
+    expect(Math.abs(bs[1].vx)).toBeGreaterThan(BUMP.kick / 2);
+    expect(bs[1].vy).toBeGreaterThanOrEqual(-BUMP.hop);
   });
 
   it('jumping off a head is the same jump as off the floor', () => {
@@ -251,17 +250,18 @@ describe('standing on a runner', () => {
     expect(feet(bs[1])).toBe(FLOOR * TILE);
   });
 
-  it('a rising runner bucks whoever it meets instead of stopping on their feet', () => {
+  it('a rising runner bumps whoever it meets in the air instead of stopping on their feet, and goes on up', () => {
     const { run, rs, bs } = lineup(2);
     airborne(bs[1], bs[0].x, bs[0].y - 30);
     run.step([JUMP, NO_INPUT]);
-    for (let f = 0; f < 5; f++) {
-      run.step([HOLD_JUMP, NO_INPUT]);
-      expect(feet(bs[1])).toBeLessThanOrEqual(bs[0].y + 1e-6);
-    }
+    for (let f = 0; f < 5; f++) run.step([HOLD_JUMP, NO_INPUT]);
     expect(bs[0].vy).toBeLessThan(-200);
+    expect(rs[1].items.daze).toBeGreaterThan(0);
+    expect(rs[1].items.bonkedBy).toBe(0);
     expect(rs[1].ride).toBe(-1);
-    expect(bs[1].vy).toBeLessThan(bs[0].vy);
+    // Knocked aside, never lifted: the jumper is the one going up.
+    expect(bs[1].vy).toBeGreaterThan(bs[0].vy);
+    expect(Math.abs(bs[1].vx)).toBeGreaterThan(BUMP.kick / 2);
   });
 
   it('a ceiling stops the stack: the bucked rider and the jumper bonk, and nobody is squeezed', () => {
@@ -1111,7 +1111,7 @@ describe('fuzz', () => {
             return press({ left: d === 0, right: d >= 2, run: rng.int(0, 2) === 0, jump: rng.int(0, 2) === 0, down: rng.int(0, 5) === 0 });
           });
         }
-        const before = run.runners.map((r) => ({ body: { ...r.body }, press: r.press }));
+        const before = run.runners.map((r) => ({ body: { ...r.body }, press: r.press, bonk: r.items.bonkCredit }));
         run.step(held.map((h) => (h.jump && fresh ? { ...h, jumpPressed: true } : h)));
         run.runners.forEach((r, i) => {
           expect(firstOverlap(r.body, world), `seed ${seed} frame ${f} runner ${i} in terrain`).toBeNull();
@@ -1119,7 +1119,12 @@ describe('fuzz', () => {
             const o = run.runners[j];
             if (r.finished || o.finished || !r.alive || !o.alive) continue;
             if (!overlaps(r.body, o.body) || overlaps(before[i].body, before[j].body)) continue;
-            const why = before[i].press >= SLIP || before[j].press >= SLIP || r.body.dropFrames > 0 || o.body.dropFrames > 0 || run.isSafe(r) || run.isSafe(o);
+            // A bump from below lets the pair pass through each other until they've come apart: it's a fresh bonk, whose
+            // credit went up or (bumped again) didn't tick down.
+            const rebonked = (now: number, was: number) => now > 0 && now >= was;
+            const bumped = rebonked(r.items.bonkCredit, before[i].bonk) || rebonked(o.items.bonkCredit, before[j].bonk);
+            const why =
+              bumped || before[i].press >= SLIP || before[j].press >= SLIP || r.body.dropFrames > 0 || o.body.dropFrames > 0 || run.isSafe(r) || run.isSafe(o);
             expect(why, `seed ${seed} frame ${f}: ${i} and ${j} overlap for no reason`).toBe(true);
           }
         });
@@ -1261,7 +1266,8 @@ describe('online', () => {
         });
         if (drawn.length) runners.forEach((_, i) => (snap = Math.max(snap, Math.abs(now[i].x - drawn[i].x) - Math.abs(v[i].x) * DT)));
         drawn = now;
-        if (confirmed.run!.runners.some((r) => r.ride >= 0 || r.press > 0)) contact++;
+        // A stack, a shove, or a bump from below (the stars it leaves).
+        if (confirmed.run!.runners.some((r) => r.ride >= 0 || r.press > 0 || r.items.daze > 0)) contact++;
       }
       expect(contact).toBeGreaterThan(150);
       return snap;
