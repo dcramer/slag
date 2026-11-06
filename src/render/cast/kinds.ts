@@ -252,6 +252,26 @@ export const KINDS: Record<Kind, KindArt> = {
       spot(d.s, d.f * d.W * 0.06, Y(d, 0.24), d.W * 0.17, d.H * 0.16, d.sd + 1, PEACH, 0.08);
     },
     snout: (d) => poly(d.s, oval(d.f * d.W * 0.42, Y(d, 0.6), 0.75, 0.6, 7), d.lk.eye),
+    back: (d) => {
+      // The tin toy's wind-up key out of his hip: a stem, and a figure-eight bow standing clear behind him.
+      const y = Y(d, 0.26);
+      const x = -d.f * d.W * 0.56;
+      mark(
+        d.s,
+        d.lk.ink,
+        [
+          { x: x + d.f * 1.2, y },
+          { x: -d.f * d.W * 0.1, y },
+        ],
+        1.3,
+        1,
+        [0, 0],
+      );
+      for (const dy of [-1.35, 1.35]) {
+        tonedOval(d.s, x, y + dy, 1.45, 1.35, 10, '#9a9d9f', '#7b7f82', d.lk.ink, 0.35, 0.7 * d.k, 0.5);
+        poly(d.s, oval(x, y + dy, 0.45, 0.45, 6), d.lk.ink);
+      }
+    },
     parts: ['shard', 'shard', 'coin'],
   },
 

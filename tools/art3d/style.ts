@@ -108,28 +108,31 @@ export const BRIEFS: Record<string, Brief> = {
   },
   hedgehog: {
     // The nod, each part of the read at race size: long cobalt quills swept straight back (the whole
-    // silhouette), big red sneakers (the second thing anyone names), a peach muzzle and belly, green eyes
+    // silhouette), big red shoes (the second thing anyone names), a peach muzzle and belly, green eyes
     // and a cocky grin; the run leaning hard forward and the jump curled into a spinning ball.
-    // Ours, and the joke: a stubby scrapyard speedster who runs so fast his quill tips are scorched black;
-    // two separate eyes under heavy brows instead of the joined eye shape, a chipped tooth, a
-    // hazard-striped neckerchief, leather fingerless gloves, and red work high-tops with steel toecaps.
+    // Ours, and the joke: the fastest thing alive is an old pressed-tin wind-up toy, and he has to be wound up.
+    // A big wind-up key sticks out of his hip (the outline and a big grey block, in every pose: it turns round the
+    // spin ball and stands up out of him when he's run down); the quills are bent tin strips with a pale folded
+    // edge; the head and body are tin halves on riveted seams; the shoes are boxy tin blocks on grey soles.
     character:
-      'Character: a small, stubby, round blue hedgehog with a very big round head, a small round body and short stubby legs, like a chunky toy. ' +
-      'Cobalt-blue quills (#2f5bd0) in four thick spikes swept straight back from the head, their tips scorched soot-black, and two short spikes on the back. ' +
-      'A peach muzzle and belly (#f0c99c), two separate big round eyes with green irises and a white glint under heavy dark-blue brows, a small black nose, a cocky one-sided grin with one chipped tooth. ' +
-      'A snug neckerchief of yellow-and-black hazard-striped cloth knotted at his throat. ' +
-      'Big brown fingerless leather gloves. Huge red high-top work sneakers (#d8382f) with grey steel toecaps and a hazard-yellow strap across each. Confident and fast.',
-    // Designed at game size: the quills swept back, the big red shoes, the peach muzzle and belly, the eyes,
-    // and the scrapyard twist as big shapes (soot-black quill tips, the hazard neckerchief, steel toecaps).
+      'Character: a small blue hedgehog built as an old pressed-tin wind-up toy, a big round head on a small round body. ' +
+      'A big grey wind-up key sticks straight out of his hip behind him, its huge flat figure-eight bow standing clear of him. ' +
+      'Long cobalt-blue quills (#2f5bd0), flat bent strips of tin with a pale folded edge, swept straight back from the head. ' +
+      'His head and body are blue tin halves joined on seams with a few big rivets; a peach tin muzzle, belly and mitten hands (#f0c99c); green eyes, a cocky one-sided grin. ' +
+      'Huge boxy red tin shoes (#d8382f) on thick grey soles. Confident and fast.',
+    // Designed as an edit of the scrapyard design (scrapyard/), since without a reference the image model draws the
+    // original: the key, the tin strips and the boxy shoes asked for, then the key drawn bigger and moved down to
+    // the hip by hand (tin/keyed-2.png, tin/low-1.png), then the quills lengthened (art/sprites/hedgehog/design.prompt.txt).
     design:
-      'The character: a small, stubby blue hedgehog (#2f5bd0) built like a chunky wind-up toy: a big round head on a round barrel body as wide as the head, short thick legs. ' +
-      'Four thick quills swept straight back from the head, their tips soot-black. A peach muzzle and belly (#f0c99c). His two eyes are apart, each its own round white with a green iris, with blue fur between them and heavy blue brows over them; a cocky grin. ' +
-      'Huge red high-top sneakers (#d8382f) with grey steel toecaps, a yellow-and-black hazard-striped neckerchief (#e8c24a) knotted at the throat, brown fingerless gloves.',
-    worn: 'one quill is snapped off short and its stump wrapped in grey tape; the sole of the front sneaker is coming loose and flaps open at the toe; the neckerchief is torn ragged at one end; one tooth is chipped.',
-    views: 'a front view, a side profile facing right, a back view showing the swept quills, and a three-quarter view facing right',
-    pose: 'The quills sweep straight back from the head, clear of the shoulders and arms. The neckerchief is snug at the throat, nowhere near the arms.',
+      'The same character as in the reference image: the same big head, face shape, swept-back quills, pose, proportions, three-quarter view facing right, thin dark line and flat white background. ' +
+      'Rebuild him as an old pressed-tin wind-up toy, and make each change big and obvious. A big wind-up key sticks straight out of the small of his back below the quills: a thick grey steel stem and a big flat figure-eight bow with two round holes in it, the bow as tall as his body, standing well clear of him with white background all round it. ' +
+      'His quills are four flat strips of blue-painted tin, each with a folded edge, swept straight back. His head and body are blue-painted tin halves joined by a raised seam that runs round his outline, with a row of big round rivets along it. ' +
+      'His muzzle and belly are flat peach-painted tin plates. Two separate round painted eyes with green irises, and a cocky one-sided painted grin. Huge chunky boxy red tin shoes with a thick riveted grey sole.',
+    worn: "a big dent is pushed into the top of his tin head; the lowest quill strip is bent down at a sharp kink; the front shoe's grey sole has come loose and gapes open at the toe.",
+    views: 'a front view, a side profile facing right, a back view showing the swept quills and the wind-up key, and a three-quarter view facing right',
+    pose: 'The quills sweep straight back from the head, clear of the shoulders and arms. The wind-up key sticks straight out of his hip behind him, its bow clear of his body and quills.',
     poses:
-      'standing idle with one foot tapping; mid-run leaning hard forward with legs a blur; crouched low before a jump; curled into a tight spinning ball in mid-air, quills outward, no limbs showing; falling with arms out and legs reaching down; sliding down a wall on his right with one glove flat against it and both sneakers braced; cheering with one fist up; knocked flat on his back with stars circling',
+      'standing idle with one foot tapping; mid-run leaning hard forward with legs a blur; curled into a tight spinning ball in mid-air, quills outward, the key sticking out of it; sliding down a wall on his right with one hand flat against it and both shoes braced; cheering with one fist up; run down flat on his back with the key standing up out of him',
   },
   elf: {
     // The nod, each part of the read at race size: the long green cap flopping back behind the head like a
