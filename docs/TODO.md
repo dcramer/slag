@@ -45,10 +45,12 @@ Phone support (follow camera, pinch, scaled HUD, settings sheet) is on `main` bu
 
 ## 31. Kinds under the colour bar
 The bar is the clean colour read (owner, 2026-11-06; tools/art3d/CHECKLIST.md). A clean audit that day, three readers outside the repository on `sprites-blind-colour.png`, left these unnamed or named only at low:
-- **Never named:** the engineer (paired with the plumber), the warrior (paired with the slayer, "Shovel Knight, low"), the sneak, the assistant dog ("Amy Rose, low"), the top-hat girl, the dragon, the elf (in blue it read as an Inkling), the rapper, the horse ("Epona, low"), the slayer ("a viking, low") and the creeper.
+- **Never named:** the engineer (paired with the plumber), the warrior (paired with the slayer, "Shovel Knight, low"), the assistant dog ("Amy Rose, low"), the top-hat girl, the dragon, the rapper, the horse ("Epona, low") and the slayer ("a viking, low").
+- **Redrawn to pass:** the sneak (a cardboard box with the "!"), the zapmouse (black ear tips, red cheeks, the bolt tail: "Pikachu, high" in cyan and in purple), the elf (a cap on a band: "Link, high" in blue) and the creeper (a square box with the frowning face).
+- **Pairs readers keep naming in colour:** two Kirby-like blobs (the puffball and whichever round stand-in or kind rolls near it), and the hunter with the robot boy ("both blue armour with an arm cannon").
 - **Only at low:** the bear, the pyramid and the vampire (one reader at medium each), the hedgehog and the worm (likewise), the archer.
 - The warrior, the slayer and the assistant are accepted as colour reads by the owner. That was before the colour read was the bar, and they fail it too.
-- **The player's colour hides the homage:** the zapmouse read as "a purple cat" and the hedgehog as "an orange spiky creature" in the colour each rolled. The owner keeps the rule (2026-11-06: player colour only, no signature colour kept), so these kinds must read by shape in any colour: push the outline (the zapmouse's ears and bolt tail, the hedgehog's quills and shoes) until the colour read passes in a colour that isn't theirs.
+- **The player's colour hides the homage:** the hedgehog read as "an orange spiky creature" in the colour it rolled (the zapmouse's read as "a purple cat" until its redraw). The owner keeps the rule (2026-11-06: player colour only, no signature colour kept), so these kinds must read by shape in any colour: push the outline (the zapmouse's ears and bolt tail, the hedgehog's quills and shoes) until the colour read passes in a colour that isn't theirs.
 
 The black read (`sprites-blind.png`) named about 20 of 46 cleanly. It's the harsher diagnostic now, not the bar.
 
