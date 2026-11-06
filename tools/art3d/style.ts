@@ -575,22 +575,25 @@ export const BRIEFS: Record<string, Brief> = {
   },
   dragon: {
     // The nod, each part of the read at race size: small and low on four short legs, side on (the horse is tall
-    // with a long neck, the dino upright); the horns swept straight back off the head (the head's outline, and
-    // back, never up like the king's); stubby wings standing up off the back (a dragon, not a lizard); the pale
-    // belly and the ridge of small spines (the purple dragon's markings, in neutral bone); the tail's arrowhead
-    // tip (the tip everyone draws him with).
+    // with a long neck, the dino upright); the long horns swept straight back off a big round head (the head's
+    // outline, and back, never up like the king's); a small wing standing straight up off the middle of the back,
+    // with background between it and the horns (a dragon, not a lizard; swept back beside the horns, wing, horns and
+    // spines read as the hedgehog's quills); the pale belly and the ridge of small spines (the purple dragon's
+    // markings, in neutral bone); the tail's arrowhead tip (the tip everyone draws him with).
     // Ours, and the joke: the wings are umbrella cloth on bent spokes, and he carries his own light, a firefly
     // in a jam jar tied to his tail.
     // The palette is neutral (Decisions 4): the scales in the player's colour, the wing cloth a light of it; the
-    // belly, horns, spines and tip bone; the jar glass.
+    // belly, horns, spines and tip bone; the jar glass. The shipped design was drawn from a paste-up of the first
+    // one with the wing stood up (art/sprites/dragon/design.prompt.txt): asked in words, the image model kept the
+    // swept-back bat wing.
     design:
       'The character: a small cute cartoon baby dragon standing low on all four short stubby legs, seen from its side, facing right, its whole outline unmistakably a little dragon, long and low with no neck. ' +
       'Its big round head has a short blunt snout and one big eye, and two long pale bone horns (#ecdcb8) sweep straight back off the top of its head, flat and backward, longer than the head. ' +
-      'Two small stubby wings stand up off its shoulders, each made of umbrella cloth (#c4a2ea) stretched over three bent thin black metal spokes, the cloth scalloped between the spoke tips. ' +
+      'One small stubby wing stands straight up off the middle of its back, pointing at the sky, well behind the horns with white space between them, made of umbrella cloth (#c4a2ea) stretched over three bent thin black metal spokes with round knob tips, the cloth scalloped between them. ' +
       'A row of small pale bone triangle spines runs along the top of its back. A pale bone belly (#ecdcb8). ' +
       'A long thin tail curves out behind and ends in a big flat pale bone arrowhead tip; a small glass jam jar with a firefly glowing pale inside hangs from the tail on a string. ' +
       'The head, body, legs and tail are all one purple (#8a5cc0).',
-    worn: "one wing's cloth is torn, a big flap of it hanging loose, and one of its spokes is bent and poking out past the cloth; a big square patch of grey cloth (#9a9c98) is sewn on the other wing with big stitches; the arrowhead tail tip is bent sideways and wrapped with a strip of grey tape.",
+    worn: 'a big square patch of grey cloth (#9a9c98) is sewn on the wing with big stitches; the arrowhead tail tip is bent sideways and wrapped with a strip of grey tape.',
   },
   horse: {
     // The nod, each part of the read at race size, and each a shape only a horse has in outline: four long legs

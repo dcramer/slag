@@ -3,8 +3,8 @@ import { type D, type KindArt, mark, poly, spot, toned, Y } from '../kit';
 
 /**
  * The little purple dragon (docs/characters/dragon.md): small and low on four stubby legs, side on, a big round
- * head with two long horns swept straight back off it, stubby wings of umbrella cloth on bent spokes standing up
- * off the shoulders, a pale belly, a ridge of small spines, and a tail out behind ending in an arrowhead, a firefly
+ * head with two long horns swept straight back off it, small wings of umbrella cloth on bent spokes standing straight
+ * up off the middle of the back, clear of the horns, a pale belly, a ridge of small spines, and a tail out behind ending in an arrowhead, a firefly
  * in a jam jar tied to it. A rendered kind draws from its frames (src/render/cast/sprites/); this is what shows
  * before they load, and on the hand-drawn sheets.
  */
@@ -102,13 +102,13 @@ function tail(d: D) {
   spot(d.s, jx, jy + 0.2, 0.35, 0.35, d.sd + 4, '#f4f0c8', 0.05);
 }
 
-/** One umbrella wing: three bent spokes fanned up and back from the shoulder, the cloth scalloped between their knobs. */
+/** One umbrella wing: three bent spokes fanned straight up off the back, the cloth scalloped between their knobs. */
 function wing(d: D, rx: number, ry: number, fill: string, shade: string, lift: number) {
   const f = d.f;
   const tips = [
-    { x: rx - f * 1.6, y: ry - 5.2 - lift },
-    { x: rx - f * 4.2, y: ry - 4 - lift },
-    { x: rx - f * 5.4, y: ry - 1.6 - lift * 0.5 },
+    { x: rx + f * 0.5, y: ry - 5.4 - lift },
+    { x: rx - f * 1.5, y: ry - 4.8 - lift },
+    { x: rx - f * 3, y: ry - 3 - lift * 0.5 },
   ];
   const scallop = (a: { x: number; y: number }, b: { x: number; y: number }) => ({
     x: (a.x + b.x) / 2 + f * 0.5,
@@ -130,11 +130,11 @@ function wing(d: D, rx: number, ry: number, fill: string, shade: string, lift: n
   }
 }
 
-/** Both wings standing up off the shoulders, flicking on the trot and flung up in the air. */
+/** Both wings standing up off the middle of the back, behind the horns, flicking on the trot and flung up in the air. */
 function wings(d: D) {
   const lift = d.p.grounded ? Math.abs(Math.sin(d.ph)) * 0.8 : 1.4;
-  wing(d, d.f * d.W * 0.12, Y(d, 0.6), d.lk.playerShade, d.lk.playerDark, lift * 0.8);
-  wing(d, d.f * d.W * 0.02, Y(d, 0.58), d.lk.playerHi, d.lk.player, lift);
+  wing(d, -d.f * d.W * 0.06, Y(d, 0.6), d.lk.playerShade, d.lk.playerDark, lift * 0.8);
+  wing(d, -d.f * d.W * 0.14, Y(d, 0.58), d.lk.playerHi, d.lk.player, lift);
 }
 
 /** The two long horns swept straight back off the top of the head, longer than the head. */
