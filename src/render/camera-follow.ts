@@ -4,6 +4,7 @@ import { overview, viewToWorld, type ViewXform, worldToView } from '../game/view
 import { PHYS, RUN_COUNTDOWN, TILE, VIEW_H, VIEW_W } from '../sim/constants';
 import { MODES } from '../game/modes';
 import { leaderOf } from '../sim/standing';
+import { openingRows } from '../sim/tide';
 import type { Camera } from './camera';
 
 /**
@@ -36,7 +37,11 @@ const FORCED_ZOOM = 2;
 /** The race camera's zoom cap and framing pad off phones. */
 const RACE_MAX_ZOOM = 1.45;
 const RACE_PAD = 120;
-/** A frame that follows the leader: rows shown over it, the most shown below it (about Rising Slag's longest leash), and a tighter pad. */
+/**
+ * A frame that follows the leader: rows shown over it, the most shown below it (about Rising Slag's longest leash), and a
+ * tighter pad. While the slag's opening makes the leash longer (sim/tide.ts `open`), the frame reaches that much further
+ * down, so the slag is in sight from GO.
+ */
 const LEAD_LOOK_UP = 4;
 const LEAD_VIEW_DOWN = 25;
 const LEAD_PAD = 40;
@@ -198,7 +203,7 @@ export class PhoneCam {
     const follow = MODES[m.rules.mode].camera === 'leader' && pts.length > 0 && leader >= 0;
     if (follow) {
       const lead = pts[racing.indexOf(run.runners[leader])];
-      const down = lead.y + LEAD_VIEW_DOWN * TILE;
+      const down = lead.y + (LEAD_VIEW_DOWN + (m.level.tide ? openingRows(m.level.tide, run.frame) : 0)) * TILE;
       pts.push({ x: lead.x, y: lead.y - LEAD_LOOK_UP * TILE }, { x: lead.x, y: run.slag === null ? down : Math.min(run.slag + this.lap * L, down) });
     }
     if (pts.length && !solo) cam.frameAll(pts, this.enabled ? Math.max(RACE_MAX_ZOOM, this.zoom) : RACE_MAX_ZOOM, follow ? LEAD_PAD : RACE_PAD);

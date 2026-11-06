@@ -436,8 +436,12 @@ export type Module =
     }
   /** Sticky web over some cells: heavy drag while inside (it can catch a fall), weak jumps just after. */
   | { type: 'web'; cells: Cell[]; drag: number }
-  /** Blink blocks: solid for `on` frames, gone for `off`, shifted by `offset` (pairs alternate). */
-  | { type: 'phase'; cells: Cell[]; on: number; off: number; offset: number }
+  /**
+   * Blink blocks: solid for `on` frames, gone for `off`, shifted by `offset` (pairs alternate). `clock`: the cycle
+   * runs on the race's frame alone, not shifted by the piece's own phase, so the level can say when it shuts (a Rising
+   * Slag gate, which the slag waits on: sim/tide.ts). `look`: a gate is a shutter across a shaft (art only).
+   */
+  | { type: 'phase'; cells: Cell[]; on: number; off: number; offset: number; clock?: boolean; look?: PhaseLook }
   /**
    * Proximity crusher: a solid head (cells) that watches the lane in
    * direction `angle`; when a runner enters it shakes for `warn` frames,
@@ -748,6 +752,8 @@ export type BlockLook = 'tetra' | 'obsidian' | 'hydrant';
 // --- Stage concepts (docs/SETPIECES.md): looks, art only -----------------------
 /** What a spike strip (or a spike coat) is made of; unset is plain metal spikes. */
 export type SpikeLook = 'glass' | 'thorn' | 'crystal' | 'icicle' | 'pitchfork';
+/** What blink blocks are drawn as; unset is retro blocks. A gate is a shutter across a Rising Slag shaft. */
+export type PhaseLook = 'gate';
 /** What a dropper's head is (art only); unset is the carved crusher stone. A portcullis (castle) is the iron grille of a gate. */
 export type DropperLook = 'icicle' | 'chandelier' | 'portcullis';
 /** The liquid a flood fills with. */

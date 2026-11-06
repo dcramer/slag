@@ -143,26 +143,29 @@ export const BRIEFS: Record<string, Brief> = {
       'standing idle with one foot tapping; mid-run leaning hard forward with legs a blur; curled into a tight spinning ball in mid-air, quills outward, the key sticking out of it; sliding down a wall on his right with one hand flat against it and both shoes braced; cheering with one fist up; run down flat on his back with the key standing up out of him',
   },
   elf: {
-    // The nod, each part of the read at race size: the long green cap flopping back behind the head like a
-    // tail (the silhouette people draw), the long pointed ear sticking out sideways (an elf, not a gnome),
-    // the green tunic flared at the hem with a brown belt (the colour and the hero's cut), a blond fringe,
-    // and something to fight with on his back (a hero, not a shepherd).
-    // Ours, and the joke: a hero kitted out from the bins. The cap is a long green woolly sock with a darned
-    // toe, the round shield a dented dustbin lid with its handle, the sword a sooty fireplace poker.
+    // The nod, each part of the read at race size, in any player's colour: a pointed cap on a band round the
+    // head, running back from the crown and flopping down to a point (a cap, not hair: the old smooth sock
+    // hanging back read as a tentacle ponytail in blue), the long pointed ear standing clear of it (an elf,
+    // not a gnome), the tunic flared at the hem with a belt, a blond fringe, and a round shield and a straight
+    // sword held out clear of the body (the bent poker read as a hook, the lid on his back as nothing).
+    // Ours, and the joke: a hero kitted out from the bins. The cap is a knitted stocking with a sock's ribbed
+    // cuff for its band and a darned tip, the shield a dented dustbin lid with its handle, the sword a sooty
+    // fireplace poker with a crossbar.
     // The twist and the nod lead: the image generator drops what comes late in a long prompt (the lid and
     // the poker vanished when they came last).
     character:
       'Character: a slim young elf hero, never stout. A blond fringe (#e6c25a), long pointed ears, blue eyes. ' +
-      'His cap: a very long floppy green woolly sock (#3f7a34), its long foot flopping straight back behind his head and drooping to his shoulders, a light green darn (#5a9a4a) on its toe. ' +
-      'A green tunic (#3f7a34) flared at the hem, a wide brown belt, cream sleeves and leggings, brown gloves and boots (#6b4a35). ' +
-      'On his back as a shield, a dented round steel dustbin lid (#a8adb4) with its handle; a black iron fireplace poker (#4a4a52) with a hooked tip in place of a sword, its loop handle over his shoulder. No sword, no bow.',
-    // Designed at game size: the long cap flopping back, the pointed ear, the flared tunic, the round shield on
-    // the back, and the twist as big shapes (a woolly sock for the cap, a dustbin lid, a fireplace poker).
+      'His cap: a pointed green knitted stocking cap (#3f7a34) on a wide ribbed lighter cuff band (#8fb86a) round his head, running back from the crown and flopping down to a darned point behind his head. ' +
+      'A green tunic (#3f7a34) flared at the hem, a wide brown belt, brown gloves and boots (#6b4a35). ' +
+      'Held out on his far arm as a shield, a dented round grey dustbin lid (#a8adb4) with its handle; in his near hand, a straight black iron fireplace poker (#4a4a52) with a pointed tip and a crossbar, held like a sword.',
+    // Designed at game size, made as an edit of the first design (2026-11-06, art/sprites/elf/design.prompt.txt):
+    // the pointed cap on its band, the ear clear of it, the lid and the poker held out, as big shapes.
     design:
-      'The character: a slim young elf hero in a green tunic (#3f7a34) flared at the hem over a brown belt, brown boots and gloves (#6b4a35), blond hair (#e6c25a), one long pointed ear sticking out, big eyes. ' +
-      'His cap is a long green woolly sock flopping back from his head like a tail. ' +
-      'On his back, a round dented grey dustbin lid (#a8adb4) as his shield, its handle showing; in one hand, a dark iron fireplace poker (#4a4a52) as his sword.',
-    worn: 'the toe of the sock cap is darned with a big lighter-green patch; the dustbin lid has a deep dent and a rusty hole; the poker is bent near the tip; the tunic hem is torn into two ragged points.',
+      'The character: a slim young elf hero in a green tunic (#3f7a34) flared at the hem over a brown belt, brown boots and gloves (#6b4a35), blond hair (#e6c25a), big eyes. ' +
+      'His cap is a pointed green knitted stocking cap on a wide ribbed lighter cuff band round his head; from the band it runs back from the crown, tapering, and its tip folds over and flops down to a point behind his head, never a rounded hanging tail. ' +
+      'One long pointed ear sticks straight out backwards below the band, clear of the cap. ' +
+      'Held out on his far arm, clear of his body, a round dented grey dustbin lid (#a8adb4) as his shield, its handle showing; in his near hand, held up and forward clear of his body, a straight dark iron fireplace poker (#4a4a52) with a crossbar, as his sword.',
+    worn: 'the pointed tip of the cap is darned with a big lighter-green patch; the dustbin lid has a deep dent and a rusty hole; the tunic hem is torn into two ragged points.',
     views: 'a front view, a side profile facing right, a back view showing the dustbin lid and poker on his back, and a three-quarter view facing right',
     pose: 'The sock cap flops straight back and down behind his head to the nape, clear of the arms. The dustbin lid sits flat on his back and the poker lies behind it, both clear of the arms and head.',
     poses:
@@ -186,13 +189,18 @@ export const BRIEFS: Record<string, Brief> = {
       'The mouse itself is small, chubby and round, soft yellow fur (#f2c62a) all over, an animal and not a costume: a pear-shaped body, a big round head almost as wide as the body, short stubby arms with little round paws, short legs with big oval furry feet. ' +
       'Two very long pointed ears standing straight up from the top of the head, each as tall as the head, their top third black (#2a1f1a); the tip of one ear is kinked a little and wrapped in a strip of grey tape. ' +
       'Big round bright-red cheek circles (#e0473b), small round black eyes with a white glint, a tiny dark nose, a small open smile. Two thick brown stripes (#6b4a35) across the upper back only. Cheeky, quick and crackling with mischief.',
-    // Designed at game size: the nod (ears, bolt tail, cheeks, yellow) and the twist kept as big shapes only.
+    // Designed at game size: the nod and the twist kept as big shapes only. The fur is the player's colour, so the
+    // read is what isn't fur (the clean colour audit, 2026-11-06: in purple, "a cat-like body", "a horned
+    // creature"): two long ears both standing in a V with their black tips big, a huge clean bolt of grey tin, big
+    // red cheeks, and a squat round body. A bent ear left one ear standing (a horn), and a crumpled tail was a
+    // grey blob.
     design:
-      'The character: a chubby yellow electric mouse (#f2c62a), a cheap bootleg toy: one big round head fused into a pear-shaped body, round red cheeks (#e0473b), two small black dot eyes and a tiny mouth, stubby arms, short legs with big round feet. ' +
-      'Its two long pointed ears are black-tipped (#2a1f1a) and sewn on unevenly, one higher and longer than the other. ' +
-      'Behind it, a big zigzag lightning-bolt tail cut from a sheet of dull grey tin (#c4c8ce), held on at the root by one big hex bolt. ' +
-      'A black power cord (#2a2a30) is knotted round its middle as a belt, a big cream plug (#d9d4c8) dangling from the knot.',
-    worn: 'the shorter ear is bent over halfway along and wrapped in a wide band of grey tape; the top of the head has a clear dent on one side; the tin tail is bent and dented.',
+      'Behind it, a huge flat zigzag lightning-bolt tail as tall as its body, three sharp zigzags with straight edges and sharp corners, cut from one flat sheet of plain grey tin (#a9afb7) and held to its rump by two big rivets: plainly a lightning bolt. ' +
+      'The character: a chubby round electric mouse, a cheap bootleg toy, its fur one flat bright colour (#f2c62a): a big round head fused into a squat round body nearly as wide as it is tall, stubby little arms, short legs with big round feet. ' +
+      'Two very long pointed ears, each taller than the head, standing straight and splayed apart in a wide V with background between them, their top third solid black (#2a1f1a). ' +
+      'Two huge round red cheeks (#e0473b), small black dot eyes, a tiny mouth. ' +
+      'A brown power cord (#7a5236) knotted round its middle as a belt, a grey plug (#7c848d) dangling from the knot.',
+    worn: 'one ear has a wide band of pale grey tape wrapped round its middle, the ear still straight and as long as the other; the top of the head has a small dent on one side; one corner of the tin tail is bent over.',
     views: 'a front view, a side profile facing right, a back view showing the brown stripes and the riveted tin tail, and a three-quarter view facing right',
     pose: 'The ears stand straight up, clear of the arms. Leave the tin tail and the plug off this figure: no tail at all, a smooth round rump. The cord belt sits snug round the waist, nowhere near the hands.',
     poses:
@@ -401,6 +409,9 @@ export const BRIEFS: Record<string, Brief> = {
     // in three-quarter view with its top corner crushed and its flaps flared, failed the blind read as "a
     // shaggy, hunched" ape (2026-11-04), its slanted top and torn corner rounding the box into a blob and its
     // flaps a skirt over the legs. So the wear keeps the box's outline square.
+    // In the game the box stays cardboard (a neutral) and the suit and bandana take the player's colour: a box in
+    // the player's colour read as a creature with a face (2026-11-06). The dark eye slot and the "!" over the box
+    // are painted onto the drawings after.
     design:
       'The character, seen from the side in profile facing right: a soldier hiding inside a big plain brown cardboard box (#c49a62) worn upside down over his whole head and body, down to his knees. The box is the whole figure: a crisp upright rectangle with straight edges and sharp square corners, a little taller than it is wide, its bottom edge straight and level, no flaps showing. ' +
       'Below it only his two short legs show, in a grey-blue sneaking suit (#4d5a66), apart in a low crouching step with a clear gap of white background between them, in big dark boots (#2a2a30). No arms and no head show outside the box. ' +
@@ -563,22 +574,25 @@ export const BRIEFS: Record<string, Brief> = {
   },
   dragon: {
     // The nod, each part of the read at race size: small and low on four short legs, side on (the horse is tall
-    // with a long neck, the dino upright); the horns swept straight back off the head (the head's outline, and
-    // back, never up like the king's); stubby wings standing up off the back (a dragon, not a lizard); the pale
-    // belly and the ridge of small spines (the purple dragon's markings, in neutral bone); the tail's arrowhead
-    // tip (the tip everyone draws him with).
+    // with a long neck, the dino upright); the long horns swept straight back off a big round head (the head's
+    // outline, and back, never up like the king's); a small wing standing straight up off the middle of the back,
+    // with background between it and the horns (a dragon, not a lizard; swept back beside the horns, wing, horns and
+    // spines read as the hedgehog's quills); the pale belly and the ridge of small spines (the purple dragon's
+    // markings, in neutral bone); the tail's arrowhead tip (the tip everyone draws him with).
     // Ours, and the joke: the wings are umbrella cloth on bent spokes, and he carries his own light, a firefly
     // in a jam jar tied to his tail.
     // The palette is neutral (Decisions 4): the scales in the player's colour, the wing cloth a light of it; the
-    // belly, horns, spines and tip bone; the jar glass.
+    // belly, horns, spines and tip bone; the jar glass. The shipped design was drawn from a paste-up of the first
+    // one with the wing stood up (art/sprites/dragon/design.prompt.txt): asked in words, the image model kept the
+    // swept-back bat wing.
     design:
       'The character: a small cute cartoon baby dragon standing low on all four short stubby legs, seen from its side, facing right, its whole outline unmistakably a little dragon, long and low with no neck. ' +
       'Its big round head has a short blunt snout and one big eye, and two long pale bone horns (#ecdcb8) sweep straight back off the top of its head, flat and backward, longer than the head. ' +
-      'Two small stubby wings stand up off its shoulders, each made of umbrella cloth (#c4a2ea) stretched over three bent thin black metal spokes, the cloth scalloped between the spoke tips. ' +
+      'One small stubby wing stands straight up off the middle of its back, pointing at the sky, well behind the horns with white space between them, made of umbrella cloth (#c4a2ea) stretched over three bent thin black metal spokes with round knob tips, the cloth scalloped between them. ' +
       'A row of small pale bone triangle spines runs along the top of its back. A pale bone belly (#ecdcb8). ' +
       'A long thin tail curves out behind and ends in a big flat pale bone arrowhead tip; a small glass jam jar with a firefly glowing pale inside hangs from the tail on a string. ' +
       'The head, body, legs and tail are all one purple (#8a5cc0).',
-    worn: "one wing's cloth is torn, a big flap of it hanging loose, and one of its spokes is bent and poking out past the cloth; a big square patch of grey cloth (#9a9c98) is sewn on the other wing with big stitches; the arrowhead tail tip is bent sideways and wrapped with a strip of grey tape.",
+    worn: 'a big square patch of grey cloth (#9a9c98) is sewn on the wing with big stitches; the arrowhead tail tip is bent sideways and wrapped with a strip of grey tape.',
   },
   horse: {
     // The nod, each part of the read at race size, and each a shape only a horse has in outline: four long legs
@@ -809,33 +823,33 @@ export const BRIEFS: Record<string, Brief> = {
     worn: "the satchel's strap is torn and tied back together in a big knot, its flap hanging open; a strip of grey tape (#9a9c98) is wrapped round the near water pistol's cracked tank; one knee of her shorts' hem is torn into a ragged notch; one boot's sole is flapping loose at the toe. Her face, the braid and its shoelace bow stay as they are.",
   },
   creeper: {
-    // The nod, each part of the read at race size and each a shape in outline: the tall upright block body with a
-    // square block head exactly as wide on top and no neck (the outline: taller than wide, so not the sneak's box on
-    // legs, and the head no wider than the body, so not the miner's cube head over arms); four stubby block legs, two
-    // at the front and two at the back with background between the pairs (a block on four legs, so not the
-    // impostor's bean or the hopper's ball on two); no arms at all (nobody else in the cast stands armless on four);
-    // the frowning face of square holes (the face, the homage's own: two square eyes over a stepped frown).
-    // Ours, and the joke: he's a cardboard box painted in squares, a birthday candle stuck on his head for a fuse, lit.
-    // The palette is neutral (Decisions 4): the body in the player's colour, its painted squares a light and a dark of
-    // it; the face holes, the candle and its flame neutrals. The colours lead the brief: the image model drops a
+    // The nod, each part of the read at race size and each a shape in outline: the tall upright box body with a big
+    // cube head exactly as wide on top and no neck, crisp square corners (taller than wide, so not the sneak's box on
+    // legs; the head no wider than the body, so not the miner's cube head over arms; square, so never a cylinder); four
+    // stubby block feet with background between them (a block on four, so not the impostor's bean or the hopper's ball
+    // on two); no arms at all; the big black frowning face square to us, two square eyes over a long down-turned mouth
+    // (the homage's own face, solid ink so it reads in any player's colour); the pixel tiles painted all over him, a
+    // light and a dark of his colour (the homage's skin, in shape not hue).
+    // Ours, and the joke: he's a cardboard box, a birthday candle burnt to a stub stuck on his head for a fuse, lit.
+    // The palette is neutral (Decisions 4): the body in the player's colour, its tiles a light and a dark of it; the
+    // face, the candle and its flame and the torn card neutrals. The colours lead the brief: the image model drops a
     // prompt's tail.
-    // The design read (black silhouettes) named nothing but "a thin tall slab with an antenna": the outline alone is a
-    // post. With the face's four holes cut through it, as the game cuts them (`holes`), a reader named him; so the
-    // face is holes through the box, the level showing through, and the kit only shuts and acts them. A second brief,
-    // a big overhanging head on splayed cube legs (art/sprites/creeper/drafts/r2-*), read as "a creeper or a bomb mix"
-    // where this one read as the creeper.
+    // The first drawing, three-quarter on with the face cut through as holes and packing tape round his middle, read in
+    // the clean colour audit as "a magenta striped cylinder": the holes showed the level, a light patch, the tape a
+    // stripe, the shaded side a cylinder's. So the face is ink, nothing crosses the box, and he faces us: the drawing
+    // asked for "seen almost straight from the front" in place of DESIGN's three-quarter view
+    // (art/sprites/creeper/design.prompt.txt).
     design:
-      'The character: a tall narrow cartoon creature made from cardboard boxes, seen in three-quarter view facing right. ' +
-      'Colours: green cardboard (#5aa846) painted in a patchwork of lighter (#8cd06a) and darker (#3c7a34) green squares, the face holes near-black (#1e2a1e), a white wax candle (#f2eee4) with a yellow flame (#f6c443). ' +
-      'Its body is one tall upright box, twice as tall as it is wide. On top sits a square box head exactly as wide as the body, no neck. ' +
-      'Under the body four short square block legs, two at the front and two at the back, with white background between the front pair and the back pair. No arms at all. ' +
-      'On the front of the head a face of four square black holes: two square eyes and a frowning mouth under them. ' +
-      'A short birthday candle stands on top of the head, its flame lit.',
+      'The character: a tall cartoon creature made from cardboard boxes, its face square to us and only a thin sliver of its right side showing. ' +
+      'Colours: green cardboard (#5aa846) painted all over in a grid of big square pixel tiles in a lighter (#8cd06a) and a darker (#3c7a34) green, like low-resolution pixel camouflage, the face solid near-black (#1e2a1e), a white wax candle (#f2eee4) with a yellow flame (#f6c443). ' +
+      'Its body is one tall upright box with crisp sharp square corners, twice as tall as it is wide. On top sits a big cube head exactly as wide as the body, no neck. ' +
+      'Under the body four short square block feet, two at the front and two at the back peeking out at the sides, white background between them. No arms at all. ' +
+      'The front of the head is a big black frowning face filling most of it: two large square black eyes near its top corners and, under the gap between them, a long black down-turned mouth, a tall block in the middle with a leg stepping down on each side. ' +
+      'A short stubby birthday candle stands on top of the head, its small flame lit. The top back corner of the head is dented in. No stripes, no bands, no tape.',
     // The design came back as the original redrawn with a candle on, so the edit carries the twist with the wear: the
-    // packing tape, the torn corner's corrugated brown, the crooked candle. Nothing on the face, which is the read. A
-    // second edit burnt the candle down to a stub, on the design and on every pose sheet: tall, it read blind as an
-    // antenna, a fuse and a mage's pointed hat (art/sprites/creeper/design.prompt.txt).
-    worn: 'he is an old painted cardboard box: a wide strip of brown packing tape (#c49a5a) is stuck across a big split in the front of his body; the top back corner of his head is dented in, a big notch in its outline; the bottom front corner of his body is torn open, the brown corrugated cardboard (#b8925e) showing; the birthday candle is stuck in crooked, leaning back, wax dripping down it, its flame big. The four square face holes stay exactly as they are.',
+    // crumpled corner, the torn corner's corrugated brown, the crooked candle. Nothing on the face, which is the read, and
+    // no tape, which read as a stripe. A second edit took the wax drips off the head's edges: they traced as horns.
+    worn: 'he is an old painted cardboard box: the top left corner of his head is dented in, a big notch in its outline; the bottom right corner of his body is torn open, a big ragged triangle of brown corrugated cardboard (#b8925e) showing; the birthday candle is stuck in crooked, leaning back, its melted wax only a small flat puddle round its foot. The big black face stays exactly as it is. Nothing else changes: no tape, no stripes, no dirt, no texture.',
   },
   invader: {
     // The nod, each part of the read at race size and each a shape in outline: the crab cut from big square pixels,
@@ -1087,6 +1101,29 @@ export const BRIEFS: Record<string, Brief> = {
     // Off the face and off the gloves' round outline: the scorch on the near mitt, a tape end flapping loose, the tea
     // towel's corner frayed, a boot's lace trailing.
     worn: "the near oven-mitt glove has a big dark brown scorch mark on its side; the grey tape on the near wrist has come loose and one end flaps out; one corner of the tea towel is frayed ragged; the back boot's lace has come undone and trails. Both gloves stay big and round, held up in front of his chin with white background between them and his face. His face stays as it is.",
+  },
+  junior: {
+    // No homage and no twist: Junior is Sentry's own robot, which the owner's team made (docs/characters/junior.md), so
+    // the design is the reference (art/sprites/junior/reference.png) redrawn flat, every trait kept: the square yellow
+    // box head with one huge eye and a big grin (the face, and the head nobody else in the cast has: the robot boy's is
+    // a round helmet, the miner's and the creeper's cubes have two eyes); the cap on backwards, its bill out behind;
+    // the zigzag antennae with ball tips springing up and out (they stand clear of the cap, or they join it); the round
+    // headphone ears; the long arm ending in a claw, held out clear of the body; the phone in the other hand; the thin
+    // legs on roller skates.
+    // At play size the reference's own sizes were lost (a colour read against it saw "bone-shaped blobs", "round yellow
+    // mitts" and no phone), so the props are bigger than its: one big zigzag to each antenna with a big ball tip, a pincer
+    // as big as the head, a phone as tall as it, a longer bill, steel wheels (art/sprites/junior/design.prompt.txt). The
+    // drawings keep only the antenna off the cap (art/sprites/junior/prune.py): three read in black as spiky hair or horns.
+    // The palette is neutral (Decisions 4): the hoodie in the player's colour, the cap and the skates a dark of it;
+    // the head, the arms and the ankle bands Junior's own yellow; the antennae and wheels a light steel, the legs and the
+    // headphones a dark purple-grey. The first image is an edit of the reference (`--ref`), not a new design.
+    design:
+      'The same robot character exactly as in the reference image, redrawn as a simple flat cartoon sprite design, full body, three-quarter view facing right. ' +
+      'A square yellow box head (#fdb819), as wide as the shoulders, with one huge round eye and a big toothy grin; a purple baseball cap (#8a3f8c) worn backwards, its long bill sticking far out behind; three light steel-grey wire antennae (#aaa6b4), each with one big sharp zigzag and a big round ball tip, one off the crown of the cap and one springing out from each round dark headphone ear (#4a4058), clear of the cap. ' +
+      'A pink hoodie (#ee4d9b). One long yellow arm held out low ending in a big open yellow pincer claw as big as his head, clear of his body; the other yellow hand holds a phone as tall as his head out to the side. ' +
+      'Thin dark purple-grey legs (#4a4058) with yellow ankle bands, white socks and purple roller skates (#6c3a78) on big light steel-grey wheels.',
+    // Off the face, the antennae and the cap: a torn hem, tape at the claw arm's elbow.
+    worn: "the hoodie's hem has a big ragged tear at one side; a wide band of grey tape (#9a9c98) is wrapped round the elbow of the long claw arm; the near roller skate has lost its front wheel and tips a little. The head, the eye, the grin, the cap, the antennae, the claw and the phone stay exactly as they are.",
   },
 };
 
