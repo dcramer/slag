@@ -581,27 +581,26 @@ export const BRIEFS: Record<string, Brief> = {
 
   rapper: {
     // The nod, each part of the read at race size: the tall knit beanie standing straight up off the head, a thumb
-    // with a round top and a snug band (the head's outline; with a brim, or leaning back to a point, it read as a
-    // wizard's hat); the long floppy ear hanging behind the head (a dog, and not the zapmouse, whose ears stand up);
-    // the round nose on a snout low on the face (level with the band, it read as a cap's bill: the plumber); the
-    // flat card body with a sliver of edge down the back (the paper look the original is known for); the mic held out
-    // in front (the rapper). Side on: in the three-quarter view the beanie, head, ears and mic were one tall pill in
-    // silhouette. The baggy tee and shorts and big trainers are the colour block, on a chubby body, so the cuptoon's
-    // tight hose-limbed toon doesn't rhyme.
-    // Ours, and the joke: he's a cardboard shop standee come loose (the card's edge, a fold crease across his middle, a
-    // torn bite out of the card at his shorts). The karaoke mic's coiled cord went: hanging below his arm, it read as
-    // a monkey's curly tail.
+    // with a round top and a snug band, no brim and no pompom (with a brim, or leaning back to a point, it read as a
+    // wizard's hat); a big dog's head with a long snout jutting far forward and a big round nose on its tip, the jaw
+    // dropped open rapping (a short snout level with the band read as a cap's bill, the plumber); a short floppy ear
+    // hanging straight down behind the head (flying up or back beside the beanie, it read as a rabbit's ears); the mic
+    // held out in front (the rapper); the card's edge round the outline (the paper look the original is known for).
+    // Side on: in the three-quarter view the beanie, head, ears and mic were one tall pill in silhouette. A skinny
+    // body under the big head: the chubby one under the beanie read as a gnome, a monkey or a princess.
+    // Ours, and the joke: he's a cardboard shop standee come loose (the card's edge, a fold crease, torn bites out of
+    // the card at his shorts). The karaoke mic's coiled cord went: hanging below his arm, it read as a monkey's tail.
     // The palette is neutral (Decisions 4): the beanie and the tee in the player's colour, the shorts a dark of it;
     // the fur cream, the nose brown, the trainers grey, the mic black, the card's edge plain cardboard.
-    // The design was reached in edits (art/sprites/rapper/design.prompt.txt); this is it as one brief, for a redraw.
+    // Round 8 was reached in edits (art/sprites/rapper/design.prompt.txt); this is it as one brief, for a redraw.
     design:
-      'The character: a chubby cartoon puppy who is a flat cardboard cut-out, seen side on in profile, facing right. ' +
-      'His signature: a very tall knitted beanie (#e8922e) standing straight up on his head like a thumb, round on top, never pointed, with a snug thick ribbed band only a little wider than his head and no brim. ' +
-      "He holds a chunky black cordless microphone out in front of him at arm's length, clear of his face. " +
-      'A big round head of pale cream fur (#f1dfb8) under the band, a snout low on his face ending in a big round dark brown nose (#4a3428), two eyes, one long floppy dog ear hanging down behind his head past his chin. ' +
-      'A short round body in a baggy orange tee (#e8922e), baggy dark brown-orange shorts (#9a4f1e), short cream legs, huge chunky grey trainers (#9aa0a8) with thick pale soles. ' +
-      'Down the back edge of his outline a narrow strip of plain brown cardboard edge (#b8946a) shows, the thickness of the cut-out.',
-    worn: "he is a cardboard shop standee come loose: a crisp fold crease runs straight across his middle at the waist, the card kinked a little there; a torn bite is missing from the card at the edge of his shorts, showing the rough brown card inside. The beanie's shape and the ear don't change.",
+      'The character: a skinny cartoon puppy who is a flat cardboard cut-out, seen side on in profile, facing right, with a big head on a small body. ' +
+      'His signature: a very tall knitted beanie (#e8922e) standing straight up on his head like a thumb, round on top, with a snug ribbed band, no brim and no pompom. ' +
+      'An exaggerated long dog snout juts far forward from the lower half of his face, a big round dark brown nose (#4a3428) on its tip; his mouth is wide open, rapping. ' +
+      'One short floppy cream ear (#f1dfb8) hangs straight down from the back of his head to his shoulder, with white space between it and his neck. ' +
+      'He holds a chunky black cordless microphone out in front of him in his fist, below the snout. An orange tee (#e8922e), dark orange shorts, thin legs, big grey trainers (#9aa0a8). ' +
+      'A narrow strip of plain brown cardboard edge (#b8946a) shows round his outline, the thickness of the cut-out.',
+    worn: "he is a cardboard shop standee come loose: a narrow strip of plain brown cardboard edge shows along the back of his outline; a crisp fold crease runs straight across him, the card kinked a little there; a torn bite is missing from the card at his shorts, showing the rough brown card inside. The beanie, the ear, the snout, the nose, the open mouth and the mic don't change.",
   },
   limbless: {
     // The nod, each part of the read at race size: the gaps where the arms and legs should be (the read in

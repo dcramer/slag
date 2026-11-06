@@ -55,7 +55,7 @@ Each kind's entry is its own file in [characters/](characters/): what a stranger
 | [sneak](characters/sneak.md) | the sneaking soldier | side on, a square cardboard box on two crouched legs, his eyes in a slot, a striped bandana's two tails out of a hand-hole behind | costume: the box (its back end, tape, arrow and bandana tones of it) |
 | [cuptoon](characters/cuptoon.md) | the cup-headed toon | a white enamel mug for a head, its handle out the back and a straw bent over out of the tea, black rubber-hose limbs, white gloves, high-waisted shorts, big round shoes | costume: the shorts |
 | [horse](characters/horse.md) | the barnyard party game's horse | on all four legs, side on: a long neck with the mane standing up along it as a crest, a long blunt head with a pale nose and buck teeth, a long straight tail hanging to the heels, flat hooves; a scarf and a zip (a costume) | costume: the coat, the far legs and the scarf darks of it |
-| [rapper](characters/rapper.md) | the rapping paper puppy | side on, a chubby flat card cut-out with its edge down his back: a tall thumb of a knit beanie standing straight up, a long floppy ear hanging behind, a round nose on a snout low on his face, a baggy tee and shorts, big trainers, a cordless mic held out in front | costume: the beanie and tee, the shorts a dark of it |
+| [rapper](characters/rapper.md) | the rapping paper puppy | side on, a big dog's head on a skinny card cut-out with its brown edge showing: a tall thumb of a knit beanie standing straight up, a long snout jutting far forward with a big round nose on its tip and the jaw dropped open rapping, a short floppy ear hanging down behind, a tee and shorts, big trainers, a cordless mic held out in front | costume: the beanie and tee, the shorts a dark of it |
 | [limbless](characters/limbless.md) | the limbless hero | no arms or legs: white gloves and big shoes floating clear of a small round body with background all round each, a huge nose, a spiky hair tuft standing up, a neckerchief | costume: the top, the shoes a light tone of it |
 | [worm](characters/worm.md) | the worm in the super suit | side on, a super suit with big round shoulder pads, a broad chest, a narrow belted waist, slim legs and big boots; a thin pink worm neck out of the collar arcing forward to a head wider than it, huge bulging eyes standing up and a wide grin; a small hair dryer held out at arm's length like a raygun | costume: the suit, the gloves, boots and belt a dark of it |
 | [dragon](characters/dragon.md) | the little purple dragon | small and low on four stubby legs, side on: a big round head with two long horns swept straight back, stubby umbrella-cloth wings on bent spokes, a pale belly, a ridge of small spines, a tail ending in a taped arrowhead with a firefly jar hanging from it | costume: the scales; the wing cloth a light of it, the far legs a dark |
@@ -128,7 +128,7 @@ The strongest reads first. **Keyed** marks the non-humanoids, the riskiest to dr
 | 18 | goose | Honkers | **keyed**, bird | drawn flat |
 | 19 | horse | Hoarse | **keyed**, quadruped | drawn flat |
 | 20 | jelly | Meltroid | **keyed**, no limbs | drawn flat |
-| 21 | rapper | Parapper | humanoid, flat card | drawn flat; the blind read fails (TODO.md → 31) |
+| 21 | rapper | Parapper | humanoid, flat card | drawn flat |
 | 22 | limbless | Raymond | **keyed**, floating hands and feet | drawn flat |
 | 23 | worm | Earthworm Gym | humanoid + head stalk | drawn flat |
 | 24 | dragon | Spiro | **keyed**, quadruped | drawn flat |
