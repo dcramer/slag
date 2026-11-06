@@ -1,41 +1,49 @@
 import type { FlatKind } from '../kinds';
 
-// The tin wind-up toy speedster (2026-11-06): the big key out of his hip is the twist and the joke, the quills are
-// bent tin strips with a pale folded edge, the shoes boxy tin blocks on grey soles.
+// The tin wind-up toy speedster (2026-11-06): the big key out of his hip is the twist and the joke; his head is a
+// pressed-tin box with a grey flange round its seam and a square snout block, the quills three fat tin strips with a
+// pale folded edge, the shoes boxy tin blocks on grey soles.
 export const kind: FlatKind = {
-  body: 277,
+  body: 273,
   map: {
     roles: ['blue', 'edge', 'peach', 'shoe', 'steel', 'white', 'dark', 'iris'],
     families: [
-      ['blue', [65, 96, 163]],
-      ['blue', [60, 85, 139]],
-      ['blue', [68, 94, 158]],
-      ['blue', [58, 71, 108]],
-      ['blue', [92, 102, 134]],
-      ['blue', [71, 73, 96]],
-      // The quills' folded tin edge: a light of the quills, or the strips trace as one blue mass.
-      ['edge', [188, 210, 223]],
-      ['peach', [248, 179, 124]],
-      ['peach', [240, 179, 129]],
-      ['peach', [215, 192, 174]],
+      ['blue', [74, 98, 153]],
+      ['blue', [60, 81, 130]],
+      ['blue', [64, 81, 132]],
+      ['blue', [71, 86, 134]],
+      ['blue', [57, 68, 100]],
+      ['blue', [75, 101, 151]],
+      ['blue', [86, 85, 110]],
+      // The quills' folded tin edge: a light of the quills, or the strips trace as one blue mass. Drawn in the eye
+      // whites' off-white, it is painted light blue in every drawing first (art/sprites/hedgehog/edges.py).
+      ['edge', [176, 198, 232]],
+      ['edge', [128, 144, 163]],
+      ['peach', [246, 161, 105]],
+      ['peach', [248, 167, 113]],
+      ['peach', [235, 159, 109]],
+      ['peach', [226, 181, 151]],
+      ['peach', [203, 168, 146]],
       // A rivet on the peach plates folds into them.
-      ['peach', [149, 134, 125]],
-      ['shoe', [181, 51, 38]],
-      ['shoe', [139, 42, 30]],
-      // The key, the soles and the shoes' straps.
-      ['steel', [145, 148, 149]],
-      ['steel', [121, 125, 126]],
-      ['steel', [166, 162, 160]],
-      ['steel', [196, 200, 202]],
+      ['peach', [147, 132, 126]],
+      ['shoe', [165, 30, 24]],
+      ['shoe', [158, 39, 31]],
+      ['shoe', [78, 22, 15]],
+      // The key, the head's flange, the soles and the shoes' straps.
+      ['steel', [132, 132, 133]],
+      ['steel', [152, 150, 151]],
+      ['steel', [109, 107, 110]],
+      ['steel', [120, 125, 129]],
       ['white', [255, 255, 252]],
-      // The eye whites and the grin's teeth, tinted a step off white in every drawing (art/sprites/hedgehog/whites.py)
-      // so `holes` cuts the key's two holes and never the face.
+      // The eye whites and the grin's teeth, drawn a step off white (and tinted so in every drawing,
+      // art/sprites/hedgehog/whites.py) so `holes` cuts the key's two holes and never the face.
+      ['white', [218, 210, 198]],
       ['white', [238, 234, 224]],
-      ['dark', [63, 40, 35]],
-      ['dark', [46, 29, 29]],
-      ['dark', [46, 41, 54]],
-      // The open grin's inside.
-      ['dark', [117, 73, 76]],
+      ['dark', [50, 30, 27]],
+      ['dark', [34, 11, 10]],
+      ['dark', [51, 42, 47]],
+      ['dark', [37, 28, 31]],
+      ['dark', [75, 51, 48]],
       ['iris', [88, 140, 68]],
     ],
     line: 'dark',
@@ -89,7 +97,8 @@ export const kind: FlatKind = {
     // itself, since its feet are wherever the spin left them.
     air: { frames: ['air-1', 'air-1b'], loop: true, fps: 12, eyes: false, centre: 'box' },
     wall: { frames: ['wall'], loop: true, fps: 1, centre: 'box' },
-    cheer: { frames: ['cheer', 'idle'], loop: true, holds: [0.5, 0.25] },
+    // The punch's eyes are drawn squeezed shut: the drawing's own, not the kit's.
+    cheer: { frames: ['cheer', 'idle'], loop: true, holds: [0.5, 0.25], eyes: false },
     cheer2: { frames: ['cheer2', 'idle'], loop: true, holds: [0.7, 0.3] },
     // Run down: flat on his back, the key standing up out of him.
     death: { frames: ['death'], loop: false, fps: 1, eyes: false, centre: 'box', scale: 0.92 },

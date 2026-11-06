@@ -107,30 +107,32 @@ export const BRIEFS: Record<string, Brief> = {
       'standing idle with his chest puffed out; mid-run stride leaning forward with arms pumping and one knee high; crouched low before a jump, knees bent, arms swung back; jumping up with one fist punched high overhead and the other arm down, legs tucked; falling with both arms flailing up and legs reaching down; sliding down a wall on his right with one gauntlet flat against it and both boots braced; cheering with both fists in the air; knocked flat on his back with stars circling',
   },
   hedgehog: {
-    // The nod, each part of the read at race size: long cobalt quills swept straight back (the whole
-    // silhouette), big red shoes (the second thing anyone names), a peach muzzle and belly, green eyes
-    // and a cocky grin; the run leaning hard forward and the jump curled into a spinning ball.
+    // The nod, each part of the read at race size: cobalt quills swept straight back (the whole silhouette), big
+    // red shoes (the second thing anyone names), a peach muzzle and belly, green eyes and a cocky grin; the run
+    // leaning hard forward and the jump curled into a spinning ball.
     // Ours, and the joke: the fastest thing alive is an old pressed-tin wind-up toy, and he has to be wound up.
-    // A big wind-up key sticks out of his hip (the outline and a big grey block, in every pose: it turns round the
-    // spin ball and stands up out of him when he's run down); the quills are bent tin strips with a pale folded
-    // edge; the head and body are tin halves on riveted seams; the shoes are boxy tin blocks on grey soles.
+    // Two big changes that each read alone: a big wind-up key sticks out of his hip (the outline and a big grey
+    // block, in every pose: it turns round the spin ball and stands up out of him when he's run down), and his head
+    // is a pressed-tin box, two halves with a wide grey flange round the seam, the snout a square block with a
+    // screw for a nose (round, a reader saw the original with a key added). Three fat tin quills with a pale folded
+    // edge (long thin ones rhymed with the dragon's horns); boxy tin shoes on grey soles.
     character:
-      'Character: a small blue hedgehog built as an old pressed-tin wind-up toy, a big round head on a small round body. ' +
+      'Character: a small blue hedgehog built as an old pressed-tin wind-up toy. ' +
       'A big grey wind-up key sticks straight out of his hip behind him, its huge flat figure-eight bow standing clear of him. ' +
-      'Long cobalt-blue quills (#2f5bd0), flat bent strips of tin with a pale folded edge, swept straight back from the head. ' +
-      'His head and body are blue tin halves joined on seams with a few big rivets; a peach tin muzzle, belly and mitten hands (#f0c99c); green eyes, a cocky one-sided grin. ' +
-      'Huge boxy red tin shoes (#d8382f) on thick grey soles. Confident and fast.',
-    // Designed as an edit of the scrapyard design (scrapyard/), since without a reference the image model draws the
-    // original: the key, the tin strips and the boxy shoes asked for, then the key drawn bigger and moved down to
-    // the hip by hand (tin/keyed-2.png, tin/low-1.png), then the quills lengthened (art/sprites/hedgehog/design.prompt.txt).
+      'His head is a boxy pressed-tin cube of two halves with a wide grey flange round the seam, a flat top and square corners; a square peach snout block with a screw for a nose; two printed eyes with green irises, a cocky one-sided printed grin. ' +
+      'Three fat cobalt-blue quills (#2f5bd0) of bent tin with a pale folded edge swept straight back from his head. ' +
+      'A small round tin body on riveted seams, a peach tin belly and mitten hands (#f0c99c). Huge boxy red tin shoes (#d8382f) on thick grey soles. Confident and fast.',
+    // Designed as edits of the scrapyard design (scrapyard/), since without a reference the image model draws the
+    // original: the key, tin strips and boxy shoes; the key drawn bigger and moved to the hip by hand; then the box
+    // head, the fat quills and the wear (art/sprites/hedgehog/design.prompt.txt).
     design:
-      'The same character as in the reference image: the same big head, face shape, swept-back quills, pose, proportions, three-quarter view facing right, thin dark line and flat white background. ' +
-      'Rebuild him as an old pressed-tin wind-up toy, and make each change big and obvious. A big wind-up key sticks straight out of the small of his back below the quills: a thick grey steel stem and a big flat figure-eight bow with two round holes in it, the bow as tall as his body, standing well clear of him with white background all round it. ' +
-      'His quills are four flat strips of blue-painted tin, each with a folded edge, swept straight back. His head and body are blue-painted tin halves joined by a raised seam that runs round his outline, with a row of big round rivets along it. ' +
-      'His muzzle and belly are flat peach-painted tin plates. Two separate round painted eyes with green irises, and a cocky one-sided painted grin. Huge chunky boxy red tin shoes with a thick riveted grey sole.',
-    worn: "a big dent is pushed into the top of his tin head; the lowest quill strip is bent down at a sharp kink; the front shoe's grey sole has come loose and gapes open at the toe.",
+      'The same tin wind-up toy hedgehog as in the reference image, the same pose, three-quarter view facing right, thin dark line and flat white background. ' +
+      'His head is a big hard tin cube, a box with flat sides, a flat top and sharp square corners, a thick grey tin flange round its seam sticking far out all round like a wide square rim; his snout is a square block printed peach, with a big round bolt for a nose. Two separate printed eyes with green irises, and a cocky one-sided printed grin. ' +
+      'Just four big fat quills, broad flat strips of bent blue tin, each a short thick triangle swept straight back, each with its pale folded edge. ' +
+      'A big grey wind-up key sticks straight out of his hip, its big figure-eight bow standing clear of him. Peach tin hands and belly, huge boxy red tin shoes on thick grey soles.',
+    worn: "a big dent is pushed into the top front corner of his tin head box; the lowest quill is bent down at a sharp kink; the front shoe's grey sole has come loose and gapes open at the toe.",
     views: 'a front view, a side profile facing right, a back view showing the swept quills and the wind-up key, and a three-quarter view facing right',
-    pose: 'The quills sweep straight back from the head, clear of the shoulders and arms. The wind-up key sticks straight out of his hip behind him, its bow clear of his body and quills.',
+    pose: 'His head is a square tin box with a grey flange. The quills sweep straight back from the head, clear of the shoulders and arms. The wind-up key sticks straight out of his hip behind him, its bow clear of his body and quills.',
     poses:
       'standing idle with one foot tapping; mid-run leaning hard forward with legs a blur; curled into a tight spinning ball in mid-air, quills outward, the key sticking out of it; sliding down a wall on his right with one hand flat against it and both shoes braced; cheering with one fist up; run down flat on his back with the key standing up out of him',
   },
