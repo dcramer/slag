@@ -34,6 +34,8 @@ export interface ModeDef {
   camera: 'pack' | 'leader';
   /** Bouts per placement when the mode is chosen (MatchRules.bouts): fights on one level's parts before the next pick. One if unset. */
   bouts?: number;
+  /** Players (bots count) a match needs before it starts: a fight needs someone to fight. One if unset. */
+  minPlayers?: number;
   /**
    * Whether a level set (theme) builds this mode's level as the mode means it. Every set should, since the engine
    * builds the level; one that doesn't yet still plays (Rising Slag in a farm is a classic climb, no loop), and the
@@ -109,6 +111,8 @@ export const MODES: Record<ModeId, ModeDef> = {
       route: 'ltr',
       bare: true,
       ends: true,
+      // Mist hides a one-screen arena's edges, the very things that kill in it (owner decision).
+      noWeather: ['mist'],
       // Deadly from round 1: as many set pieces as fit, from the nastiest of the set's mix.
       hazards: 6,
       danger: 0.9,
@@ -122,6 +126,7 @@ export const MODES: Record<ModeId, ModeDef> = {
     // Three fights on each placement, as the party brawler plays rounds back to back: picking and placing (up to 30 s)
     // would otherwise outlast a fight (about 28 s with bots).
     bouts: 3,
+    minPlayers: 2,
     builds: () => true,
     score: ({ run, standings }) =>
       scoreSurvival(
@@ -143,3 +148,6 @@ export function climbed(run: RunWorld, slot: number): number {
   const top = run.level.loop ? start - 3 * run.level.loop * TILE : (run.level.goal.ty + 1) * TILE;
   return (start - feetUp(run.level, r)) / Math.max(TILE, start - top);
 }
+
+/** Players a match of `mode` needs before it starts (`ModeDef.minPlayers`). */
+export const minPlayersOf = (mode: ModeId): number => MODES[mode].minPlayers ?? 1;

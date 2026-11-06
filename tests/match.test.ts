@@ -457,6 +457,19 @@ describe('lobby', () => {
     expect(p.character.seed).not.toBe(seed);
     expect(p.character.name).toBe(name);
   });
+
+  it("waits for as many players as the mode needs: a brawl doesn't start alone", () => {
+    const m = new Match(2, undefined, withMode(DEFAULT_RULES, 'brawl'));
+    m.step({ kb1: press({ confirmPressed: true }) });
+    m.step({ kb1: press({ confirmPressed: true }) });
+    expect(m.players[0].ready).toBe(true);
+    for (let i = 0; i < 120; i++) m.step({ kb1: NO_INPUT });
+    expect(m.phase).toBe('lobby');
+    m.step({ kb2: press({ confirmPressed: true }) });
+    m.step({ kb2: press({ confirmPressed: true }) });
+    for (let i = 0; i < 600 && m.phase === 'lobby'; i++) m.step({ kb1: NO_INPUT, kb2: NO_INPUT });
+    expect(m.phase).not.toBe('lobby');
+  });
 });
 
 describe('controller cursor', () => {
