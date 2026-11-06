@@ -7,7 +7,7 @@ import { generateTheme } from '../src/gen/theme';
 import { Predictor } from '../src/net/predict';
 import { drawnVelocity } from '../src/net/session';
 import { hashMatch, restoreMatch, snapshotMatch } from '../src/net/snapshot';
-import { COLLIDE, PERCH } from '../src/sim/collide';
+import { BUMP, COLLIDE, PERCH } from '../src/sim/collide';
 import { DT, LEVEL_H, LEVEL_W, PHYS, RUN_COUNTDOWN, TILE } from '../src/sim/constants';
 import { giveItem } from '../src/sim/items';
 import { type Level, spawnZone, tileAt } from '../src/sim/level';
@@ -291,6 +291,47 @@ describe('standing on a runner', () => {
     bs[1].vy = 50;
     steps(run, 2);
     expect(feet(bs[1])).toBeCloseTo(bs[0].y, 9);
+  });
+});
+
+describe('a bump from below', () => {
+  /** A board (one-way) a shaft's step over the floor (its top three rows up), columns 12..18, someone standing on it at column 15. */
+  function board() {
+    const level = testLevel();
+    for (let x = 12; x <= 18; x++) level.tiles[(FLOOR - 3) * LEVEL_W + x] = 2;
+    const s = lineup(2, { tx: 15, spacing: 0, level });
+    s.bs[1].x = s.bs[0].x;
+    s.bs[1].y = (FLOOR - 3) * TILE - s.bs[1].h;
+    steps(s.run, 5);
+    return s;
+  }
+
+  it('jumping up through a board into someone standing on it bonks them and knocks them off; you carry on up', () => {
+    const { run, rs, bs } = board();
+    expect(bs[1].onGround).toBe(true);
+    run.step([JUMP, NO_INPUT]);
+    let bumped = -1;
+    for (let f = 0; f < 30 && bumped < 0; f++) {
+      run.step([HOLD_JUMP, NO_INPUT]);
+      if (rs[1].items.daze > 0) bumped = f;
+    }
+    expect(bumped).toBeGreaterThanOrEqual(0);
+    expect(rs[1].items.bonkedBy).toBe(0);
+    expect(Math.abs(bs[1].vx)).toBeGreaterThan(BUMP.kick / 2);
+    steps(run, 30);
+    // The bumper got up onto the board, and whoever stood there was knocked off it.
+    expect(feet(bs[0])).toBeLessThanOrEqual((FLOOR - 3) * TILE + 1e-6);
+    expect(Math.abs(bs[1].x - bs[0].x)).toBeGreaterThan(TILE);
+  });
+
+  it('only from the level: a rider on a head is still bucked, not bumped', () => {
+    const { run, rs, bs } = lineup(2);
+    airborne(bs[1], bs[0].x, bs[0].y - 30);
+    steps(run, 20);
+    expect(rs[1].ride).toBe(0);
+    run.step([JUMP, NO_INPUT]);
+    steps(run, 3);
+    expect(rs[1].items.daze).toBe(0);
   });
 });
 

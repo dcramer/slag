@@ -2,7 +2,7 @@ import { inset, overlaps, type Rect, type Vec } from '../core/geom';
 import { deriveSeed, Rng } from '../core/rng';
 import { type BloodCell, buildBlood, groundOf, spillBlood } from './blood';
 import { FPS, PLAYER_W, POP_HOLD, RUN_COUNTDOWN, TILE } from './constants';
-import { collideRunners, contactStart, footing as stackFooting } from './collide';
+import { BUMP, type Bump, collideRunners, contactStart, footing as stackFooting } from './collide';
 import {
   absorbHit,
   bonk,
@@ -409,7 +409,7 @@ export class RunWorld {
     settleGrabs(this, this.grabs);
 
     // Bodies are solid to each other (sim/collide.ts): everyone has moved, so nobody's order matters.
-    collideRunners(this.runners, start, this.world, (r) => this.isSafe(r));
+    for (const bump of collideRunners(this.runners, start, this.world, (r) => this.isSafe(r))) this.bump(bump);
 
     stepItems(this, inputs, live);
     this.stepProjectiles(f);
@@ -435,6 +435,19 @@ export class RunWorld {
     if (!this.level.loop) return;
     const rows = this.level.loop * TILE;
     for (const t of [...this.projectiles, ...this.items.drops]) t.y += lapShift(this.level, t.y) * rows;
+  }
+
+  /** A runner bumped from below (sim/collide.ts): knocked off sideways with a hop, seeing stars, the bump credited like any bonk. */
+  private bump({ victim, by, side }: Bump) {
+    const r = this.runners.find((x) => x.slot === victim)!;
+    letGo(r);
+    r.body.vx = side * BUMP.kick;
+    r.body.vy = -BUMP.hop;
+    r.body.onGround = false;
+    r.body.groundRef = -1;
+    r.body.jumping = false;
+    bonk(r, by);
+    this.events.push({ type: 'item', what: 'hit', kind: 'bump', slot: by, x: r.body.x + r.body.w / 2, y: r.body.y + r.body.h });
   }
 
   /** Kill a runner, unless a shield cancels it. Bonks pass kill credit on. */

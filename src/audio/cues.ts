@@ -203,6 +203,7 @@ const ITEM_KIND_CUE: Record<string, SfxName> = {
   'hit:tremor': 'piston-slam',
   'hit:tax': 'explosion',
   'hit:hook': 'whoosh',
+  'hit:bump': 'spring',
   'hit:upper': 'piston-slam',
   'fizzle:block': 'crumble-break',
 };
