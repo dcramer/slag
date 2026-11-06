@@ -90,7 +90,7 @@ What we borrow: short rounds, last one standing, items from boxes knocked from b
 
 | Attribute | Reference | Ours | Target |
 | --- | --- | --- | --- |
-| Players | 2–8 [DG-steam] | 1–8 | 2–8 |
+| Players | 2–8 [DG-steam] | 2–8, bots counting: one alone waits in the lobby (`minPlayers`) | 2–8 |
 | Kill | one hit [DG-steam]; or knockback past a blast line, further the more damage you've taken [Smash-kb] | knockback into a hazard or off the edge; items and bumps knock, bodies shove (owner decision) | the same |
 | Round won by | last standing, who must stay alive a moment; a draw scores nothing [DG-mp] | last standing (10), and a kill credited by a bonk (2); a draw (everyone out at once, or the time out) scores nothing | the same |
 | Round length | 8–10 s, rarely more (a review); under a minute (another) [DG-reviews] | 30.1 s on average with bots on the bare arena, 28.1 s with parts placed (from 39.6 and 38.1): 32 of 48 bare rounds land in 20–40 s, 46 of 64 with parts placed; 60 s at most | 20–40 s |
