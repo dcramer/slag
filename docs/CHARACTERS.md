@@ -134,7 +134,7 @@ The strongest reads first. **Keyed** marks the non-humanoids, the riskiest to dr
 | 24 | dragon | Spyrella | **keyed**, quadruped | drawn flat |
 | 25 | hopper | Tootbert | **keyed**, legs only | drawn flat |
 | 26 | warrior | Kakosh | humanoid, round | drawn flat side on (round 5, the sword out level); the blind read fails: "a stout knight in a pointed helmet", no name and no pairs |
-| 27 | slayer | Gerald | humanoid | drawn flat, redrawn a third time crouched side on with the sword level out ahead; the blind read not passed (unpaired, read as a ninja: the hilts above his shoulders read as horns or a headband's tails) |
+| 27 | slayer | Gerald | humanoid | drawn flat, redrawn a third time crouched side on with the sword level out ahead; the blind read not passed (unpaired, read as a ninja: the hilts above his shoulders read as horns or a headband's tails; with nothing on his back, in design reads, a ninja paired with the fighter, or holding a trophy an axe or a torch) |
 | 28 | raider | Clara Loft | humanoid | drawn flat; named by both blind readers at medium, one still pairing her with the puppy (long hair behind a slim figure) |
 | 29 | fighter | Bun-Li | humanoid | drawn flat, redrawn in a deep wide stance with a small head; the blind read passes (both readers named her at medium, unpaired, once the buns stood up and out with her crown round between them: snug on its corners, head and buns were a headband, and readers saw the other fighter) |
 | 30 | stinger | Hornknit | humanoid, cloaked | drawn flat; the blind read passes (straight horns read as rabbit ears until they curved into crescents) |
