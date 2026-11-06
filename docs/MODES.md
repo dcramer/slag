@@ -26,7 +26,7 @@ What we borrow: the pick, place, run loop; parts persist; scoring that punishes 
 | Finishers per round, 4 players | not documented | 1.85 | 1.5–2.5 |
 | First to finish | +1/5 of a finish [UCH-rules] | +4/10 | keep |
 | Trap kill | +1/5 a victim [UCH-rules] | +2/10, finishers only | keep |
-| Comeback (behind for 2+ rounds, then finish) | +4/5 [UCH-rules] | underdog +3/10 after 2 scoreless rounds | consider raising toward +8 |
+| Comeback (behind for 2+ rounds, then finish) | +4/5 [UCH-rules] | underdog +8/10 after 2 scoreless rounds (owner decision; was +3) | keep |
 | Only finisher (3–4 players) | Solo +3/5 [UCH-rules] | none | consider adding (+6) |
 | Crate size, 4 players | "4–6 items", a review's estimate [UCH-box] | players + 2: 6 | the same |
 | Lone bot's finish rate by tier (gentle, medium, hard) | n/a | Easy 73/58/58, Normal 93/65/60, Hard 93/78/88 | Easy 75/50/30, Normal 90/70/50, Hard 95/85/70 (`PASS_TARGETS`) |
