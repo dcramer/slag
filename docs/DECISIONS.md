@@ -75,6 +75,12 @@ Every game design decision, preference and direction the owner has given, groupe
   2026-11-02 04:56Z · `done` · DESIGN.md → Props (Secret Parts), Rules
 - **Add alternative playstyle modes that keep the game's graphics and reuse its parts where they make sense; Rising Slag first, with Brawl (a Duck Game-like knock-them-off mode) and a co-op Gauntlet to follow.** "what would it look like to add alternative playstyle modes? id want graphics to be the same, sometimes we'd reuse props when they made sense" / "Rising Slag first" / "gauntlet and brawl are also great"
   2026-11-04 · `done` for the mode registry and Rising Slag; Brawl and Gauntlet are `planned` · DESIGN.md → Modes, `src/game/modes.ts`, TODO.md → 31
+- **A race's comeback bonus is bigger: +8, most of a finish, as the reference game pays its comeback.** "we should def do the bigger comeback on race"
+  2026-11-06 · `done` (`POINTS.underdog`; Rising Slag and Brawl keep +3, `POINTS.survivor`) · DESIGN.md → Scoring, MODES.md → Race · Replaced: +3.
+- **In a brawl, items knock back and never kill; a hit keeps its half-second daze.** "its a knockback, not a knockout, to be clear. in brawl we dont want items that kill the other person, only ones that push/knock them" / "Keep the daze"
+  2026-11-06 · `done` (as built: items shove and daze, the level kills) · DESIGN.md → Modes · Considered: a pure shove with no daze.
+- **A brawl's items are ones that bop people into things, and not ones that only move you.** "we probably want more items that will like bop people (like the sword) to push them in this mode, and less of the items that are movement based?"
+  2026-11-06 · `done` (the brawl's boxes deal swings, throws and slams only, and a new Sucker Punch, a long swing that throws sideways) · DESIGN.md → Parts, Modes · Replaced: smoke and Bubble Wrap in the brawl's deal.
 - **A brawl's arena is deadly by default.** "also the arena could be a little deadly by default, thats a thing we can tweak"
   2026-11-06 · `done` (up to six set pieces from the nastiest mix) · DESIGN.md → Modes, MODES.md · Replaced: four of the usual mix.
 - **In a brawl, if everyone left goes out at once, nobody wins the round.** "Highest one wins" / "actually if you all die no winners maybe?"
