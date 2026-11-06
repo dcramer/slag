@@ -133,8 +133,8 @@ The strongest reads first. **Keyed** marks the non-humanoids, the riskiest to dr
 | 23 | worm | Mudworm Slim | humanoid + head stalk | drawn flat |
 | 24 | dragon | Spyrella | **keyed**, quadruped | drawn flat |
 | 25 | hopper | Tootbert | **keyed**, legs only | drawn flat |
-| 26 | warrior | Potkosz | humanoid, round | drawn flat side on (round 5, the sword out level); the blind read fails: "a stout knight in a pointed helmet", no name and no pairs |
-| 27 | slayer | Gerry Drizzle | humanoid | drawn flat, redrawn a third time crouched side on with the sword level out ahead; the blind read not passed (unpaired, read as a ninja: the hilts above his shoulders read as horns or a headband's tails; with nothing on his back, in design reads, a ninja paired with the fighter, or holding a trophy an axe or a torch) |
+| 26 | warrior | Potkosz | humanoid, round | drawn flat side on (round 5, the sword out level); the blind read fails: "a stout knight in a pointed helmet", no name and no pairs; accepted as a colour read (2026-11-06) |
+| 27 | slayer | Gerry Drizzle | humanoid | drawn flat, redrawn a third time crouched side on with the sword level out ahead; the blind read not passed (unpaired, read as a ninja: the hilts above his shoulders read as horns or a headband's tails; with nothing on his back, in design reads, a ninja paired with the fighter, or holding a trophy an axe or a torch); accepted as a colour read (2026-11-06) |
 | 28 | raider | Clara Loft | humanoid | drawn flat; named by both blind readers at medium, one still pairing her with the puppy (long hair behind a slim figure) |
 | 29 | fighter | Bun-Li | humanoid | drawn flat, redrawn in a deep wide stance with a small head; the blind read passes (both readers named her at medium, unpaired, once the buns stood up and out with her crown round between them: snug on its corners, head and buns were a headband, and readers saw the other fighter) |
 | 30 | stinger | Hornknit | humanoid, cloaked | drawn flat; the blind read passes (straight horns read as rabbit ears until they curved into crescents) |
@@ -144,7 +144,7 @@ The strongest reads first. **Keyed** marks the non-humanoids, the riskiest to dr
 | 34 | pyramid | Pyramid Fred | humanoid, big + blade | drawn flat, no face; the blind read passes (both readers named him at medium once the wedge, a brim over his shoulders and the mage's hat, became an upright pyramid on them, the slicer long and steep behind him) |
 | 35 | invader | Space Evader | **keyed**, legs only, pixel edge | drawn flat, front on, the eye holes cut through; the blind read passes (both readers named it at high, unpaired) |
 | 36 | vampire | Lady Dimistretch | humanoid, tall, gowned | drawn flat; the blind read passes (named at medium by both on the first sheet: the height under the wide flat hat, the gown to the floor) |
-| 37 | assistant | Jinglebelle | humanoid, small, dog | drawn flat; the blind read not passed (unpaired as "Pikmin" while the tuft stood on a stalk, then a nameless small figure with a tuft or hat; a side-on redraw with a snout, round 3, read the same and worse in colour, not shipped): in black her head is a hat |
+| 37 | assistant | Jinglebelle | humanoid, small, dog | drawn flat; the blind read not passed (unpaired as "Pikmin" while the tuft stood on a stalk, then a nameless small figure with a tuft or hat; a side-on redraw with a snout, round 3, read the same and worse in colour, not shipped): in black her head is a hat; accepted as a colour read (2026-11-06) |
 | 38 | sim | Bella Gauche | humanoid + floating diamond | drawn flat; the blind read passes (both readers named her at high once the diamond's points survived the tracer: rounded, it was a Pikmin's leaf) |
 
 **What to check.** No two kinds may rhyme. Watch these pairs:

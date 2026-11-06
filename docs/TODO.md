@@ -43,11 +43,8 @@ Phone support (follow camera, pinch, scaled HUD, settings sheet) is on `main` bu
 ## 8. Render polish
 - **Impact words** can hide a hazard for most of a second; `?lettering=0` turns them off. Decide whether they stay. Big plain walls are a taste call. Try a real phone.
 
-## 31. Kinds under the blind-read bar
-The warrior, the slayer and the assistant dog are drawn flat and read in colour, but two fresh readers never named them from the silhouette (each one's rounds and readers' words are in its Rig line in docs/characters/<kind>.md). The 2026-11-06 redraws passed the rapper, the fighter and the executioner; a retry of these three the same day stopped under the two-round rule, nothing shipped. **Owner's call:** accept each as a colour-only read, or swap it for another kind. Another edit of the same ideas won't do it:
-- **Warrior:** two ideas read only as "a round body under a pointed top": round 5 as "a stout knight", unpaired; round 6 as "King Dedede". He's from a comic, and readers are asked for game characters.
-- **Slayer:** the two swords on his back are the only shape that ever got his name, and they read as horns or a headband's tails. Without them a low lunge with a blade reads as a ninja (paired with the fighter), and a trophy held out reads as an axe or a torch.
-- **Assistant dog** (`assistant`): "Isabelle, high" in colour. In black, over four rounds: a Pikmin leaf, Toad's hat, a mushroom head, then (ears cut free of the face) a knight's shoulders or a cape. Her head is about 6 world px wide, too small for ears with background round them.
+## 31. Blind-read leftovers
+Every drawn kind passes the blind read except the warrior, the slayer and the assistant dog, which the owner accepted as colour reads (2026-11-06, docs/DECISIONS.md). Their rounds are in their Rig lines.
 
 A full-cast read (2026-11-04, every kind drawn, cells wide enough for a held prop; two fresh readers) agrees: the warrior "King Dedede, low" twice (a round body under a tall headpiece); the slayer "Princess Peach or Zelda, low" twice (his long coat reads as a gown, his hair as a princess's). The worm passed at medium twice. Both readers also paired the plumber with the engineer (4 and 22, capped and moustached), the robot with the hunter (the arm cannons) and the hopper with the dino (a round head with a long snout); the merc read as "Crash Bandicoot or Tails, low" twice.
 
