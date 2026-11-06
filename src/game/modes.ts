@@ -41,8 +41,12 @@ export interface ModeDef {
   score(o: RoundInput): RoundResult;
 }
 
-/** What a brawl's boxes deal, to anyone: things that knock, shove or toss you, a shield, and a punch that comes up from below. */
-const BRAWL_ITEMS = ['sword', 'bat', 'bat', 'puck', 'boomerang', 'tremor', 'smoke', 'shield', 'upper'] as const;
+/**
+ * What a brawl's boxes deal, to anyone: only things that knock someone into something, the swings most (the noodle,
+ * the bat, the punch in a box), then the throws and the slams. Nothing that only moves you, and no shield, which would
+ * soak the very hit the mode kills with.
+ */
+const BRAWL_ITEMS = ['sword', 'sword', 'bat', 'bat', 'glove', 'glove', 'glove', 'puck', 'boomerang', 'tremor', 'upper'] as const;
 
 export const MODES: Record<ModeId, ModeDef> = {
   race: {
