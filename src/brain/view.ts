@@ -55,6 +55,7 @@ function lift(b: Body): Lift {
 const OBJECTIVES: Record<ModeId, (m: Match) => Objective> = {
   race: (m) => ({ kind: 'reach', cell: { ...m.level.goal } }),
   slag: (m) => ({ kind: 'climb', lapLine: { ...m.level.goal }, loop: m.level.loop ?? 0 }),
+  brawl: (m) => ({ kind: 'fight', cell: { tx: Math.round((m.level.spawn.tx + m.level.goal.tx) / 2), ty: m.level.spawn.ty } }),
 };
 
 /** Rows `r`'s feet stand above the spawn's floor, laps and all. */

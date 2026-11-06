@@ -134,8 +134,10 @@ export interface RunRules {
   flag: boolean;
   /** With more than one runner, the race ends when one is left standing. */
   lastStanding: boolean;
-  /** What ahead means (sim/standing.ts): nearer the flag by route, or higher up, laps and all. */
-  ahead: 'route' | 'height';
+  /** What ahead means (sim/standing.ts): nearer the flag by route, higher up (laps and all), or nothing (a brawl). */
+  ahead: 'route' | 'height' | 'none';
+  /** The round's own time limit, seconds after GO, over the match's race time rule; when it runs out, everyone left is out. */
+  seconds?: number;
 }
 
 /** The race the game was built on: run for the flag. */

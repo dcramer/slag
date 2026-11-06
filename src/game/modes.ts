@@ -8,11 +8,11 @@ import { type CrateMix, RACE_CRATE } from '../gen/props';
 import type { ThemeId } from '../themes';
 import { TILE } from '../sim/constants';
 import { feetUp, RACE_RUN, type RunRules, type RunWorld } from '../sim/run';
-import { type RoundResult, scoreRound, scoreSurvival, type Standing } from './scoring';
+import { POINTS, type RoundResult, scoreRound, scoreSurvival, type Standing } from './scoring';
 
-export type ModeId = 'race' | 'slag';
+export type ModeId = 'race' | 'slag' | 'brawl';
 
-export const MODE_IDS: readonly ModeId[] = ['race', 'slag'];
+export const MODE_IDS: readonly ModeId[] = ['race', 'slag', 'brawl'];
 
 /** What a finished race hands its mode's scorer. */
 export interface RoundInput {
@@ -40,6 +40,9 @@ export interface ModeDef {
   builds: (theme: ThemeId) => boolean;
   score(o: RoundInput): RoundResult;
 }
+
+/** What a brawl's boxes deal, to anyone: things that knock, shove or toss you, a shield, and a punch that comes up from below. */
+const BRAWL_ITEMS = ['sword', 'bat', 'bat', 'puck', 'boomerang', 'tremor', 'smoke', 'shield', 'upper'] as const;
 
 export const MODES: Record<ModeId, ModeDef> = {
   race: {
@@ -82,6 +85,38 @@ export const MODES: Record<ModeId, ModeDef> = {
         run.kills,
         standings,
         (slot) => climbed(run, slot),
+      ),
+  },
+  /**
+   * Brawl: a one-screen arena that owes no part, everyone starting from its two ends, and the last one standing takes
+   * the round. Nothing kills on its own: items knock and bodies shove, on the race's own physics, and what kills is the
+   * level (its hazards, the parts placed in it each round, the drop, and late in the round the slag). Its own boxes
+   * hand out what to knock with. A round that runs out of time is a draw.
+   */
+  brawl: {
+    label: 'Brawl',
+    // 25 s in, slag pours in from below and the arena closes in, so a round always comes to a fight; 60 s is the end.
+    profile: {
+      size: 'classic',
+      route: 'ltr',
+      bare: true,
+      ends: true,
+      hazards: 4,
+      boxes: { chase: [...BRAWL_ITEMS], lead: [...BRAWL_ITEMS] },
+      tide: { wait: 25, speed: 0.4, gain: 0.04 },
+    },
+    run: { flag: false, lastStanding: true, ahead: 'none', seconds: 60 },
+    // No gap to cross: the crate leans to hazards to knock people into and utility to throw them about.
+    crate: { bridges: false, roles: { hazard: 1.8, utility: 1.2, build: 0.4, demolish: 0.5 } },
+    camera: 'pack',
+    builds: () => true,
+    score: ({ run, standings }) =>
+      scoreSurvival(
+        run.runners.map((r) => ({ slot: r.slot, alive: r.alive, deathFrame: r.deathFrame })),
+        run.kills,
+        standings,
+        () => 0,
+        [POINTS.survive],
       ),
   },
 };

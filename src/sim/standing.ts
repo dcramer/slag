@@ -44,8 +44,9 @@ export function routeDistance(level: Level, r: Runner): number {
   return Number.POSITIVE_INFINITY;
 }
 
-/** How far along `r` is: bigger is further. Height climbed (px, laps counted), or minus the route to the flag. */
+/** How far along `r` is: bigger is further. Height climbed (px, laps counted), minus the route to the flag, or 0 where nobody is ahead. */
 export function progressOf(race: Pick<Race, 'level' | 'rules'>, r: Runner): number {
+  if (race.rules.ahead === 'none') return 0;
   if (race.rules.ahead === 'height') return -(r.body.y + r.body.h - r.lap * (race.level.loop ?? 0) * TILE);
   return -routeDistance(race.level, r);
 }

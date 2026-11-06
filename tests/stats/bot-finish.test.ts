@@ -50,7 +50,7 @@ describe('bot finish rate', () => {
       const r = rates(level);
       measured.set(level, r);
       r.forEach((x, i) => {
-        const [lo, hi] = PASS_BANDS.race[level][DIFFICULTIES[i]];
+        const [lo, hi] = PASS_BANDS.race![level][DIFFICULTIES[i]];
         expect(x, `${level}/${DIFFICULTIES[i]}`).toBeGreaterThanOrEqual(lo);
         expect(x, `${level}/${DIFFICULTIES[i]}`).toBeLessThanOrEqual(hi);
       });

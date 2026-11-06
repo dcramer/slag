@@ -35,6 +35,7 @@ describe('every mode', () => {
       if (ask.loop) expect(lv.loop, 'loop').toBeGreaterThan(0);
       if (ask.tide) expect(lv.tide, 'tide').toBeDefined();
       if (ask.bare) expect(lv.solution, 'owes no part').toEqual([]);
+      if (ask.ends) expect(lv.spawns, 'a spawn at each end').toEqual([lv.goal]);
       if (ask.boxes)
         expect(
           lv.setPieces.some((p) => p.def.key === 'loop-box'),

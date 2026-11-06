@@ -61,7 +61,51 @@ const slag: Emblem = (c, cx, cy, s) => {
   c.fillRect(cx + 1.6 * u, cy - 0.6 * u, 0.6 * u, 0.6 * u);
 };
 
-export const MODE_EMBLEMS: Record<ModeId, Emblem> = { race, slag };
+/** Brawl: a saw blade spinning at the edge of a ledge, and a burst where someone was knocked into it. */
+const brawl: Emblem = (c, cx, cy, s) => {
+  const u = s / 10;
+  // The ledge.
+  c.fillStyle = PAL.steel;
+  c.fillRect(cx - 5 * u, cy + 3.6 * u, 10 * u, 0.9 * u);
+  // The saw: a toothed disc, its hub, standing on the ledge.
+  const sx = cx + 1.8 * u;
+  const sy = cy + 0.4 * u;
+  const teeth = 10;
+  c.fillStyle = PAL.ash;
+  c.beginPath();
+  for (let i = 0; i < teeth * 2; i++) {
+    const a = (i / (teeth * 2)) * Math.PI * 2;
+    const r = (i % 2 ? 2.4 : 3.2) * u;
+    if (i === 0) c.moveTo(sx + Math.cos(a) * r, sy + Math.sin(a) * r);
+    else c.lineTo(sx + Math.cos(a) * r, sy + Math.sin(a) * r);
+  }
+  c.closePath();
+  c.fill();
+  c.fillStyle = PAL.steel;
+  c.beginPath();
+  c.arc(sx, sy, 0.9 * u, 0, Math.PI * 2);
+  c.fill();
+  // The burst on its near side, and the streaks of whoever flew into it.
+  const bx = cx - 1.6 * u;
+  const by = cy - 0.6 * u;
+  c.fillStyle = PAL.amber;
+  c.beginPath();
+  for (let i = 0; i < 16; i++) {
+    const a = (i / 16) * Math.PI * 2;
+    const r = (i % 2 ? 0.8 : 2) * u;
+    if (i === 0) c.moveTo(bx + Math.cos(a) * r, by + Math.sin(a) * r);
+    else c.lineTo(bx + Math.cos(a) * r, by + Math.sin(a) * r);
+  }
+  c.closePath();
+  c.fill();
+  c.fillStyle = PAL.whiteHot;
+  c.fillRect(bx - 0.4 * u, by - 0.4 * u, 0.8 * u, 0.8 * u);
+  c.fillStyle = PAL.molten;
+  c.fillRect(cx - 5 * u, cy - 1.6 * u, 1.8 * u, 0.5 * u);
+  c.fillRect(cx - 4.6 * u, cy - 0.2 * u, 1.4 * u, 0.5 * u);
+};
+
+export const MODE_EMBLEMS: Record<ModeId, Emblem> = { race, slag, brawl };
 
 /** Draw `mode`'s emblem `s` px tall, centred on (cx, cy). */
 export function modeEmblem(c: Ctx, mode: ModeId, cx: number, cy: number, s: number) {
