@@ -821,33 +821,33 @@ export const BRIEFS: Record<string, Brief> = {
     worn: "the satchel's strap is torn and tied back together in a big knot, its flap hanging open; a strip of grey tape (#9a9c98) is wrapped round the near water pistol's cracked tank; one knee of her shorts' hem is torn into a ragged notch; one boot's sole is flapping loose at the toe. Her face, the braid and its shoelace bow stay as they are.",
   },
   creeper: {
-    // The nod, each part of the read at race size and each a shape in outline: the tall upright block body with a
-    // square block head exactly as wide on top and no neck (the outline: taller than wide, so not the sneak's box on
-    // legs, and the head no wider than the body, so not the miner's cube head over arms); four stubby block legs, two
-    // at the front and two at the back with background between the pairs (a block on four legs, so not the
-    // impostor's bean or the hopper's ball on two); no arms at all (nobody else in the cast stands armless on four);
-    // the frowning face of square holes (the face, the homage's own: two square eyes over a stepped frown).
-    // Ours, and the joke: he's a cardboard box painted in squares, a birthday candle stuck on his head for a fuse, lit.
-    // The palette is neutral (Decisions 4): the body in the player's colour, its painted squares a light and a dark of
-    // it; the face holes, the candle and its flame neutrals. The colours lead the brief: the image model drops a
+    // The nod, each part of the read at race size and each a shape in outline: the tall upright box body with a big
+    // cube head exactly as wide on top and no neck, crisp square corners (taller than wide, so not the sneak's box on
+    // legs; the head no wider than the body, so not the miner's cube head over arms; square, so never a cylinder); four
+    // stubby block feet with background between them (a block on four, so not the impostor's bean or the hopper's ball
+    // on two); no arms at all; the big black frowning face square to us, two square eyes over a long down-turned mouth
+    // (the homage's own face, solid ink so it reads in any player's colour); the pixel tiles painted all over him, a
+    // light and a dark of his colour (the homage's skin, in shape not hue).
+    // Ours, and the joke: he's a cardboard box, a birthday candle burnt to a stub stuck on his head for a fuse, lit.
+    // The palette is neutral (Decisions 4): the body in the player's colour, its tiles a light and a dark of it; the
+    // face, the candle and its flame and the torn card neutrals. The colours lead the brief: the image model drops a
     // prompt's tail.
-    // The design read (black silhouettes) named nothing but "a thin tall slab with an antenna": the outline alone is a
-    // post. With the face's four holes cut through it, as the game cuts them (`holes`), a reader named him; so the
-    // face is holes through the box, the level showing through, and the kit only shuts and acts them. A second brief,
-    // a big overhanging head on splayed cube legs (art/sprites/creeper/drafts/r2-*), read as "a creeper or a bomb mix"
-    // where this one read as the creeper.
+    // The first drawing, three-quarter on with the face cut through as holes and packing tape round his middle, read in
+    // the clean colour audit as "a magenta striped cylinder": the holes showed the level, a light patch, the tape a
+    // stripe, the shaded side a cylinder's. So the face is ink, nothing crosses the box, and he faces us: the drawing
+    // asked for "seen almost straight from the front" in place of DESIGN's three-quarter view
+    // (art/sprites/creeper/design.prompt.txt).
     design:
-      'The character: a tall narrow cartoon creature made from cardboard boxes, seen in three-quarter view facing right. ' +
-      'Colours: green cardboard (#5aa846) painted in a patchwork of lighter (#8cd06a) and darker (#3c7a34) green squares, the face holes near-black (#1e2a1e), a white wax candle (#f2eee4) with a yellow flame (#f6c443). ' +
-      'Its body is one tall upright box, twice as tall as it is wide. On top sits a square box head exactly as wide as the body, no neck. ' +
-      'Under the body four short square block legs, two at the front and two at the back, with white background between the front pair and the back pair. No arms at all. ' +
-      'On the front of the head a face of four square black holes: two square eyes and a frowning mouth under them. ' +
-      'A short birthday candle stands on top of the head, its flame lit.',
+      'The character: a tall cartoon creature made from cardboard boxes, its face square to us and only a thin sliver of its right side showing. ' +
+      'Colours: green cardboard (#5aa846) painted all over in a grid of big square pixel tiles in a lighter (#8cd06a) and a darker (#3c7a34) green, like low-resolution pixel camouflage, the face solid near-black (#1e2a1e), a white wax candle (#f2eee4) with a yellow flame (#f6c443). ' +
+      'Its body is one tall upright box with crisp sharp square corners, twice as tall as it is wide. On top sits a big cube head exactly as wide as the body, no neck. ' +
+      'Under the body four short square block feet, two at the front and two at the back peeking out at the sides, white background between them. No arms at all. ' +
+      'The front of the head is a big black frowning face filling most of it: two large square black eyes near its top corners and, under the gap between them, a long black down-turned mouth, a tall block in the middle with a leg stepping down on each side. ' +
+      'A short stubby birthday candle stands on top of the head, its small flame lit. The top back corner of the head is dented in. No stripes, no bands, no tape.',
     // The design came back as the original redrawn with a candle on, so the edit carries the twist with the wear: the
-    // packing tape, the torn corner's corrugated brown, the crooked candle. Nothing on the face, which is the read. A
-    // second edit burnt the candle down to a stub, on the design and on every pose sheet: tall, it read blind as an
-    // antenna, a fuse and a mage's pointed hat (art/sprites/creeper/design.prompt.txt).
-    worn: 'he is an old painted cardboard box: a wide strip of brown packing tape (#c49a5a) is stuck across a big split in the front of his body; the top back corner of his head is dented in, a big notch in its outline; the bottom front corner of his body is torn open, the brown corrugated cardboard (#b8925e) showing; the birthday candle is stuck in crooked, leaning back, wax dripping down it, its flame big. The four square face holes stay exactly as they are.',
+    // crumpled corner, the torn corner's corrugated brown, the crooked candle. Nothing on the face, which is the read, and
+    // no tape, which read as a stripe. A second edit took the wax drips off the head's edges: they traced as horns.
+    worn: 'he is an old painted cardboard box: the top left corner of his head is dented in, a big notch in its outline; the bottom right corner of his body is torn open, a big ragged triangle of brown corrugated cardboard (#b8925e) showing; the birthday candle is stuck in crooked, leaning back, its melted wax only a small flat puddle round its foot. The big black face stays exactly as it is. Nothing else changes: no tape, no stripes, no dirt, no texture.',
   },
   invader: {
     // The nod, each part of the read at race size and each a shape in outline: the crab cut from big square pixels,
