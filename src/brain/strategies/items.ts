@@ -14,16 +14,24 @@ import type { BrainView, Intent, SelfSense } from '../types';
 const USE_EVERY = 8;
 /** Frames between looks round for a box or an item to fetch: each new spot asks the route for a field. */
 const SCAN_EVERY = 15;
-/** Tiles of route it will go out of its way for one. */
-const DETOUR = 8;
-/** How far off it notices one, in tiles across and rows. */
-const SEE_ACROSS = 10;
-const SEE_ROWS = 8;
+/**
+ * How far off it notices one, in tiles across and rows, the tiles of route it will go out of its way for one, whether
+ * the slag under its feet cuts that short (a climb's, on a leash to the leader), and whether one it ran out of time
+ * for stays turned down a while (in a crowd, the way there can be blocked).
+ */
+export interface Errands {
+  across: number;
+  rows: number;
+  detour: number;
+  slag: boolean;
+  shun: boolean;
+}
+const ERRANDS: Errands = { across: 10, rows: 8, detour: 8, slag: true, shun: false };
 /** Rows a box may hang over the floor it's knocked from: a full jump's head room. */
 const BOX_HANG = 3;
 /**
  * Rows of slag under its feet it keeps whatever it's fetching: past these, every row more is a tile of detour it
- * will take, up to DETOUR. Chasers ride the slag's leash a few rows up, so a box on the way is still worth a knock.
+ * will take, up to its detour. Chasers ride the slag's leash a few rows up, so a box on the way is still worth a knock.
  */
 const ERRAND_SLAG = 4;
 /** Frames it keeps at an errand before giving it up. */
@@ -51,6 +59,8 @@ export class ItemPlay {
   constructor(
     private readonly rng: Rng,
     private readonly traits: Personality,
+    /** How far it goes for one: a mode fought over items reaches further than a race on its way. */
+    private readonly reach: Errands = ERRANDS,
   ) {}
 
   /** Off on an errand: its strategy shouldn't count the detour as being stuck. */
@@ -76,7 +86,10 @@ export class ItemPlay {
   }
 
   private run(v: BrainView, me: SelfSense, e: Errand): Intent | null {
-    if (this.frame > e.until) return (this.errand = null);
+    if (this.frame > e.until) {
+      if (this.reach.shun) this.passed.set(key(e, v.level.w), this.frame + PASS_FRAMES);
+      return (this.errand = null);
+    }
     if (e.box) {
       const ready = v.boxes.some((b) => b.tx === e.box!.tx && b.ty === e.box!.ty && b.ready);
       // Popped: whatever it dropped is the next errand.
@@ -94,7 +107,8 @@ export class ItemPlay {
   private scan(v: BrainView, me: SelfSense): Errand | null {
     const climbing = v.objective.kind === 'climb';
     // Climbing, only what's level with it or above is on the way.
-    const near = (x: number, y: number) => Math.abs(x - me.tx) <= SEE_ACROSS && me.ty - y <= SEE_ROWS && y - me.ty <= (climbing ? 1 : SEE_ROWS);
+    const near = (x: number, y: number) =>
+      Math.abs(x - me.tx) <= this.reach.across && me.ty - y <= this.reach.rows && y - me.ty <= (climbing ? 1 : this.reach.rows);
     const spots: Spot[] = [];
     for (const d of v.drops) {
       const tx = Math.floor(d.x);
@@ -127,15 +141,15 @@ export class ItemPlay {
     return null;
   }
 
-  /** Tiles of route it will go out of its way: DETOUR, less as the slag closes in. */
+  /** Tiles of route it will go out of its way: its detour, less as the slag closes in. */
   private budget(me: SelfSense): number {
-    return me.slag === null ? DETOUR : Math.min(DETOUR, me.slag - ERRAND_SLAG);
+    return me.slag === null || !this.reach.slag ? this.reach.detour : Math.min(this.reach.detour, me.slag - ERRAND_SLAG);
   }
 
   /** A spot a short way off its route, and for a box, one where what it pops can be got at. */
   private worth(v: BrainView, me: SelfSense, s: Spot): boolean {
     const d = s.tx === me.tx && s.ty === me.ty ? 0 : v.detour(s.tx, s.ty);
-    if (d > this.budget(me)) return false;
+    if (!Number.isFinite(d) || d > this.budget(me)) return false;
     // What a box pops comes out of the top (out of the bottom under a roof): only worth knocking if it can get there,
     // or if the box hands it over.
     return !s.box || s.box.hands || tile(v, s.box.tx, s.box.ty - 1) === T_SOLID || Number.isFinite(v.detour(s.box.tx, s.box.ty - 1));

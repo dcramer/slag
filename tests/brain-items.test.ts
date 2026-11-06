@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { Rng } from '../src/core/rng';
 import { rollPersonality } from '../src/brain/personality';
 import { ItemPlay } from '../src/brain/strategies/items';
-import { ITEM_TACTICS, type Moment } from '../src/brain/tactics';
+import { ITEM_TACTICS, knockedInto, type Moment } from '../src/brain/tactics';
 import { BRAIN_VIEW_VERSION, type BrainView, type RunnerSense, type SelfSense } from '../src/brain/types';
 import { T_ONEWAY, T_SOLID } from '../src/sim/level';
 import { botRound } from './lib/bot-race';
@@ -50,6 +50,7 @@ const rival = (x: number, up: number, over: Partial<RunnerSense> = {}): RunnerSe
   grounded: true,
   alive: true,
   finished: false,
+  held: null,
   ...over,
 });
 
@@ -132,6 +133,42 @@ describe('item tactics', () => {
     expect(ITEM_TACTICS.bat.when(moment({ grounded: false }, { runners: [rival(6.5, 0)] }))).toBeNull();
     expect(ITEM_TACTICS.bat.when(moment({}, { runners: [rival(6.5, 0)] }))).toEqual({ do: 'use', dir: 1 });
     expect(ITEM_TACTICS.shield.when(moment({ slag: 1, rank: 2 }, { runners: [rival(6, 0)] }))).toBeNull();
+  });
+});
+
+describe('knocking someone into something (a brawl)', () => {
+  /** The floor ends at column 10, over the pit; a wall stands at column 0. */
+  const LEDGE_END = tiles((set) => {
+    for (let x = 10; x < W; x++) set(x, 14, 0);
+    for (let y = 8; y < 14; y++) set(0, y, T_SOLID);
+  });
+
+  it('sees a hit that throws a rival off the end of the floor, and not one into the wall', () => {
+    const v = view({ tiles: LEDGE_END });
+    const r = rival(8.5, 0);
+    expect(knockedInto(v, SELF, r, 1, 'sword')).toBe(true);
+    expect(knockedInto(v, SELF, r, -1, 'sword')).toBe(false);
+    // Bare-handed, only a shove at the very edge counts.
+    expect(knockedInto(v, SELF, rival(9.5, 0), 1, null)).toBe(true);
+    expect(knockedInto(v, SELF, rival(4.5, 0), 1, null)).toBe(false);
+  });
+
+  it('sees a hit that throws a rival into a part that hurts, but not into a mystery box', () => {
+    const props = [{ owner: 1, ground: [], noGo: [13 * W + 2] }];
+    const box = { tx: 2, ty: 13, ready: true, hands: false };
+    expect(knockedInto(view({ tiles: LEDGE_END, props }), SELF, rival(3, 0), -1, 'sword')).toBe(true);
+    expect(knockedInto(view({ tiles: LEDGE_END, props, boxes: [box] }), SELF, rival(3, 0), -1, 'sword')).toBe(false);
+  });
+
+  it('sees the slag under a ledge as a place to throw someone', () => {
+    const shelf = tiles((set) => {
+      for (let x = 0; x < W; x++) set(x, 14, x < 6 ? T_SOLID : 0);
+      for (let x = 0; x < W; x++) set(x, 15, T_SOLID);
+    });
+    const me = { ...SELF, x: 2.5, tx: 2 };
+    // The floor a row down is safe, until the slag covers it.
+    expect(knockedInto(view({ tiles: shelf }), me, rival(4.5, 0), 1, 'sword')).toBe(false);
+    expect(knockedInto(view({ tiles: shelf }), { ...me, slag: 0.5 }, rival(4.5, 0), 1, 'sword')).toBe(true);
   });
 });
 

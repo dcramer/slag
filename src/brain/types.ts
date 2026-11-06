@@ -14,7 +14,7 @@ import type { Temperament } from './temperament';
  */
 
 /** Bumped when BrainView changes shape. A player's script will declare the version it was written against. */
-export const BRAIN_VIEW_VERSION = 7;
+export const BRAIN_VIEW_VERSION = 8;
 
 /** How fast across the ground, as a player would say it. */
 export type Pace = 'still' | 'walking' | 'running' | 'flying';
@@ -62,6 +62,8 @@ export interface RunnerSense {
   grounded: boolean;
   alive: boolean;
   finished: boolean;
+  /** The item in its hands, by its look, or null. */
+  held: ItemKind | null;
 }
 
 /** A mystery box standing in the level: hit it from below and it pops an item. */
