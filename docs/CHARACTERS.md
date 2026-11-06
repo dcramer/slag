@@ -133,8 +133,8 @@ The strongest reads first. **Keyed** marks the non-humanoids, the riskiest to dr
 | 23 | worm | Mudworm Slim | humanoid + head stalk | drawn flat |
 | 24 | dragon | Spyrella | **keyed**, quadruped | drawn flat |
 | 25 | hopper | Tootbert | **keyed**, legs only | drawn flat |
-| 26 | warrior | Kakosh | humanoid, round | drawn flat side on (round 5, the sword out level); the blind read fails: "a stout knight in a pointed helmet", no name and no pairs |
-| 27 | slayer | Gerald | humanoid | drawn flat, redrawn a third time crouched side on with the sword level out ahead; the blind read not passed (unpaired, read as a ninja: the hilts above his shoulders read as horns or a headband's tails) |
+| 26 | warrior | Potkosz | humanoid, round | drawn flat side on (round 5, the sword out level); the blind read fails: "a stout knight in a pointed helmet", no name and no pairs |
+| 27 | slayer | Gerry Drizzle | humanoid | drawn flat, redrawn a third time crouched side on with the sword level out ahead; the blind read not passed (unpaired, read as a ninja: the hilts above his shoulders read as horns or a headband's tails; with nothing on his back, in design reads, a ninja paired with the fighter, or holding a trophy an axe or a torch) |
 | 28 | raider | Clara Loft | humanoid | drawn flat; named by both blind readers at medium, one still pairing her with the puppy (long hair behind a slim figure) |
 | 29 | fighter | Bun-Li | humanoid | drawn flat, redrawn in a deep wide stance with a small head; the blind read passes (both readers named her at medium, unpaired, once the buns stood up and out with her crown round between them: snug on its corners, head and buns were a headband, and readers saw the other fighter) |
 | 30 | stinger | Hornknit | humanoid, cloaked | drawn flat; the blind read passes (straight horns read as rabbit ears until they curved into crescents) |
@@ -144,7 +144,7 @@ The strongest reads first. **Keyed** marks the non-humanoids, the riskiest to dr
 | 34 | pyramid | Pyramid Fred | humanoid, big + blade | drawn flat, no face; the blind read passes (both readers named him at medium once the wedge, a brim over his shoulders and the mage's hat, became an upright pyramid on them, the slicer long and steep behind him) |
 | 35 | invader | Space Evader | **keyed**, legs only, pixel edge | drawn flat, front on, the eye holes cut through; the blind read passes (both readers named it at high, unpaired) |
 | 36 | vampire | Lady Dimistretch | humanoid, tall, gowned | drawn flat; the blind read passes (named at medium by both on the first sheet: the height under the wide flat hat, the gown to the floor) |
-| 37 | assistant | Izzabelle | humanoid, small, dog | drawn flat; the blind read not passed (unpaired as "Pikmin" while the tuft stood on a stalk, then a nameless small figure with a tuft or hat; a side-on redraw with a snout, round 3, read the same and worse in colour, not shipped): in black her head is a hat |
+| 37 | assistant | Jinglebelle | humanoid, small, dog | drawn flat; the blind read not passed (unpaired as "Pikmin" while the tuft stood on a stalk, then a nameless small figure with a tuft or hat; a side-on redraw with a snout, round 3, read the same and worse in colour, not shipped): in black her head is a hat |
 | 38 | sim | Bella Gauche | humanoid + floating diamond | drawn flat; the blind read passes (both readers named her at high once the diamond's points survived the tracer: rounded, it was a Pikmin's leaf) |
 
 **What to check.** No two kinds may rhyme. Watch these pairs:
@@ -185,6 +185,8 @@ How a kind's entry becomes a kind the game draws from art. The entry is the one 
   - **Widening a signature part can turn it into the head** (the rapper's beanie): push a part taller or further out before wider.
   - **A prop that belongs to the homage can carry the read when the head can't.** A triangle on a body is a cone hat until a long blade drags steeply behind it (the executioner).
   - **A long ear flying up beside a tall hat reads as rabbit ears** (the rapper, until his ear hung short and limp under a side-on dog head with a long snout).
+  - **A low lunge with a blade reads as a ninja or a martial artist, whatever it carries; a trophy held out reads as a weapon** (the slayer).
+  - **Lobes hanging beside a small head read as shoulders or a cape**, not ears (the assistant dog, whose head is about 6 world px wide).
   - **Background between a part and the head makes it a part.** Buns snug on the crown, at the temples or on its corners read as a headband's knot; pushed up and out with a gap round each and a thin join, they read as the fighter's buns.
   - **Edits that only move the misread** (a gnome, then a mouse, then a monkey) mean the silhouette has no shape nobody else's has; a new design idea is cheaper than a fifth edit (the rapper's seven rounds).
 - **Motion** is a few drawings per clip: a two-frame walk and run, a jump and a fall (the hedgehog's a looping spin ball), a wall slide, two cheers, a second idle, the knocked-out pose; the shared squash and the kind's gait move on top.
