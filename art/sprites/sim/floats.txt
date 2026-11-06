@@ -1,0 +1,15 @@
+# float.py: where each drawing's diamond hangs. NAME gap(image px) tilt(degrees, + leans back) dx(image px, - behind her)
+# Tipped only a few degrees: tipped 10 to 18, the small diamond read blind as a Pikmin's leaf (round 1).
+scale 1.55
+design 100 5 0
+idle2 100 6 0
+walk-1 100 5 -10
+walk-2 108 4 -6
+run-1 100 8 -40
+run-2 106 7 -35
+air-1 100 3 0
+air-2 140 -4 0
+wall 100 5 0
+cheer 100 3 0
+cheer2 100 6 0
+death 100 10 0
