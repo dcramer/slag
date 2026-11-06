@@ -36,7 +36,7 @@ Each kind's entry is its own file in [characters/](characters/): what a stranger
 | Kind | Homage (what a stranger should say) | Signature traits | Player's color |
 |---|---|---|---|
 | [plumber](characters/plumber.md) | the mustached plumber | a cap with its bill out front and a round badge (our own mark, a little wrench, never the letter), big round nose, thick mustache, bib overalls over the shirt with two buttons, gauntlets, boots; big head, stout | costume: cap and shirt; overalls and plunger cup a dark of it |
-| [hedgehog](characters/hedgehog.md) | the blue speedster, as a tin wind-up toy | spikes swept straight back, green eyes, peach muzzle and belly, a one-sided grin, big boxy shoes, a wind-up key out of his hip; runs leaning hard, spins in the air | costume: the tin quills and body; the quills' folded edge a light of it, the shoes a dark |
+| [hedgehog](characters/hedgehog.md) | the blue speedster, as a tin wind-up toy | a pressed-tin box head with a grey flange and a square snout, fat spikes swept straight back, green eyes, peach belly, a one-sided grin, big boxy shoes, a wind-up key out of his hip; runs leaning hard, spins in the air | costume: the tin quills, head and body; the quills' folded edge a light of it, the shoes a dark |
 | [elf](characters/elf.md) | the green-tunic elf hero | long cap flopping back, pointed ear, blond fringe, flared tunic with a belt, a shield and a sword hilt on the back | costume: cap and tunic; the darned toe a light of it |
 | [hunter](characters/hunter.md) | the armored bounty hunter | tall and long-legged, huge round shoulder pads wider than anything else, a helmet with a wide visor band, the forearm a cannon held straight out from the shoulder; tucks into a ball | costume: the suit, the buoys a dark of it, the cannon a light |
 | [zapmouse](characters/zapmouse.md) | the yellow electric mouse | yellow, long ears with black tips, red cheeks, a lightning-bolt tail | costume: the fur; the cheeks keep their red (a face mark), the tin tail and the cord are neutral |
@@ -117,7 +117,7 @@ The strongest reads first. **Keyed** marks the non-humanoids, the riskiest to dr
 | # | Kind | Name | Rig | Status or risk |
 |---|---|---|---|---|
 | 1 | plumber | Plumbo | humanoid | drawn flat |
-| 2 | hedgehog | Zoomic | humanoid, spin keyed | drawn flat, a tin wind-up toy; the blind read passes (named at medium and high), the twist read says a knock-off with its own twist; the dragon's dash is read as him |
+| 2 | hedgehog | Zoomic | humanoid, spin keyed | drawn flat, a tin wind-up toy with a box head; the blind read passes (named at medium and low), the twist read says a knock-off with or without the key; the dragon's dash is read as him, as it was before |
 | 3 | chomper | Snack-Man | generated, no limbs | drawn flat |
 | 4 | zapmouse | Kilowatchu | **keyed**, quadruped | drawn flat |
 | 5 | elf | Sir Clinkalot | humanoid | drawn flat |
