@@ -825,6 +825,28 @@ export const BRIEFS: Record<string, Brief> = {
     // twist with the wear: the tin can's ridges and dent, the hair tie, the umbrella grown huge.
     worn: "the top hat is now clearly an old tin can: two raised ridged rings run round it near its top and its bottom, and a big dent is knocked into its side, its brim still wide and flat and the hat still straight up; its band is a fat lilac hair tie (#e0b0dc) knotted at the side; the umbrella grows huge: an open paper cocktail umbrella as wide as she is, on a long wooden toothpick stick, held out at arm's length in front of her, with white background all round it; the hem of the cape is torn into a big ragged notch; one striped sock has slipped down round her boot. Her face and the ponytail stay as they are.",
   },
+  sim: {
+    // The nod, each part of the read at race size and each a shape in outline: the green diamond floating above her
+    // head, a long double point top and bottom, with a clear gap of background under it (the read: nobody else in the
+    // cast has a part hanging in the air over the head, and only while the gap shows; joined to the head it is a
+    // pointed hat, the mage's or a gnome's); the black bob, a rounded helmet of hair to the jaw (an ordinary woman's
+    // head, not the raider's braid or the fighter's buns); the plain knee-length dress flaring a little from the
+    // waist, slim legs together in heels (not the raider's shorts and wide stance, nor the fighter's thick legs in a
+    // kick); one hand raised in a polite wave at shoulder height, never over the head (arms up read as the ape).
+    // Ours, and the joke: the diamond is cracked and taped and hangs crooked, and one shoe has lost its heel (the
+    // wear edit).
+    // The palette is neutral (Decisions 4): the dress in the player's colour, the shoes a dark of it; the hair black,
+    // the skin neutral; the diamond keeps its green, a fixed mark like the zapmouse's cheeks. The diamond leads the
+    // brief: the image model drops what comes last. Asked for a slim woman, it drew a realistic one, a stick under a
+    // dot at play size, so she is a chunky toy. No drawn diamond ships: one drawn once is hung over her head in every
+    // drawing (art/sprites/sim/design.prompt.txt).
+    design:
+      'The character: a chunky little cartoon woman like a toy figure, three-quarter view facing right, her head a third of her height. Her signature: a huge bright green crystal diamond (#46c84a, its lit facets #9ee87a) floating in the air above her head, a long double point, pointed top and bottom, as tall as her head and half as wide, with a clear gap of white background between it and her hair: it never touches her. ' +
+      'A big glossy black bob haircut (#24202a), round and wider than her face, to her jaw, with a straight fringe. Peach skin (#efc9a4). ' +
+      'A plain blue knee-length dress (#3f6fb5), sleeveless, flaring out wide from the waist into a big bell. Short legs together, chunky dark blue high heels (#24345e). ' +
+      'One hand raised in a polite little wave at shoulder height, the other at her side. A polite, vacant smile.',
+    worn: 'the green diamond is cracked across its middle and a strip of grey tape (#9a9c98) is stuck over the crack, and it hangs crooked, tilted to one side, still floating clear above her head with white background under it; the hem of the dress is torn into a big ragged notch at the side; the heel of her back shoe has snapped off, that shoe now flat. Her face, the bob and the gap under the diamond stay as they are.',
+  },
 };
 
 function brief(kind: string): Brief {
