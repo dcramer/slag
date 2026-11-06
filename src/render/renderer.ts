@@ -6,7 +6,7 @@ import { overview, raceFloor, type ViewXform } from '../game/view';
 import { FPS, PLAYER_H, RUN_COUNTDOWN, TILE, VIEW_H, VIEW_W } from '../sim/constants';
 import { floorY, type Level, tileAt } from '../sim/level';
 import type { Solid } from '../sim/physics';
-import type { Cell } from '../core/geom';
+import type { Cell, Rect } from '../core/geom';
 import { type Beam, footprint, motionOffset, placeFaults, previewProps, type Resolved, resolveProp } from '../sim/props';
 import { feetUp, type RunWorld } from '../sim/run';
 import { leashRows } from '../sim/tide';
@@ -714,14 +714,16 @@ export class Renderer {
     light(rc, gx, gy - 20, 90, ac, 0.7);
   }
 
-  /** Faint shimmer over the spawn safe zone during a race (runners touching it are immune to props). */
+  /** Faint shimmer over each spawn's safe zone during a race (runners touching one are immune to props). */
   private drawSafeZone(rc: RC, level: Level, run: RunWorld) {
-    const z = run.safeZone;
-    if (!z) return;
+    for (const { cell, zone } of run.safeZones) this.drawZone(rc, level, zone, cell);
+  }
+
+  private drawZone(rc: RC, level: Level, z: Rect, cell: { tx: number; ty: number }) {
     const g = rc.g;
     const pc: HSL = shift(level.theme.accent, 0, 0, 40);
     // Only the air above the spawn floor; the rect also covers the floor row.
-    const bottom = Math.min(z.y + z.h, floorY(level.spawn));
+    const bottom = Math.min(z.y + z.h, floorY(cell));
     const h = bottom - z.y;
     if (h <= 0) return;
     const a = 0.07 + Math.sin(rc.t * 2.2) * 0.02;

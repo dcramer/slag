@@ -23,6 +23,7 @@ import type {
 } from '../sim/props/types';
 
 import { CRATE_ITEMS } from '../sim/items/roster';
+import type { ItemKind } from '../sim/items/types';
 import { AMMO } from '../sim/props/types';
 
 export type { Aim, Archetype, MetalStyle, Module, PropDef, PropStyle, Role };
@@ -1616,6 +1617,8 @@ export function clearsParts(def: PropDef): boolean {
 export interface CrateMix {
   bridges: boolean;
   roles: Readonly<Record<Role, number>>;
+  /** What a loot box in the crate deals; absent, `CRATE_ITEMS`. */
+  items?: readonly ItemKind[];
 }
 
 /** A race's crate: the bridges the level needs, every role as the roster has it. */
@@ -1661,7 +1664,13 @@ export function generateCrate(
       ),
     );
   }
-  return rng.shuffle(cards.map((c, i) => ({ ...c, key: `${round}-${i}` })));
+  return rng.shuffle(cards.map((c, i) => ({ ...withItems(c, mix.items), key: `${round}-${i}` })));
+}
+
+/** `def` with its loot boxes dealing `items`, if the mode names its own. */
+function withItems(def: PropDef, items: readonly ItemKind[] | undefined): PropDef {
+  if (!items || !def.modules.some((m) => m.type === 'mystery')) return def;
+  return { ...def, modules: def.modules.map((m) => (m.type === 'mystery' ? { ...m, pool: [...items] } : m)) };
 }
 
 /**

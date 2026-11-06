@@ -13,7 +13,6 @@ import { hashMatch, restoreMatch, snapshotMatch } from '../src/net/snapshot';
 import { FPS, LEVEL_H, LEVEL_W, POP_HOLD, RUN_COUNTDOWN, TILE } from '../src/sim/constants';
 import { isProtected, lapShift, type Level, LOOP_BAND, LOOP_SPAWN } from '../src/sim/level';
 import { moduleSim, newPropState } from '../src/sim/props';
-import { CATCH_UP } from '../src/sim/props/modules/mystery';
 import { bodyAtCell } from '../src/sim/physics';
 import { RunWorld } from '../src/sim/run';
 import { leashRows, stepTide, type Tide } from '../src/sim/tide';
@@ -90,7 +89,7 @@ describe('Rising Slag levels', () => {
     for (const b of boxes) {
       const [x, y] = b.def.footprint[0];
       expect(isProtected(lv, x, y)).toBe(false);
-      expect(b.def.modules[0]).toMatchObject({ type: 'mystery', catchUp: true });
+      expect(b.def.modules[0]).toMatchObject({ type: 'mystery', deal: MODES.slag.profile.boxes });
     }
     // Back to a race, the lobby's level is rebuilt without it.
     m.setRules(DEFAULT_RULES);
@@ -241,7 +240,7 @@ describe("a loop's mystery boxes", () => {
       refill: 1,
       look: 'crate' as const,
       seed: 1,
-      catchUp: true,
+      deal: MODES.slag.profile.boxes!,
     };
     /** The item the box pops when knocked from below by a runner whose feet stand at `up` (climbed px), beside one at `other`. */
     const knock = (uid: number, up: number, other: number) => {
@@ -269,8 +268,8 @@ describe("a loop's mystery boxes", () => {
       return got[0];
     };
     for (let uid = 1; uid <= 8; uid++) {
-      expect(CATCH_UP.chase).toContain(knock(uid, 500, 100));
-      expect(CATCH_UP.lead).toContain(knock(uid, 100, 500));
+      expect(box.deal.chase).toContain(knock(uid, 500, 100));
+      expect(box.deal.lead).toContain(knock(uid, 100, 500));
     }
   });
 });

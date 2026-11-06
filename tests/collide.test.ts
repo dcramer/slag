@@ -1289,3 +1289,16 @@ describe('cost', () => {
     expect((performance.now() - t0) / frames).toBeLessThan(4);
   });
 });
+
+describe('more than one spawn', () => {
+  it('runner i starts at the i-th spawn, round and round, each spawn with a safe zone of its own', () => {
+    const level = testLevel();
+    level.spawns = [{ tx: LEVEL_W - 3, ty: FLOOR - 1 }];
+    const run = new RunWorld(level, [], [0, 1, 2, 3]);
+    const at = (i: number) => Math.floor((run.runners[i].body.x + run.runners[i].body.w / 2) / TILE);
+    expect([at(0), at(2)].every((x) => Math.abs(x - level.spawn.tx) <= 1)).toBe(true);
+    expect([at(1), at(3)].every((x) => Math.abs(x - (LEVEL_W - 3)) <= 1)).toBe(true);
+    expect(run.safeZones).toHaveLength(2);
+    expect(run.runners.every((r) => run.isSafe(r))).toBe(true);
+  });
+});

@@ -49,7 +49,7 @@ What we borrow: the camera that follows the leader, out when you fall off it; th
 | Late squeeze | after the first elimination, or after a set time with none [SR-wiki] (time not documented) | from 30 s, 0.4 rows a second | from the first elimination, or 30 s |
 | No weapons at the start | first 1.5 s [SR-patch] | the slag boils 3 s; items come from boxes later | keep |
 | Items | 8 kinds, from orbs on the track [SR-pickups] | 10 kinds, from the loop's boxes and placed boxes | rethink for a climb (below) |
-| How boxes deal | weighted random [SR-patch]; players say by rank: drills to the back, crates to the front [SR-odds] | by rank: catch-up to the pack, defence to the leader (`CATCH_UP`) | by rank |
+| How boxes deal | weighted random [SR-patch]; players say by rank: drills to the back, crates to the front [SR-odds] | by rank: catch-up to the pack, defence to the leader (Rising Slag's `boxes` table, `src/game/modes.ts`) | by rank |
 | Strongest catch-up | Golden Hook: swap places with the runner ahead [SR-pickups] | Queue Jumper: trade places with the runner just above | keep |
 | Movement tools | grapple at 45° onto white ceilings; a boost meter [SR-controls] | walk, run, jumps, wall jumps; no grapple or boost | a grapple item |
 | Early leader wins (leader at 15 s) | not documented | open shaft, bumping from below in the air too: 66% as built, 50% with items in every hand, 69% with none (storeys: 60, 59, 55; 128 seeds, about 80 judged each, so ±5) | about half (estimate) |

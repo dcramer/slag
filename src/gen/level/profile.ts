@@ -205,7 +205,7 @@ export function rollProfile(seed: number, themeId: ThemeId, o: ProfileOverride =
     ...(o.builder ? { builder: o.builder } : {}),
     ...(o.loop ? { loop: true } : {}),
     ...(o.bare ? { bare: true } : {}),
-    ...(o.boxes ? { boxes: true } : {}),
+    ...(o.boxes ? { boxes: o.boxes } : {}),
     ...(o.tide ? { tide: true } : {}),
     // A loop's laps climb the difficulty curve unless the host fixed one difficulty for every level.
     ...(o.loop && size === 'tall' && (o.curve ?? !o.difficulty) ? { curve: true } : {}),

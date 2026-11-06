@@ -5,7 +5,8 @@ import { LEVEL_H, LEVEL_W, RUN_COUNTDOWN } from '../src/sim/constants';
 import { CRATE_ITEMS, giveItem, HOOK, type ItemKind, UPPER } from '../src/sim/items';
 import type { Level } from '../src/sim/level';
 import { bodyAtCell } from '../src/sim/physics';
-import { CATCH_UP } from '../src/sim/props/modules/mystery';
+import { MODES } from '../src/game/modes';
+import { generateCrate, RACE_CRATE } from '../src/gen/props';
 import { RACE_RUN, type Runner, RunWorld, type RunRules } from '../src/sim/run';
 import type { Tide } from '../src/sim/tide';
 import { type InputFrame, NO_INPUT } from '../src/sim/types';
@@ -170,6 +171,7 @@ describe('Upper Hand', () => {
 
 describe('where the climb items come from', () => {
   it('only a loop box deals them, and only to whoever is behind', () => {
+    const CATCH_UP = MODES.slag.profile.boxes!;
     for (const k of ['hook', 'upper'] as const) {
       expect(CRATE_ITEMS).not.toContain(k);
       expect(CATCH_UP.chase).toContain(k);
@@ -202,5 +204,24 @@ describe('where the climb items come from', () => {
     const a = chaos();
     expect(a).toBe(chaos());
     expect((JSON.parse(a) as { runners: Runner[] }).runners.some((r) => r.items.bonkedBy >= 0)).toBe(true);
+  });
+});
+
+describe('a mode names what its crates deal', () => {
+  it("a crate's loot boxes deal the mode's items, and the rest are as dealt", () => {
+    const items: ItemKind[] = ['hook'];
+    let boxes = 0;
+    for (let round = 0; round < 40 && !boxes; round++) {
+      const plain = generateCrate(5, round, 6);
+      const own = generateCrate(5, round, 6, 1, 0, false, false, undefined, { ...RACE_CRATE, items });
+      expect(own.map((c) => c.name)).toEqual(plain.map((c) => c.name));
+      for (const c of own)
+        for (const m of c.modules)
+          if (m.type === 'mystery') {
+            boxes++;
+            expect(m.pool).toEqual(items);
+          }
+    }
+    expect(boxes).toBeGreaterThan(0);
   });
 });

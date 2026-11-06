@@ -1,14 +1,14 @@
 import type { Rng } from '../../core/rng';
 import { isProtected, type Level, LOOP_BAND, T_EMPTY, T_ONEWAY, T_SOLID } from '../../sim/level';
 import { footprintCells, type PlacedProp, type PropDef } from '../../sim/props';
-import { CRATE_ITEMS } from '../../sim/items/roster';
+import type { ItemDeal } from '../../sim/items/types';
 
 /**
  * Mystery boxes a Rising Slag loop is built with (game/modes.ts), as SpeedRunners' tracks have their item boxes:
  * placed by the level, not by players, so every round has items and every lap passes them. Each hangs over a
  * floor where a climber standing under it can knock it from below, a few apart up the shaft, off the seam's band
- * and out of perch wells. They deal by rank (`catchUp`, sim/props/modules/mystery.ts): catch-up items to whoever is
- * behind, a defensive one to the leader.
+ * and out of perch wells. They deal by rank from the mode's table (`ItemDeal`, sim/props/modules/mystery.ts): catch-up
+ * items to whoever is behind, a defensive one to the leader.
  */
 
 /** Rows of shaft per box: about one every two storeys. */
@@ -18,8 +18,8 @@ const MIN_APART = 9;
 /** Frames a loop's box takes to fill again: about a lap's worth of climbing behind you. */
 const REFILL = 5 * 60;
 
-/** A loop's box as a level piece: one solid crate cell at (tx, ty) that refills forever and deals by rank. */
-function boxAt(tx: number, ty: number, seed: number): PropDef {
+/** A loop's box as a level piece: one solid crate cell at (tx, ty) that refills forever and deals by rank from `deal`. */
+function boxAt(tx: number, ty: number, seed: number, deal: ItemDeal): PropDef {
   return {
     key: 'loop-box',
     name: 'Loot Box',
@@ -28,7 +28,7 @@ function boxAt(tx: number, ty: number, seed: number): PropDef {
     role: 'utility',
     style: { metal: 'steel', trim: 'none', hue: 0, glowHue: 0, woodHue: 30 },
     motion: { type: 'none' },
-    modules: [{ type: 'mystery', cells: [[tx, ty]], pool: [...CRATE_ITEMS], uses: 0, refill: REFILL, look: 'crate', seed, catchUp: true }],
+    modules: [{ type: 'mystery', cells: [[tx, ty]], pool: [...deal.chase], uses: 0, refill: REFILL, look: 'crate', seed, deal }],
     footprint: [[tx, ty]],
   };
 }
@@ -52,7 +52,13 @@ function hangs(level: Level, x: number, y: number, taken: ReadonlySet<number>): 
  * A loop's boxes, among the level's set pieces `pieces` (kept clear of their cells), each one kept only if `keep`
  * says the lap still climbs with it in place.
  */
-export function loopBoxes(level: Level, pieces: readonly PlacedProp[], keep: (pieces: readonly PlacedProp[]) => boolean, rng: Rng): PlacedProp[] {
+export function loopBoxes(
+  level: Level,
+  pieces: readonly PlacedProp[],
+  keep: (pieces: readonly PlacedProp[]) => boolean,
+  rng: Rng,
+  deal: ItemDeal,
+): PlacedProp[] {
   const loop = level.loop;
   if (!loop) return [];
   const taken = new Set(pieces.flatMap((p) => footprintCells(p).map(([x, y]) => y * level.w + x)));
@@ -64,7 +70,7 @@ export function loopBoxes(level: Level, pieces: readonly PlacedProp[], keep: (pi
   for (const [x, y] of spots) {
     if (out.length >= want) break;
     if (out.some((b) => Math.abs(b.def.footprint[0][1] - y) < MIN_APART)) continue;
-    const box: PlacedProp = { uid: 0, def: boxAt(x, y, rng.int(0, 1 << 20)), owner: -1, tx: 0, ty: 0, rot: 0 };
+    const box: PlacedProp = { uid: 0, def: boxAt(x, y, rng.int(0, 1 << 20), deal), owner: -1, tx: 0, ty: 0, rot: 0 };
     if (keep([...pieces, ...out, box])) out.push(box);
   }
   return out;
