@@ -71,7 +71,7 @@ Each kind's entry is its own file in [characters/](characters/): what a stranger
 | [pyramid](characters/pyramid.md) | the triangle-helmeted executioner | a huge rusty wedge of a helmet, its point out past his shoulder, no face, a butcher's apron with a pig on it, thick bare arms, a giant cheese slicer dragged behind | costume: the apron, the pig a light of it |
 | [invader](characters/invader.md) | the pixel crab from space | wider than tall and cut from square pixels, two antennae, side claws raised, stubby legs that shuffle in and out, two square eye holes | costume: the body |
 | [vampire](characters/vampire.md) | the giant vampire lady in the big hat | as tall as the box allows, a wide flat-crowned hat, a long gown to the floor, long claws, pearls | costume: the gown |
-| [assistant](characters/assistant.md) | the town assistant dog with the bell in her hair | a small yellow dog upright, floppy ears, a top-knot with a bell, a vest and skirt, a clipboard | costume: the fur, the vest a dark of it |
+| [assistant](characters/assistant.md) | the town assistant dog with the bell in her hair | a small dog upright with a big round head, floppy ears hanging down, a short bushy top-knot pinched by a cat's collar with a big jingle bell on it, a vest over a white shirt, a short flared skirt, a cracked clipboard held out in front | costume: the fur; the vest a dark of it, the ears' tips a light |
 | [sim](characters/sim.md) | the lady with the green diamond over her head | a slim woman with a black bob in a dress, a green double-pointed diamond floating clear above her head | costume: the dress; the diamond keeps its green |
 
 **Reserves**, if a kind won't read: the spinning bandicoot (its tuft and grin rhyme with the speedster), the shovel-wielding knight, the red-haired mountain climber, the falling-block party bean (rhymes with the crewmate). The space marine in green armour reads as a generic soldier at 20 px; the plumber's tall brother, the ape's red-capped nephew and the king's turtle foot soldiers rhyme with kinds already in.
@@ -144,7 +144,7 @@ The strongest reads first. **Keyed** marks the non-humanoids, the riskiest to dr
 | 34 | pyramid | Pyramid Ted | humanoid, big + blade | drawn flat, no face; the blind read not passed (one reader of two names him, the other reads the mage's pointed hat: the cowl overhanging his shoulders is a brim at play size) |
 | 35 | invader | Invayda | **keyed**, legs only, pixel edge | high: the pixel crab; the creeper's blocks and the crewmate's legs to watch |
 | 36 | vampire | Lady Dimitreskew | humanoid, tall, gowned | medium: the height and the hat; the mage's and the top-hat girl's hats to watch |
-| 37 | assistant | Izzabelle | humanoid, small, dog | medium: the bell top-knot; the zapmouse and the rapping puppy to watch |
+| 37 | assistant | Izzabelle | humanoid, small, dog | drawn flat; the blind read not passed (unpaired as "Pikmin" while the tuft stood on a stalk, then a nameless small figure with a tuft or hat): in black the knot and bell are a hat |
 | 38 | sim | Bella Gauche | humanoid + floating diamond | medium: the diamond, only while it floats clear |
 
 **What to check.** No two kinds may rhyme. Watch these pairs:

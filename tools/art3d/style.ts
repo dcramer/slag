@@ -825,6 +825,33 @@ export const BRIEFS: Record<string, Brief> = {
     // twist with the wear: the tin can's ridges and dent, the hair tie, the umbrella grown huge.
     worn: "the top hat is now clearly an old tin can: two raised ridged rings run round it near its top and its bottom, and a big dent is knocked into its side, its brim still wide and flat and the hat still straight up; its band is a fat lilac hair tie (#e0b0dc) knotted at the side; the umbrella grows huge: an open paper cocktail umbrella as wide as she is, on a long wooden toothpick stick, held out at arm's length in front of her, with white background all round it; the hem of the cape is torn into a big ragged notch; one striped sock has slipped down round her boot. Her face and the ponytail stay as they are.",
   },
+  assistant: {
+    // The nod, each part of the read at race size and each a shape in outline: the top-knot, a tuft of hair standing
+    // straight up off the crown, pinched in at its base by a band and splaying out at its tip, with a big round bell
+    // hanging off the front of the band clear of the head (the read: nobody else in the cast has a bell on its head;
+    // a round knot on a round head is the fighter's buns, so the tuft is tall and splayed, and one, in the middle);
+    // the two floppy ears hanging straight down beside the face to the shoulders (the zapmouse's stand up, the
+    // puppy has one ear behind); a small upright dog in a vest over a white shirt and a short flared skirt (a girl's
+    // outline, not the puppy's tee and shorts); the clipboard, held out in front clear of her (hugged to the chest
+    // it vanishes inside the outline).
+    // Ours, and the joke: the bell is a jingle bell off a cat's collar, the collar itself the band round her knot;
+    // one ear is folded inside out; papers are slipping out of the clipboard.
+    // The palette is neutral (Decisions 4): the fur in the player's colour, the vest a dark of it; the shirt, skirt,
+    // collar, bell and clipboard neutrals. The colours lead the brief: the image model drops what comes last.
+    // The first four designs (art/sprites/assistant/drafts/design-1..4), traced black at 22 px, were a hooded blob:
+    // the tuft a one-pixel nub, the bell inside the head's outline, the ears one mass with the body. So the head is half
+    // of her, the tuft half as tall again, the bell big and out past the head's outline, the ears flicked out clear.
+    // Blind, that stalked tuft read as a leaf on a sprout ("Pikmin", both readers), so the shipped design is an edit of
+    // it: the tuft a short bushy fan with no stem, the bell twice as big (art/sprites/assistant/design.prompt.txt).
+    design:
+      'The character: a small cheerful cartoon dog girl standing upright, her round head huge, half of her height. Colours: fluffy yellow fur (#f2c84a), a dark ochre vest (#9a6a1e), a white shirt (#f6f2ea), a slate grey skirt (#5e6470), a silver bell (#c4c8cc), a dark brown leather collar (#5a3a26), a wooden clipboard (#d8b47a). ' +
+      'Her signature, big and bold: a tall tuft of fur shoots straight up out of the top of her head, as tall as half her head, pinched tight at its base by a small cat collar and fanning out wide at its tip like a palm tree; a big round silver jingle bell, a third as wide as her head, hangs off the collar out in front of the tuft, sticking out past the outline of her head. ' +
+      'Two long fluffy floppy ears hang straight down past her chin and flick outward at their tips, a gap between each ear and her body. Big round eyes, a black nose. ' +
+      "A vest over a white shirt, a short flared skirt, short legs. Her front hand holds a clipboard out level at arm's length, clear of her body.",
+    // The edit carries the rest of the twist with the wear: the ear folded inside out (still hanging, so it never
+    // stands up like the zapmouse's), the papers sliding out of a broken clipboard, a dented bell. Nothing on the face.
+    worn: "her front hand now holds the clipboard out in front of her at arm's length, level, clear of her body with white background all round it, its top corner cracked and patched with grey tape, three loose white papers sliding out of it; the near floppy ear is folded inside out at its tip, its pale inside (#f8e4a8) showing, still hanging down; the silver bell has a big dent in its side; the short skirt flares out wider, its hem torn into a big ragged notch. Her face, the tall tuft and the bell stay exactly where they are.",
+  },
 };
 
 function brief(kind: string): Brief {
