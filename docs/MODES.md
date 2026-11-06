@@ -86,22 +86,23 @@ Next: nothing for catch-up itself. Whether a gate that splits the pack that ofte
 
 ## Brawl: the party brawler (Duck Game), killing by knockback into the level as the crossover brawler does (Smash)
 
-What we borrow: short rounds, last one standing, items from boxes knocked from below, a draw scores nothing. What's ours: nothing kills on its own (items knock, bodies shove, on the race's physics), the level does: its hazards, the parts placed in it every round (so the arena gets nastier through a match), the drop, and late in a round slag pouring in from below.
+What we borrow: short rounds, last one standing, items from boxes knocked from below, a draw scores nothing. What's ours: nothing kills on its own (items knock, bodies shove, on the race's physics), the level does: its hazards, the parts placed in it every three bouts (so the arena gets nastier through a match), the drop, and late in a round slag pouring in from below.
 
 | Attribute | Reference | Ours | Target |
 | --- | --- | --- | --- |
 | Players | 2–8 [DG-steam] | 1–8 | 2–8 |
 | Kill | one hit [DG-steam]; or knockback past a blast line, further the more damage you've taken [Smash-kb] | knockback into a hazard or off the edge; items and bumps knock, bodies shove (owner decision) | the same |
 | Round won by | last standing, who must stay alive a moment; a draw scores nothing [DG-mp] | last standing (10), and a kill credited by a bonk (2); a draw (everyone out at once, or the time out) scores nothing | the same |
-| Round length | 8–10 s, rarely more (a review); under a minute (another) [DG-reviews] | 29.6 s on average with bots on the bare arena, 27.4 s with parts placed (from 39.6 and 38.1): 30 of 48 bare rounds land in 20–40 s, 38 of 64 with parts placed; 60 s at most | 20–40 s |
-| Draws | rare (not documented) | 6% of bot rounds on the bare arena, 17% with parts placed (from 63% and 59%): the slag takes the last ones together | rare |
-| Match won by | 10 wins by default, checked at intermission every 10 rounds [DG-mp] | 50 points (Normal): 5 wins | the same |
+| Round length | 8–10 s, rarely more (a review); under a minute (another) [DG-reviews] | 30.1 s on average with bots on the bare arena, 28.1 s with parts placed (from 39.6 and 38.1): 32 of 48 bare rounds land in 20–40 s, 46 of 64 with parts placed; 60 s at most | 20–40 s |
+| Draws | rare (not documented) | 13% of bot rounds on the bare arena, 16% with parts placed (7% and 15% over twice the seeds; from 63% and 59%): the slag takes the last ones together | rare |
+| Match won by | 10 wins by default, checked at intermission every 10 rounds [DG-mp] | 50 points (Normal): 5 wins, checked after every bout; 15 bouts at most | the same |
+| Rounds between intermissions | an intermission every 10 rounds [DG-mp] | 3 bouts on each placement (Bouts per Pick: 1, 2, 3 or 5), then pick and place: four Normal bots fight 80% of a match (68% at one bout a placement), picking and placing 9% (22%; about 9 s each time), 5.6 min a match (6.3), 9 rounds either way | most of a match spent fighting |
 | Weapons | spawners on a timer, boxes bumped from below, a mystery gun at the start [DG-spawns] | 3 boxes in every arena, handing over what they deal | the same |
 | Item frequency | crossover brawler: one every 8–13 s on medium [Smash-items] | boxes refill every 5 s | one every 5–10 s |
 | Catch-up | none found | none | none at first (the crossover brawler has an optional underdog boost [Smash-rules]) |
 | Sudden death | crossover brawler: 300% damage, a shrinking blast zone [Smash-sd] | slag pours in from below 25 s in | the same |
 
-The arena is a classic one-screen level that owes no part (`bare`), everyone starting from its two ends (`ends`), deadly by default: up to six set pieces from the nastiest of its set's mix (`hazards: 6`, `danger: 0.9`; about 4.7 fit), against 4 of the usual mix, runners out before the slag in round 1 went from 0.54 a round to 0.75. Bots fetch from the arena's boxes wherever they are, and line a rival up before they hit or shove: they follow the flight a hit would give a dazed body (`knockedInto`, src/brain/tactics.ts) and hit from the side that throws it into an edge, a drop, a hazard or the slag, taking any hit once kept waiting 4 s, cornered, or with the slag close; one lined up itself gets round its rival first. Once the slag pours they climb to the highest ground they can reach, and leave a shoving match that goes nowhere. Of deaths on the bare arena 31% come with a rival's knock credited (from 11%), with parts placed 24% (from 9%): the parts take more of them on their own. Four Normal bots, `tests/stats/brawl.test.ts`, bands in `BRAWL_ROUNDS`. Pouring earlier or faster (20 s in, or gaining 0.07 tiles/s²) cut the rounds over 40 s but added draws, so the pour stays 25 s in at 0.4 tiles/s gaining 0.04.
+The arena is a classic one-screen level that owes no part (`bare`), everyone starting from its two ends (`ends`), deadly by default: up to six set pieces from the nastiest of its set's mix (`hazards: 6`, `danger: 0.9`; about 4.7 fit), against 4 of the usual mix, runners out before the slag in round 1 went from 0.54 a round to 0.75. Bots fetch from the arena's boxes wherever they are, and line a rival up before they hit or shove: they follow the flight a hit would give a dazed body (`knockedInto`, src/brain/tactics.ts) and hit from the side that throws it into an edge, a drop, a hazard or the slag, taking any hit once kept waiting 4 s, cornered, or with the slag close; one lined up itself gets round its rival first. Once the slag pours they climb to the highest ground they can reach, and leave a shoving match that goes nowhere. There's no route to block, so they put their hazards where a knock throws someone and they'd still come down safe (`knockLanes`, the cells nobody ran through last round first), turning that knock into a kill, and no part near the two ends, where it would catch the field walking off at GO; a hop under a box or a leap is played out before it's taken, as a walking move is, and a bot stops rather than coasts on where it meant to stand. Of deaths on the bare arena 36% come with a rival's knock credited (from 31%, and 11% before bots lined rivals up), with parts placed 32% (from 24% and 9%); deaths to a hazard with no knock credited fell from 68 in 64 rounds to 56. Four Normal bots, `tests/stats/brawl.test.ts`, bands in `BRAWL_ROUNDS`. Pouring earlier or faster (20 s in, or gaining 0.07 tiles/s²) cut the rounds over 40 s but added draws, so the pour stays 25 s in at 0.4 tiles/s gaining 0.04.
 
 ---
 
@@ -130,6 +131,7 @@ What it needs from us: Race's "everyone finished scores nothing" flipped, team s
 | Early leader wins | Rising Slag | `tests/stats/slag-catch-up.test.ts`; `LEAD_HOLDS` |
 | Round and match length, rounds that score, finishers per round | all | not yet a suite: measured once with a probe for this page |
 | Draws, round length, deaths knocked into the level | Brawl | `tests/stats/brawl.test.ts`; `BRAWL_ROUNDS` |
+| Share of a match spent fighting, by bouts per placement | Brawl | `tests/stats/brawl-bouts.test.ts` |
 | Team clear rate | Gauntlet | to come with the mode |
 
 ## Sources

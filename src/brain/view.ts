@@ -4,9 +4,9 @@ import { isBridgePart, type PropDef } from '../gen/props';
 import { type Bridge, cacheFor, canPlaceBridge, fieldOf, prove, settled, withBridges } from '../gen/level';
 import { JumpCache, levelPrecision } from '../gen/level/precision';
 import { analyzeRoutes } from '../gen/level/routes';
-import type { Level } from '../sim/level';
+import { type Level, spawnsOf } from '../sim/level';
 import { RUN_COUNTDOWN, TILE } from '../sim/constants';
-import { barrierOf, hangRow, motionOffset, mysterySpent, mysteryState, type PlacedProp, spotAt } from '../sim/props';
+import { barrierOf, footprint, hangRow, motionOffset, mysterySpent, mysteryState, type PlacedProp, spotAt } from '../sim/props';
 import type { Body } from '../sim/physics';
 import { feetUp, type Runner, type RunWorld } from '../sim/run';
 import { raceMap } from './route';
@@ -55,7 +55,11 @@ function lift(b: Body): Lift {
 const OBJECTIVES: Record<ModeId, (m: Match) => Objective> = {
   race: (m) => ({ kind: 'reach', cell: { ...m.level.goal } }),
   slag: (m) => ({ kind: 'climb', lapLine: { ...m.level.goal }, loop: m.level.loop ?? 0 }),
-  brawl: (m) => ({ kind: 'fight', cell: { tx: Math.round((m.level.spawn.tx + m.level.goal.tx) / 2), ty: m.level.spawn.ty } }),
+  brawl: (m) => ({
+    kind: 'fight',
+    cell: { tx: Math.round((m.level.spawn.tx + m.level.goal.tx) / 2), ty: m.level.spawn.ty },
+    ends: spawnsOf(m.level).map((c) => ({ ...c })),
+  }),
 };
 
 /** Rows `r`'s feet stand above the spawn's floor, laps and all. */
@@ -73,6 +77,27 @@ function boxesOf(run: RunWorld): BoxSense[] {
       for (const [cx, cy] of mod.cells) out.push({ tx: Math.round(cx + ox / TILE), ty: Math.round(cy + oy / TILE), ready, hands: !!mod.deal });
     });
   return out;
+}
+
+/** The cursor point (world px) Match.ghostOrigin turns back into origin (tx, ty) for `def` turned `rot`: where to aim to put it there. */
+export function aimPoint(def: PropDef, rot: number, tx: number, ty: number): { x: number; y: number } {
+  let w = 0;
+  let h = 0;
+  for (const [x, y] of footprint(def, rot)) {
+    w = Math.max(w, x + 1);
+    h = Math.max(h, y + 1);
+  }
+  return { x: (tx + (w - 1) / 2 + 0.5) * TILE, y: (ty + (h - 1) / 2 + 0.5) * TILE };
+}
+
+/**
+ * Whether a cursor can aim the held part at (tx, ty): the cursor stops at the level's edges, so a spot whose aim
+ * point lies past one (a part hanging half off the bottom row, its legal cells trimmed) is legal but out of reach,
+ * and a bot steering for it would press the arrow against the edge forever.
+ */
+function aimable(m: Match, def: PropDef, rot: number, tx: number, ty: number): boolean {
+  const { x, y } = aimPoint(def, rot, tx, ty);
+  return x >= 0 && y >= 0 && x <= m.level.w * TILE - 1 && y <= m.level.h * TILE - 1;
 }
 
 /** Where the held part lands with the cursor aimed at (tx, y): what Match.ghostOrigin decides, for any turn. */
@@ -237,7 +262,7 @@ export function senseView(m: Match, p: Player): BrainView {
       })),
     kills: (m.phase === 'run' || m.phase === 'score') && m.run ? m.run.kills.map((k) => ({ ...k })) : [],
     live: !!run && run.frame >= RUN_COUNTDOWN,
-    canPlace: (tx, ty, rot) => !!held && m.phase === 'place' && ghostAt(m, held, rot, tx, ty).ok,
+    canPlace: (tx, ty, rot) => !!held && m.phase === 'place' && aimable(m, held, rot, tx, ty) && ghostAt(m, held, rot, tx, ty).ok,
     route: () => (m.phase === 'place' ? routeOf(m) : NO_ROUTE),
     assess: (tx, ty, rot) => {
       if (!held || m.phase !== 'place') return null;

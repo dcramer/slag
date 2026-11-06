@@ -1,6 +1,6 @@
 import { deriveSeed, Rng } from '../../core/rng';
 import { Grudges } from '../grudge';
-import { STRATEGIES, type Strategy } from '../strategies';
+import { type Lay, STRATEGIES, type Strategy } from '../strategies';
 import type { Personality } from '../personality';
 import type { Temperament } from '../temperament';
 import type { Brain, BrainView, CardSense, Intent } from '../types';
@@ -24,6 +24,9 @@ const TEMPO = {
 /** Spots tried when looking for somewhere to put a part, and how many of the legal ones are checked for sealing the level. */
 const SPOT_TRIES = 400;
 const SPOT_CHECKS = 16;
+/** The best cells of a mode's lay a hazard is tried on (in any order among them), and how many legal spots on them are checked for sealing the level. */
+const LAY_CELLS = 24;
+const LAY_CHECKS = 6;
 /** Cells of a trail tried for a trap, and how many legal spots among them are checked for sealing the level. */
 const TRAP_CELLS = 24;
 const TRAP_CHECKS = 6;
@@ -36,6 +39,15 @@ const AROUND = [
 ] as const;
 /** A death counts this many frames of standing there: where someone died is where a trap goes. */
 const DEATH_WEIGHT = 240;
+/**
+ * Frames it keeps steering for one spot before it gives that spot up and looks for another, and frames of a place
+ * phase after which it stops looking and lets go of the controls. A spot it can't get placed (something moved into
+ * it on the way, a ghost that won't take) can't keep it pressing arrows forever: an untimed place phase waits on
+ * everyone, and only stops waiting on a seat once it has stood idle (Match `IDLE_FRAMES`), as it does for a player
+ * with nowhere to put their part.
+ */
+const SPOT_FRAMES = 6 * 60;
+const PLACE_FRAMES = 40 * 60;
 /** Frames between spots weighed for a block: each asks the proof again, so it looks the level over a spot at a time. */
 const WEIGH_EVERY = 4;
 /** Tiles of detour a tight jump is worth when weighing how hard a block makes the run. */
@@ -87,6 +99,9 @@ export function runnerBrain(seed: number, traits: Personality, mood: Temperament
   let phase = '';
   let card = -1;
   let spot: Place | null = null;
+  /** Place: the phase frame it set off for `spot`, and the spots it gave up on this phase. */
+  let spotSince = 0;
+  const givenUp = new Set<string>();
   let pause = 0;
   /** Cards still to point at before taking `card`, and the phase frame it moves on from the current one. */
   let looks: number[] = [];
@@ -182,11 +197,17 @@ export function runnerBrain(seed: number, traits: Personality, mood: Temperament
   };
 
   const place = (v: BrainView): Intent => {
-    if (v.placed || v.claim < 0) return { do: 'wait' };
+    if (v.placed || v.claim < 0 || v.phaseFrame > PLACE_FRAMES) return { do: 'wait' };
     const held = v.crate[v.claim];
     if (spot && !v.canPlace(spot.tx, spot.ty, spot.rot)) spot = weighing = null;
+    if (spot && v.phaseFrame - spotSince > SPOT_FRAMES) {
+      givenUp.add(spotKey(spot));
+      spot = null;
+    }
+    // The mode says where its parts go (strategies/ `lay`): a hazard on its cells, anything else anywhere it allows.
+    const lay = STRATEGIES[v.mode].lay?.(v);
     // Looking the level over, a spot at a time: where would this make the run hardest?
-    if (!spot && scheme.block && held && blocker(held)) {
+    if (!lay && !spot && scheme.block && held && blocker(held)) {
       weighing ??= { left: inTheWay(v, traits.weigh, rng), best: null, score: -Infinity };
       if (weighing.left.length) {
         // Bots take turns weighing, so no one frame asks the proof for all of them.
@@ -198,7 +219,8 @@ export function runnerBrain(seed: number, traits: Personality, mood: Temperament
         }
         if (weighing.left.length) return { do: 'wait' };
       }
-      spot = weighing.best;
+      spot = weighing.best && !givenUp.has(spotKey(weighing.best)) ? weighing.best : null;
+      spotSince = Math.max(v.phaseFrame, pause);
     }
     if (v.phaseFrame < pause) return { do: 'wait' };
     const hazard = held?.role === 'hazard';
@@ -207,7 +229,11 @@ export function runnerBrain(seed: number, traits: Personality, mood: Temperament
     // Someone may have put a part where it meant to go: look again whenever that spot stops being free.
     if (!spot || !v.canPlace(spot.tx, spot.ty, spot.rot)) {
       const trail = them ? trails[them.slot] : scheme.mischief && hazard ? everyone() : undefined;
-      spot = (trail && trap(v, trail, passed, scheme.sharp, rng)) || findSpot(v, rng);
+      if (lay) spot = (hazard && onLay(v, lay, everyone(), rng, (s) => givenUp.has(spotKey(s)))) || findSpot(v, rng, lay);
+      else spot = (trail && trap(v, trail, passed, scheme.sharp, rng)) || findSpot(v, rng);
+      if (spot && givenUp.has(spotKey(spot))) spot = findSpot(v, rng, lay);
+      if (spot && givenUp.has(spotKey(spot))) spot = null;
+      spotSince = Math.max(v.phaseFrame, pause);
     }
     return spot ?? { do: 'wait' };
   };
@@ -247,14 +273,16 @@ export function runnerBrain(seed: number, traits: Personality, mood: Temperament
   return {
     think(v) {
       if (v.phase !== phase) {
-        // The race is over (the score screen still shows it): take it to heart once, as it last stood.
-        if (raced && v.phase !== 'run' && v.phase !== 'score') {
+        // The race is over (the score screen still shows it): take it to heart once, as it last stood. Leaving the
+        // score screen for another bout on the same parts is the end of one too.
+        if (raced && v.phase !== 'score') {
           reckon(raced);
           raced = null;
         }
         phase = v.phase;
         card = -1;
         spot = null;
+        givenUp.clear();
         weighing = null;
         strategy = null;
         // A beat before choosing, as a person takes in the crate or the level.
@@ -290,6 +318,8 @@ export function runnerBrain(seed: number, traits: Personality, mood: Temperament
     },
   };
 }
+
+const spotKey = (s: Place) => `${s.tx},${s.ty},${s.rot}`;
 
 /** A part that stands in the way: a hazard, or a block that isn't the plan's bridge. */
 function blocker(c: CardSense): boolean {
@@ -350,8 +380,11 @@ function trap(v: BrainView, trail: Trail, passed: (cell: number) => number, shar
   return null;
 }
 
-/** Where the held part goes: on the plan if it's a bridge the plan needs, else a legal spot that leaves the level a way through. */
-function findSpot(v: BrainView, rng: Rng): Place | null {
+/**
+ * Where the held part goes: on the plan if it's a bridge the plan needs, else a legal spot that leaves the level a
+ * way through, where the mode's `lay` allows one if it has one (and anywhere legal if it allows none).
+ */
+function findSpot(v: BrainView, rng: Rng, lay?: Lay): Place | null {
   const held = v.crate[v.claim];
   if (held?.bridge) for (const b of v.level.plan) if (v.canPlace(b.tx, b.ty, 0)) return { do: 'place', tx: b.tx, ty: b.ty, rot: 0 };
   const legal: Place[] = [];
@@ -359,5 +392,33 @@ function findSpot(v: BrainView, rng: Rng): Place | null {
     const s = { do: 'place' as const, tx: rng.int(1, v.level.w - 2), ty: rng.int(1, v.level.h - 2), rot: rng.int(0, 3) };
     if (v.canPlace(s.tx, s.ty, s.rot)) legal.push(s);
   }
-  return legal.find((s) => v.keepsWay(s.tx, s.ty, s.rot)) ?? legal[0] ?? null;
+  const kept = lay ? legal.filter((s) => lay.keeps(s.tx, s.ty)) : legal;
+  return kept.find((s) => v.keepsWay(s.tx, s.ty, s.rot)) ?? kept[0] ?? legal[0] ?? null;
+}
+
+/**
+ * A spot for the held part on a few of the best cells of the mode's `lay`, taken in any order, those nobody ran
+ * through last race (`trodden`, everyone's trail) first: a part there catches whoever is thrown in, not whoever walks
+ * by. It leaves the level a way through if one of the first few legal ones does; null if none is legal (or all are
+ * `skip`ped).
+ */
+function onLay(v: BrainView, lay: Lay, trodden: Trail, rng: Rng, skip: (s: Place) => boolean): Place | null {
+  const w = v.level.w;
+  let first: Place | null = null;
+  let checks = 0;
+  const best = lay.cells.slice(0, 2 * LAY_CELLS);
+  const clear = best.filter((c) => !trodden.has(c));
+  for (const c of [...rng.shuffle(clear.slice(0, LAY_CELLS)), ...best.filter((c) => trodden.has(c))]) {
+    const turn = rng.int(0, 3);
+    found: for (const [dx, dy] of AROUND)
+      for (let r = 0; r < 4; r++) {
+        const s: Place = { do: 'place', tx: (c % w) - dx, ty: Math.floor(c / w) - dy, rot: (turn + r) % 4 };
+        if (!lay.keeps(s.tx, s.ty) || skip(s) || !v.canPlace(s.tx, s.ty, s.rot)) continue;
+        if (v.keepsWay(s.tx, s.ty, s.rot)) return s;
+        first ??= s;
+        if (++checks >= LAY_CHECKS) return first;
+        break found;
+      }
+  }
+  return first;
 }

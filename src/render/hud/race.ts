@@ -4,7 +4,7 @@ import { POP_HOLD, RUN_COUNTDOWN, VIEW_H, VIEW_W } from '../../sim/constants';
 import { popCountdown } from '../../sim/run';
 import { PAL, TYPE } from '../../ui/style';
 import { drawInkRunner } from '../ink-character';
-import { icon, plate, standings } from '../hud-kit';
+import { discPts, icon, inkShape, plate, standings } from '../hud-kit';
 import { drawItemIcon } from '../items';
 import { glowDot } from '../kit';
 import type { Hud } from '../hud';
@@ -30,7 +30,8 @@ export function race(hud: Hud, m: Match, t: number) {
     glowDot(hud.gctx, VIEW_W / 2, VIEW_H / 2 - 30, 90, left > 0 ? { h: 30, s: 100, l: 60 } : { h: 90, s: 100, l: 55 }, 0.3);
   }
   let done = hud.grow(VIEW_W / 2, hud.frame.safeY0, hud.uiScale);
-  if (Number.isFinite(run.timeLeft)) {
+  const timed = Number.isFinite(run.timeLeft);
+  if (timed) {
     const secs = Math.ceil(run.timeLeft / 60);
     const urgent = secs <= 10;
     plate(c, VIEW_W / 2 - 28, hud.frame.safeY0 + 6, 56, 24, { rivets: false, stroke: urgent ? PAL.danger : undefined });
@@ -45,6 +46,7 @@ export function race(hud: Hud, m: Match, t: number) {
       400,
     );
   }
+  boutPips(c, m, hud.frame.safeY0 + (timed ? 34 : 6));
   done();
   const chips = chipGrid(hud, m.players.length);
   done = hud.grow(hud.frame.safeX0, hud.frame.safeY0, chips.s);
@@ -90,6 +92,22 @@ export function race(hud: Hud, m: Match, t: number) {
   });
   done();
   popCountdowns(hud, m);
+}
+
+/**
+ * Which bout on this placement the race is, when there's more than one: a pip per bout under the timer, the ones
+ * fought ash, this one amber, the ones to come soot.
+ */
+function boutPips(c: CanvasRenderingContext2D, m: Match, y: number) {
+  const n = m.rules.bouts;
+  if (n < 2) return;
+  const gap = 9;
+  const w = n * gap + 6;
+  plate(c, VIEW_W / 2 - w / 2, y, w, 11, { rivets: false, alpha: 0.92, seed: 71 });
+  for (let i = 0; i < n; i++) {
+    const fill = i + 1 < m.bout ? PAL.ash : i + 1 === m.bout ? PAL.amber : PAL.soot;
+    inkShape(c, discPts(VIEW_W / 2 + (i - (n - 1) / 2) * gap, y + 5.5, i + 1 === m.bout ? 2.9 : 2.4, 73 + i), fill, 79 + i, 0.8);
+  }
 }
 
 /**

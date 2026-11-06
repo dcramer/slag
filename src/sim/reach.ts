@@ -368,6 +368,34 @@ export function brakeFrom(level: Level, body: Body, solids: readonly Solid[] = [
   return tracerFor(level, air, columns).brake(body, solids);
 }
 
+/** How a played-out move ends (`playFrom`): down on a floor again, into the pit, off a side of the map, or none of those yet. */
+export type Fate = 'land' | 'fall' | 'out' | 'open';
+
+/** A move of the caller's own, played out and recorded (`playFrom`); `to` is the cell it lands on, or -1. */
+export interface Played extends Move {
+  fate: Fate;
+}
+
+/**
+ * `input` (the controls for frame `f`, from the body as it is then) played from `body` as it is, for up to `frames`
+ * frames or until it comes back down on the ground after leaving it, recorded as `movesFrom` records the
+ * controller's own moves, and how it ended. What a bot checks a move of its own making by before it plays it (a hop
+ * under a box, a leap of faith), as it checks the controller's: whether it lands at all, and what it passes on the
+ * way. Unlike the controller's moves it goes on through no-go tiles (a box it hops at is one): whether what's there
+ * hurts when it gets there is the caller's to time. `solids`, `air` and `columns` as in `movesFrom`.
+ */
+export function playFrom(
+  level: Level,
+  body: Body,
+  input: (f: number, b: Body, c: Controls) => void,
+  frames: number,
+  solids: readonly Solid[] = [],
+  air = 0,
+  columns?: WindColumns,
+): Played {
+  return tracerFor(level, air, columns).play(body, solids, input, frames);
+}
+
 /**
  * A tracer for `movesFrom`, `air` the steady side wind (px/s, + right) its moves
  * are traced in: a gust blowing now, which a move started in it has to fight;
@@ -931,6 +959,49 @@ class Tracer {
         return;
       }
     }
+  }
+
+  /** `playFrom`: `input` played from `b0` until it lands again, falls or leaves the map. */
+  play(b0: Body, solids: readonly Solid[], input: (f: number, b: Body, c: Controls) => void, frames: number): Played {
+    this.world.solids = solids;
+    this.world.grid = gridOf(solids);
+    const tx = Math.floor((b0.x + b0.w / 2) / TILE);
+    const ty = Math.floor((b0.y + b0.h - 1) / TILE);
+    this.reset(tx, ty);
+    const b = { ...b0 };
+    if (b.onGround) b.groundRef = groundOf(b0, solids, this.world.tileAt(tx, ty + 1) === T_ONEWAY);
+    this.touched = false;
+    const controls: Controls[] = [];
+    const path: number[] = [];
+    const bottom = this.h * TILE;
+    let airborne = !b.onGround;
+    let fate: Fate = 'open';
+    let to = -1;
+    for (let f = 0; f < frames; f++) {
+      const c: Controls = { left: false, right: false, down: false, jump: false, jumpPressed: false, run: false };
+      input(f, b, c);
+      stepBody(b, c, this.world, this.columns ? this.airAt(b, f) : this.wind);
+      controls.push(c);
+      path.push(b.x, b.y);
+      if (b.y > bottom) {
+        fate = 'fall';
+        break;
+      }
+      if (offMap(b, this.w)) {
+        fate = 'out';
+        break;
+      }
+      if (!b.onGround) airborne = true;
+      else if (airborne) {
+        fate = 'land';
+        to = this.landing(b);
+        break;
+      }
+    }
+    this.touched = false;
+    this.world.solids = [];
+    this.world.grid = undefined;
+    return { to, air: true, controls, path, end: { ...b }, fate };
   }
 
   /** `brakeFrom`: the stop `stops` makes, recorded; null if it can't stop here. */

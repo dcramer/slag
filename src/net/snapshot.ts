@@ -32,7 +32,7 @@ import { cleanCharacter } from './actions';
  * Worktree branches never bump it, since two bumps always conflict: `pnpm land` bumps it once
  * for a batch that changed this file's code or that test's field lists (`--snap` for a change in what a field means).
  */
-export const SNAP_VERSION = 57;
+export const SNAP_VERSION = 58;
 
 export interface RunSnap {
   slots: number[];
@@ -58,6 +58,8 @@ export interface MatchSnap {
   phaseFrame: number;
   frame: number;
   round: number;
+  /** Which bout on this placement (Match.bout). */
+  bout: number;
   /** Rounds in a row nobody finished (it weights the next crate). */
   dryRounds: number;
   /**
@@ -217,6 +219,7 @@ export function snapshotMatch(m: Match): MatchSnap {
     phaseFrame: m.phaseFrame,
     frame: m.frame,
     round: m.round,
+    bout: m.bout,
     dryRounds: m.dryRounds,
     profile: levelRecipe(m.level, m.profileOverride()),
     force: { ...m.forceProfile },
@@ -291,6 +294,7 @@ export function restoreMatch(m: Match, s: MatchSnap): void {
   m.phaseFrame = s.phaseFrame;
   m.frame = s.frame;
   m.round = s.round;
+  m.bout = s.bout;
   m.dryRounds = s.dryRounds;
   m.forceProfile = { ...s.force };
   m.players = fromWire(s.players) as Player[];

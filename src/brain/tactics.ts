@@ -225,13 +225,17 @@ export function hurtsAt(v: BrainView, tx: number, ty: number): boolean {
 /** The slag's row as `me` sees it (rows down from its feet), or Infinity with none. */
 export const slagRow = (me: SelfSense): number => (me.slag === null ? Infinity : me.y + me.slag);
 
+/** How a knocked body's flight ends: into something that kills, down on a floor, or neither within `FLIGHT` frames. */
+type Landing = 'dies' | 'safe' | 'open';
+
 /**
- * Whether a body with its feet at (x, y) tiles, thrown at (vx, vy) px/s (up positive) with nobody at its controls,
- * the way a dazed one flies, meets something that kills before it comes down on a floor: a part or a set piece that
- * hurts, a side of the map, the pit or the slag at row `slag`. A sketch of the body's flight, not the sim's: its
- * middle column, the dazed body's gravity and air drag, and a wall it meets stopping it dead.
+ * A body with its feet at (x, y) tiles, thrown at (vx, vy) px/s (up positive) with nobody at its controls, the way a
+ * dazed one flies, followed until it meets something that kills (a part or a set piece that hurts, a side of the
+ * map, the pit or the slag at row `slag`) or comes down on a floor. A sketch of the body's flight, not the sim's: its
+ * middle column, the dazed body's gravity and air drag, and a wall it meets stopping it dead. `pass` hears each cell
+ * the body's column passes through, and the rock cell of a wall it hits.
  */
-export function knockKills(v: BrainView, x: number, y: number, vx: number, vy: number, slag: number): boolean {
+function fly(v: BrainView, x: number, y: number, vx: number, vy: number, slag: number, pass?: (cx: number, cy: number) => void): Landing {
   const { w, h } = v.level;
   const mask = noGoMask(v);
   let px = x * TILE;
@@ -244,11 +248,12 @@ export function knockKills(v: BrainView, x: number, y: number, vx: number, vy: n
     let nx = px + sx * DT;
     let ny = py + sy * DT;
     let cx = Math.floor(nx / TILE);
-    if (cx < 0 || cx >= w) return true;
+    if (cx < 0 || cx >= w) return 'dies';
     const top = Math.floor((ny - PLAYER_H) / TILE);
     const bottom = Math.floor((ny - 1) / TILE);
     // A wall across stops it dead, and it drops from there; a ceiling stops its rise.
     if (cx !== Math.floor(px / TILE) && (tile(v, cx, top) === T_SOLID || tile(v, cx, bottom) === T_SOLID)) {
+      pass?.(cx, tile(v, cx, bottom) === T_SOLID ? bottom : top);
       sx = 0;
       nx = px;
       cx = Math.floor(px / TILE);
@@ -257,15 +262,53 @@ export function knockKills(v: BrainView, x: number, y: number, vx: number, vy: n
       sy = 0;
       ny = py;
     }
-    if (ny >= h * TILE || ny / TILE > slag) return true;
-    for (let ty = Math.max(0, top); ty <= Math.min(h - 1, bottom); ty++) if (harms(v, mask, cx, ty)) return true;
+    if (ny >= h * TILE || ny / TILE > slag) return 'dies';
+    for (let ty = Math.max(0, top); ty <= Math.min(h - 1, bottom); ty++) {
+      if (harms(v, mask, cx, ty)) return 'dies';
+      pass?.(cx, ty);
+    }
     // Coming down onto a floor: it's down, and safe.
     const row = Math.floor(ny / TILE);
-    if (sy > 0 && py <= row * TILE && floorAt(v, cx, row)) return false;
+    if (sy > 0 && py <= row * TILE && floorAt(v, cx, row)) return 'safe';
     px = nx;
     py = ny;
   }
-  return false;
+  return 'open';
+}
+
+/** Whether a body thrown as `fly` throws it meets something that kills before it comes down on a floor. */
+export function knockKills(v: BrainView, x: number, y: number, vx: number, vy: number, slag: number): boolean {
+  return fly(v, x, y, vx, vy, slag) === 'dies';
+}
+
+/** Tiles round where a field starts that a knock lane keeps clear of: a part there would catch everyone at GO. */
+export const ENDS_CLEAR = 5;
+
+/**
+ * Where a part does a brawl's work, best first: the cells (y * w + x) that a body knocked off any stand cell flies
+ * through and still comes down safe, by how many knocks pass there, the rock a knock throws it against among them.
+ * A hazard there turns a knock someone walks away from into a kill. Only air the knock flies through, never a stand
+ * cell where everyone walks, and nothing near where the field starts (`ends`). Made once per level and parts.
+ */
+export function knockLanes(v: BrainView, ends: readonly { tx: number; ty: number }[]): number[] {
+  const { w, h } = v.level;
+  const hits = new Map<number, number>();
+  const near = (tx: number, ty: number) => ends.some((e) => Math.abs(e.tx - tx) <= ENDS_CLEAR && Math.abs(e.ty - ty) <= ENDS_CLEAR);
+  const knock = KNOCKS.sword!;
+  for (let ty = 1; ty < h - 1; ty++)
+    for (let tx = 0; tx < w; tx++) {
+      if (tile(v, tx, ty) === T_SOLID || !floorAt(v, tx, ty + 1)) continue;
+      for (const d of [-1, 1] as const) {
+        const seen = new Set<number>();
+        const land = fly(v, tx + 0.5, ty + 1, d * knock.vx, knock.vy, Infinity, (cx, cy) => {
+          if (cx === tx || near(cx, cy) || (tile(v, cx, cy) !== T_SOLID && floorAt(v, cx, cy + 1))) return;
+          seen.add(cy * w + cx);
+        });
+        if (land === 'dies') continue;
+        for (const c of seen) hits.set(c, (hits.get(c) ?? 0) + 1);
+      }
+    }
+  return [...hits].sort((a, b) => b[1] - a[1] || a[0] - b[0]).map(([c]) => c);
 }
 
 /** Whether a hit from `kind` (or a shove, with none) toward `dir` throws `r` into something that kills, as `me` reads the level. */

@@ -69,17 +69,20 @@ export const LEAD_HOLDS = {
  * before any part, seeds 1–48) and through the first four rounds of a match as the parts pile up (seeds 1–16).
  * `draws`: the share of rounds nobody wins (the last ones out on one frame, or the time out). `seconds`: a round's
  * mean length from GO. `knocked`: the share of deaths with a rival's knock still credited (sim/items/common.ts
- * `BONK_CREDIT`), thrown or bumped into the level. Measured bare 6%, 29.6 s and 31%; placed 17%, 27.4 s and 24%
- * (from 63%, 39.6 s, 11% and 59%, 38.1 s, 9% before bots lined rivals up and fetched boxes from anywhere; placed draws were 6% before the motor stopped flip-flopping when it brakes at a walk). Placed parts
- * take more of the deaths on their own: a bot walking into one isn't knocked. Earlier or faster pours shortened rounds
- * and added draws. The targets are the owner's, from the party brawler: draws rare, rounds of 20–40 s. The bands
- * only catch a regression.
+ * `BONK_CREDIT`), thrown or bumped into the level. Measured bare 13%, 30.1 s and 36%; placed 16%, 28.1 s and 32%
+ * (twice the seeds: bare 7%, 29.6 s and 39%, placed 15%, 27.4 s and 32%), since bots put their hazards where a knock
+ * throws someone and keep them off the ends, check their hops and leaps and stop rather than coast off where they
+ * meant to stand: from bare 6%, 29.6 s and 31%, placed 17%, 27.4 s and 24%, and before that 63%, 39.6 s, 11% and
+ * 59%, 38.1 s, 9% before bots lined rivals up and fetched boxes from anywhere (placed draws were 6% before the motor
+ * stopped flip-flopping when it brakes at a walk). The slag still takes more deaths than anything else.
+ * Earlier or faster pours shortened rounds and added draws. The targets are the owner's, from the party brawler:
+ * draws rare, rounds of 20–40 s. The bands only catch a regression.
  */
 export const BRAWL_ROUNDS = {
   targets: { draws: 0.2, seconds: [20, 40] },
   bands: {
-    bare: { draws: [0, 0.15], seconds: [24, 31], knocked: [0.26, 0.45] },
-    placed: { draws: [0, 0.18], seconds: [24, 33], knocked: [0.14, 0.32] },
+    bare: { draws: [0, 0.2], seconds: [26, 34], knocked: [0.3, 0.46] },
+    placed: { draws: [0, 0.24], seconds: [24, 32], knocked: [0.25, 0.4] },
   },
 } as const satisfies {
   targets: { draws: number; seconds: readonly [number, number] };

@@ -33,7 +33,12 @@ import { botRace } from './bot-race';
  * bot's keepsWay only keeps the plan everyone is building (it no longer
  * searches for another), tall went from 71 in 633 to 72 in 637: the new
  * finish is a long one (space/3, 885 frames), and the races both finish
- * are no slower.
+ * are no slower. Since the motor plays its hops and leaps out before taking
+ * them (a leap off the map or into a hazard it waits out or goes round),
+ * stops where coasting would carry it off, and lines up only where nothing
+ * reaches it meanwhile: classic 91 in 482, wide 92 in 559, tall 74 in 644,
+ * every new finish a long one (jungle/3, space/8) and the races both finish
+ * as quick as before (479, 554, 638 frames).
  */
 
 /** The seeds each theme races at every size. */
