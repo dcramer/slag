@@ -105,7 +105,16 @@ export const kind: FlatKind = {
     { name: 'plaster', vary: 1, options: 2 },
     { name: 'wear', vary: 11, options: 3 },
   ],
-  eyes: { role: 'dark', area: [0.1, 1.6], gap: [1.2, 5], band: [0.35, 0.56], edge: 0.15, glint: 0.25, from: 'map', specks: { dark: 2.5, mouth: 3, shirt: 0.5 } },
+  eyes: {
+    role: 'dark',
+    area: [0.1, 1.6],
+    gap: [1.2, 5],
+    band: [0.35, 0.56],
+    edge: 0.15,
+    glint: 0.25,
+    from: 'map',
+    specks: { dark: 2.5, mouth: 3, shirt: 0.5 },
+  },
   wear: {
     on: ['fur'],
     chin: 4.5,
