@@ -159,10 +159,10 @@ The strongest reads first. **Keyed** marks the non-humanoids, the riskiest to dr
 | 40 | archer | Aloof | humanoid, side on | drawn flat; named by both blind readers at medium in the first round, paired with nobody (the bow drawn in every pose, the bushy mane) |
 | 41 | slime | Slimple | **keyed**, limbless | drawn flat; the blind read passes (both readers named it at medium-high or better, unpaired: the onion with its tip a point, kept by `smooth: 0`; a big hooked tip read as a witch's hat) |
 | 42 | bear | Creaky Buzzbear | humanoid, stocky | drawn flat; the blind read passes (named by both readers, at medium and low, unpaired: the tiny hat between the round ears with background each side, the mic held up) |
-| 43 | mech | D.Wash | **keyed**, mech on legs | drawn flat; the blind read fails, owner to decide (two rounds: a hunched stocky figure, then the ape, paired with it; never with the robot boy or the hunter): black at 22 px a rider or a walker is the best read, and the pink shell, bunny and headphones carry her in colour |
-| 44 | genie | Shampootae | humanoid, side on | drawn flat; the blind read fails three times: a plume swept back read as a squirrel's tail, a level rope as a bazooka, a fountain from the crown as a hook or a hat, each on a body the box leaves small beside a ponytail as long as she is |
+| 43 | mech | D.Wash | **keyed**, mech on legs | drawn flat; passes the clean colour read ("D.Va (Overwatch), medium" twice); black fails |
+| 44 | genie | Shampootae | humanoid, side on | drawn flat; passes the clean colour read ("Shantae, high" three times); black fails |
 | 45 | mushroom | Toadmund | humanoid, small, capped | drawn flat; the blind read passes (named by both readers, at medium and medium-high, unpaired: the huge dome cap over a small body) |
-| 46 | boxer | Little Smack | humanoid, small | drawn flat, side on, redrawn with bigger gloves held far apart; the blind read not passed (fresh readers outside the repository: "unsure – round head with a big puffy hand or arm", "unsure; figure with something big and round on its back or arm"; the first design, "a small figure with a big hairdo"); round gloves on thin arms read as balloons; the design read alone named him at medium and medium-high |
+| 46 | boxer | Little Smack | humanoid, small | drawn flat; passes the clean colour read ("Little Mac (Punch-Out!!), high" twice); black fails |
 | 47 | junior | Junior | humanoid, robot; an egg (about 1 look in 100) | to draw from the reference; no blind read (the owner checks it) |
 
 **What to check.** No two kinds may rhyme. Watch these pairs:
@@ -177,7 +177,7 @@ The strongest reads first. **Keyed** marks the non-humanoids, the riskiest to dr
 - **The mercenary and the elf:** both carry a blade, but a poker on the elf's back against a blade bigger than the mercenary.
 - **The crewmate and the sneaking soldier:** both a body on two stubby legs. A rounded bean with a visor against a square box with an eye slot.
 
-Every kind must also pass the silhouette sheet, the blind read and the "is it the homage?" sheet before it ships.
+Every kind must also pass the silhouette sheet, the blind read and the "is it the homage?" sheet before it ships. The blind read is the clean colour read (owner, 2026-11-06): two fresh readers outside the repository (`tools/art3d/blind-read.sh`), the colour sheet at play scale, both naming the homage and one at medium. The black sheet stays as the diagnostic. The statuses below from before 2026-11-06 came from readers who could see the commit log; TODO.md → 31 has the clean audit.
 
 ## Rendered kinds
 
@@ -195,6 +195,7 @@ How a kind's entry becomes a kind the game draws from art. The entry is the one 
   - Every style acts every mood: the blink, the cheer's arcs and the death's crosses are the kit's for all; the run, the way up and the fall are each style's own (a lid drops into the run and lifts on the way up, a pupil shrinks on a fall), and the brows act over every style but the black ones, whose act is in the eye. `pnpm shot cast --only faces` shows every kind's face through the moods, close up and at play scale px for px.
 - **What a 20 px read can't take** is drawn otherwise: anything dark under the face reads as a mouth (the zapmouse's black cord belt is brown), a long line across a ball reads as a mouth (the puffball's seam isn't drawn), a cross beside an eye reads as an eye (the puffball's tape is gone), and a colourway that lands on another role's colour loses the colour block (the plumber's brown-canvas overalls are navy).
 - **What the blind reads taught**, across every kind's rounds (each kind's Rig line has its readers' words). A reader names a silhouette by its outline alone, so:
+  - **In black the bar is harsher than any player's.** Read clean, about 20 of 46 kinds are named in black and about 33 in colour; the plumber's homage isn't named in black. The bar is the colour read; black finds what a misread points at.
   - **Profile beats three-quarter** for a kind read by its snout, jaw, shell, box or four legs: in three-quarter its parts merge into one round mass (the king, the sneak, the rapper; the horse upright read as a fox until it stood on four legs).
   - **A part inside the outline isn't there.** A prop held across the chest or raised overhead vanishes (the hunter's cannon, the robot's can); held out level with background all round it, it reads. A visor, ear disc or pack that doesn't stand proud of the body is lost (the impostor, the robot).
   - **Parts that touch become one shape.** A cup above a cap, buoys beside a helmet, a can against a back, a beanie against the head: each pair read as one lobed blob. A gap the read needs must be about 2 world px of background, or the pen closes it (the limbless hero).

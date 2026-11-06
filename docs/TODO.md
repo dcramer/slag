@@ -43,12 +43,14 @@ Phone support (follow camera, pinch, scaled HUD, settings sheet) is on `main` bu
 ## 8. Render polish
 - **Impact words** can hide a hazard for most of a second; `?lettering=0` turns them off. Decide whether they stay. Big plain walls are a taste call. Try a real phone.
 
-## 31. Blind-read leftovers
-**Clean audit (2026-11-06).** Every blind read before `tools/art3d/blind-read.sh` was leaky: subagent readers saw the git status, and seat commits name the kinds by trait. Three clean readers per sheet, all 46 kinds (the readers' words are in the session's scratchpad only; the counts are here):
-- **Black** (`sprites-blind.png`): about 20 kinds reach the old bar. Even the plumber isn't named ("a figure holding a horn or trumpet"), nor the raider, archer, bear, vampire, pyramid, rapper, tophat, sneak, engineer, hopper, worm, horse or boxer.
-- **Colour** (`sprites-blind-colour.png`, the same cells as the game draws them): about 33 reach it, the mech, genie and boxer among them (Little Mac and Shantae at high). Still unnamed in colour: the engineer, warrior, sneak, assistant, tophat, dragon, elf (read as an Inkling in blue), rapper, horse, slayer (a viking), creeper, and the zapmouse and hedgehog when the player's colour isn't theirs (a purple "cat", an orange "spiky creature").
-- Pairs, colour: the engineer with the plumber, the warrior with the slayer, the robot with the hunter.
-- **Owner's call:** which read is the bar.
+## 31. Kinds under the colour bar
+The bar is the clean colour read (owner, 2026-11-06; tools/art3d/CHECKLIST.md). A clean audit that day, three readers outside the repository on `sprites-blind-colour.png`, left these unnamed or named only at low:
+- **Never named:** the engineer (paired with the plumber), the warrior (paired with the slayer, "Shovel Knight, low"), the sneak, the assistant dog ("Amy Rose, low"), the top-hat girl, the dragon, the elf (in blue it read as an Inkling), the rapper, the horse ("Epona, low"), the slayer ("a viking, low") and the creeper.
+- **Only at low:** the bear, the pyramid and the vampire (one reader at medium each), the hedgehog and the worm (likewise), the archer.
+- The warrior, the slayer and the assistant are accepted as colour reads by the owner. That was before the colour read was the bar, and they fail it too.
+- **The player's colour can hide the homage:** the zapmouse read as "a purple cat" and the hedgehog as "an orange spiky creature" in the colour each rolled. The palette rule puts the player's colour on the costume (Decisions 4), so a kind known by one colour loses it in most players' colours. Whether such a kind keeps its own colour somewhere is the owner's call.
+
+The black read (`sprites-blind.png`) named about 20 of 46 cleanly. It's the harsher diagnostic now, not the bar.
 
 A full-cast read (2026-11-04, every kind drawn, cells wide enough for a held prop; two fresh readers) agrees: the warrior "King Dedede, low" twice (a round body under a tall headpiece); the slayer "Princess Peach or Zelda, low" twice (his long coat reads as a gown, his hair as a princess's). The worm passed at medium twice. Both readers also paired the plumber with the engineer (4 and 22, capped and moustached), the robot with the hunter (the arm cannons) and the hopper with the dino (a round head with a long snout); the merc read as "Crash Bandicoot or Tails, low" twice.
 
