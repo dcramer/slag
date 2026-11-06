@@ -116,7 +116,7 @@ The strongest reads first. **Keyed** marks the non-humanoids, the riskiest to dr
 
 | # | Kind | Name | Rig | Status or risk |
 |---|---|---|---|---|
-| 1 | plumber | Plumbo | humanoid | drawn flat; the twist redrawn (2026-11-06): the plunger on his shoulder like a greatsword, its cup far out behind his head. The twist read passes (both readers: a parody with its own twist); the scripted blind read does not (both unsure in black, as were the shipped first-twist frames), named at medium and high only standing, in a design read |
+| 1 | plumber | Plumbo | humanoid | drawn flat; the twist redrawn (2026-11-06): the plunger on his shoulder like a greatsword, its cup far out behind his head. The twist read passes (both readers: a parody with its own twist); the scripted blind read does not ("Mario? low" and unsure, unpaired; the shipped first-twist frames read unsure twice), named at medium and high only standing, in a design read |
 | 2 | hedgehog | Zoomic | humanoid, spin keyed | drawn flat, a tin wind-up toy with a box head; the blind read passes (named at medium and low), the twist read says a knock-off with or without the key; the dragon's dash is read as him, as it was before |
 | 3 | chomper | Snack-Man | generated, no limbs | drawn flat |
 | 4 | zapmouse | Kilowatchu | **keyed**, quadruped | drawn flat |
