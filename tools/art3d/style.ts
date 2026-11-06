@@ -877,6 +877,25 @@ export const BRIEFS: Record<string, Brief> = {
       'One hand raised in a polite little wave at shoulder height, the other at her side. A polite, vacant smile.',
     worn: 'the green diamond is cracked across its middle and a strip of grey tape (#9a9c98) is stuck over the crack, and it hangs crooked, tilted to one side, still floating clear above her head with white background under it; the hem of the dress is torn into a big ragged notch at the side; the heel of her back shoe has snapped off, that shoe now flat. Her face, the bob and the gap under the diamond stay as they are.',
   },
+  slime: {
+    // The nod, each part of the read at race size and each a shape in outline: the teardrop of goo, wide and flat at
+    // the bottom, rising to a pointed tip that curls over to one side (the read: nobody else in the cast comes to a
+    // point on top, and it parts it from the jelly's dome, the dot-eater's circle and the puffball's ball, so the tip
+    // stands tall and clear and is traced with `smooth: 0`); no limbs (it parts it from the puffball and the hopper,
+    // on feet); the huge open grin across its middle and the two big round eyes high on it (the face, in colour).
+    // Ours, and the joke: it's a water balloon. The curled tip is the balloon's tied knot, a seam of the rubber shows,
+    // and a slow drip leaks from a pinhole in its back.
+    // The palette is neutral (Decisions 4): the goo in the player's colour, the shine a light of it; the eyes and the
+    // mouth neutrals, the tongue a warm fixed tone (a face mark). The image model draws the original's onion whatever
+    // the twist says, so the balloon is the wear edit's: made the balloon's neck, the tip tied off a sack (a money bag in
+    // black), and a big hooked curl read as a witch's hat; the tip as drawn, a knot tied round its root, read as the
+    // homage (art/sprites/slime/design.prompt.txt).
+    design:
+      'The character: a small blob of glossy blue goo (#3d8fe0) shaped like an onion or a teardrop, with no arms, no legs and no feet, side on facing right. ' +
+      'Its signature: wide and flat at the bottom, it rises to a tall pointed tip that curls over backwards to the left like a flame, as tall as a third of the body, the tip standing clear against the white. ' +
+      'The tip is the tied knot of a water balloon. Two big round white eyes with black pupils high on its front, a huge open grin across its middle, dark inside (#2a1f1a), with a pink tongue (#e26a6a). A big pale shine (#bfe2ff) on its upper side.',
+    worn: 'the pointed tip on top keeps its shape, curling over at its end, but taller and thicker at its root, and a thin twist of rubber is tied round its root like the knot of a water balloon; a strip of grey tape (#9a9c98) is stuck over a pinhole low on its back, and one big drop of water leaks out from under it and hangs off the back of the body; the body sags a little lopsided, slumped lower on its back side. The eyes and the grin stay exactly as they are.',
+  },
   assistant: {
     // The nod, each part of the read at race size and each a shape in outline: the top-knot, a tuft of hair standing
     // straight up off the crown, pinched in at its base by a band and splaying out at its tip, with a big round bell
