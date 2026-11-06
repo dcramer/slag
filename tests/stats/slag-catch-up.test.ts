@@ -7,9 +7,9 @@ import { botRound } from '../lib/bot-race';
  * Catch-up in Rising Slag (src/game/expectations.ts `LEAD_HOLDS`, docs/DESIGN.md → Difficulty): how often whoever
  * leads 15 s after GO wins the round, four Normal bots on a bare loop. Three ways: the loop's boxes as built; the
  * boxes' deal reaching every empty hand every 5 s, used by the bots' item tactics (src/brain/tactics.ts); and the
- * same deal never used (`knack` 0). Rounds over by 15 s, or ending in a tie, aren't counted. Catch-up itself isn't
- * there yet (`LEAD_HOLDS`), so nothing here asserts it; the bands hold what's measured. The boxes' runs also say how
- * long a round lasts (`SLAG_ROUNDS`).
+ * same deal never used (`knack` 0). Rounds over by 15 s, or ending in a tie, aren't counted. The bands hold what's
+ * measured since the regroup gates brought it to about half (`LEAD_HOLDS`). The boxes' runs also say how long a round
+ * lasts (`SLAG_ROUNDS`).
  */
 const SEEDS = Array.from({ length: 128 }, (_, i) => i + 1);
 const DEAL = 5 * 60;

@@ -65,7 +65,8 @@ export const MODES: Record<ModeId, ModeDef> = {
    */
   slag: {
     label: 'Rising Slag',
-    // A looping shaft of open ledges in every set, owing no part, with boxes of its own up every lap and slag under it.
+    // A looping shaft of open ledges in every set, owing no part, with boxes of its own up every lap, two gates across it
+    // that shut on a cycle so the leader waits for the pack (gen/level/loop-gates.ts), and slag under it.
     // The boxes deal by rank, the way a kart racer's do: whoever is behind draws something that reaches up (the hook
     // that trades places with the one ahead, the punch that flies up through floors, a burst upward, a step, the
     // shell that hunts the leader), and whoever leads something to hold on with. None kills.
@@ -74,6 +75,7 @@ export const MODES: Record<ModeId, ModeDef> = {
       loop: true,
       bare: true,
       boxes: { chase: ['hook', 'upper', 'upper', 'rocket', 'block', 'tax'], lead: ['shield', 'sword', 'block'] },
+      gates: true,
       tide: true,
     },
     run: { flag: false, lastStanding: true, ahead: 'height' },
