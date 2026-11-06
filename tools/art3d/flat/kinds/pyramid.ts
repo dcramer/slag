@@ -5,14 +5,17 @@ import type { FlatKind } from '../kinds';
 // triangle for a head on a hulking body; the old wedge, its point out past his front shoulder, was a brim at play
 // size, and the mage's hat); and the long cheese slicer in his back fist, slanting from it down to the floor behind
 // him to the left (the second read, a great blade dragged; never raised, never across his legs, where his base
-// flared into a robe). KEEP is the words the pose sheets were drawn with.
+// flared into a robe). KEEP is the words the pose sheets were drawn with. The drawn cowl is repainted in every pose
+// as a hard pyramid (art/sprites/pyramid/cowl.py, sources in cone-flat/): straight edges, a flat base as wide as his
+// shoulders, 1.35 times as tall as drawn, a lit near face and a shaded far face. Drawn, it traced as a soft narrow
+// cone and clean readers took it for a hood.
 const KEEP =
   'the tall upright rusty pyramid helmet always sitting straight down on his shoulders with its point straight up, and the long cheese slicer always in his back fist, slanting from his fist down to the floor behind him to the left, never raised, never in front of his legs';
 
 export const kind: FlatKind = {
   body: 146,
   map: {
-    roles: ['boot', 'skin', 'apron', 'pig', 'rust', 'steel', 'dark'],
+    roles: ['boot', 'skin', 'apron', 'pig', 'rust', 'cowl', 'steel', 'dark'],
     // Sampled from the design (art/sprites/pyramid/design.png, `swatch.py`), region by region: the wedge's design's
     // samples and the pyramid's, which are the same character's colours.
     families: [
@@ -56,24 +59,12 @@ export const kind: FlatKind = {
       ['pig', [180, 138, 144]],
       ['pig', [205, 156, 156]],
       ['pig', [181, 134, 139]],
-      // The roof-vent cowl: its rust, the rust's blotches, the rivets and the shade, all one.
-      ['rust', [110, 60, 32]],
-      ['rust', [132, 67, 34]],
+      // The cowl, redrawn as a hard pyramid (art/sprites/pyramid/cowl.py): its lit near face.
+      ['rust', [172, 98, 60]],
       ['rust', [166, 96, 57]],
-      ['rust', [135, 73, 39]],
-      ['rust', [154, 87, 50]],
-      ['rust', [67, 37, 28]],
-      ['rust', [148, 76, 44]],
-      ['rust', [172, 100, 60]],
       ['rust', [180, 108, 68]],
-      ['rust', [108, 60, 36]],
-      ['rust', [116, 68, 36]],
-      ['rust', [162, 93, 59]],
-      ['rust', [122, 86, 75]],
-      ['rust', [83, 57, 43]],
-      ['rust', [114, 63, 36]],
-      ['rust', [92, 62, 46]],
-      ['rust', [66, 30, 22]],
+      // Its shaded far face.
+      ['cowl', [112, 58, 38]],
       // The cheese slicer, blade and handle, and its edge's shade.
       ['steel', [188, 196, 196]],
       ['steel', [196, 196, 204]],
@@ -89,14 +80,16 @@ export const kind: FlatKind = {
       ['dark', [27, 10, 12]],
     ],
     line: 'dark',
-    thin: ['boot', 'skin', 'apron', 'pig', 'rust', 'steel'],
+    thin: ['boot', 'skin', 'apron', 'pig', 'rust', 'cowl', 'steel'],
+    // The pyramid's edges and point stay hard: rounded, it traced as a soft cone, a hood.
+    smooth: 0,
     fringe: 5,
     stroke: 2.4,
     feet: ['boot'],
     // The slicer is carried, so the body's size is the man under his helmet, alike in every pose.
     loose: ['steel'],
     // Skin slivers on the slicer's blade (its grey is near his) and the pig's rust-brown eye dots go.
-    min: { dark: 0.3, pig: 0.6, skin: 0.4, rust: 0.4 },
+    min: { dark: 0.3, pig: 0.6, skin: 0.4, rust: 0.4, cowl: 0.4 },
     // The slicer's slot and the gaps between his arms and his body, cut through.
     holes: 0.6,
   },
@@ -106,9 +99,13 @@ export const kind: FlatKind = {
     // The costume: the butcher's apron, in the player's colour; the pig printed on it a light of it.
     { name: 'apron', color: '#4f7fae', slot: 'player' },
     { name: 'pig', color: '#808080', on: 2, tone: 34 },
-    // A colourway is the cowl (VARIETY.palette), neutrals all: rust, an old brown rust, a sooty iron. Never a grey:
-    // galvanised, the cowl was his grey skin's colour and the helmet melted into his shoulders.
-    { name: 'rust', color: '#a85e3a', alts: ['#8a5238', '#5e4c44'], vary: 6 },
+    // A colourway is the cowl (VARIETY.palette), neutrals all: rust, an old brown rust, a weathered iron (light
+    // enough that its shaded face stays off the ink). Never a grey: galvanised, the cowl was his grey skin's colour
+    // and the helmet melted into his shoulders.
+    { name: 'rust', color: '#a85e3a', alts: ['#8a5238', '#7a6a60'], vary: 6 },
+    // The pyramid's far face, a shade of whichever metal it is: two flat faces meeting at a ridge are a metal
+    // pyramid; one flat colour traced as a cone, a hood.
+    { name: 'cowl', color: '#808080', on: 4, tone: -15 },
     { name: 'steel', color: '#c6cace' },
     { name: 'dark', color: '#2a1f1a' },
     { name: 'scuff', color: '#808080', on: 2, tone: 14 },
@@ -130,17 +127,17 @@ export const kind: FlatKind = {
     specks: {},
     count: 1,
     at: {
-      idle: [0.73, 0.32],
-      idle2: [0.68, 0.32],
-      'walk-1': [0.72, 0.33],
-      'walk-2': [0.72, 0.32],
-      'run-1': [0.68, 0.34],
-      'run-2': [0.68, 0.33],
-      'air-1': [0.44, 0.27],
-      'air-2': [0.42, 0.31],
-      wall: [0.38, 0.24],
-      cheer: [0.66, 0.32],
-      cheer2: [0.64, 0.33],
+      idle: [0.77, 0.36],
+      idle2: [0.72, 0.35],
+      'walk-1': [0.76, 0.36],
+      'walk-2': [0.76, 0.35],
+      'run-1': [0.72, 0.37],
+      'run-2': [0.72, 0.36],
+      'air-1': [0.5, 0.31],
+      'air-2': [0.44, 0.33],
+      wall: [0.43, 0.29],
+      cheer: [0.7, 0.35],
+      cheer2: [0.67, 0.36],
     },
   },
   wear: {
@@ -158,8 +155,8 @@ export const kind: FlatKind = {
     walk: { frames: ['walk-1', 'walk-2'], loop: true, stride: 34 },
     // A touch smaller: the lurch's lean pushed the slicer past the box behind him.
     run: { frames: ['run-1', 'run-2'], loop: true, stride: 48, scale: 0.95 },
-    air: { frames: ['air-1', 'air-2'], loop: false, vy: [-200, 200], centre: 'box', scale: 0.9 },
-    wall: { frames: ['wall'], loop: true, fps: 1, centre: 'box', scale: 0.9 },
+    air: { frames: ['air-1', 'air-2'], loop: false, vy: [-200, 200], centre: 'box', scale: 0.85 },
+    wall: { frames: ['wall'], loop: true, fps: 1, centre: 'box', scale: 0.86 },
     cheer: { frames: ['cheer', 'idle'], loop: true, holds: [0.5, 0.25] },
     cheer2: { frames: ['cheer2', 'idle'], loop: true, holds: [0.6, 0.3] },
     death: { frames: ['death'], loop: false, fps: 1, eyes: false, centre: 'box', scale: 0.8 },

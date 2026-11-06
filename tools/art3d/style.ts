@@ -508,7 +508,9 @@ export const BRIEFS: Record<string, Brief> = {
     // The palette is neutral (Decisions 4): the apron in the player's colour, the pig a light of it; the rust, the
     // grey skin, the steel and the boots all their own. The slicer leads the brief: the model drops what comes last,
     // and asked for last it came back small and in front of him. The design shipped is an edit of the wedge's worn
-    // design to this (art/sprites/pyramid/design.prompt.txt); this brief is it, for a redraw.
+    // design to this (art/sprites/pyramid/design.prompt.txt); this brief is it, for a redraw. The model draws the cowl
+    // soft and head-sized whatever the brief says, and traced it was a hood: every drawing's cowl is repainted a hard
+    // two-faced pyramid as wide as his shoulders (art/sprites/pyramid/cowl.py), so a redraw runs that too.
     design:
       'The character: a big hulking cartoon toy brute, in five colours: a blue apron (#4f7fae), a rusty orange metal helmet (#b8683e), pale grey skin (#bdb8b2), a steel blade (#c4c8ce), dark brown boots (#4a3e38). ' +
       'He drags a giant flat steel cheese slicer as long as he is tall behind him: its long broad paddle blade with a slot across it slants steeply from his back fist down to the ground behind his back heel. ' +
