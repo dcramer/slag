@@ -102,7 +102,7 @@ const WIDE_SIZES = { w: [64, 96], h: [24, 30] } as const;
 export type ProfileOverride = Partial<
   Pick<
     LevelProfile,
-    'size' | 'route' | 'density' | 'hazards' | 'danger' | 'gravity' | 'difficulty' | 'draw' | 'builder' | 'loop' | 'bare' | 'boxes' | 'tide' | 'curve'
+    'size' | 'route' | 'density' | 'hazards' | 'danger' | 'gravity' | 'difficulty' | 'draw' | 'builder' | 'loop' | 'bare' | 'boxes' | 'tide' | 'ends' | 'curve'
   >
 > & {
   weather?: WeatherKind;
@@ -206,7 +206,8 @@ export function rollProfile(seed: number, themeId: ThemeId, o: ProfileOverride =
     ...(o.loop ? { loop: true } : {}),
     ...(o.bare ? { bare: true } : {}),
     ...(o.boxes ? { boxes: o.boxes } : {}),
-    ...(o.tide ? { tide: true } : {}),
+    ...(o.tide ? { tide: o.tide } : {}),
+    ...(o.ends ? { ends: true } : {}),
     // A loop's laps climb the difficulty curve unless the host fixed one difficulty for every level.
     ...(o.loop && size === 'tall' && (o.curve ?? !o.difficulty) ? { curve: true } : {}),
   };

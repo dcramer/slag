@@ -155,6 +155,8 @@ export interface BotRound {
   leads: number;
   /** Runners bumped from below (sim/collide.ts `BUMP`). */
   bumps: number;
+  /** How the runners who went out went out (`DeathCause`), with `+` where a rival got the credit. */
+  causes: Record<string, number>;
 }
 
 /**
@@ -162,6 +164,13 @@ export interface BotRound {
  * placed), to its end: who led `at` frames after GO (highest up, laps and all), and who outlasted everyone. Catch-up's
  * measure (tests/stats/slag-catch-up.test.ts).
  */
+/** How each runner out of `run` went out, `+` marking a credited kill. */
+function causesOf(run: NonNullable<Match['run']>): Record<string, number> {
+  const out: Record<string, number> = {};
+  for (const r of run.runners) if (!r.alive) out[`${r.cause}${r.killer >= 0 ? '+' : ''}`] = (out[`${r.cause}${r.killer >= 0 ? '+' : ''}`] ?? 0) + 1;
+  return out;
+}
+
 export function botRound(
   seed: number,
   {
@@ -236,5 +245,5 @@ export function botRound(
     const at = run.runners.filter((r) => r.deathFrame === last);
     if (at.length === 1) winner = at[0].slot;
   }
-  return { leader, winner, uses, pickups, pops, frames: run.frame - RUN_COUNTDOWN, leads, bumps };
+  return { leader, winner, uses, pickups, pops, frames: run.frame - RUN_COUNTDOWN, leads, bumps, causes: causesOf(run) };
 }

@@ -14,7 +14,7 @@ import type { Temperament } from './temperament';
  */
 
 /** Bumped when BrainView changes shape. A player's script will declare the version it was written against. */
-export const BRAIN_VIEW_VERSION = 6;
+export const BRAIN_VIEW_VERSION = 7;
 
 /** How fast across the ground, as a player would say it. */
 export type Pace = 'still' | 'walking' | 'running' | 'flying';
@@ -98,7 +98,9 @@ export type Objective =
    * Climb, the slag rising after you, nobody finishing. Round a loop (`loop`, the rows of a lap) `lapLine` is where
    * climbing carries you on a lap up, so the whole climb is ahead again; with no loop (`loop` 0) it's the top, a place to hold.
    */
-  | { kind: 'climb'; lapLine: Cell; loop: number };
+  | { kind: 'climb'; lapLine: Cell; loop: number }
+  /** Knock everyone else out (a brawl): `cell` is the arena's middle, where to head with nobody to go for. */
+  | { kind: 'fight'; cell: Cell };
 
 /** A part standing in the level, by what it does to a route rather than by name. */
 export interface PropSense {

@@ -20,8 +20,9 @@ export const PASS_TARGETS: Record<BotLevel, Record<Difficulty, number>> = {
  * Where each mode's measurement may land today before its suite fails: bands around what the suite measured
  * (seeds 1–40 for a race, 1–32 for a loop), so they catch a regression, not the distance to the target. A band
  * that sits away from its target is a known gap, said beside it; close the gap and move the band, never the target.
+ * Only modes measured by stretches a bot gets through have them: a brawl has no stretch to get through.
  */
-export const PASS_BANDS: Record<ModeId, Record<BotLevel, Record<Difficulty, readonly [number, number]>>> = {
+export const PASS_BANDS: Partial<Record<ModeId, Record<BotLevel, Record<Difficulty, readonly [number, number]>>>> = {
   // Measured Easy 73 58 58, Normal 93 65 60, Hard 93 78 88. A hard level plays little harder than a medium one so
   // far, because only about half land in their band (docs/TODO.md → Level follow-ups): the hard column should fall
   // toward its target as hard layouts land, with no change here.

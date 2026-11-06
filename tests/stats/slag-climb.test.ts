@@ -42,7 +42,7 @@ describe('Rising Slag climb', () => {
       );
       for (const { s, entered, rate } of rates) {
         if (entered < 4) continue;
-        const [lo, hi] = PASS_BANDS.slag[level][s.tier];
+        const [lo, hi] = PASS_BANDS.slag![level][s.tier];
         expect(rate, `${level}/${s.tier} (rows ${s.from}–${s.to})`).toBeGreaterThanOrEqual(lo);
         expect(rate, `${level}/${s.tier} (rows ${s.from}–${s.to})`).toBeLessThanOrEqual(hi);
       }

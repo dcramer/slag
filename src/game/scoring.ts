@@ -103,6 +103,8 @@ export function scoreSurvival(
   kills: readonly { victim: number; killer: number }[],
   standings: Readonly<Record<number, Standing>> = {},
   progress: (slot: number) => number = () => 0,
+  /** What each place pays, the last one standing first (a brawl pays only its winner). */
+  places: readonly number[] = SURVIVE_PLACES,
 ): RoundResult {
   const slots = fates.map((f) => f.slot);
   if (fates.length === 1) {
@@ -117,11 +119,11 @@ export function scoreSurvival(
   if (when(order[0]) === when(order[order.length - 1])) return { verdict: 'too-hard', awards: [], finishers: [] };
   const awards: Award[] = [];
   let place = 0;
-  for (let i = 0; i < order.length && place < SURVIVE_PLACES.length && i < order.length - 1;) {
+  for (let i = 0; i < order.length && place < places.length && i < order.length - 1;) {
     const tied = order.filter((f) => when(f) === when(order[i]));
     // The first ones out never score, however the ties fall.
     if (i + tied.length >= order.length) break;
-    for (const f of tied) awards.push({ slot: f.slot, points: SURVIVE_PLACES[place], reason: 'survive' });
+    for (const f of tied) awards.push({ slot: f.slot, points: places[place], reason: 'survive' });
     i += tied.length;
     place += tied.length;
   }

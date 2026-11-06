@@ -39,6 +39,9 @@ export const RUSH = 10;
 
 /** The tide for a level of this profile and terrain. */
 export function slagTide(profile: LevelProfile, tiles: Uint8Array, w: number, h: number): Tide {
+  // A pour of the mode's own pace: from the lowest open row, no leash, no squeeze.
+  if (typeof profile.tide === 'object')
+    return { ...profile.tide, from: lowestOpen(tiles, w, h), leash: [], squeeze: { after: 9999, rate: 0, min: 0 }, rush: RUSH };
   return {
     ...SLAG_FLOOR,
     // A loop starts it a storey's depth under the spawn's floor, in the lap below, so the spawn storey is a head start,

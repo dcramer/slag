@@ -1,4 +1,5 @@
 import type { ModeId } from '../../game/modes';
+import { brawlStrategy } from './brawl';
 import { raceStrategy } from './race';
 import { slagStrategy } from './slag';
 import type { StrategyDef } from './types';
@@ -10,6 +11,7 @@ import type { StrategyDef } from './types';
 export const STRATEGIES: Record<ModeId, StrategyDef> = {
   race: raceStrategy,
   slag: slagStrategy,
+  brawl: brawlStrategy,
 };
 
 export type { Strategy, StrategyDef } from './types';
