@@ -43,6 +43,17 @@ export interface Shape {
   ground?: Uint8Array;
   /** The stage concept's landmark, when the sculptor raised one (sculptors/common.ts: claimSite, raiseLandmark). */
   landmark?: Landmark;
+  /**
+   * What the builder laid the level round (a brawl's arena): the kind of room, and its cells, where the set's own
+   * hazards stand first, before any other set piece, as the level's centrepiece (setpieces/place.ts, `PlacerOpts.centre`).
+   */
+  centre?: Centre;
+}
+
+/** A room a builder lays for its level's centrepiece: its kind (`SculptCtx.noCentre` names it), and the cells a centrepiece stands in. */
+export interface Centre {
+  kind: string;
+  rooms: TileRect[];
 }
 
 /** Width of a bridge prop in tiles. */
@@ -66,6 +77,8 @@ export interface SculptCtx {
   challenge: number;
   /** The level's stage concept (gen/stage), fixed per level; absent for a plain level. Sculptors give it a site with claimSite. */
   concept?: Concept;
+  /** Centre kinds (`Shape.centre`) none of the set's hazards stood in, earlier in this draw: the builder lays another. */
+  noCentre?: readonly string[];
 }
 
 /** Builds a level shape for a theme. Must be deterministic in ctx.rng. */

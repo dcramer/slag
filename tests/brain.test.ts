@@ -263,8 +263,8 @@ describe('the motor’s own moves', () => {
   // counts. The others have nothing to wait for, so every still frame counts.
   it.each([
     [2, false],
-    [3, true],
     [4, true],
+    [5, true],
   ])('in a fight it reads its landings in the air: slow hands cost a run across arena %i no stops, where a race still pays them', (seed, clear) => {
     const across = (reaction: number, haste: boolean) => {
       const m = new Match(seed, undefined, { ...DEFAULT_RULES, mode: 'brawl' });

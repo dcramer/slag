@@ -109,6 +109,10 @@ if (flag('stats')) {
     let nearHazard = 0;
     let contractFaults = 0;
     let contractRejects = 0;
+    // What each arena was laid round: room kinds, the recipes that stood there (`pair` when mirrored), and how near.
+    const centres: Record<string, number> = {};
+    const cores: Record<string, number> = {};
+    let centreNear = 0;
     const boxes: number[] = [];
     for (let i = 0; i < n; i++) {
       const t0 = performance.now();
@@ -148,7 +152,13 @@ if (flag('stats')) {
       if (lastGenInfo.contractFaults) contractFaults++;
       contractRejects += lastGenInfo.rejects.contract;
       if (r.boxes !== undefined) boxes.push(r.boxes);
-      for (const t of lastGenInfo.placement?.tries ?? []) {
+      if (r.centre) {
+        centres[r.centre.kind] = (centres[r.centre.kind] ?? 0) + 1;
+        const k = r.centre.recipe ? `${r.centre.recipe}${r.centre.pieces > 1 ? ' pair' : ''}` : 'none';
+        cores[k] = (cores[k] ?? 0) + 1;
+        centreNear += r.measures.centre;
+      }
+      for (const t of (lastGenInfo.placement?.tries ?? []).filter((t) => !t.centre)) {
         const key = `${th}:${t.recipe}`;
         const rc = (recipes[key] ??= { theme: th, recipe: t.recipe, tried: 0, spot: 0, placed: 0, refused: {} });
         rc.tried++;
@@ -176,6 +186,18 @@ if (flag('stats')) {
       nearHazard: `${((nearHazard / n) * 100).toFixed(0)}%`,
       contractFaults,
       contractRejects,
+      ...(Object.keys(centres).length
+        ? {
+            centre: Object.entries(centres)
+              .map(([k, v]) => `${k}:${v}`)
+              .join(' '),
+            centrepiece: Object.entries(cores)
+              .sort((a, b) => b[1] - a[1])
+              .map(([k, v]) => `${k}:${v}`)
+              .join(', '),
+            nearCentre: `${((centreNear / n) * 100).toFixed(0)}%`,
+          }
+        : {}),
       needParts: `${(((n - parts[0]) / n) * 100).toFixed(0)}%`,
       ...partShares(parts, n),
       fallbacks,
@@ -334,8 +356,11 @@ function holds(r: LevelReport): string {
             .join('; ')}`,
         ]
       : []),
+    ...(r.centre
+      ? [`centre: ${r.centre.kind}, ${r.centre.recipe ? `${r.centre.recipe}${r.centre.pieces > 1 ? ', a mirrored pair' : ''}` : 'nothing stood there'}`]
+      : []),
     ...(r.boxes !== undefined ? [`boxes: ${r.boxes}`] : []),
-    `stand cells: ${m.stands} on ${m.tiers} rows, ${pct(m.safe)} safe, ${pct(m.hazard)} near a hazard, ${pct(m.edgy)} by a drop`,
+    `stand cells: ${m.stands} on ${m.tiers} rows, ${pct(m.safe)} safe, ${pct(m.hazard)} near a hazard${m.centres ? ` (${pct(m.centre)} near the centrepiece)` : ''}, ${pct(m.edgy)} by a drop`,
     `spawns, bare: ${(r.spawns ?? [])
       .map(
         (c, _, all) =>

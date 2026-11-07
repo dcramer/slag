@@ -193,6 +193,11 @@ export interface BuilderContract {
     sideWall?: number;
     /** No set piece's hazard, moving solid or shot gets into a spawn's safe zone over its cycle (conformance only: a simulation). */
     clearSpawns?: true;
+    /**
+     * A centrepiece stands (`Shape.centre`: the set's hazard laid first, in the room the builder built round it), and
+     * at least this share of the stand cells the field reaches are near it.
+     */
+    centre?: number;
   };
   /** Over each set's levels. */
   set?: {
@@ -215,6 +220,8 @@ export interface BuilderContract {
     mirrored?: number;
     /** Its shapes (the style's last segment): exactly these come up, each in more than `share` of the levels. */
     shapes?: { names: readonly string[]; share: number };
+    /** Mean share of stand cells near the centrepiece, over this. */
+    centre?: number;
   };
 }
 

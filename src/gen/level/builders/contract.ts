@@ -30,7 +30,7 @@ export const boxesOf = (level: Level) => level.setPieces.filter((p) => isBox(p.d
 export const fillOf = (level: Level, asked: number) => (asked ? fillerOf(level).length / asked : 1);
 
 /** What only the shape and stand cells answer: measured once, only for a contract that reads it. */
-const SHAPED: readonly (keyof NonNullable<BuilderContract['each']>)[] = ['tiers', 'sideWall'];
+const SHAPED: readonly (keyof NonNullable<BuilderContract['each']>)[] = ['tiers', 'sideWall', 'centre'];
 
 /**
  * Where `level` breaks `each`, one line per promise (none: it keeps them). `asked` is the set pieces the pipeline
@@ -51,6 +51,9 @@ export function builderFaults(each: NonNullable<BuilderContract['each']>, level:
     const m = measured ?? measureLevel(level, cache);
     if (each.tiers !== undefined && m.tiers < each.tiers) out.push(`tiers: the field stands on ${m.tiers} rows, under ${each.tiers}`);
     if (each.sideWall !== undefined && m.wall >= each.sideWall) out.push(`sideWall: a side column runs ${m.wall} rows of terrain, not under ${each.sideWall}`);
+    if (each.centre !== undefined && !m.centres) out.push('centre: no centrepiece stands');
+    else if (each.centre !== undefined && m.centre < each.centre)
+      out.push(`centre: ${pct(m.centre)} of stand cells near the centrepiece, under ${pct(each.centre)}`);
   }
   return out;
 }

@@ -3,7 +3,19 @@ import { BRIDGE_W } from './validate';
 import { deriveSeed, Rng } from '../../core/rng';
 import { type Level, type LevelProfile, LOOP_BAND } from '../../sim/level';
 import { pickThemeId, type ThemeId } from '../../themes';
-import { commit, finalize, type RecipeTry, SET_PIECE_UID, SET_PIECES, shotsIntoSpawns, Site, tellFaults, windowFaults } from '../setpieces';
+import {
+  centreFits,
+  commit,
+  finalize,
+  type RecipeTry,
+  SET_PIECE_RECIPES,
+  SET_PIECE_UID,
+  SET_PIECES,
+  shotsIntoSpawns,
+  Site,
+  tellFaults,
+  windowFaults,
+} from '../setpieces';
 import { type Concept, conceptName, fits, type Landmark, landmarkFaults, rollConcept } from '../stage';
 import { generateTheme, type Theme } from '../theme';
 import { ReachCache } from '../../sim/reach';
@@ -67,7 +79,7 @@ export interface GenInfo {
   precision: number;
   draws: number;
   /** The filler set pieces the level asked for (`count`, its landmark's own aside) and each recipe the placer tried (`pnpm level` reports both). */
-  placement?: { asked: number; tries: RecipeTry[] };
+  placement?: { asked: number; tries: RecipeTry[]; centre?: string };
 }
 
 export let lastGenInfo: GenInfo = {
@@ -167,6 +179,8 @@ export function generateLevel(seed: number, themeOverride?: ThemeId, profileOver
     const profile: LevelProfile = { ...drawn.profile, draw: n };
     const rejects = { unsolvable: 0, tooEasy: 0, closed: 0, landmark: 0, precision: turned, contract: 0 };
     const faults: string[] = [];
+    // Centre kinds (Shape.centre) none of the set's hazards stood in: the builder lays others for the rest of the draw.
+    const unfit: string[] = [];
     const lab = (s: string) => (n ? `draw${n}:${s}` : s);
     for (let attempt = 0; attempt < MAX_ATTEMPTS + LEGACY_ATTEMPTS; attempt++) {
       const rng = new Rng(deriveSeed(seed, lab(`level:${attempt}`)));
@@ -174,7 +188,26 @@ export function generateLevel(seed: number, themeOverride?: ThemeId, profileOver
       const sculptor = attempt < MAX_ATTEMPTS || profile.loop ? SCULPTORS[themeId] : FALLBACK_SCULPTOR;
       const live = concept && attempt < MAX_ATTEMPTS && rejects.landmark < MAX_LANDMARK_REJECTS ? concept : undefined;
       const reject = () => rejects.landmark++;
-      const shape = sculptor({ rng, themeId, theme, attempt, profile, challenge, ...(live ? { concept: live } : {}) });
+      const ctx = { themeId, theme, attempt, profile, challenge, ...(live ? { concept: live } : {}) };
+      let shape = sculptor({ rng, ...ctx, ...(unfit.length ? { noCentre: [...unfit] } : {}) });
+      // A level laid round a centre is first asked whether one of the set's hazards stands in it (before any
+      // proof); a kind none does is laid no more this draw, and this attempt sculpts again round another.
+      while (
+        shape.centre &&
+        !centreFits(
+          new Rng(deriveSeed(seed, lab(`centre:${attempt}`))),
+          toLevel(seed, shape, theme, profile),
+          shape.centre.rooms,
+          SET_PIECE_RECIPES[themeId],
+          profile.setPieceRoles,
+        )
+      ) {
+        unfit.push(shape.centre.kind);
+        shape = sculptor({ rng: new Rng(deriveSeed(seed, lab(`level:${attempt}:${unfit.join('+')}`))), ...ctx, noCentre: [...unfit] });
+      }
+      // Every kind turned down on this attempt's sculpts: it goes on without one (its builder's contract has the last
+      // word), and the next attempt's sculpt may fit any of them again.
+      if (!shape.centre && unfit.length) unfit.length = 0;
       const landmark = live ? shape.landmark : undefined;
       if (live && !landmark) {
         reject();
@@ -291,12 +324,13 @@ export function generateLevel(seed: number, themeOverride?: ThemeId, profileOver
       // A Rising Slag tower is several levels tall: its hazards come at the same rate per storey.
       const asked = Math.max(0, profile.hazards * (profile.loop ? Math.max(1, Math.round(profile.h / 50)) : 1) - budget);
       const tries: RecipeTry[] = [];
-      lastGenInfo.placement = { asked, tries };
+      lastGenInfo.placement = { asked, tries, ...(shape.centre ? { centre: shape.centre.kind } : {}) };
       const pieces = SET_PIECES[themeId](new Rng(deriveSeed(seed, lab(`setpieces:${attempt}`))), level, {
         count: asked,
         log: tries,
         danger: profile.danger,
         ...(profile.setPieceRoles ? { roles: profile.setPieceRoles } : {}),
+        ...(shape.centre ? { centre: shape.centre.rooms } : {}),
         cache,
         keep: fixed.length ? (ps) => keep([...fixed, ...ps]) : keep,
         ...(live && landmark ? { standing: fixed, avoid: landmark.air, family: live.family } : {}),
