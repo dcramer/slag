@@ -21,13 +21,13 @@ import { art as raider } from './art/raider';
 import { art as fighter } from './art/fighter';
 import { art as stinger } from './art/stinger';
 import { art as mage } from './art/mage';
-import { art as creeper } from './art/creeper';
+import { art as hisser } from './art/hisser';
 import { art as tophat } from './art/tophat';
 import { art as pyramid } from './art/pyramid';
-import { art as invader } from './art/invader';
+import { art as marcher } from './art/marcher';
 import { art as vampire } from './art/vampire';
 import { art as assistant } from './art/assistant';
-import { art as sim } from './art/sim';
+import { art as neighbour } from './art/neighbour';
 import { art as succubus } from './art/succubus';
 import { art as archer } from './art/archer';
 import { art as slime } from './art/slime';
@@ -583,7 +583,7 @@ export const KINDS: Record<Kind, KindArt> = {
 
   // The impostor bean: a bean on two stubby legs, a wide visor, a backpack. Shuffles. Its body is the
   // player's color, as the original's crew comes in every color anyway.
-  impostor: {
+  visor: {
     size: [0.9, 0.98],
     outline:
       'M 0.04 -1 C 0.3 -1 0.42 -0.84 0.42 -0.6 L 0.42 -0.18 C 0.42 -0.06 0.36 0 0.26 0 L 0.12 0 C 0.12 -0.08 0.08 -0.1 0.02 -0.1 C -0.04 -0.1 -0.08 -0.08 -0.08 0 L -0.24 0 C -0.34 0 -0.4 -0.06 -0.4 -0.18 L -0.4 -0.6 C -0.4 -0.84 -0.24 -1 0.04 -1 Z',
@@ -962,13 +962,13 @@ export const KINDS: Record<Kind, KindArt> = {
   fighter,
   stinger,
   mage,
-  creeper,
+  hisser,
   tophat,
   pyramid,
-  invader,
+  marcher,
   vampire,
   assistant,
-  sim,
+  neighbour,
   succubus,
   archer,
   slime,

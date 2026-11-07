@@ -2,7 +2,7 @@
 so `map.holes` cuts them through the frame and the level shows through, as through the arcade crab's. Prints each
 drawing's eyes as fractions of the figure's box, the left one first, for `eyes.at` and `eyes.pair`.
 
-python3 -I art/sprites/invader/holes.py IN OUT [IN OUT ...]
+python3 -I art/sprites/marcher/holes.py IN OUT [IN OUT ...]
 """
 import sys
 from PIL import Image, ImageDraw, ImageFilter
