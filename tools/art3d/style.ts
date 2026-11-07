@@ -1138,6 +1138,26 @@ export const BRIEFS: Record<string, Brief> = {
     // Off the face, the antennae and the cap: a torn hem, tape at the claw arm's elbow.
     worn: "the hoodie's hem has a big ragged tear at one side; a wide band of grey tape (#9a9c98) is wrapped round the elbow of the long claw arm; the near roller skate has lost its front wheel and tips a little. The head, the eye, the grin, the cap, the antennae, the claw and the phone stay exactly as they are.",
   },
+  android: {
+    // The nod, each part of the read at race size and each a shape in outline: the huge long blade held out low in
+    // front of her (the read's prop: long and thin and pointing ahead, never tip-down beside her like the
+    // mercenary's broad knife, nor on her shoulder like the plumber's plunger); the white bob with a straight fringe
+    // and the black band across her eyes (the read's head: white where the sim's bob is black, and the band nobody
+    // else in the cast wears); the short dress flaring at the hem over long legs in thigh-high boots (a slim
+    // swordswoman, not the fighter's wide stance and thick thighs, nor the sim's knee-length bell); calm and upright,
+    // never a lunge (a low lunge with a blade reads as a ninja).
+    // Ours, and the joke: the blade is a giant letter opener, a flat paper knife with a round-ended tip and a curly
+    // handle; the blindfold is a satin sleep mask; her floating drone is a cardboard box hung on a string from a stick
+    // over her shoulder.
+    // The palette is neutral (Decisions 4): the dress and boots in the player's colour, the trim a dark of it; the
+    // hair white, the mask black, the skin neutral; the blade and handle steel, the box cardboard.
+    design:
+      'The character: a chunky little cartoon swordswoman like a toy figure, side on facing right, her head a third of her height. Her signature: a huge long flat steel letter opener (#c9ccd2) as long as she is tall, held out low in front of her in one hand, its long thin straight blade pointing forward and down, its round-ended tip near the ground well ahead of her toes, a curly little handle in her fist. ' +
+      'A big round white bob haircut (#eeece6) to her jaw with a straight fringe, and across her eyes a wide black satin sleep mask (#24202a) tied round her head. Pale skin (#f2d8c2), a small calm mouth. ' +
+      'A short blue dress (#3f5fa8) flaring out wide at the hem, dark blue trim (#25396a), long legs in tall blue boots up to her thighs. ' +
+      'Floating beside her shoulder, a small brown cardboard box (#c49a64) hangs on a string from a short stick poking up behind her back, with white background all round the box.',
+    worn: "the two black tails of the sleep mask's knot are longer and fly out far behind her head; the letter opener's long blade is bent a little near its tip and has a big nick out of its edge; the cardboard box has a big dent caved into one corner and a strip of grey tape (#9a9c98) across its lid, and hangs further out from her shoulder, a wide gap of white all round it; the hem of the dress is torn into a big ragged notch at one side. Her face, the white bob with its straight fringe, the black mask and the stick stay as they are.",
+  },
 };
 
 function brief(kind: string): Brief {

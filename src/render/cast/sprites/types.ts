@@ -95,7 +95,7 @@ export interface SpriteGait {
  * flat lid, `anime` a big iris under a thick lash, `square` a white block and an iris block, `cat` an almond all
  * iris round a slit pupil (the monster slayer's), `googly` a stuck-on craft eye, a white disc round a loose pupil
  * that rolls with the fall and sits askew between the two eyes (the puffball's knock-off), `goggle` a dark lens in
- * a grey rim worn down over the eyes, acting in its glint (the engineer's), `cutout` the drawing's own hole cut through the figure (the box creeper's).
+ * a grey rim worn down over the eyes, acting in its glint (the engineer's), `cutout` the drawing's own hole cut through the figure (the box creeper's), `printed` the pale shut eyes printed on a sleep mask worn over hers (the blindfolded android's).
  */
 export type EyeStyle =
   | 'round'
@@ -113,7 +113,8 @@ export type EyeStyle =
   | 'bulb'
   | 'googly'
   | 'goggle'
-  | 'cutout';
+  | 'cutout'
+  | 'printed';
 
 /**
  * The face kit's settings for a kind: eye size (world px, the near eye's at rest), iris, its eye style (`round` if

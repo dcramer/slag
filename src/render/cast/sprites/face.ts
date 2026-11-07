@@ -378,6 +378,42 @@ export const EYES: Record<EyeStyle, EyeArt> = {
     brow: true,
     open() {},
   },
+  // A sleep mask's printed eyes: the mask is worn over hers, so none of hers shows, only the pale pair printed on the
+  // black satin, lids shut in a sleepy curve (the blindfolded android's). The print acts anyway, which is the joke: it
+  // narrows into a hard slant on the run and the wall, lifts on the way up and springs open into a round O on a fall;
+  // its blink, cheer arcs and crosses are in the print's colour too (`lit`), since ink is lost on the mask.
+  printed: {
+    extent: [1, 0.7],
+    brow: false,
+    lit: true,
+    open(s, r, m, f, iris) {
+      s.fillStyle = iris;
+      if (m === 'fall') {
+        poly(s, oval(0, 0, r * 0.8, r * 0.85, 12), iris);
+        poly(s, oval(0, 0, r * 0.4, r * 0.45, 10), INK);
+        return;
+      }
+      if (m === 'run' || m === 'wall') {
+        // A hard dash slanting down to the front.
+        stroke(
+          s,
+          [
+            { x: -f * r, y: -r * 0.3 },
+            { x: f * r, y: r * 0.2 },
+          ],
+          { w: Math.max(0.35, r * 0.5), seed: 5, taper: [0.2, 0.2], press: 0.1 },
+        );
+        return;
+      }
+      const lift = m === 'up' ? -0.35 : 0;
+      const lid: P[] = [];
+      for (let j = 0; j <= 6; j++) {
+        const a = Math.PI * (0.1 + (j / 6) * 0.8);
+        lid.push({ x: Math.cos(a) * r, y: (lift - 0.25) * r + Math.sin(a) * r * 0.55 });
+      }
+      stroke(s, lid, { w: Math.max(0.35, r * 0.5), seed: 7, taper: [0.2, 0.2], press: 0.1 });
+    },
+  },
 };
 
 /** An almond, pointed at the back and round at the front. */

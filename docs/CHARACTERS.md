@@ -170,7 +170,7 @@ The strongest reads first. **Keyed** marks the non-humanoids, the riskiest to dr
 | 47 | junior | Junior | humanoid, robot; an egg (about 1 look in 100) | drawn flat from the reference, its props bigger than the reference's (a pincer as big as the head, a big phone, steel wheels) and one antenna; in colour the eye, claw and skates read, the phone mostly, the grin, backwards bill and zigzag partly; in black one reader of two pairs it with the elf (the antenna as a pointed cap); owner to decide |
 | 48 | bomber | Kaboomerman | humanoid, small, round helmet | to draw flat (2026-11-07) |
 | 49 | skeleton | Humerus | humanoid, stocky | to draw flat (2026-11-07) |
-| 50 | android | B-Minus | humanoid, slim + sword | to draw flat (2026-11-07) |
+| 50 | android | B-Minus | humanoid, slim + sword | drawn flat (2026-11-06); the clean colour read fails six rounds running: the white bob over the blindfold reads as "a white round helmet with a visor" (once "Bomberman is possible"), then "a white hood"; the design read small passed ("2B, medium" twice). Owner to decide |
 | 51 | climber | Maddie Summit | humanoid, small | to draw flat (2026-11-07) |
 
 **What to check.** No two kinds may rhyme. Watch these pairs:
