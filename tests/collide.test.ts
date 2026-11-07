@@ -2,18 +2,19 @@ import { describe, expect, it } from 'vitest';
 import { type Cell, normalizeCells, overlaps } from '../src/core/geom';
 import { Rng } from '../src/core/rng';
 import { Match } from '../src/game/match';
+import { MODES } from '../src/game/modes';
 import { generateProp } from '../src/gen/props';
 import { generateTheme } from '../src/gen/theme';
 import { Predictor } from '../src/net/predict';
 import { drawnVelocity } from '../src/net/session';
 import { hashMatch, restoreMatch, snapshotMatch } from '../src/net/snapshot';
-import { BUMP, COLLIDE, PERCH } from '../src/sim/collide';
-import { DT, LEVEL_H, LEVEL_W, PHYS, RUN_COUNTDOWN, TILE } from '../src/sim/constants';
+import { BUMP, CHECK, COLLIDE, PERCH } from '../src/sim/collide';
+import { DT, FPS, LEVEL_H, LEVEL_W, PHYS, RUN_COUNTDOWN, SHIELD_FRAMES, TILE } from '../src/sim/constants';
 import { giveItem } from '../src/sim/items';
 import { type Level, spawnZone, tileAt } from '../src/sim/level';
 import { type Body, bodyAtCell, firstOverlap, stepBody } from '../src/sim/physics';
 import { gliderSolidId, makeProjectile, type Module, moduleSim, type PlacedProp, type PropDef } from '../src/sim/props';
-import { type Runner, RunWorld } from '../src/sim/run';
+import { RACE_RUN, type Runner, type RunRules, RunWorld } from '../src/sim/run';
 import { type InputFrame, NO_INPUT } from '../src/sim/types';
 
 const FLOOR = 20; // first solid row
@@ -77,13 +78,18 @@ function settle(run: RunWorld, n: number) {
   while (run.frame < RUN_COUNTDOWN) run.step(Array(n).fill(NO_INPUT));
 }
 
-/** `n` runners standing on open floor, in a live race, `spacing` px apart from column `tx`. */
-function lineup(n: number, opts: { tx?: number; spacing?: number; level?: Level; props?: PlacedProp[] } = {}) {
-  const { tx = 14, spacing = 30, level = testLevel(), props = [] } = opts;
+/** `n` runners standing on open floor, in a live race (or a mode's, `rules`), `spacing` px apart from column `tx`. */
+function lineup(n: number, opts: { tx?: number; spacing?: number; level?: Level; props?: PlacedProp[]; rules?: RunRules } = {}) {
+  const { tx = 14, spacing = 30, level = testLevel(), props = [], rules } = opts;
   const run = new RunWorld(
     level,
     props,
     Array.from({ length: n }, (_, i) => i),
+    0,
+    level.seed,
+    [],
+    true,
+    rules,
   );
   run.runners.forEach((r, i) => (r.body = bodyAtCell(tx, FLOOR - 1, i * spacing)));
   run.frame = RUN_COUNTDOWN;
@@ -129,6 +135,19 @@ describe('spawn safe zone', () => {
     expect(outside.runners[0].alive).toBe(false);
     expect(outside.runners[0].cause).toBe('hazard');
     expect(outside.runners[0].killer).toBe(7);
+  });
+
+  it('shields for 5 s from GO and then for nobody: still standing at 4 s, killed by the same hazard by 6 s', () => {
+    const run = new RunWorld(level, [spikeAt(2)], [0]);
+    const r = run.runners[0];
+    while (run.frame < RUN_COUNTDOWN + 4 * FPS) run.step([NO_INPUT]);
+    expect(run.isSafe(r)).toBe(true);
+    expect(r.alive).toBe(true);
+    while (run.frame < RUN_COUNTDOWN + 6 * FPS) run.step([NO_INPUT]);
+    expect(run.isSafe(r)).toBe(false);
+    expect(r.alive).toBe(false);
+    expect(r.cause).toBe('hazard');
+    expect(r.deathFrame).toBe(RUN_COUNTDOWN + SHIELD_FRAMES);
   });
 
   it('projectiles reaching a protected runner pop harmlessly; outside they kill', () => {
@@ -564,12 +583,79 @@ describe('side contact', () => {
   });
 });
 
+describe("a brawl's shove (RunRules.shove)", () => {
+  const BRAWL = MODES.brawl.run;
+  /** The floor ends at this column: open pit to the right of it. */
+  const EDGE = 24;
+  function ledge(): Level {
+    const level = testLevel();
+    for (let y = FLOOR; y < LEVEL_H; y++) for (let x = EDGE; x < LEVEL_W; x++) level.tiles[y * LEVEL_W + x] = 0;
+    for (let y = 10; y < FLOOR; y++) level.tiles[y * LEVEL_W + WALL_X] = 0;
+    return level;
+  }
+  /** A victim standing `tiles` from the edge, a rival `back` px behind them; true if `inputs` put the victim off the ledge in 2 s. */
+  function offLedge(rules: RunRules, tiles: number, back: number, inputs: (f: number, r: Runner) => [InputFrame, InputFrame]) {
+    const { run, rs, bs } = lineup(2, { level: ledge(), tx: EDGE - tiles, spacing: 0, rules });
+    bs[0].x = bs[1].x - bs[0].w - back;
+    for (let f = 0; f < 120 && rs[1].alive; f++) run.step(inputs(f, rs[1]));
+    return !rs[1].alive || bs[1].y > (FLOOR + 1) * TILE;
+  }
+
+  it('a run-up into someone two tiles from an edge checks them off it, where a race only jostles them', () => {
+    // From four tiles back, running into them and on for a moment.
+    const runUp = (f: number) => [f < 36 ? dash(1) : NO_INPUT, NO_INPUT] as [InputFrame, InputFrame];
+    expect(offLedge(BRAWL, 2, 4 * TILE, runUp)).toBe(true);
+    expect(offLedge(RACE_RUN, 2, 4 * TILE, runUp)).toBe(false);
+  });
+
+  it('a walk pushes someone who stands there two tiles off an edge inside a second', () => {
+    const lean = (f: number) => [f < 60 ? walk(1) : NO_INPUT, NO_INPUT] as [InputFrame, InputFrame];
+    expect(offLedge(BRAWL, 2, 0.5, lean)).toBe(true);
+    expect(offLedge(RACE_RUN, 2, 0.5, lean)).toBe(false);
+  });
+
+  it('pushing back holds your ground against a walk, as in a race', () => {
+    expect(offLedge(BRAWL, 2, 0.5, () => [walk(1), walk(-1)])).toBe(false);
+  });
+
+  it('shoved off an edge you go out over the drop, not straight down', () => {
+    const { run, rs, bs } = lineup(2, { level: ledge(), tx: EDGE - 1, spacing: 0, rules: BRAWL });
+    bs[0].x = bs[1].x - bs[0].w - 0.5;
+    for (let f = 0; f < 60 && bs[1].onGround; f++) run.step([walk(1), NO_INPUT]);
+    expect(rs[1].alive && !bs[1].onGround).toBe(true);
+    expect(bs[1].vx).toBeGreaterThan(PHYS.walkSpeed * BRAWL.shove!.share * 0.9);
+  });
+
+  it('a check knocks like a bump: stars, credit and a throw ahead of the runner; leaning on after it is only a shove', () => {
+    const { run, rs, bs } = lineup(2, { spacing: 4 * TILE, rules: BRAWL });
+    let f = 0;
+    for (; f < 60 && rs[1].items.daze === 0; f++) run.step([dash(1), NO_INPUT]);
+    expect(rs[1].items.daze).toBeGreaterThan(0);
+    expect(rs[1].items.bonkedBy).toBe(0);
+    expect(bs[1].vx).toBeGreaterThanOrEqual(CHECK.kick);
+    expect(bs[1].vx).toBeGreaterThan(bs[0].vx);
+    // Running on into them while they see stars knocks them no further.
+    const credit = rs[1].items.bonkCredit;
+    for (let k = 0; k < 20; k++) run.step([dash(1), NO_INPUT]);
+    expect(rs[1].items.bonkCredit).toBeLessThan(credit);
+  });
+
+  it('a walk into a bystander, or a run into someone running back at you, is no check', () => {
+    const walked = lineup(2, { spacing: 4 * TILE, rules: BRAWL });
+    for (let f = 0; f < 60; f++) walked.run.step([walk(1), NO_INPUT]);
+    expect(walked.rs[1].items.daze).toBe(0);
+    const headOn = lineup(2, { spacing: 6 * TILE, rules: BRAWL });
+    for (let f = 0; f < 60; f++) headOn.run.step([dash(1), dash(-1)]);
+    expect(headOn.rs.map((r) => r.items.daze)).toEqual([0, 0]);
+  });
+});
+
 describe('order independence', () => {
   type Script = (slot: number, f: number) => InputFrame;
 
   /** Same inputs per slot, with the runners in the array in a different order. */
-  function play(order: number[], script: Script, at: (slot: number) => [number, number], frames: number) {
-    const run = new RunWorld(testLevel(), [], order);
+  function play(order: number[], script: Script, at: (slot: number) => [number, number], frames: number, rules?: RunRules) {
+    const run = new RunWorld(testLevel(), [], order, 0, 1, [], true, rules);
     run.frame = RUN_COUNTDOWN;
     for (const r of run.runners) airborne(r.body, ...at(r.slot));
     for (let f = 0; f < frames; f++) run.step(order.map((slot) => script(slot, f)));
@@ -622,6 +708,15 @@ describe('order independence', () => {
       same(base, play([7, 6, 5, 4, 3, 2, 1, 0], script, at, 900));
       same(base, play([3, 7, 0, 5, 1, 6, 2, 4], script, at, 900));
     }
+  });
+
+  it("a brawl's shoves and body checks come out the same in any array order", () => {
+    const at = (s: number): [number, number] => [120 + s * 25, 200 + (s % 3) * 20];
+    const script = mash(4);
+    const base = play([0, 1, 2, 3, 4, 5, 6, 7], script, at, 900, MODES.brawl.run);
+    same(base, play([7, 6, 5, 4, 3, 2, 1, 0], script, at, 900, MODES.brawl.run));
+    same(base, play([3, 7, 0, 5, 1, 6, 2, 4], script, at, 900, MODES.brawl.run));
+    expect(Object.values(base).some((r) => r.items.bonkedBy >= 0 || r.items.daze > 0)).toBe(true);
   });
 
   it('renumbering the slots changes nothing: which player you are is not a rule', () => {

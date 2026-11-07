@@ -2,7 +2,7 @@ import type { ItemDeal } from './items/types';
 import type { Rect } from '../core/geom';
 import type { TerrainKind, Theme } from '../gen/theme';
 import { TILE } from './constants';
-import type { PlacedProp } from './props/types';
+import type { PlacedProp, Role } from './props/types';
 import type { Tide } from './tide';
 import type { Weather, WeatherKind } from './weather';
 
@@ -41,10 +41,12 @@ export interface LevelProfile {
   h: number;
   /** 0 = sparse (lots of open air, few landmarks) … 1 = dense (packed terrain, ceilings, clutter). */
   density: number;
-  /** Target number of theme set pieces (0–4); the placer may find room for fewer. */
+  /** Target number of theme set pieces (0–4 rolled, more where a mode asks); the placer may find room for fewer. */
   hazards: number;
   /** 0 = tame set-piece mix (platforms, lifts) … 1 = nasty (cannons, saws, presses). */
   danger: number;
+  /** The roles its set pieces are drawn from (a brawl's: what kills or knocks, no platforms or lifts); absent, every one. */
+  setPieceRoles?: readonly Role[];
   route: RouteShape;
   /** World gravity scale (copied to Level.gravity). */
   gravity: number;
@@ -241,7 +243,7 @@ export function goalRect(level: Level): Rect {
 /**
  * The spawn safe zone in world px: the protected rect that holds the spawn
  * cell (the starting pocket). Runners touching it can't be killed by props
- * (see RunWorld). Null when the level has no protected rect around spawn.
+ * while the shield lasts (RunWorld.isSafe). Null when the level has no protected rect around spawn.
  */
 export function spawnZone(level: Level): Rect | null {
   return zoneAt(level, level.spawn);

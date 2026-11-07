@@ -33,7 +33,7 @@ import '../../sim/props/modules';
 import { ReachCache } from '../../sim/reach';
 import { gustPeak } from '../../sim/weather';
 import { noFreeRide } from '../level/winnable';
-import { hazardBox, tellFaults, windowFaults } from './contract';
+import { hazardBox, tellFaults, throughFaults, windowFaults } from './contract';
 
 /**
  * Shared machinery for set-piece placers: a terrain scan (`Site`) that
@@ -405,6 +405,8 @@ export interface PlacerOpts {
   avoid?: readonly TileRect[];
   /** Draw only from these recipe names (a stage concept's hazard family). */
   family?: readonly string[];
+  /** Draw only recipes of these roles (the level profile's `setPieceRoles`). */
+  roles?: readonly Role[];
 }
 
 /** Recipe weight scaled by the level's danger: hazards up to ×2.4 on nasty levels, ×0.4 on tame ones (and the reverse for helpers). */
@@ -441,7 +443,9 @@ export function makePlacer(themeKey: string, recipes: readonly Recipe[], uidBase
     const danger = opts.danger ?? 0.5;
     const tryCap = Math.round(16 * Math.max(1, Math.sqrt((level.w * level.h) / (48 * 27))));
     const family = opts.family;
-    const pool = (family ? recipes.filter((r) => family.includes(r.name)) : recipes)
+    const roles = opts.roles;
+    const pool = recipes
+      .filter((r) => (!family || family.includes(r.name)) && (!roles || roles.includes(r.role ?? 'hazard')))
       .map((r) => ({ r, k: dpow(rng.next() + 1e-9, 1 / (opts.danger === undefined ? r.weight : dangerWeight(r, danger))) }))
       .sort((a, b) => b.k - a.k);
     const order = [...pool.map((p) => p.r), ...pool.filter((p) => p.r.repeat).map((p) => p.r)];
@@ -453,7 +457,13 @@ export function makePlacer(themeKey: string, recipes: readonly Recipe[], uidBase
         if (++tries > tryCap) break;
         if (tellFaults(cand.modules).length) continue;
         const pp = finalize(s, cand, uidBase + first + out.length, `setpiece:${themeKey}:${recipe.name}`);
-        if (pp && !windowFaults(level, pp).length && (!opts.keep || opts.keep([...out, pp])) && noFreeRide(level, pp, [...standing, ...out], s.cache)) {
+        if (
+          pp &&
+          !windowFaults(level, pp).length &&
+          !throughFaults(level, pp).length &&
+          (!opts.keep || opts.keep([...out, pp])) &&
+          noFreeRide(level, pp, [...standing, ...out], s.cache)
+        ) {
           out.push(pp);
           commit(s, pp);
           break;

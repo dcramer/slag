@@ -1,7 +1,19 @@
-import type { Rect } from '../../core/geom';
+import { type Rect, rectCircle } from '../../core/geom';
 import { RUN_COUNTDOWN, TILE } from '../../sim/constants';
-import type { Level } from '../../sim/level';
-import { type Contrib, type Hazard, type Module, type ModuleOf, moduleSim, motionOffset, newPropState, type PlacedProp, resolveProp } from '../../sim/props';
+import { type Level, spawnZones, T_EMPTY } from '../../sim/level';
+import {
+  type Contrib,
+  footprintCells,
+  type Hazard,
+  type Module,
+  type ModuleOf,
+  moduleSim,
+  motionOffset,
+  newPropState,
+  type PlacedProp,
+  resolveProp,
+} from '../../sim/props';
+import { RunWorld } from '../../sim/run';
 import type { Recipe } from './place';
 
 /**
@@ -76,6 +88,49 @@ export function tellFaults(mods: readonly Module[]): string[] {
 /** Frames `windowFaults` watches a piece for, from the race start: longer than every hazard's cycle. */
 const WINDOW_SPAN = 900;
 /** A cell a moving hazard crosses has to stay clear longer than this between passes. */
+/**
+ * Nothing a set piece holds reaches through terrain: in each column of its footprint (every cell it claims over its
+ * cycle), no tile of the level between two of its cells. The placer claims a hazard's cells best-effort and skips
+ * tiles it can't, so a fall, a drip's path or a hail of rocks laid over a board or a ledge would be drawn, and hurt,
+ * straight through it. Empty when it holds.
+ */
+export function throughFaults(level: Level, pp: PlacedProp): string[] {
+  const cols = new Map<number, Set<number>>();
+  for (const [x, y] of footprintCells(pp)) cols.set(x, (cols.get(x) ?? new Set()).add(y));
+  const out: string[] = [];
+  for (const [x, ys] of cols) {
+    const lo = Math.min(...ys);
+    const hi = Math.max(...ys);
+    for (let y = lo + 1; y < hi; y++)
+      if (!ys.has(y) && level.tiles[y * level.w + x] !== T_EMPTY) {
+        out.push(`${pp.def.name}: reaches through terrain at ${x},${y}`);
+        break;
+      }
+  }
+  return out;
+}
+
+/** Frames of a level's set pieces firing that `shotsIntoSpawns` plays: a few volleys of the slowest gun. */
+const SHOT_FRAMES = 900;
+
+/**
+ * The set pieces whose shots reach a spawn's safe zone, played through the real sim: a shot bouncing off another
+ * piece goes where no trace of it alone says. The placer keeps every gun's own trace off the ends; on a level whose
+ * field keeps coming back to them (an arena's two ends), a shot that gets there anyway kills at a spawn once the
+ * shield is down, so the gun goes. Their uids.
+ */
+export function shotsIntoSpawns(level: Level): Set<number> {
+  const out = new Set<number>();
+  if (!level.setPieces.some((p) => p.def.modules.some((m) => m.type === 'cannon'))) return out;
+  const zones = spawnZones(level).map((z) => z.zone);
+  const run = new RunWorld(level, [], []);
+  for (let f = 0; f < SHOT_FRAMES; f++) {
+    run.step([]);
+    for (const p of run.projectiles) if (p.source >= 0 && zones.some((z) => rectCircle(z, p.x, p.y, 4))) out.add(p.source);
+  }
+  return out;
+}
+
 export const SAFE_WINDOW = 60;
 
 /**

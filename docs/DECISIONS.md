@@ -95,6 +95,12 @@ Every game design decision, preference and direction the owner has given, groupe
   2026-11-06 · `done` (a fight's moves carry `haste`: re-pick when the target moves, read the landing in the air, line up only where it pays; still 22 → 11% bare, 26 → 15% placed; races unchanged) · `src/brain/motor.ts`, src/brain/AGENTS.md
 - **Brawl gets arenas of its own, built for knocking people off things: tiers of ledges up the whole screen, edges with drops beside them, sides open to the drop, two mirrored ends.** "the brawl elvel designs might need more edges and stuff?"
   2026-11-06 · `done` (the `arena` builder; each spawn pocket keeps a two-row lip so nobody walks off at GO; deaths off the sides 13 → 41 in 48 bare rounds, knocked share 53 → 66%, draws 8 → 0%) · MODES.md → Brawl, DESIGN.md → Modes, `src/gen/level/builders/arena.ts`
+- **The start's safe zone shields you for 5 s from GO, in every mode, then it's gone.** "in brawl, the 'safe zone' of your start lasts forever.. that should time out in all modes after 5s"
+  2026-11-06 · `done` (`SHIELD_FRAMES`; each bout's own GO; the shield blinks through its last second; placement's protected rects unchanged) · AGENTS.md → Game rules, DESIGN.md, `src/sim/run.ts`
+- **Brawl has no safe areas and knocks throw people off ledges: bots don't pause, nearly everywhere to stand has a way to die next to it, and a hit near an edge sends you over.** "also the ai pauses too much on brawl" / "theres too many safe areas, and its hard to push people off ledges etc"
+  2026-11-06 · `in progress` · MODES.md → Brawl
+- **Brawl's hazards are amped up: its set pieces are things that kill or knock, more of them, near the ledges.** "we may need to amp up the hazards in brawl"
+  2026-11-06 · `done` (`setPieceRoles`: hazards and utility only; arenas stand 5.8 of 6, factory 2.6 → 5.5; stand cells with no way to die within 3 tiles 52 → 14%; nothing shoots into a spawn) · MODES.md → Brawl, `src/gen/level/builders/arena.ts`
 - **A brawl's arena is deadly by default.** "also the arena could be a little deadly by default, thats a thing we can tweak"
   2026-11-06 · `done` (up to six set pieces from the nastiest mix) · DESIGN.md → Modes, MODES.md · Replaced: four of the usual mix.
 - **In a brawl, if everyone left goes out at once, nobody wins the round.** "Highest one wins" / "actually if you all die no winners maybe?"

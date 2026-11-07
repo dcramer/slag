@@ -16,7 +16,7 @@ import { VOLCANO } from './volcano';
 
 export type { Piece, Recipe } from './place';
 export { commit, finalize, type PlacerOpts, SAFE_TILES, Site } from './place';
-export { hazardSignature, MIN_TELL, TELLS, tellFaults, windowFaults } from './contract';
+export { hazardSignature, MIN_TELL, shotsIntoSpawns, TELLS, tellFaults, throughFaults, windowFaults } from './contract';
 
 /**
  * Theme set pieces: large, pre-placed props that make a level interesting
