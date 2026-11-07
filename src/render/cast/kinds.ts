@@ -41,6 +41,7 @@ import { art as bomber } from './art/bomber';
 import { art as skeleton } from './art/skeleton';
 import { art as android } from './art/android';
 import { art as climber } from './art/climber';
+import { art as hitman } from './art/hitman';
 import { band, type D, type KindArt, line, mark, ORANGE, ORANGE_SH, oval, poly, spot, STEEL, STEEL_SH, toned, tonedOval, Y } from './kit';
 
 /**
@@ -981,4 +982,5 @@ export const KINDS: Record<Kind, KindArt> = {
   skeleton,
   android,
   climber,
+  hitman,
 };

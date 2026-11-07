@@ -94,7 +94,7 @@ describe('characters', () => {
   it('keep the name, colours, kind and swaps every seed had before faces stopped being rolled', () => {
     // Taken from the generator as it was (2026-11-02): saved looks are seeds, so a changed draw would
     // rename and recolour everyone's saved character. The kinds and their paints are the cast of
-    // 2026-11-07 (`LOOK_CAST` 16), which re-rolled every seed's kind once more.
+    // 2026-11-07 (`LOOK_CAST` 17), which re-rolled every seed's kind once more.
     const r = (v: number) => Math.round(v * 1e6) / 1e6;
     const hsl = (c: { h: number; s: number; l: number }) => [r(c.h), r(c.s), r(c.l)];
     const was = [
@@ -114,8 +114,8 @@ describe('characters', () => {
         4.213711,
         [4.213711, 56.42504, 59.823569],
         [184.213711, 60, 62],
-        'android',
-        [250, 20, 30],
+        'climber',
+        [190, 55, 45],
         [0.521445, 0.405522, 0.466233, 0.239925, 0.553326, 0.729822],
       ],
       [
@@ -124,8 +124,8 @@ describe('characters', () => {
         216.397351,
         [216.397351, 65.310683, 58.741505],
         [426.397351, 60, 62],
-        'mech',
-        [325, 60, 60],
+        'genie',
+        [345, 58, 50],
         [0.174814, 0.526593, 0.273228, 0.624745, 0.865475, 0.472317],
       ],
       [
@@ -134,8 +134,8 @@ describe('characters', () => {
         26.386192,
         [26.386192, 71.178476, 59.658041],
         [86.386192, 60, 62],
-        'boxer',
-        [125, 55, 42],
+        'bomber',
+        [220, 60, 55],
         [0.040964, 0.117763, 0.161785, 0.802757, 0.39893, 0.127491],
       ],
       [
@@ -144,8 +144,8 @@ describe('characters', () => {
         72.697179,
         [72.697179, 66.186532, 56.170261],
         [192.697179, 60, 62],
-        'creeper',
-        [118, 50, 40],
+        'tophat',
+        [305, 40, 42],
         [0.125612, 0.597632, 0.431327, 0.034586, 0.183248, 0.354172],
       ],
       [
@@ -164,8 +164,8 @@ describe('characters', () => {
         95.334505,
         [95.334505, 71.057736, 52.403322],
         [305.334505, 60, 62],
-        'hopper',
-        [22, 85, 52],
+        'warrior',
+        [8, 55, 45],
         [0.437685, 0.131625, 0.505768, 0.169069, 0.824561, 0.675632],
       ],
       [
