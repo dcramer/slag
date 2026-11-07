@@ -54,7 +54,7 @@ function opener(d: D, hx: number, hy: number) {
   const a = d.pose === 'air' ? 0.75 : 0.55;
   const ca = Math.cos(a) * d.f;
   const sa = Math.sin(a);
-  const len = 13;
+  const len = 9;
   const at = (u: number, v: number) => ({ x: hx + ca * u - sa * v * d.f, y: hy + sa * u + Math.cos(a) * v });
   toned(d.s, [at(1, -0.8), at(len - 1, -0.8), at(len, 0), at(len - 1, 0.8), at(1, 0.8)], BLADE, BLADE_SH, d.lk.ink, 0.3, 0.6 * d.k, 0.5);
   // The curly handle behind the fist.
@@ -66,7 +66,7 @@ function opener(d: D, hx: number, hy: number) {
 function drone(d: D) {
   const f = d.f;
   const base = { x: d.bx(0.5) - f * d.W * 0.1, y: Y(d, 0.42) };
-  const tip = { x: d.bx(0.9) + f * d.W * 0.72, y: Y(d, 0.92) };
+  const tip = { x: d.bx(0.9) + f * d.W * 0.5, y: Y(d, 0.92) };
   mark(d.s, WOOD_SH, [base, tip], 0.6, 5, [0.1, 0.3]);
   const sway = d.wob * 0.4 + Math.sin(d.t * 2.4) * 0.2;
   const bx = tip.x + sway;
