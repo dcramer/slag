@@ -1,3 +1,4 @@
+import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import { Match } from '../src/game/match';
 import { DEFAULT_RULES, MATCH_LENGTHS, withMode } from '../src/game/rules';
@@ -7,6 +8,7 @@ import { fromWire, hashMatch, hashSnap, restoreMatch, snapshotMatch, toWire } fr
 import { giveItem, type ItemKind, ITEMS, spawnItem } from '../src/sim/items';
 import { RunWorld } from '../src/sim/run';
 import { type InputFrame, NO_INPUT } from '../src/sim/types';
+import { SHAPE_FILE, type SnapShape, shapeDiff, snapshotShape } from './lib/snapshot-shape';
 
 const press = (k: Partial<InputFrame>): InputFrame => ({ ...NO_INPUT, ...k });
 
@@ -90,6 +92,14 @@ describe('snapshot coverage', () => {
     const missing = Object.keys(run).filter((k) => !known.has(k));
     expect(missing, `new RunWorld state: ${howTo}`).toEqual([]);
   });
+
+  it('matches the committed wire shape, nested fields and all', () => {
+    const committed = JSON.parse(readFileSync(SHAPE_FILE, 'utf8')) as SnapShape;
+    expect(
+      shapeDiff(committed, snapshotShape()),
+      `the snapshot shape changed (- as ${SHAPE_FILE} has it, + as a snapshot now carries it): run \`pnpm snap:shape\` and commit the file. Don't bump SNAP_VERSION in a branch, \`pnpm land\` bumps it once when the file changes`,
+    ).toEqual([]);
+  }, 20_000);
 });
 
 describe('match snapshots', () => {
