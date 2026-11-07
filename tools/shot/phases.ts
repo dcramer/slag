@@ -19,8 +19,17 @@ export const shots: Scenarios = {
       },
       Number(opt('bots') ?? 0),
     );
+    // `--ready`: everyone seated readies, and Start shows, as it does to whoever may press it (offline, or the host).
+    const ready = flag('ready');
+    if (ready) await page.evaluate(() => (window as any).slagDebug.match.players.forEach((p: any) => (p.ready = true)));
     await step(30);
-    await snap(`lobby-${seed}`);
+    if (ready)
+      await page.evaluate(() => {
+        const d = (window as any).slagDebug;
+        d.renderer.hud.canStart = d.match.canStart();
+        d.render();
+      });
+    await snap(`lobby-${seed}${ready ? '-ready' : ''}`);
   },
   async pick() {
     await open(`seed=${seed}&players=${players}`);

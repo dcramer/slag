@@ -69,25 +69,56 @@ export const LEAD_HOLDS = {
  * before any part, seeds 1–48) and through the first four rounds of a match as the parts pile up (seeds 1–16).
  * `draws`: the share of rounds nobody wins (the last ones out on one frame, or the time out). `seconds`: a round's
  * mean length from GO. `knocked`: the share of deaths with a rival's knock still credited (sim/items/common.ts
- * `BONK_CREDIT`), thrown or bumped into the level. Measured bare 13%, 30.1 s and 36%; placed 16%, 28.1 s and 32%
- * (twice the seeds: bare 7%, 29.6 s and 39%, placed 15%, 27.4 s and 32%), since bots put their hazards where a knock
- * throws someone and keep them off the ends, check their hops and leaps and stop rather than coast off where they
- * meant to stand: from bare 6%, 29.6 s and 31%, placed 17%, 27.4 s and 24%, and before that 63%, 39.6 s, 11% and
- * 59%, 38.1 s, 9% before bots lined rivals up and fetched boxes from anywhere (placed draws were 6% before the motor
- * stopped flip-flopping when it brakes at a walk). The slag still takes more deaths than anything else.
- * Earlier or faster pours shortened rounds and added draws. The targets are the owner's, from the party brawler:
- * draws rare, rounds of 20–40 s. The bands only catch a regression.
+ * `BONK_CREDIT`), thrown or bumped into the level. How hard it's fought (tests/lib/bot-race.ts `Fight`): `contact`
+ * and `hit`, seconds from GO to the first touch or bonk and to the first bonk; `uses`, items used a round; `still`
+ * and `retreat`, the shares of frames in it standing still and moving away from the nearest rival; `gap`, the tiles
+ * to that rival. Measured bare 13%, 27.6 s, 49%, 0.9 s, 3.5 s, 11.5 uses, 22%, 16%, 4.2 tiles; placed 13%, 24.5 s,
+ * 43%, 1.0 s, 4.0 s, 8.4 uses, 26%, 14%, 4.8 tiles (5 and 7 rounds under 10 s, none without a knock or a shove), since
+ * bots press the fight (`press`): they no longer read the view's rounding as the slag pouring and climb from GO, take
+ * an unlined hit after about a second in reach rather than four, fetch from boxes within 14 tiles unless a rival they
+ * could shove into something is right there, dodge only a hit that's coming, and get over a shove that stalls. From
+ * bare 13%, 30.1 s, 36%, 1.0 s, 4.5 s, 6.6 uses, 22%, 19%, 5.6 tiles; placed 16%, 28.1 s, 32%, 1.1 s, 5.5 s, 6.1
+ * uses, 26%, 17%, 5.6 tiles (2 and 7 under 10 s). Before that bare 6%, 29.6 s and 31%, placed 17%, 27.4 s and 24%
+ * before bots put their hazards where a knock throws someone, and 63%, 39.6 s, 11% and 59%, 38.1 s, 9% before bots
+ * lined rivals up and fetched boxes. Most still frames are the motor's own care (a beat to see what's next after a
+ * landing or a bump, lining up in a cell, waiting a hazard out), not a choice to hang back. The slag still takes
+ * more deaths than anything else. Earlier or faster pours shortened rounds and added draws. The targets are the
+ * owner's, from the party brawler: draws rare, rounds of 20–40 s. The bands only catch a regression; the bots before
+ * `press` fail the first bonk, uses, retreat and gap bands, so a return to turtling does too.
  */
 export const BRAWL_ROUNDS = {
   targets: { draws: 0.2, seconds: [20, 40] },
   bands: {
-    bare: { draws: [0, 0.2], seconds: [26, 34], knocked: [0.3, 0.46] },
-    placed: { draws: [0, 0.24], seconds: [24, 32], knocked: [0.25, 0.4] },
+    bare: {
+      draws: [0, 0.2],
+      seconds: [23, 32],
+      knocked: [0.4, 0.58],
+      contact: [0, 1.2],
+      hit: [0, 4.2],
+      uses: [9, 15],
+      still: [0, 0.25],
+      retreat: [0, 0.18],
+      gap: [0, 5],
+    },
+    placed: {
+      draws: [0, 0.2],
+      seconds: [21, 28],
+      knocked: [0.35, 0.5],
+      contact: [0, 1.3],
+      hit: [0, 5],
+      uses: [7, 11],
+      still: [0, 0.29],
+      retreat: [0, 0.16],
+      gap: [0, 5.3],
+    },
   },
 } as const satisfies {
   targets: { draws: number; seconds: readonly [number, number] };
-  bands: Record<string, Record<'draws' | 'seconds' | 'knocked', readonly [number, number]>>;
+  bands: Record<string, Record<BrawlMeasure, readonly [number, number]>>;
 };
+
+/** What `BRAWL_ROUNDS` bands. */
+export type BrawlMeasure = 'draws' | 'seconds' | 'knocked' | 'contact' | 'hit' | 'uses' | 'still' | 'retreat' | 'gap';
 
 /**
  * How long a Rising Slag round lasts, the same four bots and loop's boxes (tests/stats/slag-catch-up.test.ts): at most

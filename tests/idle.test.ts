@@ -28,12 +28,13 @@ function stepUntil(m: Match, done: () => boolean, inputs: (f: number) => Record<
 }
 
 describe('idle players', () => {
-  it('the lobby starts without someone idle for a minute, and never on idle players alone', () => {
+  it('the lobby can start without someone idle for a minute, and never on idle players alone', () => {
     const m = pair();
     m.step({ a: press({ confirmPressed: true }) });
-    expect(m.phase).toBe('lobby');
-    const waited = stepUntil(m, () => m.phase !== 'lobby', busy, LOBBY_IDLE_FRAMES + 10);
+    expect(m.canStart()).toBe(false);
+    const waited = stepUntil(m, () => m.canStart(), busy, LOBBY_IDLE_FRAMES + 10);
     expect(waited).toBeGreaterThan(LOBBY_IDLE_FRAMES - 10);
+    m.start();
     expect(m.phase).toBe('pick');
 
     const alone = new Match(778);

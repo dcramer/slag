@@ -4,7 +4,7 @@ import type { TerrainKind, Theme } from '../gen/theme';
 import { TILE } from './constants';
 import type { PlacedProp } from './props/types';
 import type { Tide } from './tide';
-import type { Weather } from './weather';
+import type { Weather, WeatherKind } from './weather';
 
 export interface TileRect {
   x: number;
@@ -71,6 +71,8 @@ export interface LevelProfile {
   tide?: boolean | Pick<Tide, 'wait' | 'speed' | 'gain'>;
   /** Spawns at both ends: the goal's pocket is a second spawn (Level.spawns), so a field starts split across it. */
   ends?: boolean;
+  /** Weather it never has: a roll of one of these comes out clear (mist would hide a one-screen arena's killing edges). */
+  noWeather?: readonly WeatherKind[];
   /** A loop whose laps follow the difficulty curve (gen/level/difficulty.ts `LAP_TIERS`), the first gentle to hard; absent, every lap is `difficulty`. */
   curve?: boolean;
 }

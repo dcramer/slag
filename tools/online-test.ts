@@ -919,9 +919,21 @@ async function startMatch(r: Room, n: number, rules: Record<string, number> = FA
     await pages[0].evaluate(() => (window as any).slagDebug.addBot());
     await waitFor(pages[0], 'bot seated', (v) => v.players.length === n + i + 1);
   }
-  for (const p of pages) await p.keyboard.press('Enter');
+  await readyAndStart(pages);
   for (const p of pages) await waitFor(p, 'match start', (v) => v.phase === 'pick');
   return { pages, ids };
+}
+
+/** Each page's player readies by keyboard; everyone ready shows the host (the first page) Start, and the room waits until it presses it. */
+async function readyAndStart(pages: Page[]) {
+  for (const p of pages) await p.keyboard.press('Enter');
+  const all = await waitFor(pages[0], 'everyone ready', (v) => v.players.every((p) => p.ready));
+  await sleep(300);
+  const still = await view(pages[0]);
+  check(all.phase === 'lobby' && still.phase === 'lobby', `everyone ready waits on Start (${still.phase})`);
+  const starts = await Promise.all(pages.map((p) => p.evaluate(() => !!(window as any).slagDebug.renderer.hud.canStart)));
+  check(starts[0] && !starts.slice(1).some(Boolean), `only the host has Start (${starts.join(', ')})`);
+  await pages[0].keyboard.press('Enter');
 }
 
 /** From pick: everyone claims a different card. */
@@ -1961,7 +1973,7 @@ async function observeScenario(browser: Browser, base: string) {
   await compareHashes([A, B, O, P], 'a picked color');
   await A.evaluate((x) => (window as any).slagDebug.net.act({ t: 'rules', rules: x }), FAST_RULES);
   await sleep(300);
-  for (const p of [A, B]) await p.keyboard.press('Enter');
+  await readyAndStart([A, B]);
   for (const p of [A, B, O, P]) await waitFor(p, 'match start', (v) => v.phase === 'pick');
   // A watcher's page stops dead: the room goes on without it.
   await O.evaluate(() => (window as any).slagDebug.pause(true));

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { BotSeats } from '../src/brain/bots';
-import { isBotDevice } from '../src/brain/device';
+import { isBotDevice } from '../src/game/device';
 import { Match } from '../src/game/match';
 import { DEFAULT_RULES } from '../src/game/rules';
 import { roomSeed } from '../src/game/room';
@@ -23,7 +23,11 @@ const FAST = { ...DEFAULT_RULES, targetScore: 80, maxRounds: 25, pickSeconds: 10
 function person(s: NetSession, f: number, ready: boolean): Record<string, InputFrame> {
   const m = s.match;
   const me = m.players.find((p) => p.device === s.globalDevice('kb1'));
-  if (m.phase === 'lobby') return ready && me && !me.ready && f % 20 === 0 ? { kb1: press({ confirmPressed: true }) } : {};
+  if (m.phase === 'lobby') {
+    // The host presses Start once everyone is ready, as its screen would.
+    if (s.isHost && m.canStart()) s.act({ t: 'start' });
+    return ready && me && !me.ready && f % 20 === 0 ? { kb1: press({ confirmPressed: true }) } : {};
+  }
   if (m.phase === 'pick') {
     const card = m.crate.find((c) => c.claimedBy < 0);
     return card ? { kb1: press({ pointer: { x: card.rect.x + 8, y: card.rect.y + 8 }, confirmPressed: f % 15 === 0 }) } : {};

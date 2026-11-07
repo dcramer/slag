@@ -110,6 +110,7 @@ describe('self-destruct', () => {
     // Join, then ready up once both are in.
     const lobby = (_id: string, s: NetSession, n: number): Record<string, InputFrame> => {
       const me = s.match.players.find((q) => q.device === s.globalDevice('kb1'));
+      if (s.isHost && s.match.canStart()) s.act({ t: 'start' }); // the host presses Start once everyone is ready
       return s.match.phase === 'lobby' && (!me || (!me.ready && s.match.players.length >= 2)) && n % 20 === 0 ? { kb1: press({ confirmPressed: true }) } : {};
     };
     join('aaaa');

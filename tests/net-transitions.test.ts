@@ -22,7 +22,11 @@ function drive(ready: () => boolean) {
     const f = m.frame;
     const me = m.players.find((q) => q.device === s.globalDevice('kb1'));
     if (!me) return {};
-    if (m.phase === 'lobby') return ready() && !me.ready && f % 20 === 0 ? { kb1: press({ confirmPressed: true }) } : {};
+    if (m.phase === 'lobby') {
+      // The host presses Start once everyone is ready, as its screen would.
+      if (s.isHost && m.canStart()) s.act({ t: 'start' });
+      return ready() && !me.ready && f % 20 === 0 ? { kb1: press({ confirmPressed: true }) } : {};
+    }
     if (m.phase === 'pick') {
       const card = m.crate.find((c) => c.claimedBy < 0);
       return card ? { kb1: press({ pointer: { x: card.rect.x + 8, y: card.rect.y + 8 }, confirmPressed: f % 15 === 0 }) } : {};

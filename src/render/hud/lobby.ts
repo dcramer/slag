@@ -1,5 +1,5 @@
 import { css } from '../../core/color';
-import { isBotDevice } from '../../brain/device';
+import { isBotDevice } from '../../game/device';
 import { botLevelLabel, type Match, type Player } from '../../game/match';
 import { MAX_PLAYERS, VIEW_H, VIEW_W } from '../../sim/constants';
 import { THEME_LABELS } from '../../themes';
@@ -12,7 +12,7 @@ import { glowDot } from '../kit';
 import type { Hud, NetInfo, NetWatcher } from '../hud';
 import { MODES } from '../../game/modes';
 import { modeEmblem } from '../mode-emblem';
-import { joinButton } from './arrival';
+import { joinButton, promptButton } from './arrival';
 import { DISPLAY, UI, FOOT_H, MAX_FOOT_SCALE, MIN_BAY_H, MIN_SMALL_BAY_H, PHONE_BAR_W } from './layout';
 
 /** The lobby: top bar, player bays and the online panel. */
@@ -87,9 +87,11 @@ export function lobby(hud: Hud, m: Match, t: number, dt: number) {
   // grid lets the bays grow most. Everything a thumb can press stays inside its own bay.
   const netS = phone ? Math.min(hud.uiScale, MAX_FOOT_SCALE) : 1;
   const netY = phone ? win.y1 - hud.footH - PHONE_NET_H * netS : VIEW_H - FOOT_H - 40;
+  // The row under the bays: the room panel online, and offline Start on its own once it shows.
+  const row = !!hud.net || hud.canStart;
   // Phones keep the bays clear of the top bar's and the room panel's thumb-sized hit areas.
   const top = phone ? Math.max(46 * barS + 6, 28 * barS + tap / 2 + 4) : 60;
-  const bottom = phone ? (hud.net ? Math.min(netY - 6, netY + 15 * netS - tap / 2 - 4) : win.y1 - hud.footH - 8) : VIEW_H - FOOT_H - (hud.net ? 46 : 12);
+  const bottom = phone ? (row ? Math.min(netY - 6, netY + 15 * netS - tap / 2 - 4) : win.y1 - hud.footH - 8) : VIEW_H - FOOT_H - (row ? 46 : 12);
   const want = Math.max(phone ? 2 : 4, m.players.length + 1);
   const g = phone ? phoneGrid(Math.min(MAX_PLAYERS, want), safeW, bottom - top, hud.uiScale) : deskGrid(Math.min(MAX_PLAYERS, want));
   const { cols, rows, s: gs } = g;
@@ -136,6 +138,19 @@ export function lobby(hud: Hud, m: Match, t: number, dt: number) {
     netPanel(hud, m, hud.net, 0, 0, (safeW - (hud.mode === 'touch' ? hud.gearW : 0)) / netS);
     done();
   } else if (hud.net) netPanel(hud, m, hud.net, x0, netY, gridW);
+  else if (hud.canStart && phone) {
+    done = hud.begin(netS, win.safeX0 + 8, netY);
+    const w = (safeW - (hud.mode === 'touch' ? hud.gearW : 0)) / netS;
+    startButton(hud, m, w - START_W - 6, 2);
+    done();
+  } else if (hud.canStart) startButton(hud, m, x0 + gridW - START_W - 6, netY + 2);
+}
+
+const START_W = 104;
+
+/** Start, once everyone is ready: where the room panel's end is, or would be offline. */
+function startButton(hud: Hud, m: Match, x: number, y: number) {
+  promptButton(hud, m, { x, y, w: START_W, h: 28 }, 'start', 'Start', 'confirm', 'primary', TYPE.label + 1);
 }
 
 /**
@@ -348,12 +363,15 @@ function netPanel(hud: Hud, m: Match, net: NetInfo, x: number, y: number, w: num
   hud.text(net.status, x + 16 + tw, y + h / 2, TYPE.body, PAL.ash, 'left', UI, 600);
   c.font = `600 ${TYPE.body}px ${UI}`;
   const sx = x + 28 + tw + c.measureText(net.status).width;
-  // Watching: Join takes the panel's end, the invite moves over.
+  // Watching: Join takes the panel's end, the invite moves over. So does the host's Start, once everyone is ready.
   const join = net.seat === 'watching' && !net.arrival;
-  const ix = x + w - 130 - (join ? 104 : 0);
-  const ex = net.inviteUrl ? ix - 8 : x + w - (join ? 112 : 8);
-  if (net.inviteUrl) hud.btn({ x: ix, y: y + 4, w: 124, h: 23, action: 'invite' }, 'Copy Invite Link', join ? 'secondary' : 'primary', 'copy');
+  const start = !join && hud.canStart;
+  const end = join ? 104 : start ? START_W + 8 : 0;
+  const ix = x + w - 130 - end;
+  const ex = net.inviteUrl ? ix - 8 : x + w - 8 - end;
+  if (net.inviteUrl) hud.btn({ x: ix, y: y + 4, w: 124, h: 23, action: 'invite' }, 'Copy Invite Link', end ? 'secondary' : 'primary', 'copy');
   if (join) joinButton(hud, m, { x: x + w - 102, y: y + 3, w: 96, h: 26 }, TYPE.label + 1);
+  if (start) startButton(hud, m, x + w - START_W - 6, y + 2);
   watcherChips(hud, net.watchers ?? [], sx, ex, y + h / 2);
 }
 

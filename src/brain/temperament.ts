@@ -29,11 +29,11 @@ export const GRUDGE = 1;
 
 const defs = {
   /** Plays its own game: builds, forgets a slight by the next round. */
-  builder: { heat: { kill: 0.7, route: 0.2, lead: 0, snatch: 0.2 }, memory: 0.2, mischief: 0.03, hands: { care: 1.3, block: 0.6 } },
+  builder: { heat: { kill: 0.7, route: 0.2, lead: 0, snatch: 0.2 }, memory: 0.2, mischief: 0.03, hands: { care: 1.3, block: 0.6, press: 0.85 } },
   /** Takes the hazard because it's a hazard, and puts it wherever anyone ran, its own way too. */
-  gremlin: { heat: { kill: 0.6, route: 0.3, lead: 0.3, snatch: 0.6 }, memory: 0.4, mischief: 0.6 },
+  gremlin: { heat: { kill: 0.6, route: 0.3, lead: 0.3, snatch: 0.6 }, memory: 0.4, mischief: 0.6, hands: { press: 1.1 } },
   /** Remembers who hurt it, for rounds. */
-  grudger: { heat: { kill: 2.5, route: 1.2, lead: 0.2, snatch: 1.2 }, memory: 0.75, mischief: 0.05 },
+  grudger: { heat: { kill: 2.5, route: 1.2, lead: 0.2, snatch: 1.2 }, memory: 0.75, mischief: 0.05, hands: { press: 1.15 } },
   /** Goes after whoever leads on points. */
   sheriff: { heat: { kill: 0.8, route: 0.4, lead: 1.6, snatch: 0.3 }, memory: 0.5, mischief: 0.05 },
   /** Only its own race matters: takes the quick, risky line and lets slights go. */

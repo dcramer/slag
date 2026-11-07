@@ -46,6 +46,8 @@ Every game design decision, preference and direction the owner has given, groupe
 
 ## Match flow and rules
 
+- **A match starts from a Start button, not by itself: once everyone is ready and the mode has enough players, Start appears and someone presses it.** "i think when everyones ready, there should still be a start button (when conditions are met) somehow"
+  2026-11-06 · `done` (a host-only `start` action online, anyone seated offline; a lobby of bots alone still starts itself; `SNAP_VERSION` 59) · DESIGN.md → Lobby, NETCODE.md · Replaced: the match starting the moment everyone is ready.
 - **A round is lobby, pick, place, race, score; parts stay for the whole match, so levels get more dangerous every round.**
   2026-11-01 · git `dfa1697` · `done` · DESIGN.md → Core loop
 - **Matches take 1–8 players.**
@@ -83,6 +85,12 @@ Every game design decision, preference and direction the owner has given, groupe
   2026-11-06 · `done` (the brawl's boxes deal swings, throws and slams only, and a new Sucker Punch, a long swing that throws sideways) · DESIGN.md → Parts, Modes · Replaced: smoke and Bubble Wrap in the brawl's deal.
 - **A brawl plays several bouts on one placement: N fights in the same arena with the same parts, then pick and place again. N is a lobby rule.** Picked so picking and placing (up to 30 s) don't outlast the fighting (about 28 s a bout with bots). "we could def do like N rounds per placement and have that be a configurable thing"
   2026-11-06 · `done` (Bouts per Pick: 1, 2, 3 or 5, Brawl's own 3, every other mode 1; `MatchRules.bouts`, `ModeDef.bouts`; bots fight 80% of a match, from 68%) · DESIGN.md → Core loop, Modes, Rules, MODES.md → Brawl
+- **A brawl never mists.** Mist hides about 40% of a one-screen arena, the edges that kill in it included. "No mist in Brawl"
+  2026-11-06 · `done` (`noWeather: ['mist']` in its profile) · DESIGN.md → Modes, `src/game/modes.ts`
+- **A mode can need more than one player to start, and Brawl needs two; bots count.** "also some play styles require more than one player before you can start (brawl is one)"
+  2026-11-06 · `done` (`ModeDef.minPlayers`; the lobby's count reads `1/2 Players` while short) · DESIGN.md → Modes, MODES.md → Brawl
+- **Brawl bots are semi-aggressive: they press the fight rather than run away or turtle.** "in brawl the AI needs to be semi aggressive too idk it feels a little slow and it likes to run away or turtle"
+  2026-11-06 · `done` (a `press` trait by level and temperament; bots fight on until the slag is near, swing within about a second, dodge only a hit that's coming; first bonk 4.5 → 3.5 s, item uses 6.6 → 11.5 a round, knocked share 36 → 49%) · MODES.md → Brawl, `src/brain/strategies/brawl.ts`
 - **A brawl's arena is deadly by default.** "also the arena could be a little deadly by default, thats a thing we can tweak"
   2026-11-06 · `done` (up to six set pieces from the nastiest mix) · DESIGN.md → Modes, MODES.md · Replaced: four of the usual mix.
 - **In a brawl, if everyone left goes out at once, nobody wins the round.** "Highest one wins" / "actually if you all die no winners maybe?"
