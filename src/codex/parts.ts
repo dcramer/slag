@@ -25,6 +25,8 @@ import {
  */
 
 export interface PartEntry {
+  /** Its permalink key (./links.ts) when `def.name` won't do: the def name is a number or the item's display name. */
+  id?: string;
   title: string;
   note: string;
   def: PropDef;
@@ -188,6 +190,7 @@ export function partGroups(): PartGroup[] {
       blurb: 'Paint jobs with consequences.',
       entries: (['spikes', 'ice', 'slime', 'boost'] as const).flatMap((kind) =>
         [-Math.PI / 2, 0].map((angle) => ({
+          id: `${kind}-${angle === 0 ? 'wall' : 'floor'}`,
           title: `${{ spikes: 'death carpet', ice: 'ice physics', slime: 'swamp level', boost: 'express lane' }[kind]} · ${angle === 0 ? 'wall' : 'floor'}`,
           note: {
             spikes: angle === 0 ? 'Rude, sideways.' : 'Rude.',
@@ -697,8 +700,8 @@ export function partGroups(): PartGroup[] {
       title: 'Items',
       blurb: 'Odds not disclosed.',
       entries: [
-        { title: 'loot box', note: 'Contents may vary.', def: crate('loot box', [...ITEM_KINDS], 0, 'crate') },
-        ...ITEM_KINDS.map((k) => ({ title: ITEMS[k].name.toLowerCase(), note: ITEM_NOTES[k], def: crate(ITEMS[k].name, [k], 0, 'crate'), item: k })),
+        { id: 'lootbox', title: 'loot box', note: 'Contents may vary.', def: crate('loot box', [...ITEM_KINDS], 0, 'crate') },
+        ...ITEM_KINDS.map((k) => ({ id: k, title: ITEMS[k].name.toLowerCase(), note: ITEM_NOTES[k], def: crate(ITEMS[k].name, [k], 0, 'crate'), item: k })),
       ],
     },
     {

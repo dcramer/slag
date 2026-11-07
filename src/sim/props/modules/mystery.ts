@@ -8,15 +8,15 @@ import { SURFACES } from './body';
 
 type Mystery = ModuleOf<'mystery'>;
 
-/** PropState.vars keys for a crate module. */
-const key = (mi: number, name: 'pops' | 'ready' | 'popAt') => `${mi}:${name}`;
+/** PropState.vars keys for a crate module (and a stand, which keeps the same counters). */
+export const mysteryKey = (mi: number, name: 'pops' | 'ready' | 'popAt') => `${mi}:${name}`;
 
 /** Pops so far, the frame it's ready again, and the last pop frame (for the pop animation). */
 export function mysteryState(st: PropState | undefined, mi: number): { pops: number; ready: number; popAt: number } {
   return {
-    pops: st?.vars.get(key(mi, 'pops')) ?? 0,
-    ready: st?.vars.get(key(mi, 'ready')) ?? 0,
-    popAt: st?.vars.get(key(mi, 'popAt')) ?? -999,
+    pops: st?.vars.get(mysteryKey(mi, 'pops')) ?? 0,
+    ready: st?.vars.get(mysteryKey(mi, 'ready')) ?? 0,
+    popAt: st?.vars.get(mysteryKey(mi, 'popAt')) ?? -999,
   };
 }
 
@@ -82,9 +82,9 @@ defineModule<'mystery'>({
         const roofed = tileAt(ctx.level, Math.floor((x + TILE / 2) / TILE), Math.floor((y - 1) / TILE)) === T_SOLID;
         ctx.spawnItem?.({ kind, x: x + TILE / 2, y: roofed ? y + TILE + 6 : y - 6, vx: 0, vy: roofed ? 60 : -190, grace: 14 });
       }
-      ctx.state.vars.set(key(ctx.mi, 'pops'), st.pops + 1);
-      ctx.state.vars.set(key(ctx.mi, 'ready'), ctx.frame + m.refill);
-      ctx.state.vars.set(key(ctx.mi, 'popAt'), ctx.frame);
+      ctx.state.vars.set(mysteryKey(ctx.mi, 'pops'), st.pops + 1);
+      ctx.state.vars.set(mysteryKey(ctx.mi, 'ready'), ctx.frame + m.refill);
+      ctx.state.vars.set(mysteryKey(ctx.mi, 'popAt'), ctx.frame);
       ctx.state.lastFire = ctx.frame;
       ctx.emit({ type: 'item', what: 'pop', kind, slot: -1, x: x + TILE / 2, y });
       return;

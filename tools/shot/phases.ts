@@ -159,6 +159,36 @@ export const shots: Scenarios = {
         await page.evaluate((hs) => {
           (window as any).slagDebug.match.run.runners.forEach((r: any, i: number) => (r.items.hits = hs[i % hs.length]));
         }, hits);
+      // `--under N` (Rising Slag): the lowest runner dropped under the leader's screen's bottom edge, N frames into its
+      // grace, and the next lowest with its head just over it, so both warnings show (sim/screen.ts).
+      const under = opt('under');
+      if (under)
+        await page.evaluate(
+          ([n, all]) => {
+            const run = (window as any).slagDebug.match.run;
+            const s = run.rules.screen;
+            if (!run.screen || !s) throw new Error("--under needs a race with the leader's screen (--game slag, more than one runner)");
+            const L = (run.level.loop ?? 0) * 16;
+            const bottom = run.screen.y + (s.rows - s.up) * 16;
+            // Lowest first, by climbed feet (inline: page functions can't name helpers).
+            const low = run.runners
+              .map((r: any, i: number) => ({ r, i, feet: r.body.y + r.body.h - r.lap * L }))
+              .filter((x: any) => x.r.alive)
+              .sort((a: any, b: any) => b.feet - a.feet);
+            // `--underall`: everyone but the leader under it, side by side, so every color's mark shows.
+            const sunk = all ? low.slice(0, -1) : low.slice(0, 1);
+            sunk.forEach((x: any) => {
+              x.r.body.y = bottom + 20 + x.r.lap * L;
+              x.r.body.vy = 0;
+              run.screen.under[x.i] = n;
+            });
+            if (!all && low.length > 2) {
+              low[1].r.body.y = bottom - 6 + low[1].r.lap * L - low[1].r.body.h;
+              low[1].r.body.vy = 0;
+            }
+          },
+          [Number(under), flag('underall')] as const,
+        );
       // The sim frame alone isn't the same picture: camera smoothing depends on frames rendered before the pause.
       await page.evaluate(
         (v) => {

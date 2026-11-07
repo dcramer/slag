@@ -36,6 +36,7 @@ export * from './sign';
 export * from './snapper';
 export * from './spikes';
 export * from './spring';
+export * from './stand';
 export * from './swinger';
 export * from './tesla';
 export * from './thaw';

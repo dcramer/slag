@@ -4,6 +4,7 @@ import { overview, viewToWorld, type ViewXform, worldToView } from '../game/view
 import { PHYS, RUN_COUNTDOWN, TILE, VIEW_H, VIEW_W } from '../sim/constants';
 import { MODES } from '../game/modes';
 import { leaderOf } from '../sim/standing';
+import { screenEdges } from '../sim/screen';
 import { openingRows } from '../sim/tide';
 import type { Camera } from './camera';
 
@@ -15,10 +16,12 @@ import type { Camera } from './camera';
  * - **Race, solo:** a close follow (tile ≥ ~24 CSS px, look-ahead, vertical
  *   dead zone, clamped to the level). The whole level shows for the first half
  *   of the countdown, then it closes in.
- * - **Race, more than one player, local or remote:** `Camera.frameAll`, always.
- *   Rising Slag adds the slag and a few rows over the leader to the frame.
- *   Every live runner stays on screen, whatever that costs in tile size. Only
- *   the zoom cap rises, so a tight pack still gets close.
+ * - **Race, more than one player, local or remote:** `Camera.frameAll`, always:
+ *   every live runner stays on screen, whatever that costs in tile size. Only
+ *   the zoom cap rises, so a tight pack still gets close. The one exception is
+ *   a race with the leader's screen (Rising Slag, sim/screen.ts), where the
+ *   screen is the arena: the camera shows exactly that window, and whoever
+ *   falls off its bottom is on their way out.
  * - **Pick and place:** start on the overview; pinch zooms about the fingers,
  *   two fingers pan, and a ghost dragged near an edge pans that way.
  *
@@ -140,6 +143,19 @@ export class FollowCam {
   }
 }
 
+/**
+ * The pose that shows the leader's screen (sim/screen.ts) whole, `edges` in climbed px and `shift` the lap the view is
+ * on (world px): as close as the window's width and its height under view y `under` (the race's name tags) both fit,
+ * its bottom edge on the bottom of the window, so what's off the bottom of the screen is what's out. What shows over
+ * its top (the tags' row, or more on a window of another shape) is out of play, and the HUD draws it shut.
+ */
+export function screenPose(cam: Pick<Camera, 'frame' | 'ww'>, edges: { top: number; bottom: number }, shift: number, under = 0): ViewXform {
+  const f = cam.frame;
+  const room = f.y1 - Math.max(f.y0, under);
+  const zoom = Math.min(f.w / Math.max(TILE, cam.ww), room / Math.max(TILE, edges.bottom - edges.top));
+  return { cx: cam.ww / 2, cy: edges.bottom + shift - (f.y1 - VIEW_H / 2) / zoom, zoom };
+}
+
 /** The runner a close follow may stick to: only with exactly one player in the match. */
 export function soloRunner(m: Match) {
   if (m.players.length !== 1 || !m.run) return null;
@@ -162,6 +178,9 @@ export class PhoneCam {
   private ov: ViewXform | null = null;
 
   constructor(private cam: Camera) {}
+
+  /** View y under the race HUD's name tags, set by the renderer each frame: the leader's screen starts under it. */
+  tags = 0;
 
   /** The lap a loop's race is framed on: the leader's (frameRace). The renderer draws runners and the slag in it. */
   lap = 0;
@@ -194,6 +213,13 @@ export class PhoneCam {
       const b = solo.body;
       const t = { x: b.x + b.w / 2, y: b.y + b.h / 2, vx: b.vx, facing: b.facing, onGround: b.onGround };
       cam.snap(this.follow.update(t, this.zoom, dt, cam, { cx: cam.x, cy: cam.y, zoom: cam.zoom }));
+      cam.update(dt, false);
+      return;
+    }
+    // The leader's screen (sim/screen.ts) is the arena: the camera shows exactly it, its bottom edge on the window's.
+    const screen = MODES[m.rules.mode].camera === 'leader' && run.screen ? MODES[m.rules.mode].run.screen : undefined;
+    if (screen && run.screen) {
+      cam.snap(screenPose(cam, screenEdges(screen, run.screen), this.lap * L, this.tags));
       cam.update(dt, false);
       return;
     }

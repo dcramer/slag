@@ -21,7 +21,9 @@ import {
   stepItems,
 } from './items';
 import { goalRect, killY, lapShift, type Level, offMap, spawnsOf, spawnZones, tileAt } from './level';
+import type { ItemKind } from './items/types';
 import { leaderOf } from './standing';
+import { newScreen, type Screen, type ScreenRules } from './screen';
 import { tideStart } from './tide';
 import { type RunFeature, RUN_FEATURES } from './features';
 import { type Body, bodyAtCell, type CollisionWorld, firstOverlap, type Solid, stepBody } from './physics';
@@ -72,8 +74,8 @@ import { NO_INPUT } from './types';
 
 export type { Projectile, PropState } from './props';
 
-/** `out`: left the level off its left or right edge. */
-export type DeathCause = 'hazard' | 'fall' | 'crush' | 'pop' | 'timeout' | 'out';
+/** `out`: left the level off its left or right edge. `screen`: stayed under the bottom of the leader's screen (sim/screen.ts). */
+export type DeathCause = 'hazard' | 'fall' | 'crush' | 'pop' | 'timeout' | 'out' | 'screen';
 
 export interface Runner {
   slot: number;
@@ -142,6 +144,24 @@ export interface RunRules {
   shove?: ShoveRules;
   /** Hits build up (`BuildUp`): every rival's knock a runner takes throws the next one farther. Unset: every hit throws as the first. */
   buildup?: BuildUp;
+  /** The leader's screen (sim/screen.ts): fall off its bottom and you're out. Unset: no such window. */
+  screen?: ScreenRules;
+  /** Everyone starts armed (`Armed`): a brawl's fight starts at GO, not at the first stand. */
+  armed?: Armed;
+}
+
+/**
+ * What everyone starts a race holding: one of `deal`, drawn per runner from the race's item seed (`armedWith`), so each
+ * bout hands each seat its own and every peer the same one, good for `uses` goes (a starter: fewer than a stand's).
+ */
+export interface Armed {
+  deal: readonly ItemKind[];
+  uses: number;
+}
+
+/** What `slot` starts a race holding, under rules that arm everyone (`RunRules.armed`): one draw of the race's item seed. */
+export function armedWith(armed: Armed, itemSeed: number, slot: number): ItemKind {
+  return new Rng(deriveSeed(itemSeed, `armed:${slot}`)).pick(armed.deal);
 }
 
 /**
@@ -173,6 +193,8 @@ export class RunWorld {
   endFrame = -1;
   /** Rising Slag: world y of the slag's surface (sim/tide.ts), or null on a level without one. Under it, everything burns. */
   slag: number | null;
+  /** The leader's screen (sim/screen.ts), when the rules have one (`RunRules.screen`) and more than one runs; null otherwise. */
+  screen: Screen | null;
   /** What this race has beyond running the level (sim/features.ts), from its level and rules. */
   readonly features: readonly RunFeature[];
   propState = new Map<number, PropState>();
@@ -245,6 +267,8 @@ export class RunWorld {
         lap: 0,
       };
     });
+    const armed = rules.armed;
+    if (armed?.deal.length) for (const r of this.runners) giveItem(r, armedWith(armed, itemSeed, r.slot), armed.uses);
     this.resolved = [...level.setPieces, ...placed].map(resolveProp);
     for (const r of this.resolved) {
       const st = newPropState();
@@ -261,6 +285,8 @@ export class RunWorld {
     };
     this.goal = goalRect(level);
     this.slag = tideStart(level);
+    // Alone, nobody falls behind and nothing needs holding back: the screen is for a field.
+    this.screen = rules.screen && slots.length > 1 ? newScreen(level, slots.length) : null;
     this.features = RUN_FEATURES.filter((ft) => ft.on(this));
     this.safeZones = spawnZones(level);
     this.safeZone = this.safeZones[0]?.zone ?? null;
@@ -353,8 +379,9 @@ export class RunWorld {
   step(inputs: readonly InputFrame[]): void {
     const f = this.frame;
     this.struck.length = 0;
-    this.buildProps(f);
+    // Features first: what they build (the screen's top edge) stands where their step just put it.
     for (const ft of this.features) ft.step?.(this, f);
+    this.buildProps(f);
     const live = f >= RUN_COUNTDOWN && this.endFrame < 0;
     const start = contactStart(this.runners);
 
@@ -556,6 +583,7 @@ export class RunWorld {
     buildBlood(this.blood, f, this.solids);
     buildBlocks(this.items, f, this.solids); // Pocket Blocks: transient, never part of the proof.
     traceRays(this.resolved, ctx, this.out); // Last, so what travels sees every solid whatever order the props came in.
+    for (const ft of this.features) ft.build?.(this, this.solids);
     wetSolids(this.solids, this.level);
     const gust = gustWind(this.level, f);
     if (gust) this.out.winds.push(gust);

@@ -25,6 +25,7 @@ import './keg';
 import './rope';
 import './magnet';
 import './mystery';
+import './stand';
 import './web';
 import './phase';
 import './dropper';

@@ -1,7 +1,7 @@
 import 'client-only';
 import { connectedPads } from '../input/input';
 import type { Nav, Unmount } from '../router';
-import { HOME } from '../routes';
+import { CODEX, codexCard, HOME, type Route } from '../routes';
 import { glyphSVG } from '../ui/glyphs';
 import { forgeHTML, promptHTML, scaledLogoHTML } from '../ui/screens/markup';
 import { KEY_ACTIONS, type MenuAction, MenuPadReader, navTarget, readMenuPad } from '../ui/settings-nav';
@@ -14,6 +14,7 @@ import { AMMO, type Ammo, footprint, makeProjectile, type PropDef, resolveProp }
 import { castDrawer, castEntries } from './cast';
 import { CODEX_CSS } from './css';
 import { PART_INFO, summarize } from './describe';
+import { castLink, mapLink, partLink, projectileLink } from './links';
 import type { MapPainter } from './map-view';
 import type { MapSection } from './maps';
 import { PROJECTILE_NOTES, partGroups } from './parts';
@@ -32,12 +33,17 @@ import type { MapJob } from './shots';
  * selected card at a time (arrows, d-pad or stick; mouse hover), Enter or Ⓐ
  * to look closer, Q/E or LB/RB between sections, Esc or Ⓑ to back out.
  * Labels and one-line jokes only (docs/DESIGN.md → Discovery).
+ *
+ * Every close-up has a permalink (./links.ts): opening one points the URL at it, closing it points back at the
+ * plain codex, and back and forward open and close them in place.
  */
 
 /** `close` is the close-up's stage rather than a card's. */
 type Draw = (rc: RC, w: number, h: number, rot: number, close: boolean) => void;
 
 interface Entry {
+  /** Its permalink under /codex/ (./links.ts). */
+  link: string;
   title: string;
   note: string;
   /** The section's title, for the close-up's tag. */
@@ -147,6 +153,7 @@ function catalog(): Section[] {
       const quip = main ? PART_INFO[main.type].blurb : null;
       const item = e.item;
       return {
+        link: partLink(g.id, e),
         title: titleCase(e.title),
         note: e.note,
         group: titleCase(g.title),
@@ -166,6 +173,7 @@ function catalog(): Section[] {
       const [label, joke] = PROJECTILE_NOTES[ammo];
       const spec = AMMO[ammo];
       return {
+        link: projectileLink(ammo),
         title: titleCase(label),
         note: joke,
         group: 'Projectiles',
@@ -189,7 +197,16 @@ function castCatalog(): Section[] {
       blurb: 'Same hitbox. Different hats.',
       entries: castEntries().map((e): Entry => {
         const draw = castDrawer(e);
-        return { title: e.title, note: e.note, group: 'Runners', draw: (rc, w, h, _rot, close) => draw(rc, w, h, close), spec: [], quip: null, turns: false };
+        return {
+          link: castLink(e.kind),
+          title: e.title,
+          note: e.note,
+          group: 'Runners',
+          draw: (rc, w, h, _rot, close) => draw(rc, w, h, close),
+          spec: [],
+          quip: null,
+          turns: false,
+        };
       }),
     },
   ];
@@ -202,7 +219,17 @@ function mapCatalog(list: readonly MapSection[]): Section[] {
     part: 'Maps',
     title: m.title,
     blurb: m.blurb,
-    entries: m.entries.map((e) => ({ title: e.title, note: e.note, spec: e.spec, quip: e.quip, group: m.title, draw: () => {}, turns: false, map: e.job })),
+    entries: m.entries.map((e) => ({
+      link: mapLink(m.id, e.job),
+      title: e.title,
+      note: e.note,
+      spec: e.spec,
+      quip: e.quip,
+      group: m.title,
+      draw: () => {},
+      turns: false,
+      map: e.job,
+    })),
   }));
 }
 
@@ -269,9 +296,10 @@ interface Live {
 
 /**
  * The codex screen: mounts into `root` and runs until the returned function is called. Esc or Ⓑ
- * closes an open part, then goes back to the main menu.
+ * closes an open part, then goes back to the main menu. `card` is a permalink to open at once; one
+ * it doesn't know leaves the plain codex.
  */
-export function mountCodex(root: HTMLElement, nav: Nav): Unmount {
+export function mountCodex(root: HTMLElement, nav: Nav, card?: string): Unmount {
   const st = document.createElement('style');
   st.textContent = CODEX_CSS;
   document.head.append(st);
@@ -282,6 +310,7 @@ export function mountCodex(root: HTMLElement, nav: Nav): Unmount {
   const cards: HTMLButtonElement[] = [];
   const secEls: HTMLElement[] = [];
   const indexBtns: HTMLButtonElement[] = [];
+  const byLink = new Map<string, number>();
   const sectionOf = (i: number) => {
     let si = 0;
     while (si + 1 < firstOf.length && firstOf[si + 1] <= i) si++;
@@ -453,20 +482,54 @@ export function mountCodex(root: HTMLElement, nav: Nav): Unmount {
     if (active !== i) setActive(i, { scroll: true });
     paintFooter();
   };
-  const openPart = (i: number) => {
+  // The URL names the open card. Browsing up close replaces it, so back closes the card rather than retracing every one.
+  let waiting = card ?? null;
+  const point = (i: number, replace: boolean) => {
+    waiting = null;
+    nav.goWithin(i < 0 ? CODEX : codexCard(entries[i].link), { replace });
+  };
+  const showOpen = (i: number) => {
     showPart(i);
     modal.hidden = false;
     closeUp.visible = true;
     $('[data-act=close]').focus({ preventScroll: true });
   };
-  const closePart = () => {
+  const hide = () => {
+    if (open < 0) return;
     open = -1;
     modal.hidden = true;
     closeUp.visible = false;
     cards[active].focus({ preventScroll: true });
     paintFooter();
   };
-  const browse = (d: number) => showPart((open + d + entries.length) % entries.length);
+  const openPart = (i: number) => {
+    showOpen(i);
+    point(i, false);
+  };
+  const closePart = () => {
+    hide();
+    point(-1, false);
+  };
+  const browse = (d: number) => {
+    showPart((open + d + entries.length) % entries.length);
+    point(open, true);
+  };
+  /** Show what a codex URL names: its card, or none. `final` once every section is in, when an unknown card stops waiting and leaves the plain URL. */
+  const follow = (r: Route, final: boolean) => {
+    const want = r.screen === 'codex' ? r.card : undefined;
+    const i = want === undefined ? -1 : (byLink.get(want) ?? -1);
+    if (i >= 0) {
+      waiting = null;
+      showOpen(i);
+    } else if (want === undefined) {
+      waiting = null;
+      hide();
+    } else {
+      waiting = want;
+      hide();
+      if (final) point(-1, true);
+    }
+  };
   const back = () => (open >= 0 ? closePart() : nav.go(HOME));
 
   const act = (a: string | undefined) => {
@@ -485,7 +548,7 @@ export function mountCodex(root: HTMLElement, nav: Nav): Unmount {
     for (const s of more) {
       firstOf.push(entries.length);
       sections.push(s);
-      entries.push(...s.entries);
+      for (const e of s.entries) byLink.set(e.link, entries.push(e) - 1);
     }
     index.insertAdjacentHTML('beforeend', indexHTML(part, more));
     main.insertAdjacentHTML('beforeend', sectionsHTML(more, start));
@@ -513,8 +576,16 @@ export function mountCodex(root: HTMLElement, nav: Nav): Unmount {
   add('Parts', catalog());
   add('Cast', castCatalog());
   setActive(0);
+  if (waiting !== null) follow(codexCard(waiting), false);
   // The maps read the level generator's registries: they load after the parts are up, so opening the codex stays quick.
-  void import('./maps').then((m) => !life.signal.aborted && add('Maps', mapCatalog(m.mapSections())));
+  let complete = false;
+  void import('./maps').then((m) => {
+    if (life.signal.aborted) return;
+    add('Maps', mapCatalog(m.mapSections()));
+    complete = true;
+    if (waiting !== null) follow(codexCard(waiting), true);
+  });
+  const unfollow = nav.followWithin((r) => follow(r, complete));
 
   el.addEventListener('click', (e) => act((e.target as Element).closest<HTMLElement>('[data-act]')?.dataset.act), on);
   modal.addEventListener('click', (e) => e.target === modal && closePart(), on);
@@ -606,6 +677,7 @@ export function mountCodex(root: HTMLElement, nav: Nav): Unmount {
   });
 
   return () => {
+    unfollow();
     life.abort();
     cancelAnimationFrame(raf);
     observer.disconnect();

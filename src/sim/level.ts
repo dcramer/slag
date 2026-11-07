@@ -64,13 +64,17 @@ export interface LevelProfile {
   bare?: boolean;
   /** Mystery boxes of its own up every lap, dealing by rank from this table (gen/level/loop-boxes.ts). */
   boxes?: ItemDeal;
-  /** Gates across a loop's shaft that shut on a cycle, so a leader waits and the pack closes in (gen/level/loop-gates.ts). */
-  gates?: boolean;
+  /**
+   * Its boxes are item stands (a brawl's): pedestals on the floor showing what they hold, taken by walking into them
+   * with empty hands and filled again a few seconds later, where a box is knocked from below and pops it.
+   */
+  stands?: boolean;
   /**
    * Slag rising under it (Level.tide, sim/tide.ts): `true` for a climb's, on a leash to the leader and squeezing late;
-   * or a pour of the mode's own pace with no leash (a brawl's arena closing in from below).
+   * or a pour of the mode's own pace with no leash (a brawl's arena closing in from below), from the lowest open row, or
+   * with `deep` from that many rows under the level's bottom edge, out of sight: till it rises in, the drop is only a drop.
    */
-  tide?: boolean | Pick<Tide, 'wait' | 'speed' | 'gain'>;
+  tide?: boolean | (Pick<Tide, 'wait' | 'speed' | 'gain'> & { deep?: number });
   /** Spawns at both ends: the goal's pocket is a second spawn (Level.spawns), so a field starts split across it. */
   ends?: boolean;
   /** Weather it never has: a roll of one of these comes out clear (mist would hide a one-screen arena's killing edges). */
