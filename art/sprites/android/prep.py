@@ -5,7 +5,8 @@
 2. thin.py narrows the mask to a blindfold's strip;
 3. box.py squares the cardboard drone and floats it clear of her, its stick and string gone.
 Each read blind, before, as a round white helmet with a dark visor (docs/characters/android.md, Rig). bedhead.py, a
-lock stood up off the crown, is kept but not run: with it she read as a white pointed hood.
+lock stood up off the crown, and face.py, the bob cut at her jaw with red lips and two loose strands, are kept but not
+run: with the lock she read as a white pointed hood, and with her face out from under the bob still as a helmet.
 """
 import shutil
 import subprocess
