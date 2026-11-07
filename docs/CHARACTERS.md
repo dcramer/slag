@@ -171,7 +171,7 @@ The strongest reads first. **Keyed** marks the non-humanoids, the riskiest to dr
 | 48 | bomber | Kaboomerman | humanoid, small, round helmet | to draw flat (2026-11-07) |
 | 49 | skeleton | Humerus | humanoid, stocky | to draw flat (2026-11-07) |
 | 50 | android | B-Minus | humanoid, slim + sword | to draw flat (2026-11-07) |
-| 51 | climber | Maddie Summit | humanoid, small | to draw flat (2026-11-07) |
+| 51 | climber | Maddie Summit | humanoid, small | drawn flat; round 3 (the lunchbox a tan tin: grey, it read as nothing and her parka as "a green shirt") named the homage at medium for both clean colour readers, paired with nobody |
 
 **What to check.** No two kinds may rhyme. Watch these pairs:
 
