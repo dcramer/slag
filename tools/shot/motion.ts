@@ -357,15 +357,17 @@ export const shots: Scenarios = {
   async items() {
     // Every item in hand, then everyone uses theirs at once: one frame set per moment worth looking at.
     // `--give bat,tax` picks the items (default all, cycled over the runners); one of each lies loose too.
-    // `--close` stages one item up close instead: its user, one rival beside them, and crops around the action.
+    // `--close` stages one item up close instead: its user, one rival beside them, and crops around the action;
+    // `--gap 6` stands the rival that many tiles off, for what reaches (the clock, the rod).
     const give = opt('give', 'all')!;
     const close = flag('close');
+    const gap = Number(opt('gap', '0'));
     const n = close ? 2 : 6;
     await open(`seed=${seed}&players=${n}&race=mystery,mystery,mystery&give=${give}&propseed=${opt('propseed', '1')}`);
     await step(190);
     // Spread the runners along open ground, with one loose item of each kind beside them.
     await page.evaluate(
-      ([list, near]) => {
+      ([list, near, off]) => {
         const run = (window as any).slagDebug.match.run;
         const L = run.level;
         const spots: [number, number][] = [];
@@ -377,10 +379,17 @@ export const shots: Scenarios = {
             }
           }
         }
+        // With a gap, the first spot whose floor carries on that far at the same height, so the rival stands level.
+        const first = off
+          ? Math.max(
+              0,
+              spots.findIndex(([x, y]) => L.tiles[y * L.w + x + off] === 1 && !L.tiles[(y - 1) * L.w + x + off]),
+            )
+          : 0;
         run.runners.forEach((r: any, i: number) => {
-          const [tx, ty] = spots[near ? 0 : Math.floor((i * spots.length) / run.runners.length)];
+          const [tx, ty] = spots[near ? first : Math.floor((i * spots.length) / run.runners.length)];
           // Up close, the rival stands just in front (behind, for a block, so the floor ahead is free).
-          r.body.x = tx * 16 + 2 + (near && i === 1 ? (list === 'block' ? -18 : 14) : 0);
+          r.body.x = tx * 16 + 2 + (near && i === 1 ? (list === 'block' ? -18 : off ? off * 16 : 14) : 0);
           r.body.y = ty * 16 - r.body.h;
           r.body.vx = r.body.vy = 0;
           r.body.facing = near && i === 1 ? -1 : 1;
@@ -392,7 +401,7 @@ export const shots: Scenarios = {
           run.items.drops.push({ id: 90 + i, kind, uses: 1, x: tx * 16 + 8, y: ty * 16 - 6, vx: 0, vy: 0, born: run.frame, grace: 600, onGround: false });
         });
       },
-      [(give === 'all' ? ITEM_KINDS : give.split(',')).join(','), close] as const,
+      [(give === 'all' ? ITEM_KINDS : give.split(',')).join(','), close, gap] as const,
     );
     const shot = async (name: string) => {
       if (!close) {

@@ -343,9 +343,10 @@ export function castBench(n = 200, kinds?: Kind[]): number {
  * The blind read: every kind as a solid shape at play scale (2.5 px per world px, as at 1080p), standing,
  * mid-run and mid-jump, in a shuffled order with numbers and no names. Hand it to someone who hasn't seen
  * the cast and ask what each one parodies: the answer has to come from the silhouette alone. `colour`
- * draws the same cells as the game shows them, for the read a player actually makes.
+ * draws the same cells as the game shows them, for the read a player actually makes; `roll` rolls every
+ * kind a different look, so a kind is read in a player's colour that isn't the one roll 0 gave it.
  */
-export function castBlind(t = 0.4, colour = false): HTMLCanvasElement {
+export function castBlind(t = 0.4, colour = false, roll = 0): HTMLCanvasElement {
   const order = blindOrder();
   // Each cell is as wide as a runner reaches (40 world px at 2.5): narrower, a prop held out front (the worm's
   // pistol, the rapper's mic) was cut off and never part of the read. The kinds wrap onto as many bands as
@@ -381,7 +382,7 @@ export function castBlind(t = 0.4, colour = false): HTMLCanvasElement {
     for (const [y, p, stride] of poses) {
       g.globalCompositeOperation = 'source-over';
       g.clearRect(0, 0, cell, 110);
-      runner(g, def(i * 3, 'blind', kind), cell / 2, 92, p, 2.5, 1, t, stride);
+      runner(g, def(i * 3, roll ? `blind${roll}` : 'blind', kind), cell / 2, 92, p, 2.5, 1, t, stride);
       if (!colour) {
         g.globalCompositeOperation = 'source-in';
         g.fillStyle = '#000';

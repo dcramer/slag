@@ -15,7 +15,7 @@
  *   pnpm shot place --card spikestrip --cursor 296,184 --then-race 90 → aim the first ghost, place it, shoot the race
  *   pnpm shot place --card platform --cell 28,4 → the first ghost on that level cell (a refused one shows what's in the way)
  *   pnpm shot score --players 4            → round-score screen with every award, mid-fill and settled (`--nobody`: a scoreless round)
- *   pnpm shot levels --seeds a,b,c,d      (or --count 12) → contact sheet
+ *   pnpm shot levels --seeds a,b,c,d      (or --count 12) → contact sheet: each level whole, spawns and goal marked, a JSON card per level
  *   pnpm shot props --count 24            → prop gallery (crate cards)
  *   pnpm shot cards --arch saw,block       → crate cards of those parts at every size (`platform:tetra`: only parts with that body look)
  *   pnpm shot parts --arch saw,flail       → those parts placed and raced, shot close up (`--styles all`: every launcher style; `--material conveyor`: platforms of that block; `--bait`: a runner in front of each; `--rot 1`: every part turned)
@@ -67,6 +67,7 @@
  *          --weather rain (force the weather: clear|wind|mist|rain|snow)
  *          --concept id (force a stage concept of the theme's, or plain; src/gen/stage)
  *          --game slag (the match's playstyle mode, src/game/modes.ts: race|slag|brawl)
+ *          --difficulty hard (force the level difficulty: gentle|medium|hard)
  *          --bots N (lobby: bots after the players; race: seated first, so `race --players 0 --bots 3` races bots alone)
  *          --noui (hide the HUD, e.g. to review level shapes)
  *          --q high (pin the quality tier: slow software GL otherwise reads as a slow device and drops it)
