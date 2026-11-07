@@ -4,17 +4,18 @@ import { type D, type KindArt, mark, oval, poly, toned, tonedOval, Y } from '../
 
 /**
  * The giant lady in the big hat (docs/characters/vampire.md): the tallest and slimmest of the cast, straight up
- * and down, a small pale head under a wide black sun hat on a low flat crown (no point: the mage's crown is bent
+ * and down, a small pale head under a huge pale sun hat on a low flat crown with a dark band (no point: the mage's crown is bent
  * into one, on a small round body), its brim drooping at the back where it was sat on; a fitted gown falling to
  * the floor and flaring at the hem, hiding her feet, its hem torn at the front; pearls; and one hand raised out in
- * front, clear of her, with four long false nails (the fifth is missing). A rendered kind draws from its frames
+ * front, clear of her, with four long blade claws (the fifth is missing). A rendered kind draws from its frames
  * (src/render/cast/sprites/vampire/); this is what shows before they load, and on the hand-drawn sheets.
  */
 
 const SKIN = '#f2dcd4';
 const SKIN_SH = '#d9bcb4';
-const HAT = '#34303a';
-const HAT_SH = '#24212a';
+const HAT = '#e4dccb';
+const HAT_SH = '#cbc1ad';
+const BAND = '#2e2a30';
 const PEARL = '#f4f0e8';
 const NAIL = '#b8b4c8';
 const LIPS = '#c23a44';
@@ -31,16 +32,16 @@ function hat(d: D) {
   toned(
     d.s,
     [
-      at(0.82, -0.2 + sway * 0.3),
-      at(0.5, -0.75),
+      at(1.02, -0.2 + sway * 0.3),
+      at(0.62, -0.75),
       at(0, -0.95),
-      at(-0.45, -0.8),
-      at(-0.7, -0.3),
-      at(-0.86, 0.9 + sway),
-      at(-0.78, 1.5 + sway),
-      at(-0.5, 0.6),
+      at(-0.56, -0.8),
+      at(-0.88, -0.3),
+      at(-1.06, 0.9 + sway),
+      at(-0.98, 1.5 + sway),
+      at(-0.62, 0.6),
       at(0, 0.55),
-      at(0.5, 0.45),
+      at(0.62, 0.45),
     ],
     HAT,
     HAT_SH,
@@ -51,9 +52,11 @@ function hat(d: D) {
   );
   // The low flat crown.
   toned(d.s, [at(-0.26, -0.6), at(-0.24, -2.1), at(0.22, -2.3), at(0.28, -0.7)], HAT, HAT_SH, d.lk.ink, 0.3, 0.7 * d.k, 0.4);
+  // Its dark band.
+  poly(d.s, [at(-0.255, -0.62), at(-0.25, -1.15), at(0.26, -1.25), at(0.275, -0.72)], BAND);
 }
 
-/** The raised front arm: a long sleeve out from the shoulder, the hand up, four long nails splayed. */
+/** The front arm: a long sleeve out from the shoulder, the hand up, four long blade claws fanned. */
 function arm(d: D) {
   const W = d.W;
   const f = d.f;
@@ -89,9 +92,9 @@ function arm(d: D) {
       d.lk.ink,
       [
         { x: ax, y: ay },
-        { x: ax + f * Math.cos(a) * 2.2, y: ay + Math.sin(a) * 2.2 },
+        { x: ax + f * Math.cos(a) * 3.2, y: ay + Math.sin(a) * 3.2 },
       ],
-      0.55,
+      0.7,
       i,
       [0.1, 0.9],
     );
@@ -100,9 +103,9 @@ function arm(d: D) {
       NAIL,
       [
         { x: ax + f * Math.cos(a) * 0.6, y: ay + Math.sin(a) * 0.6 },
-        { x: ax + f * Math.cos(a) * 2, y: ay + Math.sin(a) * 2 },
+        { x: ax + f * Math.cos(a) * 3, y: ay + Math.sin(a) * 3 },
       ],
-      0.3,
+      0.42,
       i + 9,
       [0.1, 0.9],
     );

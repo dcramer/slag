@@ -1,63 +1,58 @@
 import type { FlatKind } from '../kinds';
 
-// Redrawn 2026-11-05 (round 8) as a dog's head side on: seven rounds of a chubby puppy under the beanie read as a
-// gnome, a mouse, a monkey, a plumber, a princess or a "thin figure with a tuft". The new idea is the head: a big
-// head on a skinny body, a long snout jutting far forward from the lower half of the face with a big round nose on
-// its tip, the jaw dropped open rapping (the mouth cut through, so the muzzle reads as an upper snout and a jaw), the
-// short floppy ear hanging straight down behind the head (long and flying up or back, beside the beanie it read as a
-// rabbit's two ears), the tall thumb of a beanie straight up with no brim and no pompom, and the cordless mic held out
-// in his fist below the snout. He is still a card standee come loose: the card's brown edge round his outline and torn
-// bites out of his shorts. Every pose keeps those shapes (KEEP); the sheets' prompts are in
+// Redrawn 2026-11-06 for the clean colour read, where the round-8 head read as "a dog under a pointed green cap" and
+// never the rapping puppy. The head is now half his height, the dog read first: a long thick snout with a big brown
+// nose on its tip, the jaw open rapping, and one big floppy ear in a brown of its own (neutral), hanging straight down
+// to the shoulder, a shape of its own where a cream ear sank into the head. The beanie is a tall soft dome with a thick
+// ribbed cuff in a dark of the costume, never a point (a point read as a gnome's, a wizard's or an elf's cap). The mic
+// is a grey stick with a light ball head, held up to his mouth; a black mic was cut through with the open mouth and
+// read as a glove. He is a card standee come loose: the card's brown edge all round his outline, a fold crease and a
+// torn bite at his shorts. Every pose keeps those shapes (KEEP); the sheets' prompts are in
 // art/sprites/rapper/design.prompt.txt.
 const KEEP =
-  'in every one the tall orange thumb beanie standing straight up, the long snout with the big round nose out in front, the short floppy ear hanging limp straight down behind his head, never flying up or back, the black mic in his fist held out in front clear of his face, both eyes open';
+  'in every one the tall rounded orange beanie with its thick dark ribbed cuff standing straight up on his big head, the long snout with the big brown nose out in front, the big floppy brown ear hanging straight down behind his head, never flying up or back, the grey microphone with its round light grey ball head always in his fist, the brown card edge all round him, both eyes open';
 
 export const kind: FlatKind = {
-  body: 173,
+  body: 187,
   map: {
-    roles: ['card', 'fur', 'tee', 'shorts', 'shoe', 'mic', 'nose', 'mouth', 'dark'],
+    roles: ['card', 'fur', 'tee', 'shorts', 'shoe', 'mic', 'nose', 'mouth', 'dark', 'ear', 'mesh'],
+    // Sampled from the design (art/sprites/rapper/design.png, `swatch.py`).
     // Sampled from the design (art/sprites/rapper/design.png, `swatch.py`).
     families: [
-      // The card's edge round his outline and the rough card in the torn bites.
-      ['card', [174, 127, 77]],
-      ['card', [191, 134, 72]],
-      ['card', [160, 120, 88]],
-      ['card', [150, 110, 75]],
-      ['card', [175, 158, 136]],
-      // The fur, and the fold crease drawn across it.
-      ['fur', [238, 204, 139]],
-      ['fur', [244, 209, 145]],
-      ['fur', [244, 218, 167]],
-      ['fur', [233, 203, 143]],
-      ['fur', [208, 188, 150]],
-      // The beanie and the tee: one orange in the drawing, so one role, the player's colour.
-      ['tee', [230, 127, 21]],
-      ['tee', [229, 122, 16]],
-      ['tee', [222, 127, 35]],
-      ['tee', [240, 150, 60]],
-      ['shorts', [198, 65, 0]],
-      ['shorts', [185, 62, 2]],
-      ['shorts', [188, 93, 30]],
-      ['shoe', [146, 143, 141]],
-      ['shoe', [141, 140, 135]],
-      ['shoe', [120, 120, 122]],
-      ['shoe', [170, 170, 172]],
-      ['mic', [41, 40, 37]],
-      ['mic', [62, 62, 64]],
-      ['mic', [90, 90, 95]],
-      ['nose', [59, 44, 34]],
-      ['nose', [52, 30, 20]],
-      ['nose', [100, 80, 65]],
-      ['nose', [124, 78, 62]],
-      // The tongue in the open mouth.
-      ['mouth', [127, 31, 45]],
-      ['mouth', [160, 60, 70]],
+      // The card's edge all round his outline and the rough card in the torn bite.
+      ['card', [178, 142, 98]],
+      ['card', [175, 142, 101]],
+      ['card', [153, 126, 94]],
+      ['card', [198, 139, 71]],
+      ['card', [187, 143, 91]],
+      // The fur, and the fold crease's shade across it.
+      ['fur', [237, 219, 169]],
+      ['fur', [223, 207, 165]],
+      ['fur', [233, 214, 165]],
+      ['fur', [235, 222, 183]],
+      ['fur', [203, 189, 161]],
+      // The beanie's dome and the tee: one orange, the player's colour.
+      ['tee', [226, 140, 39]],
+      ['tee', [217, 141, 48]],
+      // The cuff and the shorts: one dark orange, a dark of it.
+      ['shorts', [192, 97, 7]],
+      ['shorts', [191, 111, 33]],
+      ['shoe', [235, 229, 213]],
+      ['ear', [136, 94, 60]],
+      ['ear', [131, 90, 54]],
+      ['ear', [131, 98, 66]],
+      ['nose', [85, 60, 39]],
+      ['mic', [113, 106, 101]],
+      ['mic', [90, 94, 102]],
+      ['mesh', [200, 204, 210]],
+      ['mouth', [225, 135, 130]],
+      ['mouth', [190, 90, 90]],
+      ['dark', [40, 28, 17]],
       ['dark', [0, 0, 0]],
-      ['dark', [13, 0, 0]],
-      ['dark', [15, 8, 4]],
+      ['dark', [10, 1, 1]],
     ],
     line: 'dark',
-    thin: ['card', 'fur', 'tee', 'shorts', 'shoe', 'mic', 'nose', 'mouth'],
+    thin: ['card', 'fur', 'tee', 'shorts', 'shoe', 'mic', 'nose', 'mouth', 'ear', 'mesh'],
     fringe: 5,
     stroke: 2.4,
     ink: 15,
@@ -67,17 +62,17 @@ export const kind: FlatKind = {
     cut: { role: 'dark', area: 1.2 },
     feet: ['shoe'],
     // The mic is carried, so the body's size is the puppy's whatever his arm does.
-    loose: ['mic'],
+    loose: ['mic', 'mesh'],
     min: { dark: 0.05, mouth: 0.2, nose: 0.3, card: 0.15, mic: 0.5 },
   },
   roles: [
     { name: 'card', color: '#b8946a' },
     { name: 'fur', color: '#f1dfb8' },
-    // The beanie and the tee are the costume, in the player's colour; the shorts a dark of it.
+    // The beanie and the tee are the costume, in the player's colour; the beanie's cuff and the shorts a dark of it.
     { name: 'tee', color: '#e8922e', slot: 'player' },
     { name: 'shorts', color: '#808080', on: 2, tone: -26 },
-    // A colourway is the trainers (VARIETY.palette), neutrals all: grey, white canvas, black.
-    { name: 'shoe', color: '#9aa0a8', alts: ['#d8d4cc', '#4f5359'], vary: 6 },
+    // A colourway is the trainers (VARIETY.palette), neutrals all: white canvas, grey, black.
+    { name: 'shoe', color: '#e4e0d6', alts: ['#9aa0a8', '#4f5359'], vary: 6 },
     { name: 'mic', color: '#5a5e66' },
     { name: 'nose', color: '#4a3428' },
     { name: 'mouth', color: '#9a3d36' },
@@ -86,6 +81,10 @@ export const kind: FlatKind = {
     { name: 'scuff', color: '#808080', on: 2, tone: 12 },
     { name: 'scorch', color: '#808080', on: 2, tone: -18 },
     { name: 'plaster', color: '#e9d3b0' },
+    // The ear's own brown, a neutral: a cream ear sank into the head at play size.
+    { name: 'ear', color: '#8a6448' },
+    // The mic's ball head, light against its grey handle.
+    { name: 'mesh', color: '#c4c8ce' },
   ],
   slots: [
     { name: 'plaster', vary: 1, options: 2 },
@@ -94,9 +93,10 @@ export const kind: FlatKind = {
   eyes: {
     role: 'dark',
     from: 'map',
-    area: [0.05, 0.9],
+    area: [0.05, 1.4],
+    edge: 0.6,
     gap: [0.5, 3],
-    band: [0.15, 0.42],
+    band: [0.15, 0.47],
     specks: { dark: 0.9 },
   },
   wear: {
@@ -121,25 +121,36 @@ export const kind: FlatKind = {
   // Drawn three to a 16:9 image and cut apart (README → 3. Poses); the sheets' prompts are in
   // art/sprites/rapper/design.prompt.txt. These are each pose alone, for a redraw.
   poses: {
-    idle2: { pose: `standing, nodding to the beat, his free hand on his hip, leaning back a little; ${KEEP}.` },
-    'walk-1': { pose: `strutting to the right mid-step, the near trainer forward and the far trainer back; ${KEEP}.` },
-    'walk-2': { pose: `strutting, one trainer planted and the other lifted behind, his head bobbed down on the beat; ${KEEP}.` },
-    'run-1': {
-      pose: `running fast to the right, leaning forward, a long stride, one knee high and the other leg pushing off behind; ${KEEP}.`,
+    idle2: { pose: `standing and nodding to the beat, his free hand on his hip, leaning back a little, the mic up to his mouth; ${KEEP}.` },
+    'walk-1': { pose: `strutting to the right on the beat, mid-step, the near trainer forward and the far trainer back, the mic up to his mouth; ${KEEP}.` },
+    'walk-2': {
+      pose: `strutting to the right, the legs passing under the body, one trainer planted flat and the other just lifted behind it, his head bobbed down on the beat; ${KEEP}.`,
     },
-    'run-2': { pose: `running fast, both trainers off the ground, the knees tucked under him; ${KEEP}.` },
-    'air-1': { pose: `jumping up, his knees tucked, the mic arm thrust forward level, the free arm out behind; ${KEEP}.` },
+    'run-1': {
+      pose: `running fast to the right, leaning forward, a long stride with one knee high and the other leg pushing off behind, the mic held up to his open mouth, the free arm swinging back; ${KEEP}.`,
+    },
+    'run-2': {
+      pose: `running fast to the right, leaning forward, both trainers off the ground with the knees tucked up under him, the mic held up to his open mouth; ${KEEP}.`,
+    },
+    'air-1': {
+      pose: `jumping up, his knees tucked up under him, the mic arm thrust straight up high over his head with the mic in his fist, the free arm out to the side; ${KEEP}.`,
+    },
     'air-2': {
-      pose: `falling, the trainers reaching down, the mic arm out forward and the free arm out back, eyes wide and mouth open in alarm; ${KEEP}.`,
+      pose: `falling, the trainers reaching down, the mic arm out forward and the free arm flung out back, his eyes wide and his mouth open in alarm; ${KEEP}.`,
     },
     wall: {
-      pose: 'seen from his side, facing right, he slides down a tall wall just to his right (do not draw the wall), his free palm and one trainer sole flat against it, the other leg hanging, the black mic still in his other fist, his head turned to look back at us, the tall thumb beanie upright, the short ear hanging down behind, both eyes open.',
+      pose: 'seen from his side, facing right, he slides down a tall wall just to his right (do not draw the wall), his free palm and one trainer sole flat against it, the other leg hanging, the grey microphone still in his other fist, his head turned to look back at us, the tall rounded beanie upright, the big brown ear hanging down behind, both eyes open.',
       far: true,
     },
-    cheer: { pose: `cheering, up on his toes, the mic arm thrust straight up high in his fist, the free arm out to the side, a big open grin; ${KEEP}.` },
-    cheer2: { pose: `rapping hard, the mic held out in front of his snout, leaning back, the free arm flung out behind, one knee kicked up; ${KEEP}.` },
+    // The rap pose: knees bent, leaning in, rapping into the mic, the free arm thrust forward pointing.
+    cheer: {
+      pose: `a rap pose, knees bent and leaning into it, rapping into the mic held up to his open mouth, his free arm thrust straight forward pointing with one finger; ${KEEP}.`,
+    },
+    cheer2: {
+      pose: `rapping hard, the mic arm thrust straight up high over his head with the mic in his fist, his free arm flung out wide behind him with the hand open, one knee kicked up on the beat, a big open grin; ${KEEP}.`,
+    },
     death: {
-      pose: 'knocked out, lying flat on his back on the floor, the whole body horizontal, head on the left and trainers on the right, arms and legs limp, eyes shut, the tall beanie still on his head, the black mic dropped flat beside his hand.',
+      pose: 'knocked out, lying flat on his back on the floor, the whole body horizontal, head on the left and trainers on the right, arms and legs limp, eyes shut, the tall beanie still on his head, the grey mic dropped flat on the floor just beside his hand.',
       far: true,
     },
   },

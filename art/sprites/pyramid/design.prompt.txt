@@ -54,3 +54,7 @@ The same character exactly as in the reference image: the same pose, apron, pig,
    - B (two lurches, a jump): B-1 -> flat/run-1, run-2, air-1.
    - C (falling, a fist pump, a slow wave): C-1 -> flat/air-2, cheer, cheer2.
    - D, the far template, two figures (the wall slide side on, knocked out on his back): D-1 -> flat/wall, death; its drawn wall line and what crossed it whitened first (wallline.py, sheets3/D-1-clean.png). D-2 dropped the slicer loose beside him.
+
+17. The hard pyramid (2026-11-06, no images). The clean colour audit read the traced cowl as a hood ("unsure: grey pointed hood over a purple body"): the tracer's corner rounding made it a soft narrow cone. The drawings as drawn (after helmet.py) are kept in cone-flat/; cowl.py repaints each one's cowl as a geometric pyramid on the drawn base line, 1.35 times as tall and 1.2 times as wide, the apex square over the base's middle, a shaded far face (the `cowl` role) and a lit near face meeting at a ridge, the ink as thick as the drawing's:
+   python3 -I art/sprites/pyramid/cowl.py 1.35 1.2 art/sprites/pyramid/cone-flat art/sprites/pyramid/flat idle idle2 walk-1 walk-2 run-1 run-2 air-1 air-2 wall cheer cheer2 death
+   Traced with `smooth: 0`. Clean colour read, two fresh readers: "Pyramid Head (Silent Hill), high" both. Passed.
