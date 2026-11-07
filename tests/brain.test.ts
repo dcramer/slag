@@ -241,6 +241,8 @@ describe('the motor’s own moves', () => {
     // A brawl arena's ledges run off the sides of the map, where a leap toward the edge runs off and out.
     const m = new Match(1, undefined, { ...DEFAULT_RULES, mode: 'brawl' });
     const { tiles, w, h } = m.level;
+    // What's under test is the edge of the map, not the arena's set pieces (seed 1's guns reach its right side).
+    m.level = { ...m.level, setPieces: [] };
     const stands = (x: number, y: number) => tiles[(y + 1) * w + x] !== 0 && tiles[y * w + x] === 0 && tiles[(y - 1) * w + x] === 0;
     const ty = Array.from({ length: h - 3 }, (_, i) => i + 2).find((y) => [w - 4, w - 3, w - 2, w - 1].every((x) => stands(x, y)));
     expect(ty, 'a ledge running off the right side').toBeDefined();
