@@ -2,7 +2,7 @@ import { css, type HSL } from '../core/color';
 import { CLOCK } from '../sim/items';
 import type { Runner, RunWorld } from '../sim/run';
 import { inkFor, line, type P, stroke } from './ink';
-import { ball, boxPts, glint, ovalPts, part, poly, sprite, stamp, tick } from './ink-props';
+import { ball, bar, barLine, boxPts, glint, ovalPts, part, poly, sprite, stamp, tick } from './ink-props';
 import type { RC } from './kit';
 
 /**
@@ -21,6 +21,8 @@ const ROD_C: HSL = { h: 28, s: 48, l: 46 };
 const CORK: HSL = { h: 34, s: 42, l: 66 };
 const REEL: HSL = { h: 205, s: 12, l: 62 };
 const LINE: HSL = { h: 190, s: 20, l: 86 };
+/** The dial's hand and minute marks round a ringing clock. */
+const FACE: HSL = { h: 42, s: 60, l: 90 };
 const FLOAT_TOP: HSL = { h: 356, s: 78, l: 54 };
 const FLOAT_LOW: HSL = { h: 40, s: 30, l: 94 };
 
@@ -97,19 +99,14 @@ export const REACH_ICONS = {
   },
 };
 
-/** A pen-rimmed line: a dark of its colour, then the colour along it. */
-function fishLine(g: CanvasRenderingContext2D, pts: readonly P[], seed: number) {
-  g.fillStyle = inkFor(LINE);
-  stroke(g, pts, { w: 0.9, seed, taper: [0, 0], press: 0 });
-  g.fillStyle = css(LINE);
-  stroke(g, pts, { w: 0.4, seed, taper: [0, 0], press: 0 });
-}
+/** The fishing line: a thin bar of the kit, rimmed in a dark of its colour. */
+const fishLine = (g: CanvasRenderingContext2D, pts: readonly P[], seed: number) => bar(g, pts, 0.45, LINE, seed, { rim: 0.3, taper: [0, 0], press: 0 });
 
 /** The rod's tip as drawn: held up at rest, whipped out level while a cast goes out. */
 function tipOf(r: Runner): P {
   const b = r.body;
   const f = b.facing;
-  return r.items.cast > 0 ? { x: b.x + b.w / 2 + f * 13, y: b.y + 4 } : { x: b.x + b.w / 2 + f * 9, y: b.y - 5 };
+  return r.items.cast > 0 ? { x: b.x + b.w / 2 + f * 13, y: b.y + 4 } : { x: b.x + b.w / 2 + f * 13, y: b.y - 6 };
 }
 
 /** The rod in hand: from the grip at the runner's front to its tip (`tipOf`). */
@@ -155,8 +152,8 @@ export function drawLines(rc: RC, run: RunWorld) {
     if (!r.alive || r.finished || r.items.held?.kind !== 'rod' || run.items.lines.some((l) => l.owner === i)) return;
     const tip = tipOf(r);
     const sway = Math.sin(rc.t * 3 + r.slot) * 0.8;
-    fishLine(s, poly(tip.x, tip.y, tip.x + sway, tip.y + 6), 127);
-    stamp(s, floatSprite(), tip.x + sway, tip.y + 8);
+    fishLine(s, poly(tip.x, tip.y, tip.x + sway, tip.y + 4), 127);
+    stamp(s, floatSprite(), tip.x + sway, tip.y + 6);
   });
 }
 
@@ -168,23 +165,31 @@ export function drawClocks(rc: RC, run: RunWorld) {
     if (c.fuse > 0) {
       const bg = rc.bg;
       const R = CLOCK.radius;
-      // The sweep: a flat wedge from twelve o'clock round to where the countdown stands.
-      bg.fillStyle = css(ALARM, 8, 0.2 + 0.2 * u);
+      // The sweep: a flat wedge from twelve o'clock round to where the countdown stands, bright enough to read on
+      // any ground, and the hand at its leading edge, inked so it holds on red rock and ice alike.
+      const end = -Math.PI / 2 + u * Math.PI * 2;
+      bg.fillStyle = css(ALARM, 10, 0.6 + 0.2 * u);
       bg.beginPath();
       bg.moveTo(c.x, c.y);
-      bg.arc(c.x, c.y, R, -Math.PI / 2, -Math.PI / 2 + u * Math.PI * 2);
+      bg.arc(c.x, c.y, R, -Math.PI / 2, end);
       bg.closePath();
       bg.fill();
-      // The rim, dashed like a dial's minutes.
-      bg.fillStyle = css(ALARM, 10, 0.55 + 0.4 * u);
+      barLine(bg, c.x, c.y - R, c.x, c.y, 1.4, FACE, 130, { rim: 0.6 });
+      barLine(bg, c.x, c.y, c.x + Math.cos(end) * R, c.y + Math.sin(end) * R, 1.6, FACE, 131, { rim: 0.6 });
+      // The swept rim, solid: the countdown as a ring filling, which reads on red rock where the wedge's red can't.
+      const n = Math.max(2, Math.ceil(u * 32));
+      const arc: P[] = [];
+      for (let i = 0; i <= n; i++) {
+        const a = -Math.PI / 2 + (u * Math.PI * 2 * i) / n;
+        arc.push({ x: c.x + Math.cos(a) * R, y: c.y + Math.sin(a) * R });
+      }
+      bar(bg, arc, 2, FACE, 133, { rim: 0.6 });
+      // The rim, dashed like a dial's minutes, cream rimmed in ink.
       for (let i = 0; i < 24; i++) {
         const a0 = (i / 24) * Math.PI * 2;
         const a1 = a0 + (Math.PI * 2) / 48;
-        line(bg, c.x + Math.cos(a0) * R, c.y + Math.sin(a0) * R, c.x + Math.cos(a1) * R, c.y + Math.sin(a1) * R, {
-          w: i % 6 ? 1.2 : 2,
-          seed: i,
-          taper: [0, 0],
-          press: 0,
+        barLine(bg, c.x + Math.cos(a0) * R, c.y + Math.sin(a0) * R, c.x + Math.cos(a1) * R, c.y + Math.sin(a1) * R, i % 6 ? 1.1 : 1.8, FACE, 132 + i, {
+          rim: 0.5,
         });
       }
     }
@@ -197,18 +202,19 @@ export function drawClocks(rc: RC, run: RunWorld) {
     stamp(s, clockSprite());
     s.restore();
     if (c.fuse > 0) {
-      // Ringing: strokes flicking off both bells.
-      s.fillStyle = css(BRASS, 18);
+      // Ringing: strokes flicking off both bells, behind the ink pass so it can't scrub them.
+      const bg = rc.bg;
+      bg.fillStyle = css(BRASS, 22);
       const on = Math.floor(rc.t * 24) % 2;
       for (const side of [-1, 1]) {
         const bx = c.x + side * 4;
         const by = c.y - 5;
         for (let k = 0; k < 2; k++) {
           const a = -Math.PI / 2 + side * (0.6 + k * 0.5 + on * 0.15);
-          line(s, bx + Math.cos(a) * 2.5, by + Math.sin(a) * 2.5, bx + Math.cos(a) * (4.5 + u * 2), by + Math.sin(a) * (4.5 + u * 2), {
-            w: 0.6,
+          line(bg, bx + Math.cos(a) * 2.8, by + Math.sin(a) * 2.8, bx + Math.cos(a) * (5 + u * 2), by + Math.sin(a) * (5 + u * 2), {
+            w: 1.3,
             seed: k + side,
-            taper: [0.2, 0.6],
+            taper: [0.15, 0.5],
             press: 0,
           });
         }

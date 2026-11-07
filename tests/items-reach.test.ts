@@ -187,6 +187,29 @@ describe('Catch of the Day', () => {
     expect(a.items.held).toEqual({ kind: 'rod', uses: 1 });
   });
 
+  it('the float rides on whoever it snagged till they come down, then reels home', () => {
+    const run = brawl([
+      [5, FLOOR - 1],
+      [12, FLOOR - 1],
+    ]);
+    const [a, v] = run.runners;
+    giveItem(a, 'rod');
+    use(run, 0);
+    for (let f = 0; f < 30 && v.items.daze === 0; f++) steps(run, 1);
+    const l = run.items.lines[0];
+    expect(l.hooked).toBe(1);
+    steps(run, 3);
+    expect(l.x).toBeCloseTo(mid(v), 5);
+    for (let f = 0; f < ROD.hook && l.hooked >= 0; f++) {
+      expect(l.x).toBeCloseTo(mid(v), 5);
+      steps(run, 1);
+    }
+    expect(l.hooked).toBe(-1);
+    expect(v.body.onGround).toBe(true);
+    steps(run, 30);
+    expect(run.items.lines).toHaveLength(0);
+  });
+
   it('pulls someone standing across a gap off their ledge into it', () => {
     const run = brawl(
       [

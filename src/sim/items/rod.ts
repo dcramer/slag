@@ -8,8 +8,9 @@ import type { CastLine } from './types';
  * Catch of the Day: a fishing rod that casts a lure out straight ahead (or up at a slant with up held) and yanks the
  * first rival it snags toward the caster, off whatever they stood on: the brawl's way to pull someone off a ledge
  * across a gap, into the drop between. Every other item knocks you away from whoever hit you; this one reels you in.
- * The catch: the caster stands rooted while the line goes out, and a bonk snaps it. The yank only throws; the level
- * does the rest.
+ * The float stays hooked on whoever it snagged, riding with them, till they come down, so a crowd can see who was
+ * reeled. The catch: the caster stands rooted while the line goes out, and a bonk snaps it. The yank only throws; the
+ * level does the rest.
  */
 export const ROD = {
   /** Lure speed (px/s) out, and back in, and how far (px) the line pays out. */
@@ -31,6 +32,9 @@ export const ROD = {
   maxVx: 360,
   lift: 150,
   cooldown: 24,
+  /** Frames the float stays hooked on whoever it snagged at most (till they come down, after the first `grace`). */
+  hook: 60,
+  grace: 6,
 } as const;
 
 /** Where the line leaves the rod: out in front of the caster at about chest height. */
@@ -42,7 +46,7 @@ export function castRod(w: RunWorld, r: Runner, up: boolean): void {
   const tip = rodTip(r);
   const vx = f * ROD.speed * (up ? ROD.slantX : 1);
   const vy = up ? -ROD.speed * ROD.slantY : 0;
-  w.items.lines.push({ id: w.items.nextId++, owner: w.runners.indexOf(r), x: tip.x, y: tip.y, vx, vy, out: 0, back: false });
+  w.items.lines.push({ id: w.items.nextId++, owner: w.runners.indexOf(r), x: tip.x, y: tip.y, vx, vy, out: 0, back: false, hooked: -1, held: 0 });
   r.items.cast = 1;
   r.items.cooldown = ROD.cooldown;
   itemEvent(w, 'use', 'rod', r.slot, tip.x, tip.y);
@@ -83,6 +87,17 @@ function stepLine(w: RunWorld, l: CastLine): boolean {
     owner.items.cast = 0;
     return false;
   }
+  // Hooked: the float rides on whoever it snagged, the line reeling in with them, till they come down.
+  if (l.hooked >= 0) {
+    const v = w.runners[l.hooked];
+    if (!isActive(v) || ++l.held > ROD.hook || (l.held > ROD.grace && v.body.onGround)) {
+      l.hooked = -1;
+      return true;
+    }
+    l.x = cx(v);
+    l.y = cy(v);
+    return true;
+  }
   const tip = rodTip(owner);
   if (l.back) {
     const dx = tip.x - l.x;
@@ -108,6 +123,9 @@ function stepLine(w: RunWorld, l: CastLine): boolean {
     bonk(w, v, owner.slot);
     itemEvent(w, 'hit', 'rod', owner.slot, cx(v), cy(v));
     turnBack(l, owner);
+    l.hooked = w.runners.indexOf(v);
+    l.x = cx(v);
+    l.y = cy(v);
     return true;
   }
   if (l.out >= ROD.range) turnBack(l, owner);
