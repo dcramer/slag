@@ -163,24 +163,32 @@ export const shots: Scenarios = {
       // grace, and the next lowest with its head just over it, so both warnings show (sim/screen.ts).
       const under = opt('under');
       if (under)
-        await page.evaluate((n) => {
-          const run = (window as any).slagDebug.match.run;
-          const s = run.rules.screen;
-          if (!run.screen || !s) throw new Error("--under needs a race with the leader's screen (--game slag, more than one runner)");
-          const L = (run.level.loop ?? 0) * 16;
-          const bottom = run.screen.y + (s.rows - s.up) * 16;
-          // Lowest first, by climbed feet (inline: page functions can't name helpers).
-          const low = run.runners
-            .map((r: any, i: number) => ({ r, i, feet: r.body.y + r.body.h - r.lap * L }))
-            .filter((x: any) => x.r.alive)
-            .sort((a: any, b: any) => b.feet - a.feet);
-          const drop = [bottom + 20, bottom - 6];
-          low.slice(0, low.length > 2 ? 2 : 1).forEach((x: any, k: number) => {
-            x.r.body.y = drop[k] + x.r.lap * L - (k === 0 ? 0 : x.r.body.h);
-            x.r.body.vy = 0;
-          });
-          run.screen.under[low[0].i] = n;
-        }, Number(under));
+        await page.evaluate(
+          ([n, all]) => {
+            const run = (window as any).slagDebug.match.run;
+            const s = run.rules.screen;
+            if (!run.screen || !s) throw new Error("--under needs a race with the leader's screen (--game slag, more than one runner)");
+            const L = (run.level.loop ?? 0) * 16;
+            const bottom = run.screen.y + (s.rows - s.up) * 16;
+            // Lowest first, by climbed feet (inline: page functions can't name helpers).
+            const low = run.runners
+              .map((r: any, i: number) => ({ r, i, feet: r.body.y + r.body.h - r.lap * L }))
+              .filter((x: any) => x.r.alive)
+              .sort((a: any, b: any) => b.feet - a.feet);
+            // `--underall`: everyone but the leader under it, side by side, so every color's mark shows.
+            const sunk = all ? low.slice(0, -1) : low.slice(0, 1);
+            sunk.forEach((x: any) => {
+              x.r.body.y = bottom + 20 + x.r.lap * L;
+              x.r.body.vy = 0;
+              run.screen.under[x.i] = n;
+            });
+            if (!all && low.length > 2) {
+              low[1].r.body.y = bottom - 6 + low[1].r.lap * L - low[1].r.body.h;
+              low[1].r.body.vy = 0;
+            }
+          },
+          [Number(under), flag('underall')] as const,
+        );
       // The sim frame alone isn't the same picture: camera smoothing depends on frames rendered before the pause.
       await page.evaluate(
         (v) => {

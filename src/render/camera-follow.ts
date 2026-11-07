@@ -145,12 +145,14 @@ export class FollowCam {
 
 /**
  * The pose that shows the leader's screen (sim/screen.ts) whole, `edges` in climbed px and `shift` the lap the view is
- * on (world px): as close as the window's width and height both fit, its bottom edge on the bottom of the window, so
- * what's off the bottom of the screen is what's out. A window of another shape shows more above it, never below.
+ * on (world px): as close as the window's width and its height under view y `under` (the race's name tags) both fit,
+ * its bottom edge on the bottom of the window, so what's off the bottom of the screen is what's out. What shows over
+ * its top (the tags' row, or more on a window of another shape) is out of play, and the HUD draws it shut.
  */
-export function screenPose(cam: Pick<Camera, 'frame' | 'ww'>, edges: { top: number; bottom: number }, shift: number): ViewXform {
+export function screenPose(cam: Pick<Camera, 'frame' | 'ww'>, edges: { top: number; bottom: number }, shift: number, under = 0): ViewXform {
   const f = cam.frame;
-  const zoom = Math.min(f.w / Math.max(TILE, cam.ww), f.h / Math.max(TILE, edges.bottom - edges.top));
+  const room = f.y1 - Math.max(f.y0, under);
+  const zoom = Math.min(f.w / Math.max(TILE, cam.ww), room / Math.max(TILE, edges.bottom - edges.top));
   return { cx: cam.ww / 2, cy: edges.bottom + shift - (f.y1 - VIEW_H / 2) / zoom, zoom };
 }
 
@@ -176,6 +178,9 @@ export class PhoneCam {
   private ov: ViewXform | null = null;
 
   constructor(private cam: Camera) {}
+
+  /** View y under the race HUD's name tags, set by the renderer each frame: the leader's screen starts under it. */
+  tags = 0;
 
   /** The lap a loop's race is framed on: the leader's (frameRace). The renderer draws runners and the slag in it. */
   lap = 0;
@@ -214,7 +219,7 @@ export class PhoneCam {
     // The leader's screen (sim/screen.ts) is the arena: the camera shows exactly it, its bottom edge on the window's.
     const screen = MODES[m.rules.mode].camera === 'leader' && run.screen ? MODES[m.rules.mode].run.screen : undefined;
     if (screen && run.screen) {
-      cam.snap(screenPose(cam, screenEdges(screen, run.screen), this.lap * L));
+      cam.snap(screenPose(cam, screenEdges(screen, run.screen), this.lap * L, this.tags));
       cam.update(dt, false);
       return;
     }

@@ -26,6 +26,7 @@ import { drawBuildUp } from './buildup';
 import { Fx, type Part } from './fx';
 import { frameReach, VIEW_FRAME, type ViewFrame, viewFrame } from './frame';
 import { Hud } from './hud';
+import { raceTagsBottom } from './hud/race';
 import { drawClouds, drawDrops, drawRunnerItems, itemFx } from './items';
 import { drawFists, drawHooks } from './items-climb';
 import { drawClocks, drawLines } from './items-reach';
@@ -595,6 +596,7 @@ export class Renderer {
     }
     this.cam.setBounds(ww, wh, raceFloor(lv));
     if (m.phase === 'run' && m.run) {
+      this.phone.tags = raceTagsBottom(this.hud, m.players.length, Number.isFinite(m.run.timeLeft));
       this.phone.frameRace(m, dt);
       return;
     }

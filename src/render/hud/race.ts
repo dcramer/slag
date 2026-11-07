@@ -6,7 +6,7 @@ import { screenEdges } from '../../sim/screen';
 import { MODES } from '../../game/modes';
 import { PAL, TYPE } from '../../ui/style';
 import { drawInkRunner } from '../ink-character';
-import { discPts, icon, inkShape, plate, standings } from '../hud-kit';
+import { discPts, hazardTape, icon, inkShape, plate, standings } from '../hud-kit';
 import { drawItemIcon } from '../items';
 import { glowDot } from '../kit';
 import type { Hud } from '../hud';
@@ -193,18 +193,42 @@ function countDigit(c: CanvasRenderingContext2D, s: string, size: number) {
 const EDGE_NEAR = 3;
 
 /**
- * The bottom of the leader's screen (sim/screen.ts) is a kill line, so it shows as one: it glows hot under whoever
- * comes near it, and whoever has dropped under it gets a mark in their color on the edge, pointing back up, with a
- * ring around it that runs out with their grace and flashes as it goes. Read from the sim, so every peer sees the same.
+ * The view y under the race's top-left name tags and the clock (whichever reaches lower), at this screen's scale:
+ * the leader's screen starts under it (render/camera-follow.ts `screenPose`), so a leader held at its top is never
+ * under a tag.
+ */
+export function raceTagsBottom(hud: Hud, players: number, timed: boolean): number {
+  const chips = chipGrid(hud, players);
+  const rows = Math.ceil(players / chips.cols);
+  const tags = (6 + (rows - 1) * 29 + 25 + 4) * chips.s;
+  return hud.frame.safeY0 + Math.max(tags, timed ? 34 * hud.uiScale : 0);
+}
+
+/**
+ * The leader's screen (sim/screen.ts) shows its edges for what they are. Its top is a shutter: everything over it is
+ * out of play, drawn shut like the footer's bar and lipped with hazard tape, so a leader held there is held by
+ * something you can see (the tags sit on it). Its bottom is a kill line: it glows hot under whoever comes near it, and
+ * whoever has dropped under it gets a chevron in their color, pointing back up, ringed by their grace running out,
+ * clear of the footer's prompts. Read from the sim, so every peer sees the same.
  */
 function screenEdge(hud: Hud, m: Match, t: number) {
   const run = m.run!;
   const s = MODES[m.rules.mode].run.screen;
   if (!s || !run.screen) return;
   const c = hud.ctx;
-  const { bottom } = screenEdges(s, run.screen);
+  const f = hud.frame;
+  const { top, bottom } = screenEdges(s, run.screen);
+  const ty = hud.worldToView(0, top).y;
+  if (ty > f.y0) {
+    c.fillStyle = 'rgba(16,9,6,0.88)';
+    c.fillRect(f.x0, f.y0, f.w, ty - f.y0);
+    c.fillStyle = PAL.ink;
+    c.fillRect(f.x0, ty - 1, f.w, 1);
+    hazardTape(c, f.x0, ty - 4, f.w, 3, 0.9);
+  }
   const ey = hud.worldToView(0, bottom).y;
   const k = hud.worldToView(1, bottom).x - hud.worldToView(0, bottom).x;
+  const marks: { x: number; p: NonNullable<ReturnType<Match['player']>>; left: number }[] = [];
   run.runners.forEach((r, i) => {
     if (!r.alive || r.finished) return;
     const p = m.player(r.slot);
@@ -214,45 +238,45 @@ function screenEdge(hud: Hud, m: Match, t: number) {
     const heat = under > 0 ? 1 : Math.max(0, 1 - over / EDGE_NEAR);
     if (heat <= 0) return;
     const x = hud.worldToView(r.body.x + r.body.w / 2, bottom).x;
-    // The edge heats under them: a glow, and a bar of the edge itself.
-    glowDot(hud.gctx, x, ey, (40 + 30 * heat) * Math.max(0.8, k), { h: 8, s: 100, l: 55 }, 0.35 + 0.5 * heat, 0.15);
+    // The edge heats under them: a glow on the HUD itself (not the additive glow layer, which would wash out the
+    // chevron drawn over it), and a bar of the edge.
+    glowDot(c, x, ey, (36 + 26 * heat) * Math.max(0.8, k), { h: 8, s: 100, l: 50 }, 0.3 + 0.4 * heat, 0.15);
     const bar = c.createLinearGradient(x - 46, 0, x + 46, 0);
     bar.addColorStop(0, 'rgba(255,74,61,0)');
     bar.addColorStop(0.5, `rgba(255,74,61,${(0.35 + 0.55 * heat).toFixed(3)})`);
     bar.addColorStop(1, 'rgba(255,74,61,0)');
     c.fillStyle = bar;
     c.fillRect(x - 46, ey - 3, 92, 3);
-    if (under <= 0) return;
-    const left = Math.max(0, 1 - under / s.grace);
+    if (under > 0) marks.push({ x, p, left: Math.max(0, 1 - under / s.grace) });
+  });
+  // Every glow first, then the marks over them: one runner's heat never covers another's chevron.
+  const y = Math.min(ey, f.y1 - hud.footH) - 22;
+  for (const { x, p, left } of marks) {
     const blink = left < 0.4 && Math.sin(t * (18 + 30 * (0.4 - left))) > 0;
-    const y = ey - 20;
     c.save();
     c.lineCap = 'round';
     c.lineJoin = 'round';
-    // A chevron up: get back on.
+    // A soot disc behind it, so a red or orange player's chevron reads against the red glow.
+    c.fillStyle = 'rgba(18,11,8,0.82)';
     c.beginPath();
-    c.moveTo(x - 8, y + 5);
-    c.lineTo(x, y - 5);
-    c.lineTo(x + 8, y + 5);
-    c.strokeStyle = 'rgba(18,11,8,0.85)';
-    c.lineWidth = 7;
+    c.arc(x, y, 15.5, 0, Math.PI * 2);
+    c.fill();
+    // The grace, running out: bone, flashing red at the end.
+    c.strokeStyle = blink ? PAL.danger : PAL.bone;
+    c.lineWidth = 2.5;
+    c.beginPath();
+    c.arc(x, y, 13.5, -Math.PI / 2, -Math.PI / 2 + left * Math.PI * 2);
     c.stroke();
+    // A chevron up in their color: get back on.
+    c.beginPath();
+    c.moveTo(x - 7, y + 4);
+    c.lineTo(x, y - 4);
+    c.lineTo(x + 7, y + 4);
     c.strokeStyle = css(p.character.body);
     c.lineWidth = 4;
     c.stroke();
-    // The grace, running out.
-    c.strokeStyle = 'rgba(18,11,8,0.75)';
-    c.lineWidth = 5;
-    c.beginPath();
-    c.arc(x, y, 14, 0, Math.PI * 2);
-    c.stroke();
-    c.strokeStyle = blink ? PAL.whiteHot : PAL.danger;
-    c.lineWidth = 2.5;
-    c.beginPath();
-    c.arc(x, y, 14, -Math.PI / 2, -Math.PI / 2 + left * Math.PI * 2);
-    c.stroke();
     c.restore();
-  });
+  }
 }
 
 /**
