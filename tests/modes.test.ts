@@ -15,7 +15,7 @@ import { generateTheme } from '../src/gen/theme';
 import { hashMatch, restoreMatch, snapshotMatch } from '../src/net/snapshot';
 import { FPS, LEVEL_H, LEVEL_W, POP_HOLD, RUN_COUNTDOWN, TILE } from '../src/sim/constants';
 import { isProtected, lapShift, type Level, LOOP_BAND, LOOP_SPAWN, T_ONEWAY } from '../src/sim/level';
-import { moduleSim, newPropState } from '../src/sim/props';
+import { footprintCells, moduleSim, newPropState } from '../src/sim/props';
 import { bodyAtCell } from '../src/sim/physics';
 import { feetUp, RunWorld } from '../src/sim/run';
 import { BotSeats } from '../src/brain/bots';
