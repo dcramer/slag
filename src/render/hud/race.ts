@@ -6,7 +6,7 @@ import { screenEdges } from '../../sim/screen';
 import { MODES } from '../../game/modes';
 import { PAL, TYPE } from '../../ui/style';
 import { drawInkRunner } from '../ink-character';
-import { discPts, hazardTape, icon, inkShape, plate, standings } from '../hud-kit';
+import { discPts, icon, inkShape, plate, standings } from '../hud-kit';
 import { drawItemIcon } from '../items';
 import { glowDot } from '../kit';
 import type { Hud } from '../hud';
@@ -205,9 +205,8 @@ export function raceTagsBottom(hud: Hud, players: number, timed: boolean): numbe
 }
 
 /**
- * The leader's screen (sim/screen.ts) shows its edges for what they are. Its top is a shutter: everything over it is
- * out of play, drawn shut like the footer's bar and lipped with hazard tape, so a leader held there is held by
- * something you can see (the tags sit on it). Its bottom is a kill line: it glows hot under whoever comes near it, and
+ * The leader's screen (sim/screen.ts) shows its edges for what they are. Over its top is the name tags' row, drawn
+ * shut like the footer's bar with a plain edge: the tags' backing, nothing that holds anyone. Its bottom is a kill line: it glows hot under whoever comes near it, and
  * whoever has dropped under it gets a chevron in their color, pointing back up, ringed by their grace running out,
  * clear of the footer's prompts. Read from the sim, so every peer sees the same.
  */
@@ -224,7 +223,6 @@ function screenEdge(hud: Hud, m: Match, t: number) {
     c.fillRect(f.x0, f.y0, f.w, ty - f.y0);
     c.fillStyle = PAL.ink;
     c.fillRect(f.x0, ty - 1, f.w, 1);
-    hazardTape(c, f.x0, ty - 4, f.w, 3, 0.9);
   }
   const ey = hud.worldToView(0, bottom).y;
   const k = hud.worldToView(1, bottom).x - hud.worldToView(0, bottom).x;

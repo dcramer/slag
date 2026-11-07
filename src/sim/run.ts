@@ -385,9 +385,8 @@ export class RunWorld {
   step(inputs: readonly InputFrame[]): void {
     const f = this.frame;
     this.struck.length = 0;
-    // Features first: what they build (the screen's top edge) stands where their step just put it.
-    for (const ft of this.features) ft.step?.(this, f);
     this.buildProps(f);
+    for (const ft of this.features) ft.step?.(this, f);
     const live = f >= RUN_COUNTDOWN && this.endFrame < 0;
     const start = contactStart(this.runners);
 
@@ -589,7 +588,6 @@ export class RunWorld {
     buildBlood(this.blood, f, this.solids);
     buildBlocks(this.items, f, this.solids); // Pocket Blocks: transient, never part of the proof.
     traceRays(this.resolved, ctx, this.out); // Last, so what travels sees every solid whatever order the props came in.
-    for (const ft of this.features) ft.build?.(this, this.solids);
     wetSolids(this.solids, this.level);
     const gust = gustWind(this.level, f);
     if (gust) this.out.winds.push(gust);

@@ -32,6 +32,8 @@ function view(over: Partial<BrainView>): BrainView {
     boxes: [],
     drops: [],
     detour: () => Infinity,
+    sight: null,
+    reach: () => Infinity,
     self: null,
     runners: [],
     rivals: [],
