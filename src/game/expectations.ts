@@ -73,10 +73,10 @@ export const LEAD_HOLDS = {
  * and `hit`, seconds from GO to the first touch or bonk and to the first bonk; `uses`, items used a minute of fighting
  * (from GO to a round's end: a short round isn't fewer swings; owner decision); `still` and `retreat`, the shares of frames in it standing still and moving away from the nearest rival; `gap`, the tiles
  * to that rival; `pauses`, times a bot stood still half a second on end (`PAUSE` frames), per bot-minute: a person
- * sees a pause as a stretch, not a share. Measured with everyone armed from GO and stands for boxes bare 0%, 19.6 s,
- * 77%, 0.9 s, 2.2 s, 41.8 uses a minute, 7%, 20%, 5.6 tiles, 0.72 pauses (the longest 66 frames); placed 0%, 18.9 s,
- * 79%, 0.9 s, 2.2 s, 38.3 uses a minute, 7%, 20%, 5.7 tiles, 0.63 (120) (21 of 48 and 28 of 64 rounds in the 15–30 s
- * target, 6 and 9 under 10 s; 30 and 58 deaths to hazards, 30 and 43 off the sides, 76 and 80 into the drop, 8 and 10
+ * sees a pause as a stretch, not a share. Measured with everyone armed from GO and stands for boxes bare 4%, 17.7 s,
+ * 77%, 0.9 s, 2.2 s, 47.0 uses a minute, 7%, 20%, 5.2 tiles, 0.87 pauses (the longest 54 frames); placed 2%, 17.8 s,
+ * 78%, 0.9 s, 2.2 s, 41.3 uses a minute, 6%, 19%, 5.6 tiles, 0.38 (165) (25 of 48 and 28 of 64 rounds in the 15–30 s
+ * target, 5 and 16 under 10 s; 26 and 48 deaths to hazards, 34 and 41 off the sides, 80 and 92 into the drop, 6 and 10
  * to the slag). Before (boxes, bare hands at GO, the slag pooled in the drop from GO): bare 0%, 20.0 s, 67%, 1.6 s,
  * 4.0 s, 26.7 uses a minute, 0.37 pauses; placed 2%, 17.0 s, 64%, 1.3 s, 3.9 s, 25.1; 101 and 106 deaths to the slag,
  * nearly all of them falls into its pool. The targets are the owner's, from the party
