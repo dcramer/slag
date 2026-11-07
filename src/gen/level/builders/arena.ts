@@ -83,12 +83,11 @@ const PIER = 4;
  *   over its middle `ARCH` rows up with nothing else between, for what swings or drops across the way over: a log, an
  *   axe, a hook. Tiers go on over the beam; the halls stand only where they keep most of their width.
  * A kind none of the set's hazards stood in (`SculptCtx.noCentre`) isn't laid again in that draw. Weighted by how
- * hard bots fight round it (tests/stats/brawl.test.ts, each kind alone, before the stands): a pit split the field (17
- * item uses a minute of fighting, from 27) and the halls' pair put the first bonk off most, so the arch comes up most;
- * more than three times as often moves the shapes and stand cells off their contract (`BUILDERS.arena.contract`).
+ * hard bots fight round it (tests/stats/brawl.test.ts): the halls' pair keeps the field apart most (7 to 9 tiles to the
+ * nearest rival, against 5 round a pit or an arch) and kills least, so they come up least, the arch most.
  */
 const CENTRES = ['pit', 'halls', 'arch'] as const;
-const CENTRE_WEIGHTS: Record<(typeof CENTRES)[number], number> = { pit: 1, halls: 1, arch: 3 };
+const CENTRE_WEIGHTS: Record<(typeof CENTRES)[number], number> = { pit: 2, halls: 1, arch: 4 };
 /** Half a pit's width: as wide as a walking jump at normal gravity, and as a serpent's leap needs. */
 const PIT_HALF = 2;
 /** Half the crossing under an arch: as wide as a slung log's swing (`jungle.ts` logTraps) and then some. */
