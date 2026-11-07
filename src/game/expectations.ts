@@ -130,7 +130,9 @@ export const LEAD_HOLDS = {
  * 15–30 s (from 20–40 s; the counts in 20–40 s above were against that one). The bands only catch a regression; the bots before `press` fail the first bonk, uses, retreat and gap
  * bands, the motor before `haste` the still bands and the bots before they kept at something the pauses bands, so a
  * return to turtling does too. Since hits build up (`RunRules.buildup`) a hit throws its victim further off, so the
- * field stands further apart: bare 5.7 tiles to the nearest rival, from 5.1.
+ * field stands further apart: bare 5.7 tiles to the nearest rival, from 5.1. With the clock and the rod dealt (two uses
+ * each, used only where they reach someone, where the noodle swings four times and the punch three) placed uses fall
+ * to 18.4 a minute of fighting from 19.2, so that band starts at 17.
  */
 export const BRAWL_ROUNDS = {
   targets: { draws: 0.2, seconds: [15, 30] },
@@ -153,7 +155,7 @@ export const BRAWL_ROUNDS = {
       knocked: [0.5, 0.8],
       contact: [0, 1.9],
       hit: [0, 5],
-      uses: [19, 26],
+      uses: [17, 26],
       still: [0, 0.09],
       retreat: [0, 0.21],
       gap: [0, 6.5],

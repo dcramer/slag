@@ -9,7 +9,7 @@ import type { ThemeId } from '../themes';
 import type { ShoveRules } from '../sim/collide';
 import { TILE } from '../sim/constants';
 import { type BuildUp, feetUp, RACE_RUN, type RunRules, type RunWorld } from '../sim/run';
-import { POINTS, type RoundResult, scoreRound, scoreSurvival, type Standing } from './scoring';
+import { type RoundResult, scoreKnockouts, scoreRound, scoreSurvival, type Standing } from './scoring';
 
 export type ModeId = 'race' | 'slag' | 'brawl';
 
@@ -48,10 +48,27 @@ export interface ModeDef {
 
 /**
  * What a brawl's boxes deal, to anyone: only things that knock someone into something, the swings most (the noodle,
- * the bat, the punch in a box), then the throws and the slams. Nothing that only moves you, and no shield, which would
- * soak the very hit the mode kills with.
+ * the bat, the punch in a box), then what reaches someone a swing can't (the clock lobbed onto a ledge, the rod that
+ * reels them off it), then the throws and the slams. Nothing that only moves you, and no shield, which would soak the
+ * very hit the mode kills with.
  */
-const BRAWL_ITEMS = ['sword', 'sword', 'bat', 'bat', 'glove', 'glove', 'glove', 'puck', 'boomerang', 'tremor', 'upper'] as const;
+const BRAWL_ITEMS = [
+  'sword',
+  'sword',
+  'bat',
+  'bat',
+  'glove',
+  'glove',
+  'glove',
+  'clock',
+  'clock',
+  'rod',
+  'rod',
+  'puck',
+  'boomerang',
+  'tremor',
+  'upper',
+] as const;
 
 /**
  * A brawl's bodies (`RunRules.shove`): for putting each other off ledges, where a race's only jostle. Twice the race's
@@ -151,13 +168,12 @@ export const MODES: Record<ModeId, ModeDef> = {
     bouts: 3,
     minPlayers: 2,
     builds: () => true,
+    // Knockouts pay, and the last one standing one knockout's worth: hiding while the others fight doesn't win (owner decision).
     score: ({ run, standings }) =>
-      scoreSurvival(
+      scoreKnockouts(
         run.runners.map((r) => ({ slot: r.slot, alive: r.alive, deathFrame: r.deathFrame })),
         run.kills,
         standings,
-        () => 0,
-        [POINTS.survive],
       ),
   },
 };

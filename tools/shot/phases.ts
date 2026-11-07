@@ -211,12 +211,20 @@ export const shots: Scenarios = {
   async score() {
     await open(`seed=${seed}&players=${players}&race=saw`);
     // Everyone but the leader finishes, the trailing one first and overdue a point, and the second one
-    // traps the leader: every award in one round. `--nobody` keeps it scoreless.
+    // traps the leader: every award in one round. `--nobody` keeps it scoreless. With no flag (`--game slag|brawl`)
+    // they fall in turn instead, the last one standing, and the second one, overdue a point, knocks out the
+    // first and the third before falling.
     await page.evaluate((nobody) => {
       const m = (window as any).slagDebug.match;
       const slots = m.players.map((p: any) => p.slot);
       m.players.forEach((p: any, i: number) => (p.score = 6 + i * 6));
-      if (!nobody) {
+      if (!nobody && m.rules.mode !== 'race') {
+        m.players[1].scoreless = 2;
+        m.run.runners.forEach((r: any, i: number) => {
+          if (i < slots.length - 1) Object.assign(r, { alive: false, deathFrame: m.run.frame - 60 + i });
+        });
+        for (const i of [0, 2]) if (i < slots.length - 1 && i !== 1) m.run.kills.push({ victim: slots[i], killer: slots[1] });
+      } else if (!nobody) {
         m.players[0].scoreless = 2;
         m.run.finishOrder = slots.length > 1 ? slots.slice(0, -1) : slots;
         if (slots.length > 2) m.run.kills.push({ victim: slots.at(-1), killer: slots[1] }, { victim: slots.at(-1), killer: slots[1] });
