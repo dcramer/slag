@@ -407,6 +407,21 @@ export interface PlacerOpts {
   family?: readonly string[];
   /** Draw only recipes of these roles (the level profile's `setPieceRoles`). */
   roles?: readonly Role[];
+  /** Gets one entry per recipe tried, in order (diagnostics: `GenInfo.placement`, `pnpm level`); never changes a placement. */
+  log?: RecipeTry[];
+}
+
+/** Why a candidate was turned down: the placer's checks, in the order it runs them. */
+export type Refusal = 'tell' | 'fit' | 'window' | 'through' | 'keep' | 'ride';
+
+/** One recipe the placer tried on a level: how many candidate spots it offered (none: it found no spot), and whether one went in. */
+export interface RecipeTry {
+  recipe: string;
+  role: Role;
+  offered: number;
+  placed: boolean;
+  /** Candidates turned down, by the first check each failed. */
+  refused: Partial<Record<Refusal, number>>;
 }
 
 /** Recipe weight scaled by the level's danger: hazards up to ×2.4 on nasty levels, ×0.4 on tame ones (and the reverse for helpers). */
@@ -453,22 +468,36 @@ export function makePlacer(themeKey: string, recipes: readonly Recipe[], uidBase
     for (const recipe of order) {
       if (out.length >= want) break;
       let tries = 0;
+      const log: RecipeTry = { recipe: recipe.name, role: recipe.role ?? 'hazard', offered: 0, placed: false, refused: {} };
+      const refuse = (why: Refusal) => (log.refused[why] = (log.refused[why] ?? 0) + 1);
       for (const cand of recipe.candidates(rng, s)) {
         if (++tries > tryCap) break;
-        if (tellFaults(cand.modules).length) continue;
+        log.offered++;
+        if (tellFaults(cand.modules).length) {
+          refuse('tell');
+          continue;
+        }
         const pp = finalize(s, cand, uidBase + first + out.length, `setpiece:${themeKey}:${recipe.name}`);
-        if (
-          pp &&
-          !windowFaults(level, pp).length &&
-          !throughFaults(level, pp).length &&
-          (!opts.keep || opts.keep([...out, pp])) &&
-          noFreeRide(level, pp, [...standing, ...out], s.cache)
-        ) {
+        const why: Refusal | null = !pp
+          ? 'fit'
+          : windowFaults(level, pp).length
+            ? 'window'
+            : throughFaults(level, pp).length
+              ? 'through'
+              : opts.keep && !opts.keep([...out, pp])
+                ? 'keep'
+                : !noFreeRide(level, pp, [...standing, ...out], s.cache)
+                  ? 'ride'
+                  : null;
+        if (why) refuse(why);
+        else if (pp) {
           out.push(pp);
           commit(s, pp);
+          log.placed = true;
           break;
         }
       }
+      opts.log?.push(log);
     }
     return out;
   };

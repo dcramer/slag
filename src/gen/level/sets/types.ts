@@ -168,7 +168,54 @@ export interface BuilderDef {
   asks: readonly string[];
   /** False when it raises no landmark (a mode's arena is the stage itself): its levels roll no stage concept. */
   landmark?: false;
+  /** What its levels promise in every set, as data: the pipeline holds each level to `each`, tests/conformance every set to all of it. */
+  contract?: BuilderContract;
   build(ctx: SculptCtx, set: SetKit): Shape;
+}
+
+/**
+ * A builder's promises about the levels it builds, from every set's kit (src/gen/AGENTS.md → Set kits and level
+ * builders). Numbers are measured by `measureLevel` (../measure.ts), the same one `pnpm level` prints. `each` holds for
+ * every level: the pipeline rejects an attempt that breaks it (`builderFaults`) and conformance checks it on every
+ * level it builds. `set` and `all` are shares over many levels, so only the sweep in tests/stats checks them.
+ */
+export interface BuilderContract {
+  each?: {
+    /** Share of the set pieces it asks for (`GenInfo.placement.asked`) that stand, at least. */
+    fill?: number;
+    /** Most copies of one recipe among them. */
+    repeat?: number;
+    /** Loot boxes it hangs when its profile deals them, at least. */
+    boxes?: number;
+    /** Rows the field stands on, at least. */
+    tiers?: number;
+    /** Rows of terrain either side column runs, fewer than this: a knock carries you off the map. */
+    sideWall?: number;
+    /** No set piece's hazard, moving solid or shot gets into a spawn's safe zone over its cycle (conformance only: a simulation). */
+    clearSpawns?: true;
+  };
+  /** Over each set's levels. */
+  set?: {
+    /** Mean share of the set pieces asked for that stand, at least. */
+    fill?: number;
+    /** Distinct recipes its levels stand between them, at least. */
+    kinds?: number;
+    /** Mean stand cells the field reaches, at least this share of the busiest set's. */
+    stands?: number;
+  };
+  /** Over every set's levels together. */
+  all?: {
+    /** Mean share of stand cells with no way to die near them, under this. */
+    safe?: number;
+    /** Mean share of stand cells with a drop beside them, over this. */
+    edgy?: number;
+    /** Share of levels whose field reaches the top third, over this. */
+    high?: number;
+    /** Mean share of terrain mirrored across the middle, over this. */
+    mirrored?: number;
+    /** Its shapes (the style's last segment): exactly these come up, each in more than `share` of the levels. */
+    shapes?: { names: readonly string[]; share: number };
+  };
 }
 
 /** One body of a chain: a mooring, an asteroid, a building. `kind` is the set's own word for it. */

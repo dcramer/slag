@@ -1,3 +1,4 @@
+import { LEVEL_H } from '../../../sim/constants';
 import type { LevelProfile } from '../../../sim/level';
 import { sculptTall } from '../sculptors/tall';
 import type { BuilderDef, SetKit } from '../sets/types';
@@ -58,6 +59,13 @@ export const BUILDERS: Record<BuilderId, BuilderDef> = {
     asks: ['floor'],
     // The arena is the stage: a landmark would take the middle of the one screen, so its levels are plain.
     landmark: false,
+    // Built for knocking people off things (docs/MODES.md → Brawl): room for nearly all the set pieces it asks for,
+    // three boxes, several tiers, no wall at either side, nearly every place to stand with a way to die near it.
+    contract: {
+      each: { fill: 0.5, repeat: 2, boxes: 3, tiers: 3, sideWall: LEVEL_H / 4, clearSpawns: true },
+      set: { fill: 5 / 6, kinds: 4, stands: 0.8 },
+      all: { safe: 0.2, edgy: 0.6, high: 0.6, mirrored: 0.9, shapes: { names: ['arena-bowl', 'arena-pyramid', 'arena-tiers'], share: 0.18 } },
+    },
     build: (ctx, set) => (set.tower ? (set.towerPost ?? keep)(sculptArena(ctx, set.tower), ctx) : onCourse(ctx, set)),
   },
 };
