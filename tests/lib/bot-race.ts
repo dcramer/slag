@@ -8,7 +8,7 @@ import { isBridgePart } from '../../src/gen/props';
 import type { Difficulty } from '../../src/sim/level';
 import type { PlacedProp } from '../../src/sim/props';
 import { RUN_COUNTDOWN, TILE } from '../../src/sim/constants';
-import { feetUp } from '../../src/sim/run';
+import { feetUp, type RunWorld as Run } from '../../src/sim/run';
 import { leaderOf } from '../../src/sim/standing';
 import type { ModeId } from '../../src/game/modes';
 import { MODES } from '../../src/game/modes';
@@ -162,6 +162,78 @@ export interface BotRound {
   causes: Record<string, number>;
   /** Runners out within `at` frames of GO. */
   early: number;
+  /** How the round looked as a fight (`Fight`). */
+  fight: Fight;
+}
+
+/**
+ * How hard a round was fought, from the bodies alone (Brawl's aggression measure, tests/stats/brawl.test.ts): when
+ * two runners first touched or one bonked another, how many bonks landed, and over every frame someone was in it
+ * after GO with a rival left (dazed frames aside), the share they stood still, the share they moved away from their
+ * nearest rival, and how far off that rival was.
+ */
+export interface Fight {
+  /** Frames from GO to the first touch or bonk, or -1 with none. */
+  contact: number;
+  /** Frames from GO to the first bonk a rival landed, or -1 with none. */
+  hit: number;
+  /** Bonks a rival landed. */
+  bonks: number;
+  /** Runner-frames counted, and of them standing still on the ground (not up against a rival), and moving away from the nearest rival. */
+  frames: number;
+  still: number;
+  retreat: number;
+  /** Sum over those frames of the tiles to the nearest rival. */
+  gap: number;
+  /** Deaths with no knock credited that came within `SHOVED` frames of touching a rival: shoved in, or tangled with one. */
+  shoved: number;
+  /** Race frame each slot last touched a rival. */
+  touched: number[];
+}
+
+/** Frames after touching a rival a death counts as `Fight.shoved`. */
+const SHOVED = 30;
+
+/** Px/s across that counts as moving away. */
+const RETREAT_VX = 30;
+
+function watchFight(run: Run, f: Fight, credit: number[], apart: Set<number>): void {
+  const live = run.runners.filter((r) => r.alive && !r.finished);
+  const t = run.frame - RUN_COUNTDOWN;
+  for (const r of live) {
+    const b = r.body;
+    if (r.items.bonkCredit > (credit[r.slot] ?? 0) && r.items.bonkedBy !== r.slot && r.items.bonkedBy >= 0) {
+      f.bonks++;
+      if (f.contact < 0) f.contact = t;
+      if (f.hit < 0) f.hit = t;
+    }
+    if (r.items.daze > 0 || live.length < 2) continue;
+    let near: (typeof live)[number] | null = null;
+    let d = Infinity;
+    let touching = false;
+    for (const q of live) {
+      if (q === r) continue;
+      const dx = q.body.x - b.x;
+      const dy = q.body.y - b.y;
+      const pair = Math.min(r.slot, q.slot) * 64 + Math.max(r.slot, q.slot);
+      if (Math.abs(dx) <= b.w + 1 && Math.abs(dy) < b.h) {
+        touching = true;
+        f.touched[r.slot] = run.frame;
+        // Two who start side by side touch at GO: only a touch after they've been apart is contact.
+        if (f.contact < 0 && apart.has(pair)) f.contact = t;
+      } else if (Math.hypot(dx, dy) > 2 * TILE) apart.add(pair);
+      const e = Math.hypot(dx, dy) / TILE;
+      if (e < d) {
+        d = e;
+        near = q;
+      }
+    }
+    f.frames++;
+    f.gap += d;
+    if (b.onGround && Math.abs(b.vx) < 1 && !touching) f.still++;
+    if (near && Math.abs(b.vx) > RETREAT_VX && Math.sign(b.vx) !== Math.sign(near.body.x - b.x) && Math.abs(near.body.x - b.x) > TILE) f.retreat++;
+  }
+  for (const r of run.runners) credit[r.slot] = r.items.bonkCredit;
 }
 
 /** How `botRound` and `botRounds` play and measure a round. */
@@ -232,6 +304,9 @@ function playRound(seed: number, m: Match, bots: BotSeats, { at = 15 * 60, limit
   let next = -1;
   let since = 0;
   const causes: Record<string, number> = {};
+  const fight: Fight = { contact: -1, hit: -1, bonks: 0, frames: 0, still: 0, retreat: 0, gap: 0, shoved: 0, touched: [] };
+  const credit: number[] = [];
+  const apart = new Set<number>();
   while (run.endFrame < 0 && run.frame < limit) {
     if (run.frame === RUN_COUNTDOWN + at) leader = top();
     if (run.frame > RUN_COUNTDOWN) {
@@ -260,7 +335,9 @@ function playRound(seed: number, m: Match, bots: BotSeats, { at = 15 * 60, limit
       if (!was[i] || r.alive) return;
       const k = `${slagAt(run.slag, m.level, r) ? 'slag' : r.cause}${r.items.bonkCredit > 0 && r.items.bonkedBy !== r.slot ? '+' : ''}`;
       causes[k] = (causes[k] ?? 0) + 1;
+      if (!k.endsWith('+') && run.frame - (fight.touched[r.slot] ?? -Infinity) <= SHOVED) fight.shoved++;
     });
+    if (run.frame > RUN_COUNTDOWN) watchFight(run, fight, credit, apart);
   }
   const alive = run.runners.filter((r) => r.alive && !r.finished);
   let winner = alive.length === 1 ? alive[0].slot : -1;
@@ -280,6 +357,7 @@ function playRound(seed: number, m: Match, bots: BotSeats, { at = 15 * 60, limit
     bumps,
     causes,
     early: run.runners.filter((r) => !r.alive && r.deathFrame < RUN_COUNTDOWN + at).length,
+    fight,
   };
 }
 

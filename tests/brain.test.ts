@@ -183,6 +183,9 @@ describe('bots', () => {
     expect(easy.block).toBeLessThan(normal.block);
     expect(normal.block).toBeLessThan(hard.block);
     expect(easy.weigh).toBeLessThan(hard.weigh);
+    // And presses a brawl harder.
+    expect(easy.press).toBeLessThan(normal.press);
+    expect(normal.press).toBeLessThan(hard.press);
     // Two bots at one level don't play alike.
     expect(rollPersonality(8, 'normal')).not.toEqual(normal);
     expect(rollPersonality(7, 'normal')).toEqual(normal);
