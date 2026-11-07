@@ -4,9 +4,10 @@ import { type BotMatchTime, botMatchTime } from '../lib/bot-race';
 /**
  * What bouts per placement buy a brawl (docs/MODES.md → Brawl, the round-length and match rows): four Normal bots
  * playing whole matches with the lobby's rules, one bout a placement against Brawl's own three, and the share of the
- * match spent fighting rather than picking and placing.
+ * match spent fighting rather than picking and placing. Sixteen seeds (about 5 min): four once failed the picking band
+ * by 0.0002, and 2,000 draws of sixteen from seeds 1–40 never did (12, 1 in 130).
  */
-const SEEDS = [1, 2, 3, 4];
+const SEEDS = Array.from({ length: 16 }, (_, i) => i + 1);
 
 function measure(bouts: number) {
   const runs: BotMatchTime[] = SEEDS.map((s) => botMatchTime(s, { bouts }));

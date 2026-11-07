@@ -71,68 +71,16 @@ export const LEAD_HOLDS = {
  * mean length from GO. `knocked`: the share of deaths with a rival's knock still credited (sim/items/common.ts
  * `BONK_CREDIT`), thrown or bumped into the level. How hard it's fought (tests/lib/bot-race.ts `Fight`): `contact`
  * and `hit`, seconds from GO to the first touch or bonk and to the first bonk; `uses`, items used a minute of fighting
- * (from GO to a round's end: a short round isn't fewer swings; owner decision), where earlier numbers below are per
- * round; `still`
- * and `retreat`, the shares of frames in it standing still and moving away from the nearest rival; `gap`, the tiles
+ * (from GO to a round's end: a short round isn't fewer swings; owner decision); `still` and `retreat`, the shares of frames in it standing still and moving away from the nearest rival; `gap`, the tiles
  * to that rival; `pauses`, times a bot stood still half a second on end (`PAUSE` frames), per bot-minute: a person
- * sees a pause as a stretch, not a share. Measured bare 0%, 16.5 s, 70%, 1.4 s, 3.6 s, 24.1 uses a minute (6.6 a
- * round), 5%, 19%, 5.1 tiles,
- * 0.28 pauses (the longest still 52 frames); placed 2%, 18.2 s, 63%, 1.2 s, 3.1 s, 20.5 uses a minute (6.2 a round),
- * 7%, 19%, 5.3 tiles, 0.40 (1327) (24 of 48 and 25 of 64 rounds in the 15–30 s target, 10 and 13 under 10 s; 31 and 46 deaths to hazards, 28 and 32 off
- * the sides), since a fighting bot is always at something (src/brain/strategies/brawl.ts, motor.ts): an unlined hit
- * after a moment's aim, never a goTo the cell it's in, a shove with a swing winding back up, a jump at a rival
- * overhead, a charge at a rival a body check would throw into something, a glance to think, a hazard waited on only a
- * moment, and out of a part's no-go cells or off a lip's spot rather than stand there. Rounds end sooner when nobody
- * stands still (on seeds 49–144 the same bots average 18.6 s against 19.4 s before, so most of the 5 s here is these
- * 48 seeds' draw), and items go at the same rate a minute of fighting as before (24.8 and 20.7). From bare 4%, 21.5 s,
- * 75%, 1.6 s, 3.3 s, 8.9 uses, 10%, 17%, 5.3 tiles; placed 0%, 19.1 s, 66%, 1.5 s, 4.5 s, 6.6 uses, 11%, 18%, 6.2 tiles (23 of 48 and 27 of 64 rounds in 20–40 s, 3 and 11 under 10 s; 30 and 45
- * deaths to hazards, 28 and 25 off the sides) since the arena is cut into bands of ledges over shafts to the pit with a
- * hall either side for the set's pieces, which are only what kills or knocks (gen/level/builders/arena.ts): its 6 come
- * in 5.25 to 6 of every set's arenas (from 2.6 to 6), a hazard is within 3 tiles of 42% of the places to stand (from
- * 23%), and no way to die is that near only 14% (from 52%), where bots spend 25% of their time on the ground (from
- * 49%). A knock kills more often, so rounds are shorter; rivals across a shaft take longer to get at, so the field is
- * further apart and uses fewer items, most with parts placed, where the slag takes more of the deaths (122 from 105)
- * and hazards fewer. Asking 8 set pieces made bare rounds 19.4 s, 19 of 48 in 20–40 s. From bare 2%, 24.5 s, 75%,
- * 1.6 s, 3.3 s, 11.1 uses, 9%, 20%, 5.0 tiles; placed 2%, 24.2 s, 62%,
- * 1.3 s, 3.3 s, 10.5 uses, 10%, 20.1%, 4.9 tiles (22 of 48 and 24 of 64 rounds in 20–40 s, 2 and 4 under 10 s; 17 and 57
- * deaths to hazards, 29 and 30 off the sides) since a brawl's bodies shove harder and a run-up body-checks (game/modes.ts `BRAWL_SHOVE`): a
- * check throws a rival several tiles off, so the field ends up further apart and more of it is sliding away. Bots don't
- * line a check up yet, so the rest is within the noise. From bare 2%, 23.4 s, 77%, 1.6 s, 3.6 s, 11.0 uses, 10%, 20%,
- * 5.2 tiles; placed 5%, 22.9 s, 63%, 1.3 s, 3.0 s, 10.2 uses, 11%, 19%, 4.2 tiles (22 of 48 and 27 of 64 rounds in
- * 20–40 s, 6 and 5 under 10 s; 37 and 32 deaths off the sides) since the spawn shield ends 5 s after GO (sim/constants.ts `SHIELD_FRAMES`): a rival back at its
- * spawn can be knocked, so more deaths are knocks and rounds are a little shorter. From bare 6%, 25.6 s, 68%, 1.6 s,
- * 3.8 s, 12.9 uses, 10%, 20%, 4.8 tiles; placed 2%, 23.7 s, 58%, 1.3 s, 3.4 s, 10.8 uses, 10%, 19%, 4.3 tiles (25 of 48
- * and 31 of 64 rounds in 20–40 s, 4 and 5 under 10 s; 32 and 22 deaths off the sides of the map) with a shield that
- * lasted the round, on arenas of their own (gen/level/builders/arena.ts): tiers of ledges to the top
- * of the screen, open sides, three boxes or more, the middle filled. A knock kills more often, so rounds are a little
- * shorter, and the field, spread over the tiers, meets a little later and goes round more to get at a rival. The
- * arenas' first cut (one box short in a tenth of them, an empty middle, low gravity's gaps and tiers) measured bare
- * 0%, 23.7 s, 66%, 26 of 48 in 20–40 s, 41 off the sides; placed 8%, 21.4 s, 54%, 29 of 64, 30. From bare 8%, 26.6 s, 53%, 0.8 s, 3.8 s, 12.2 uses, 11%,
- * 17%, 3.9 tiles; placed 14%, 24.2 s, 39%, 0.8 s, 3.8 s, 8.9 uses, 15%, 15%, 4.0 tiles (28 of 48 and 28 of 64 in
- * 20–40 s, 4 and 10 under 10 s, 3 placed ones without a knock or a shove; 13 and 16 off the sides) on the race course
- * with walled ends, since the motor fights with haste (`StrategyDef.haste`, src/brain/motor.ts): it picks again as soon as its
- * target moves instead of playing out a move for where the target was, takes no pause for a rival's shove and only
- * what's left of one after a landing it read in the air, and lines up in a cell only where that wins the time back,
- * walking there rather than tapping. Before, the still frames were mostly its own care: on the bare arena 7.7% of
- * frames lining up, 5.5% the beat after a landing, 1.2% after a bump, 2.3% thinking and 3.7% standing where its
- * strategy sent it. Now bare 5.0% standing where the strategy sent it, 1.8% after a short hop, 1.5% thinking, 1.1%
- * after a part bumped it; placed 4.7%, 1.5%, 1.7% and 0.7%, and 4.2% standing clear of a hazard every move would pass
- * within its margin of. From bare 13%, 27.6 s, 49%, 0.9 s, 3.5 s, 11.5 uses, 22%, 16%, 4.2 tiles; placed 13%, 24.5 s, 43%, 1.0 s,
- * 4.0 s, 8.4 uses, 26%, 14%, 4.8 tiles (5 and 7 rounds under 10 s, none without a knock or a shove), since bots
- * press the fight (`press`): they no longer read the view's rounding as the slag pouring and climb from GO, take
- * an unlined hit after about a second in reach rather than four, fetch from boxes within 14 tiles unless a rival they
- * could shove into something is right there, dodge only a hit that's coming, and get over a shove that stalls. From
- * bare 13%, 30.1 s, 36%, 1.0 s, 4.5 s, 6.6 uses, 22%, 19%, 5.6 tiles; placed 16%, 28.1 s, 32%, 1.1 s, 5.5 s, 6.1
- * uses, 26%, 17%, 5.6 tiles (2 and 7 under 10 s). Before that bare 6%, 29.6 s and 31%, placed 17%, 27.4 s and 24%
- * before bots put their hazards where a knock throws someone, and 63%, 39.6 s, 11% and 59%, 38.1 s, 9% before bots
- * lined rivals up and fetched boxes. The slag still takes more deaths than anything else. Earlier or faster pours
- * shortened rounds and added draws. The targets are the owner's, from the party brawler: draws rare, rounds of
- * 15–30 s (from 20–40 s; the counts in 20–40 s above were against that one). The bands only catch a regression; the bots before `press` fail the first bonk, uses, retreat and gap
- * bands, the motor before `haste` the still bands and the bots before they kept at something the pauses bands, so a
- * return to turtling does too. Since hits build up (`RunRules.buildup`) a hit throws its victim further off, so the
- * field stands further apart: bare 5.7 tiles to the nearest rival, from 5.1. With the clock and the rod dealt (two uses
- * each, used only where they reach someone, where the noodle swings four times and the punch three) placed uses fall
- * to 18.4 a minute of fighting from 19.2, so that band starts at 17.
+ * sees a pause as a stretch, not a share. Measured bare 0%, 20.0 s, 67%, 1.6 s, 4.0 s, 26.7 uses a minute (8.9 a
+ * round), 5%, 21%, 5.7 tiles, 0.37 pauses (the longest 39 frames); placed 2%, 17.0 s, 64%, 1.3 s, 3.9 s, 25.1 uses a
+ * minute (7.1 a round), 6%, 18%, 5.2 tiles, 0.47 (738) (20 of 48 and 26 of 64 rounds in the 15–30 s target, 6 and 12
+ * under 10 s; 27 and 60 deaths to hazards, 16 and 25 off the sides, 101 and 106 to the slag). Seeds 1–48 draw long bare
+ * rounds: on 49–144 the same bots average 16.7 s, 67% knocked, no draws. The targets are the owner's, from the party
+ * brawler: draws rare, rounds of 15–30 s. Earlier or faster pours shortened rounds and added draws. The bands only catch
+ * a regression: the bots before `press` fail the first bonk, uses, retreat and gap bands, the motor before `haste` the
+ * still bands and the bots before they kept at something the pauses bands, so a return to turtling does too.
  */
 export const BRAWL_ROUNDS = {
   targets: { draws: 0.2, seconds: [15, 30] },
