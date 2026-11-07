@@ -32,7 +32,7 @@ import { cleanCharacter } from './actions';
  * Worktree branches never bump it, since two bumps always conflict: `pnpm land` bumps it once
  * for a batch that changed this file's code or that test's field lists (`--snap` for a change in what a field means).
  */
-export const SNAP_VERSION = 60;
+export const SNAP_VERSION = 61;
 
 export interface RunSnap {
   slots: number[];
