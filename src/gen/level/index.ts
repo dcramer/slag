@@ -337,7 +337,7 @@ export function generateLevel(seed: number, themeOverride?: ThemeId, profileOver
         ...(shape.centre ? { centre: shape.centre } : {}),
         cache,
         keep: wayRound
-          ? (ps) => keep([...fixed, ...ps]) && !clearWayFaults({ ...level, setPieces: [...fixed, ...ps] }).length
+          ? (ps) => keep([...fixed, ...ps]) && !clearWayFaults({ ...level, setPieces: [...fixed, ...ps] }, cache).length
           : fixed.length
             ? (ps) => keep([...fixed, ...ps])
             : keep,

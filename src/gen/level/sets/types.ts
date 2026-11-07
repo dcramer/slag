@@ -201,7 +201,7 @@ export interface BuilderContract {
     clearSpawns?: true;
     /**
      * From each end a bare way to the other end, and to the centrepiece, with every cell a set piece that hurts takes
-     * counted as a wall whatever its timing: hazards stay, but there's always a way round them (`clearWayFaults`).
+     * counted as a wall unless it leaves a gap long enough to get past (`CROSSING`): hazards stay, but there's always a way round them (`clearWayFaults`).
      */
     clearWay?: true;
     /**
