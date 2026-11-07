@@ -98,7 +98,9 @@ Every game design decision, preference and direction the owner has given, groupe
 - **The start's safe zone shields you for 5 s from GO, in every mode, then it's gone.** "in brawl, the 'safe zone' of your start lasts forever.. that should time out in all modes after 5s"
   2026-11-06 · `done` (`SHIELD_FRAMES`; each bout's own GO; the shield blinks through its last second; placement's protected rects unchanged) · AGENTS.md → Game rules, DESIGN.md, `src/sim/run.ts`
 - **Brawl has no safe areas and knocks throw people off ledges: bots don't pause, nearly everywhere to stand has a way to die next to it, and a hit near an edge sends you over.** "also the ai pauses too much on brawl" / "theres too many safe areas, and its hard to push people off ledges etc"
-  2026-11-06 · `in progress` · MODES.md → Brawl
+  2026-11-06 · `done` (pauses of 30+ frames 1.9 → 0.3 a bot-minute; a body check in `BRAWL_SHOVE` and bots that charge it; stand cells with no way to die near 52 → 14%) · MODES.md → Brawl
+- **A brawl round aims for 15–30 s (from 20–40), and item use counts per minute of fighting, not per round.** "Yes, 15–30 s"
+  2026-11-06 · `done` (bare 16.5 s, placed 18.2 s; uses 24.1 / 20.5 a minute) · MODES.md → Brawl, `BRAWL_ROUNDS` (src/game/expectations.ts)
 - **Brawl is won by knocking people out, not by hiding: knockouts pay, each hit you take throws you farther (fresh each bout), and a couple of weapons reach from range.** "you shouldn't be able to win by just standing around" / "maybe just make it easier to get knocked out" / "or we need more weapons or something?" / "Yes, all three"
   2026-11-06 · `in progress` (an earlier slag waits on these) · MODES.md → Brawl
 - **Brawl's hazards are amped up: its set pieces are things that kill or knock, more of them, near the ledges.** "we may need to amp up the hazards in brawl"
@@ -318,6 +320,8 @@ Every game design decision, preference and direction the owner has given, groupe
   2026-11-06 · `in progress` · docs/characters/junior.md, `EGGS` in `src/gen/character.ts`, public/ASSETS.md
 - **A drawn kind must not look like the original redrawn: its twist has to show at play size, the face included (the puffball, whose seam and tape were dropped as misreads, was left with the original's exact face).** "kirby looks.. too much like kirby right now"
   2026-11-06 · `in progress` (the puffball being redrawn) · CHARACTERS.md → The nod and the twist, docs/characters/puffball.md
+- **The android ships as it is: her white bob reads as a helmet at play size, and the black dress that carries the original takes the player's colour.** "Accept as colour read" (asked after seven rounds read her as "a white round helmet with a visor")
+  2026-11-07 · `done` · CHARACTERS.md → Production order, TODO.md → 32
 - **The warrior, the slayer and the assistant dog ship as colour reads: in colour they read as their homages, in black they don't, and they pair with no other kind.** "Keep as colour reads" (asked, after their retries stopped under the two-round rule: keep them or swap them for other kinds)
   2026-11-06 · `done` · CHARACTERS.md → Production order, TODO.md → 31, tools/art3d/CHECKLIST.md → Done when
 - **A kind's name is never a respelling of the original's (one letter off, or the same sound): it is a looser sound-alike, ideally carrying the kind's own joke (Zoomic, Kilowatchu, Clara Loft, Space Evader).** "we also might need to make the parody's SLIGHTLY less obvious for a few" (asked names or drawings, and which: "The names", "Every one-letter-off")

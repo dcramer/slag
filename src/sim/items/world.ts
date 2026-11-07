@@ -181,7 +181,7 @@ function slamBricks(w: RunWorld): void {
   rs.forEach((v, i) => {
     if (by[i] < 0) return;
     launch(v.body, 0, -TREMOR.pop);
-    bonk(v, by[i]);
+    bonk(w, v, by[i]);
     itemEvent(w, 'hit', 'quake', by[i], cx(v), v.body.y + v.body.h);
   });
 }
@@ -223,7 +223,7 @@ function swingSwords(w: RunWorld): void {
     const k = knocks[vi];
     if (k.by < 0) return;
     launch(v.body, k.vx, -k.vy);
-    bonk(v, k.by);
+    bonk(w, v, k.by);
     itemEvent(w, 'hit', k.homer ? 'homer' : k.kind, k.by, cx(v), cy(v));
   });
 }

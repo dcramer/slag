@@ -123,7 +123,7 @@ function stepFist(w: RunWorld, f: UpperFist): boolean {
   if (hit.length) {
     for (const { r, dx } of hit) {
       launch(r.body, (dx > 0 ? 1 : dx < 0 ? -1 : r.body.facing) * UPPER.knockVx, UPPER.knockVy);
-      bonk(r, f.owner);
+      bonk(w, r, f.owner);
     }
     itemEvent(w, 'hit', 'upper', f.owner, f.x, f.y);
     return false;

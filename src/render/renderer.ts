@@ -22,6 +22,7 @@ import { Rig } from './character';
 import { drawInkAccessory, drawInkAfterimage, drawInkRunner, partsOf, ropeAnchor, ropeOf } from './ink-character';
 import type { Figure } from './ink-figure';
 import { ForegroundLayer, Lettering, letteringAllowed } from './cel';
+import { drawBuildUp } from './buildup';
 import { Fx, type Part } from './fx';
 import { frameReach, VIEW_FRAME, type ViewFrame, viewFrame } from './frame';
 import { Hud } from './hud';
@@ -498,6 +499,7 @@ export class Renderer {
           if (shield && !r.finished && run.isSafe(r)) this.drawShield(rc, level, r.body.x + r.body.w / 2, r.body.y + r.body.h, r.slot);
           drawRunnerStatus(rc, r.body, r.status, r.attach.soot - run.frame);
           drawRunnerItems(rc, r);
+          drawBuildUp(rc, r);
         }
         if (dy) at(0);
       }

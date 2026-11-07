@@ -105,7 +105,7 @@ function stepLine(w: RunWorld, l: CastLine): boolean {
   const v = snagged(w, l, owner);
   if (v) {
     launch(v.body, yankVx(cx(v) - cx(owner)), -ROD.lift);
-    bonk(v, owner.slot);
+    bonk(w, v, owner.slot);
     itemEvent(w, 'hit', 'rod', owner.slot, cx(v), cy(v));
     turnBack(l, owner);
     return true;

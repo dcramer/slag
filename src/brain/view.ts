@@ -1,11 +1,13 @@
 import type { Match, Player } from '../game/match';
-import type { ModeId } from '../game/modes';
+import { MODES, type ModeId } from '../game/modes';
+import { RACE_SHOVE } from '../sim/collide';
 import { isBridgePart, type PropDef } from '../gen/props';
 import { type Bridge, cacheFor, canPlaceBridge, fieldOf, prove, settled, withBridges } from '../gen/level';
 import { JumpCache, levelPrecision } from '../gen/level/precision';
 import { analyzeRoutes } from '../gen/level/routes';
 import { type Level, spawnsOf } from '../sim/level';
 import { RUN_COUNTDOWN, TILE } from '../sim/constants';
+import { knockScale } from '../sim/items';
 import { barrierOf, footprint, hangRow, motionOffset, mysterySpent, mysteryState, type PlacedProp, spotAt } from '../sim/props';
 import type { Body } from '../sim/physics';
 import { feetUp, type Runner, type RunWorld } from '../sim/run';
@@ -180,7 +182,9 @@ function selfOf(m: Match, p: Player): SelfSense | null {
     slag: run.slag === null ? null : round4((run.slag - feetUp(run.level, r)) / TILE),
     rank: rankOf(run, r),
     held: it.held ? { ...it.held } : null,
+    shielded: run.isSafe(r),
     armed: !!it.held && it.cooldown === 0 && it.swing === 0 && it.windup === 0 && it.cast === 0 && it.daze === 0 && it.thrust === 0,
+    hurt: Math.round(knockScale(run, r) * 10) / 10,
   };
 }
 
@@ -212,6 +216,7 @@ export function senseView(m: Match, p: Player): BrainView {
     version: BRAIN_VIEW_VERSION,
     phase: m.phase,
     mode: m.rules.mode,
+    shove: MODES[m.rules.mode].run.shove ?? RACE_SHOVE,
     phaseFrame: m.phaseFrame,
     slot: p.slot,
     ready: p.ready,
@@ -250,6 +255,8 @@ export function senseView(m: Match, p: Player): BrainView {
             alive: r.alive,
             finished: r.finished,
             held: r.items.held?.kind ?? null,
+            hurt: Math.round(knockScale(run, r) * 10) / 10,
+            shielded: run.isSafe(r),
           }))
       : [],
     rivals: m.players

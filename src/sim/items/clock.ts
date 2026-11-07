@@ -97,7 +97,7 @@ function blast(w: RunWorld, c: AlarmClock): void {
   }
   for (const { r, vx, vy } of hit) {
     launch(r.body, vx, -vy);
-    bonk(r, c.owner);
+    bonk(w, r, c.owner);
   }
   itemEvent(w, 'hit', 'clock', c.owner, c.x, c.y);
 }

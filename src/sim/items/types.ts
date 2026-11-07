@@ -85,6 +85,8 @@ export interface RunnerItems {
   noPickup: number;
   /** Frames a Catch of the Day's line has been going out (0: none). The caster is rooted until it snags or turns back. */
   cast: number;
+  /** Rivals' hits taken this race, under a build-up rule (`RunRules.buildup`): each throws the next one farther. */
+  hits: number;
 }
 
 /** A loose item lying in, or flying through, the level. */
@@ -235,6 +237,7 @@ export function newRunnerItems(): RunnerItems {
     bonkCredit: 0,
     noPickup: 0,
     cast: 0,
+    hits: 0,
   };
 }
 

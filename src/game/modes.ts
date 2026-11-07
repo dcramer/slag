@@ -8,7 +8,7 @@ import { type CrateMix, RACE_CRATE } from '../gen/props';
 import type { ThemeId } from '../themes';
 import type { ShoveRules } from '../sim/collide';
 import { TILE } from '../sim/constants';
-import { feetUp, RACE_RUN, type RunRules, type RunWorld } from '../sim/run';
+import { type BuildUp, feetUp, RACE_RUN, type RunRules, type RunWorld } from '../sim/run';
 import { POINTS, type RoundResult, scoreRound, scoreSurvival, type Standing } from './scoring';
 
 export type ModeId = 'race' | 'slag' | 'brawl';
@@ -76,6 +76,14 @@ const BRAWL_ITEMS = [
  * bots' rounds ran shorter (19 s with parts placed, 11 of 64 under 10 s) for no more deaths off the sides.
  */
 const BRAWL_SHOVE: ShoveRules = { share: 0.5, carry: true, check: 180 };
+
+/**
+ * A brawl's build-up (`RunRules.buildup`): every rival's hit taken throws the next a quarter as hard again, up to six.
+ * Distance goes as the square of it: a noodle carries someone standing still 10.8 tiles fresh, 25 after two hits, 46 after
+ * four; a bat's tap 5.5, 13 and 24. It took the share of deaths knocked from 70% to 73% bare and 63% to 66% with parts
+ * placed, rounds staying about 17 s; 0.35 ran most rounds with parts placed under 15 s (41 of 64), 0.1 to 0.2 moved little.
+ */
+const BRAWL_BUILDUP: BuildUp = { per: 0.25, max: 6 };
 
 export const MODES: Record<ModeId, ModeDef> = {
   race: {
@@ -151,7 +159,7 @@ export const MODES: Record<ModeId, ModeDef> = {
     // Bodies shove hard enough to put someone over an edge (sim/collide.ts `ShoveRules`): a walk moves a bystander at
     // half a walk, whoever is shoved off goes out over the drop, and a run-up into someone who isn't pushing back knocks
     // them like a bump. Everyone in the brawl shares it; a race keeps its own.
-    run: { flag: false, lastStanding: true, ahead: 'none', seconds: 60, shove: BRAWL_SHOVE },
+    run: { flag: false, lastStanding: true, ahead: 'none', seconds: 60, shove: BRAWL_SHOVE, buildup: BRAWL_BUILDUP },
     // No gap to cross: the crate leans to hazards to knock people into and utility to throw them about.
     crate: { bridges: false, roles: { hazard: 1.8, utility: 1.2, build: 0.4, demolish: 0.5 } },
     camera: 'pack',

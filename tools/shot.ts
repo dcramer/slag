@@ -72,7 +72,7 @@
  *          --q high (pin the quality tier: slow software GL otherwise reads as a slow device and drops it)
  *          --bout N (race: play the bouts before it out first, `--game brawl` plays 3)
  *          --runframe N (race: stop on exact sim frame N)  --campin x,y,zoom (race: pin the view, for before/after sheets)
- *          --spread (race: stand the runners on open ground)
+ *          --spread (race: stand the runners on open ground)  --hits 0,2,4 (race, with --runframe: the runners' brawl build-up, in turn)
  *          --pop N (race: after --frames, the first runner holds self-destruct N frames: ring and countdown)  --popall (every runner)
  *          --mode keyboard|gamepad|touch (footer prompt glyphs)  --net (fake online-lobby info)
  *          --noletters (no impact words)  --nocel (the Canvas2D compositor: no cel pass, to judge art without it)
