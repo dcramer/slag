@@ -11,7 +11,7 @@ import type { ThemeId } from '../../themes';
  *
  * Adding a decor piece: an entry in `RULES` (its kind becomes a `DecorKind`), art in src/render/decor.ts.
  * The theme's look draws from every kind registered for it (`decorFor`), and tests/conformance/decor holds
- * it to the contract: grounded or hanging as declared, small, off the spawn and goal, off a landmark that
+ * it to the contract: grounded or hanging as declared, small, off the spawn and goal and every box and stand, off a landmark that
  * wears its own skin, purely cosmetic, varied by seed, and theme-specific.
  */
 
@@ -243,8 +243,8 @@ export interface DecorLook {
 /**
  * Where the level's decor goes: a pure function of the level and its look. Every solid tile with open air
  * above may grow a `top` piece (`decorDensity`), every one with air below a hanging piece, if the piece's
- * room is clear. Nothing grows by the spawn or the flag, inside `skip` (a host's hole for the real level),
- * or on a landmark that wears its own skin: it's dressed by its own art.
+ * room is clear. Nothing grows by the spawn or the flag, on or against a loot box or item stand, inside `skip`
+ * (a host's hole for the real level), or on a landmark that wears its own skin: it's dressed by its own art.
  */
 export function placeDecor(level: Level, look: DecorLook, skip?: TileRect): DecorSpot[] {
   const rng = new Rng(deriveSeed(level.seed, 'decor'));
@@ -267,6 +267,11 @@ export function placeDecor(level: Level, look: DecorLook, skip?: TileRect): Deco
   const lm = level.landmark?.skin ? level.landmark.rect : null;
   const inRect = (r: TileRect | null | undefined, x: number, y: number) => !!r && x >= r.x && x < r.x + r.w && y >= r.y && y < r.y + r.h;
   const taken = new Set<number>();
+  const kept = keptClear(level);
+  const blocks = (x: number, y0: number, y1: number) => {
+    for (let y = y0; y <= y1; y++) if (kept.has(y * level.w + x)) return true;
+    return false;
+  };
   for (let ty = 1; ty < level.h; ty++) {
     for (let tx = 0; tx < level.w; tx++) {
       if (!solid(tx, ty) || inRect(skip, tx, ty) || inRect(lm, tx, ty) || inRect(lm, tx, ty - 1)) continue;
@@ -279,9 +284,18 @@ export function placeDecor(level: Level, look: DecorLook, skip?: TileRect): Deco
         const rule: DecorRule = RULES[kind];
         let ok = true;
         for (let k = 1; k <= rule.clear; k++) if (!air(tx, ty - k)) ok = false;
+        if (blocks(tx, ty - rule.clear, ty - 1)) ok = false;
         const [lo, hi] = rule.span ?? [1, 1];
         let span = 1;
-        if (ok) while (span < hi && solid(tx + span, ty) && air(tx + span, ty - 1) && !taken.has(ty * level.w + tx + span)) span++;
+        if (ok)
+          while (
+            span < hi &&
+            solid(tx + span, ty) &&
+            air(tx + span, ty - 1) &&
+            !taken.has(ty * level.w + tx + span) &&
+            !blocks(tx + span, ty - rule.clear, ty - 1)
+          )
+            span++;
         if (ok && span >= lo) {
           for (let k = 0; k < span; k++) taken.add(ty * level.w + tx + k);
           out.push({
@@ -301,7 +315,7 @@ export function placeDecor(level: Level, look: DecorLook, skip?: TileRect): Deco
         const kind = pick(unders);
         let ok = true;
         for (let k = 1; k <= RULES[kind].clear; k++) if (!air(tx, ty + k)) ok = false;
-        if (ok)
+        if (ok && !blocks(tx, ty + 1, ty + RULES[kind].clear))
           out.push({
             kind,
             x: tx * TILE + rng.range(3, 13),
@@ -320,12 +334,28 @@ export function placeDecor(level: Level, look: DecorLook, skip?: TileRect): Deco
 }
 
 /**
+ * Cells decor keeps out of (`y * w + x`): every loot box and item stand (gen/level/loop-boxes.ts), the cell over it, and
+ * a column either side of both, so nothing grows on, hangs over or leans against what a runner comes to take.
+ */
+function keptClear(level: Level): Set<number> {
+  const out = new Set<number>();
+  for (const pp of level.setPieces) {
+    if (!pp.def.modules.some((m) => m.type === 'stand' || m.type === 'mystery')) continue;
+    for (const [fx, fy] of pp.def.footprint)
+      for (let y = fy + pp.ty - 1; y <= fy + pp.ty; y++)
+        for (let x = fx + pp.tx - 1; x <= fx + pp.tx + 1; x++) if (x >= 0 && x < level.w && y >= 0 && y < level.h) out.add(y * level.w + x);
+  }
+  return out;
+}
+
+/**
  * The contract each placed piece keeps, checked by tests/conformance on real levels: it grows on (or hangs
- * from) a solid tile, its room is open air, it stays small, and it's off the spawn and the flag.
+ * from) a solid tile, its room is open air, it stays small, and it's off the spawn, the flag, and every box and stand.
  */
 export function decorFaults(level: Level, spots: readonly DecorSpot[]): string[] {
   const out: string[] = [];
   const at = (x: number, y: number) => tileAt(level, x, y);
+  const kept = keptClear(level);
   for (const d of spots) {
     const r = RULES[d.kind];
     const where = `${d.kind} at ${d.tx},${d.ty}`;
@@ -336,6 +366,9 @@ export function decorFaults(level: Level, spots: readonly DecorSpot[]): string[]
     if (r.clear > DECOR_MAX_CLEAR || d.span > DECOR_MAX_SPAN) out.push(`${where}: too big for decor`);
     for (const p of [level.spawn, level.goal])
       if (r.place === 'top' && Math.abs(d.tx - p.tx) <= 1 && d.ty - 1 >= p.ty && d.ty - 1 <= p.ty + 2) out.push(`${where}: by the spawn or the flag`);
+    const y0 = r.place === 'top' ? d.ty - r.clear : d.ty + 1;
+    const room = Array.from({ length: d.span * r.clear }, (_, n) => (y0 + (n % r.clear)) * level.w + d.tx + Math.floor(n / r.clear));
+    if (room.some((c) => kept.has(c))) out.push(`${where}: on or against a loot box or item stand`);
   }
   return out;
 }
