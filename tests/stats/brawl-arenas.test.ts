@@ -27,6 +27,10 @@ interface Arena {
   mirrored: number;
   /** Distinct rows the field stands on. */
   tiers: number;
+  /** Stand cells the field reaches: places to stand, and to be knocked off. */
+  stands: number;
+  /** Boxes the arena hangs. */
+  boxes: number;
   shape: string;
   fallback: boolean;
 }
@@ -71,6 +75,8 @@ function measure(lv: Level): Arena {
     wall: Math.max(run(0), run(w - 1)),
     mirrored: both / solid,
     tiers: rows.size,
+    stands: reach.size,
+    boxes: lv.setPieces.filter((p) => p.def.key === 'loop-box').length,
     shape: lv.style.split(':arena-')[1] ?? lv.style,
     fallback: lastGenInfo.fallback,
   };
@@ -94,6 +100,15 @@ describe('Brawl arenas', () => {
   it('every shape comes up in a fair share', () => {
     expect(Object.keys(shapes).sort()).toEqual(['bowl', 'pyramid', 'tiers']);
     for (const n of Object.values(shapes)) expect(n / all.length).toBeGreaterThan(0.18);
+  });
+  it('every arena hangs at least three boxes', () => expect(Math.min(...all.map((a) => a.boxes))).toBeGreaterThanOrEqual(3));
+  it('every set gives the field about as many places to stand as the busiest (low gravity included)', () => {
+    const per = THEME_IDS.map((theme) => {
+      const mine = arenas.filter((x) => x.theme === theme);
+      return mine.reduce((s, x) => s + x.a.stands, 0) / mine.length;
+    });
+    console.log(`stand cells by set: ${THEME_IDS.map((t, i) => `${t} ${Math.round(per[i])}`).join(', ')}`);
+    expect(Math.min(...per)).toBeGreaterThan(0.8 * Math.max(...per));
   });
   it('every set builds arenas of several tiers', () => {
     for (const theme of THEME_IDS) expect(Math.min(...arenas.filter((x) => x.theme === theme).map((x) => x.a.tiers)), theme).toBeGreaterThanOrEqual(3);

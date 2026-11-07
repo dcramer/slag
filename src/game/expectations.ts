@@ -72,11 +72,13 @@ export const LEAD_HOLDS = {
  * `BONK_CREDIT`), thrown or bumped into the level. How hard it's fought (tests/lib/bot-race.ts `Fight`): `contact`
  * and `hit`, seconds from GO to the first touch or bonk and to the first bonk; `uses`, items used a round; `still`
  * and `retreat`, the shares of frames in it standing still and moving away from the nearest rival; `gap`, the tiles
- * to that rival. Measured bare 0%, 23.7 s, 66%, 1.6 s, 3.8 s, 10.2 uses, 9%, 19%, 4.2 tiles; placed 8%, 21.4 s, 54%,
- * 1.5 s, 4.1 s, 7.5 uses, 11%, 18%, 5.6 tiles (26 of 48 and 29 of 64 rounds in 20–40 s, 7 and 9 under 10 s; 41 and 30
+ * to that rival. Measured bare 4%, 25.7 s, 66%, 1.4 s, 3.5 s, 12.9 uses, 10%, 20%, 4.7 tiles; placed 3%, 22.8 s, 61%,
+ * 1.2 s, 3.1 s, 9.6 uses, 10%, 18%, 4.2 tiles (29 of 48 and 27 of 64 rounds in 20–40 s, 4 and 6 under 10 s; 28 and 29
  * deaths off the sides of the map), on arenas of their own (gen/level/builders/arena.ts): tiers of ledges to the top
- * of the screen, open sides. A knock kills more often, so rounds are shorter, and the field, spread over the tiers,
- * meets a little later and goes round more to get at a rival. From bare 8%, 26.6 s, 53%, 0.8 s, 3.8 s, 12.2 uses, 11%,
+ * of the screen, open sides, three boxes or more, the middle filled. A knock kills more often, so rounds are a little
+ * shorter, and the field, spread over the tiers, meets a little later and goes round more to get at a rival. The
+ * arenas' first cut (one box short in a tenth of them, an empty middle, low gravity's gaps and tiers) measured bare
+ * 0%, 23.7 s, 66%, 26 of 48 in 20–40 s, 41 off the sides; placed 8%, 21.4 s, 54%, 29 of 64, 30. From bare 8%, 26.6 s, 53%, 0.8 s, 3.8 s, 12.2 uses, 11%,
  * 17%, 3.9 tiles; placed 14%, 24.2 s, 39%, 0.8 s, 3.8 s, 8.9 uses, 15%, 15%, 4.0 tiles (28 of 48 and 28 of 64 in
  * 20–40 s, 4 and 10 under 10 s, 3 placed ones without a knock or a shove; 13 and 16 off the sides) on the race course
  * with walled ends, since the motor fights with haste (`StrategyDef.haste`, src/brain/motor.ts): it picks again as soon as its
@@ -111,18 +113,18 @@ export const BRAWL_ROUNDS = {
       uses: [9, 15],
       still: [0, 0.14],
       retreat: [0, 0.21],
-      gap: [0, 4.6],
+      gap: [0, 5.2],
     },
     placed: {
       draws: [0, 0.2],
       seconds: [18, 25],
-      knocked: [0.45, 0.62],
+      knocked: [0.5, 0.7],
       contact: [0, 1.9],
       hit: [0, 5],
       uses: [7, 11],
       still: [0, 0.18],
       retreat: [0, 0.2],
-      gap: [0, 6.2],
+      gap: [0, 4.8],
     },
   },
 } as const satisfies {

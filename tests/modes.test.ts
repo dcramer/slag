@@ -13,7 +13,7 @@ import { rollKind } from '../src/gen/level/weather';
 import { generateTheme } from '../src/gen/theme';
 import { hashMatch, restoreMatch, snapshotMatch } from '../src/net/snapshot';
 import { FPS, LEVEL_H, LEVEL_W, POP_HOLD, RUN_COUNTDOWN, TILE } from '../src/sim/constants';
-import { isProtected, lapShift, type Level, LOOP_BAND, LOOP_SPAWN, T_SOLID } from '../src/sim/level';
+import { isProtected, lapShift, type Level, LOOP_BAND, LOOP_SPAWN, T_ONEWAY, T_SOLID } from '../src/sim/level';
 import { barrierOf, footprintCells, MIN_OPENING, type ModuleOf, moduleSim, newPropState, phaseCycle, type PlacedProp, resolveProp } from '../src/sim/props';
 import { bodyAtCell } from '../src/sim/physics';
 import { feetUp, RunWorld } from '../src/sim/run';
@@ -475,13 +475,15 @@ describe("a brawl's arena", () => {
       expect([...there.reachable].some((k) => Math.floor(k / w) < h / 2)).toBe(true);
       const open = (x: number) => Array.from({ length: h }, (_, y) => lv.tiles[y * w + x]).filter((t) => t === 0).length;
       expect(Math.min(open(0), open(w - 1))).toBeGreaterThan(h / 2);
-      // Boxes in mirrored pairs (and maybe one in the middle), each over a floor the field reaches, with room on top.
+      // At least three boxes, a mirrored pair among them, each over a floor the field reaches, with room on top.
       const boxes = lv.setPieces.filter((p) => p.def.key === 'loop-box').map((p) => p.def.footprint[0]);
-      expect(boxes.length).toBeGreaterThanOrEqual(2);
+      expect(boxes.length).toBeGreaterThanOrEqual(3);
+      expect(boxes.some(([x, y]) => boxes.some(([mx, my]) => mx !== x && mx === w - 1 - x && my === y))).toBe(true);
       for (const [x, y] of boxes) {
         expect(there.reachable.has((y + 2) * w + x), `box ${x},${y}`).toBe(true);
         expect([lv.tiles[(y - 1) * w + x], lv.tiles[(y - 2) * w + x]]).toEqual([0, 0]);
-        if (Math.abs(2 * x - (w - 1)) > 2) expect(boxes.some(([mx, my]) => mx === w - 1 - x && my === y)).toBe(true);
       }
+      // Nothing in the top rows but what the set's look hangs as a whole (a canopy): no board up there nobody reaches.
+      for (let x = 0; x < w; x++) expect([lv.tiles[x], lv.tiles[w + x]]).not.toContain(T_ONEWAY);
     });
 });
