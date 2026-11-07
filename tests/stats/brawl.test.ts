@@ -25,7 +25,7 @@ interface Measure extends Record<BrawlMeasure, number> {
   /** Seconds from GO to the first touch or bonk, and to the first bonk, mean over rounds (a round with none counts its length). */
   contact: number;
   hit: number;
-  /** Items used a round. */
+  /** Items used a minute of fighting (from GO to the round's end), so a shorter round doesn't read as fewer swings. */
   uses: number;
   /** Shares of the frames someone was in it standing still, and moving away from the nearest rival, and the mean tiles to that rival. */
   still: number;
@@ -54,7 +54,7 @@ function measure(name: Arena, rounds: BotRound[]): Measure {
     knocked: knocked / deaths,
     contact: sum((r) => (r.fight.contact < 0 ? r.frames : r.fight.contact)) / 60 / rounds.length,
     hit: sum((r) => (r.fight.hit < 0 ? r.frames : r.fight.hit)) / 60 / rounds.length,
-    uses: sum((r) => Object.values(r.uses).reduce((a, b) => a + b, 0)) / rounds.length,
+    uses: sum((r) => Object.values(r.uses).reduce((a, b) => a + b, 0)) / (sum((r) => r.frames) / 3600),
     still: sum((r) => r.fight.still) / frames,
     retreat: sum((r) => r.fight.retreat) / frames,
     gap: sum((r) => r.fight.gap) / frames,
@@ -65,10 +65,10 @@ function measure(name: Arena, rounds: BotRound[]): Measure {
   // A quick round nobody was knocked or shoved out of: the field walked into the level by itself.
   const blind = quick.filter((r) => r.fight.shoved === 0 && !Object.keys(r.causes).some((k) => k.endsWith('+'))).length;
   console.log(
-    `${name}: ${rounds.length} rounds, ${Math.round(m.draws * 100)}% draws, ${m.seconds.toFixed(1)} s a round (${within} in 20–40 s, ${quick.length} under 10 s, ${blind} with nobody knocked or shoved), ${Math.round(m.knocked * 100)}% of ${deaths} deaths knocked into it; ${JSON.stringify(causes)}`,
+    `${name}: ${rounds.length} rounds, ${Math.round(m.draws * 100)}% draws, ${m.seconds.toFixed(1)} s a round (${within} in ${BRAWL_ROUNDS.targets.seconds[0]}–${BRAWL_ROUNDS.targets.seconds[1]} s, ${quick.length} under 10 s, ${blind} with nobody knocked or shoved), ${Math.round(m.knocked * 100)}% of ${deaths} deaths knocked into it; ${JSON.stringify(causes)}`,
   );
   console.log(
-    `${name}: first contact ${m.contact.toFixed(1)} s, first bonk ${m.hit.toFixed(1)} s, ${(sum((r) => r.fight.bonks) / rounds.length).toFixed(1)} bonks and ${m.uses.toFixed(1)} uses a round, ${Math.round(m.still * 100)}% still, ${Math.round(m.retreat * 100)}% retreating, ${m.gap.toFixed(1)} tiles to the nearest rival, ${sum((r) => r.fight.shoved)} deaths shoved, ${Math.round(
+    `${name}: first contact ${m.contact.toFixed(1)} s, first bonk ${m.hit.toFixed(1)} s, ${(sum((r) => r.fight.bonks) / rounds.length).toFixed(1)} bonks a round, ${m.uses.toFixed(1)} uses a minute of fighting, ${Math.round(m.still * 100)}% still, ${Math.round(m.retreat * 100)}% retreating, ${m.gap.toFixed(1)} tiles to the nearest rival, ${sum((r) => r.fight.shoved)} deaths shoved, ${Math.round(
       (sum((r) => r.fight.safe) /
         Math.max(
           1,
