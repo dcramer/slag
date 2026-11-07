@@ -1163,6 +1163,26 @@ export const BRIEFS: Record<string, Brief> = {
     // bucket, the shoelace frayed.
     worn: "the dark ball hanging from the helmet's handle is gone, and the thin wire handle hangs empty down the helmet's side; his front mitt, on the right of the picture, now holds a charcoal bowling ball (#34343c) about as big as his torso, with three finger holes, out ahead of him low at hip height with white background all round it and between it and his body, a short frayed white shoelace sticking up from its top as a fuse, lit with a small yellow spark; a big blue paint drip (#3a6fd0) runs down the back of the white helmet from its crown; a chunk is cracked out of the helmet's rolled rim at the back. The helmet's round shape, the coiled spring with its orange ball and the dark face slot with its two white eyes stay exactly as they are. No drop shadow behind him.",
   },
+  climber: {
+    // The nod, each part of the read at race size and each a shape in outline: the big messy mop of red hair floating
+    // up and streaming back off her head as if in a wind, as big as the rest of her head and more, with background
+    // round its ragged tips (the read: short and loose, never the archer's braids beside a bow, the raider's one
+    // braid or the genie's ponytail from the crown); the puffy banded parka to her hips (her bulk under the hair); her
+    // size, a small girl on slim legs in chunky boots, leaning forward into the climb (the top-hat girl is small too,
+    // but her read is a hat as tall as she is).
+    // Ours, and the joke: the parka is a sleeping bag with arms cut in, the backpack a lunchbox on a string, and the
+    // strawberry on her pocket a plastic fridge magnet.
+    // The palette is neutral (Decisions 4): the parka in the player's colour, its puffy bands a light of it; the red
+    // hair a fixed tone the read needs (hair is a neutral), the skin, the lunchbox, the leggings and the boots neutrals.
+    // Side on: her read is a profile, the hair streaming back behind it. The lunchbox is drawn grey and ships a tan tin:
+    // grey at play size read as nothing, tan as her pack (art/sprites/climber/design.prompt.txt).
+    design:
+      'A small determined girl seen side on in profile facing right, leaning forward, one boot stepping ahead. Her signature, big and bold: a big messy mop of bright red hair (#c8382e), chin length, floating up and streaming back behind her head as if in a strong wind, as big as her head, with white background round its ragged tips. ' +
+      'A puffy quilted parka to her hips made from a blue sleeping bag (#3f6fb5) with arms cut in, fat puffy bands (pale blue #a8c4e8), a red strawberry magnet on its pocket. A small grey lunchbox on a string as a backpack. Slim dark leggings, chunky brown boots, pale skin, dot eyes.',
+    // Off the face and the hair: stuffing out of a torn hem, tape round a sleeve, the lunchbox's lid hanging open,
+    // a boot's sole flapping.
+    worn: "a big ragged tear in the parka's hem with a white tuft of stuffing poking out of it; a strip of grey tape (#9a9c98) wrapped round the near sleeve; the grey lunchbox's lid hanging open on one hinge; the back boot's sole flapping loose at the toe. Her face, the red hair's size and shape streaming back and the puffy parka stay exactly as they are.",
+  },
 };
 
 function brief(kind: string): Brief {
