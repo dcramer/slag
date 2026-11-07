@@ -1115,6 +1115,27 @@ export const BRIEFS: Record<string, Brief> = {
     // towel's corner frayed, a boot's lace trailing.
     worn: "the near oven-mitt glove has a big dark brown scorch mark on its side; the grey tape on the near wrist has come loose and one end flaps out; one corner of the tea towel is frayed ragged; the back boot's lace has come undone and trails. Both gloves stay big and round, held up in front of his chin with white background between them and his face. His face stays as it is.",
   },
+  skeleton: {
+    // The nod, each a shape at race size: the huge round skull, as wide as his shoulders, with the fixed wide toothy
+    // grin and two big dark sockets (the read, and what keeps him off the cuptoon's white cup head: a cup is a flat-
+    // topped box with a lid, a handle and a straw, this is a ball with a grin); one socket lit, a pale glow in it; the
+    // baggy hoodie with its thick fur-trimmed hood down round the neck, a collar between skull and body; both hands
+    // in the pockets, so no arms stand out (his lazy slouch, and nobody else in the cast is armless in a coat); the
+    // shorts, the thin bone legs and the slippers under it.
+    // Ours, and the joke: he's a plastic Halloween decoration come loose. A moulding seam runs over the skull, rivets
+    // show at his knees, the hoodie is a hand-me-down with a ragged hem, and a ketchup squeeze bottle sticks up out of
+    // the side pocket, standing proud of the outline. The design drew a hanging loop on the crown too, but the
+    // drawings ship without it: on the crown, in every form tried, the round skull read as a ghost's, an onion, an
+    // egg or an antenna, and the homage went (art/sprites/skeleton/design.prompt.txt).
+    // The palette is neutral (Decisions 4): the hoodie in the player's colour, the bottle a light of it; the skull
+    // and bones bone white, the fur a mid grey apart from the skull, the shorts a dark grey, the slippers a pale
+    // grey; the glow a cool fixed tone, a face mark.
+    design:
+      'A short stocky cartoon skeleton in a three-quarter view facing right, slouching lazily: a huge round bone-white plastic skull (#f4f1e8), as wide as his shoulders, with a fixed wide toothy grin and a thin moulding seam down its middle, two big black eye sockets, the near one with a pale cyan glowing pupil (#9fe0ff), and a small plastic hanging loop sticking up off the top of the skull with a snapped string end. ' +
+      'A baggy blue hoodie (#3f7fc4) two sizes too big, its hem down to his knees, a thick grey fur-trimmed hood (#a9a296) down round his neck, both hands deep in its pockets, a red ketchup squeeze bottle (#d63a2a) sticking up out of the side pocket. Dark grey baggy shorts (#3a3a40), thin bone legs with round rivets at the knees, fluffy pale grey slippers (#d8d4cc).',
+    // Off the face and off the skull's round outline: the hem torn, a slipper's sole flapping, a rivet gone.
+    worn: "the hoodie's hem has a big ragged tear on one side; the near slipper's sole has come loose at the toe and flaps open; the rivet at the near knee is missing, leaving a dark hole and the knee bent a little crooked; the ketchup bottle's cap is snapped open. The skull, the grin, the eye sockets, the hanging loop, the fur hood and the hands in the pockets stay exactly as they are.",
+  },
   junior: {
     // No homage and no twist: Junior is Sentry's own robot, which the owner's team made (docs/characters/junior.md), so
     // the design is the reference (art/sprites/junior/reference.png) redrawn flat, every trait kept: the square yellow
