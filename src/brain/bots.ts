@@ -1,7 +1,7 @@
 import { deriveSeed } from '../core/rng';
 import type { BotLevel, Match } from '../game/match';
 import type { InputFrame } from '../sim/types';
-import { botDevice, isBotDevice } from './device';
+import { botDevice, isBotDevice } from '../game/device';
 import { Motor } from './motor';
 import { type Personality, rollPersonality } from './personality';
 import { rollTemperament, type Temperament, temper } from './temperament';

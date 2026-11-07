@@ -9,6 +9,7 @@ import { generateLevel, planHolds } from '../src/gen/level';
 import { GATE_AT, GATE_HOLD } from '../src/gen/level/loop-gates';
 import { LOOP_ROWS, LOOP_W, rollProfile } from '../src/gen/level/profile';
 import { LOOP_HEAD_START } from '../src/gen/level/tide';
+import { rollKind } from '../src/gen/level/weather';
 import { generateTheme } from '../src/gen/theme';
 import { hashMatch, restoreMatch, snapshotMatch } from '../src/net/snapshot';
 import { FPS, LEVEL_H, LEVEL_W, POP_HOLD, RUN_COUNTDOWN, TILE } from '../src/sim/constants';
@@ -438,5 +439,15 @@ describe('survival scoring', () => {
     expect(scoreSurvival([fate(0, 900)], [], {}, () => 0.5).awards).toEqual([{ slot: 0, points: POINTS.survive / 2, reason: 'survive' }]);
     expect(scoreSurvival([fate(0, 900)], [], {}, () => 1.2).finishers).toEqual([0]);
     expect(scoreSurvival([fate(0, 90)], [], {}, () => 0).verdict).toBe('too-hard');
+  });
+});
+
+describe("a brawl's weather", () => {
+  it('never mists the arena: a mist roll comes out clear', () => {
+    const seeds = Array.from({ length: 60 }, (_, i) => i + 1)
+      .filter((s) => rollKind(s, 'jungle') === 'mist')
+      .slice(0, 3);
+    expect(seeds.length).toBeGreaterThan(0);
+    for (const s of seeds) expect(generateLevel(s, 'jungle', MODES.brawl.profile).weather?.kind ?? 'clear').toBe('clear');
   });
 });

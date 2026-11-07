@@ -37,7 +37,7 @@ src/net/
   signal-client.ts      browser side of the API; the one place that knows where the API lives
   signal-protocol.ts    wire types and limits, shared with the routes; pure
   session.ts            NetSession: lockstep, prediction, sync, migration, desync detection
-  actions.ts            host-sequenced match actions (join/leave/away/name/look/salt/rules/kick), who may ask for each, device ids + replicated NetState
+  actions.ts            host-sequenced match actions (join/leave/away/name/look/salt/start/rules/kick), who may ask for each, device ids + replicated NetState
   wire.ts               the trust boundary: message types, size limits, parseMsg/parseAction
   codec.ts              compact InputFrame encoding
   snapshot.ts           Match snapshot/restore/hash (exact through JSON: -0, NaN, ∞, Maps, typed arrays)
@@ -180,7 +180,7 @@ The sim is a pure function of `(seed, per-frame inputs)`, so **inputs and host-s
 - **Jitter buffer** (`src/net/pace.ts`). How deep a guest's queue sits is set by how early its frames arrive, so the guest sets it. The host measures each frame's slack (how long it waited before it was played, negative if late) and sends each guest, on its bundles (`d`), how far its slack is from what its link needs: one frame of margin plus how far its arrivals dip below their running mean, all but the rarest dips (about one in forty), at most 100 ms. The guest runs its ticks up to 3% fast or slow until it's there (the game loop scales its clock by `NetSession.pace`). On a clean link a frame arrives just before the tick that plays it; jitter and burst loss buy a deeper queue, each frame of it 17 ms of lag for everyone watching that guest, against a frame of correction for each one played held. Ticks a host runs back to back catching up after its own stall aren't measured.
 - **Folding** is the safety valve: a queue that stays three frames past what its guest needs for 250 ms (a stalled tab catching up all at once) is folded down to it, edges OR-ed. A host catching up after its own stall drains its queues as fast as they filled, and folds nothing, since every frame in them lands where predicted. Past 90 frames the oldest fold at once, whatever the guest sends.
 - The host stamps `{frame, inputs, actions, ack deltas}` into a **bundle**, applies it, and sends it every tick. Each send to a peer carries the new bundles and every one since the frame that peer last said it needs (the `c` on its input), newest first within 1100 characters, so the datagram stays one packet (at least the bundle before the new ones; a watcher, which rarely says, gets that). A burst of lost datagrams costs nothing until it outlasts what fits: with two players about 10 bundles, with eight the 2 there always were. Guests apply bundles strictly in frame order, the moment they arrive. A gap the resends don't fill triggers `need`, and the host resends from its 10 s history or sends a snapshot.
-- Discrete changes (seat a rejoiner, drop a leaver, mark away, rename, a saved look, rules, the crate salt) are **actions** in bundles, applied by everyone at the same frame.
+- Discrete changes (seat a rejoiner, drop a leaver, mark away, rename, a saved look, rules, the crate salt, the host's Start) are **actions** in bundles, applied by everyone at the same frame.
 - Sequence numbers start at wall-clock ms, so a refreshed page always counts higher than its old self.
 
 ### Trust boundary

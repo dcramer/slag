@@ -93,6 +93,8 @@ const player: Script = (s, f, rng) => {
   if (m.phase === 'lobby') {
     // Join right away; ready up (confirm again) once at least two players are in.
     const me = m.players.find((p) => p.device === s.globalDevice('kb1'));
+    // The host presses Start once everyone is ready, as its screen would.
+    if (s.isHost && m.canStart()) s.act({ t: 'start' });
     return (!me || (!me.ready && m.players.length >= 2)) && f % 20 === 0 ? { kb1: press({ confirmPressed: true }) } : {};
   }
   if (m.phase === 'pick' || m.phase === 'place')
@@ -469,7 +471,9 @@ describe('kick', () => {
     r.scripts.set('aaaa', (_s, f) => (f % 40 === 0 ? { kb1: ready } : {}));
     r.scripts.set('bbbb', (_s, f) => (f % 40 === 0 ? { kb1: ready } : {}));
     r.scripts.set('cccc', (_s, f) => (f % 40 === 0 ? { kb1: ready } : {}));
-    for (let i = 0; i < 200 && a.match.phase === 'lobby'; i++) r.run(1);
+    for (let i = 0; i < 200 && !a.match.canStart(); i++) r.run(1);
+    a.act({ t: 'start' });
+    for (let i = 0; i < 60 && a.match.phase === 'lobby'; i++) r.run(1);
     expect(a.match.phase).toBe('pick');
     r.scripts.clear();
     for (const id of ['aaaa', 'bbbb', 'cccc']) r.scripts.set(id, () => ({}));
@@ -492,6 +496,43 @@ describe('kick', () => {
     r.run(60);
     expect(back.status).toBe('kicked');
     expect(devices(c)).toEqual(['cccc:kb1']);
+  });
+});
+
+describe('Start', () => {
+  /** Ready this peer's own seat, then press nothing. */
+  const readyUp: Script = (s, f) => {
+    const me = s.match.players.find((p) => p.device === `${s.self}:kb1`);
+    return me && !me.ready && f % 20 === 0 ? { kb1: press({ confirmPressed: true }) } : {};
+  };
+
+  it("is the host's alone, still works after the host leaves the lobby, and starts every peer on one frame", () => {
+    const r = new Room({ latency: 20 });
+    const a = r.join('aaaa', readyUp);
+    r.run(5);
+    const b = r.join('bbbb', readyUp);
+    r.run(5);
+    const c = r.join('cccc', readyUp);
+    for (let i = 0; i < 300 && !(b.match.canStart() && c.match.canStart()); i++) r.run(1);
+    expect(a.match.canStart() && b.match.canStart() && c.match.canStart()).toBe(true);
+    r.run(120);
+    expect([a, b, c].map((s) => s.match.phase)).toEqual(['lobby', 'lobby', 'lobby']);
+    // A guest's Start is refused by the host, never sequenced.
+    c.act({ t: 'start' });
+    r.run(60);
+    expect([a, b, c].map((s) => s.match.phase)).toEqual(['lobby', 'lobby', 'lobby']);
+    // The host leaves: the next in line hosts, and its Start is the one that counts.
+    r.leave('aaaa');
+    for (let i = 0; i < 600 && !b.isHost; i++) r.run(1);
+    r.run(60);
+    expect(b.isHost).toBe(true);
+    expect(b.match.canStart()).toBe(true);
+    b.act({ t: 'start' });
+    for (let i = 0; i < 120 && c.match.phase === 'lobby'; i++) r.run(1);
+    expect([b, c].map((s) => s.match.phase)).toEqual(['pick', 'pick']);
+    const [hb, hc] = r.settle();
+    expect(hc.frame).toBe(hb.frame);
+    expect(hc.hash).toBe(hb.hash);
   });
 });
 

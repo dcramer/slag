@@ -1,7 +1,7 @@
 import 'client-only';
 import { pageAudio } from './audio/page';
 import { type BotBudget, BotSeats } from './brain/bots';
-import { isBotDevice } from './brain/device';
+import { isBotDevice } from './game/device';
 import { parseSeed } from './core/rng';
 import { installDebug } from './debug';
 import { type GenInfo, lastGenInfo } from './gen/level';
@@ -332,7 +332,15 @@ function startGame(container: HTMLElement, room: string, params: URLSearchParams
           return true;
         }
         return { device: b.device ?? input.pointerDevice, confirm: true };
-      case 'ready':
+      case 'start':
+        if (mayStart()) net.act({ t: 'start' });
+        return true;
+      case 'ready': {
+        // A card's Ready! still un-readies once Start shows: its confirm isn't the one that presses Start.
+        const device = b.device ?? input.pointerDevice;
+        unreadyClicks.add(device); // the frame it lands in is keyed by this same id (InputManager.sample)
+        return { device, confirm: true };
+      }
       case 'continue':
         return { device: b.device ?? input.pointerDevice, confirm: true };
       case 'look':
@@ -529,6 +537,30 @@ function startGame(container: HTMLElement, room: string, params: URLSearchParams
     hoverKey = key;
   }
 
+  /**
+   * This screen presses Start once the lobby can start: offline any seat played here, online the host's. Bots never
+   * press it; a lobby of nothing but bots starts itself (Match.stepLobby).
+   */
+  function mayStart(): boolean {
+    return match.canStart() && (net.isHost || !net.transport) && match.players.some((p) => net.isLocal(p.device) && !isBotDevice(p.device) && !p.afk);
+  }
+  /** Devices whose Ready! card button was clicked since the last sample: their confirm un-readies. */
+  const unreadyClicks = new Set<string>();
+  /** Once Start shows, a ready local player's confirm presses it instead of un-readying. Consumes the confirm it uses. */
+  function startInput(frames: Record<string, InputFrame>) {
+    let pressed = false;
+    if (mayStart())
+      for (const [dev, f] of Object.entries(frames)) {
+        if (!f.confirmPressed || unreadyClicks.has(dev) || isBotDevice(dev)) continue;
+        const p = match.players.find((q) => q.device === net.globalDevice(dev) || q.device === dev);
+        if (!p?.ready) continue;
+        f.confirmPressed = false; // two seats pressing at once both start it; neither un-readies
+        pressed = true;
+      }
+    if (pressed) net.act({ t: 'start' });
+    unreadyClicks.clear();
+  }
+
   /** The lobby's host (or an offline game), seated itself, with a seat to spare. */
   function canAddBots(): boolean {
     return (
@@ -593,6 +625,7 @@ function startGame(container: HTMLElement, room: string, params: URLSearchParams
       const seatAction = conn.seatInput(frames);
       if (seatAction) runAction(seatAction);
       conn.lobbyInput(frames);
+      startInput(frames);
       nameInput(frames);
       Object.assign(
         frames,
@@ -623,6 +656,7 @@ function startGame(container: HTMLElement, room: string, params: URLSearchParams
     uiHover();
     renderer.hud.mouseDevice = myDevice();
     renderer.hud.canAddBots = canAddBots();
+    renderer.hud.canStart = mayStart();
     renderer.hud.net = conn.hudInfo();
     conn.toast((msg) => renderer.hud.toast(msg, 3000, true)); // every net toast is bad news
     inputMode.update();
