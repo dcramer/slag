@@ -63,8 +63,8 @@ const BRAWL_SHOVE: ShoveRules = { share: 0.5, carry: true, check: 180 };
 /**
  * A brawl's build-up (`RunRules.buildup`): every rival's hit taken throws the next a quarter as hard again, up to six.
  * Distance goes as the square of it: a noodle carries someone standing still 10.8 tiles fresh, 25 after two hits, 46 after
- * four; a bat's tap 5.5, 13 and 24. Against 0.1, 0.15, 0.2 and a curve on the square of the hits, it alone put both
- * deaths off the sides and the share knocked up on the bare arena and with parts placed, rounds staying about 20 s.
+ * four; a bat's tap 5.5, 13 and 24. It took the share of deaths knocked from 70% to 73% bare and 63% to 66% with parts
+ * placed, rounds staying about 17 s; 0.35 ran most rounds with parts placed under 15 s (41 of 64), 0.1 to 0.2 moved little.
  */
 const BRAWL_BUILDUP: BuildUp = { per: 0.25, max: 6 };
 
