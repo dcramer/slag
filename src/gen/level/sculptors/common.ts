@@ -118,8 +118,8 @@ export function hardGap(rng: Rng, parts = 1): number {
  * flight of those starts on the floor and seals the storey it stands in
  * instead of floating at head height.
  */
-export function easyRise(): number {
-  return Math.max(2, Math.floor(jumpMetrics(probeGravity()).jumpHeight - difficultyKnobs().riseSlack));
+export function easyRise(gravity = probeGravity()): number {
+  return Math.max(2, Math.floor(jumpMetrics(gravity).jumpHeight - difficultyKnobs().riseSlack));
 }
 
 /**

@@ -17,6 +17,8 @@ const ROWS_PER_BOX = 12;
 const COLS_PER_BOX = 16;
 /** Rows (round a loop) or columns (an arena) apart two boxes must be, so they spread out. */
 const MIN_APART = 9;
+/** Columns apart an arena's last box may be from the others when its set pieces leave it no room `MIN_APART` off. */
+const CLOSE_APART = 5;
 /** Frames a loop's box takes to fill again: about a lap's worth of climbing behind you. */
 const REFILL = 5 * 60;
 
@@ -88,13 +90,13 @@ export function loopBoxes(
   const at = (x: number, y: number): PlacedProp => ({ uid: 0, def: boxAt(x, y, rng.int(0, 1 << 20), deal), owner: -1, tx: 0, ty: 0, rot: 0 });
   if (stands) {
     // An arena's ends are mirrored, and so are its boxes: a pair, one each side, then one in the middle, so neither
-    // end is nearer its first item. With no spot in the middle, another pair.
+    // end is nearer its first item. With no spot in the middle, another pair. `add(x, y, true)` hangs one alone.
     const { w } = level;
     const mirrorOf = (x: number) => w - 1 - x;
     const isMiddle = (x: number) => Math.abs(x - mirrorOf(x)) <= 2;
-    const add = (x: number, y: number, middle: boolean) => {
+    const add = (x: number, y: number, middle: boolean, apart = MIN_APART) => {
       const xs = middle ? [x] : [x, mirrorOf(x)];
-      if (!xs.every((bx) => out.every((o) => Math.abs(o.def.footprint[0][0] - bx) >= MIN_APART))) return;
+      if (!xs.every((bx) => out.every((o) => Math.abs(o.def.footprint[0][0] - bx) >= apart))) return;
       if (!middle && (x * 2 >= w - MIN_APART || !hangs(level, mirrorOf(x), y, taken, stands))) return;
       const boxes = xs.map((bx) => at(bx, y));
       if (keep([...pieces, ...out, ...boxes])) out.push(...boxes);
@@ -102,6 +104,11 @@ export function loopBoxes(
     for (const [x, y] of spots) if (out.length < want - 1 && !isMiddle(x)) add(x, y, false);
     for (const [x, y] of spots) if (out.length < want && isMiddle(x)) add(x, y, true);
     for (const [x, y] of spots) if (out.length < want && !isMiddle(x)) add(x, y, false);
+    // The set pieces went in first and aren't mirrored, so a spot's mirror may be taken, and a set piece may stand in
+    // the middle: then the spot nearest the middle, unpaired, and if need be a little closer to the others, so an arena
+    // never deals from fewer than `want`.
+    const byMiddle = [...spots].sort((a, b) => Math.abs(2 * a[0] - (w - 1)) - Math.abs(2 * b[0] - (w - 1)));
+    for (const apart of [MIN_APART, CLOSE_APART]) for (const [x, y] of byMiddle) if (out.length < want) add(x, y, true, apart);
     return out;
   }
   for (const [x, y] of spots) {
