@@ -3,6 +3,7 @@ import { Grid, POCKET, T_EMPTY, T_ONEWAY, T_SOLID } from '../kit';
 import { jumpProfile } from '../probe';
 import { easyRise, hopGap, knobs, LAST_RESORT } from '../sculptors/common';
 import type { Storey, TallKit } from '../sculptors/tall';
+import type { TileRect } from '../../../sim/level';
 import type { SculptCtx, Shape } from '../types';
 
 /**
@@ -17,8 +18,12 @@ import type { SculptCtx, Shape } from '../types';
  * the arena's, the same for every set). The two ends mirror each other (the same tiers, ledges and kinds; the set's
  * floor varies the details), so neither spawn gets the high ground.
  *
+ * It's laid round a centre (`CENTRES`), first: a pit in the middle, the halls, or an arch over the main crossing, the
+ * room the set's own hazard stands in before any other piece as the arena's centrepiece (`Shape.centre`,
+ * setpieces/place.ts `placeCentre`); a pit arena has no halls, its ledges running to the pit instead.
+ *
  * What varies by seed: how the tiers fill the screen (`SHAPES`: full tiers, a pyramid with the high ground in the
- * middle, a bowl with it at the sides), which tier the two spawns stand on, the tiers' rows, the bands and shafts,
+ * middle, a bowl with it at the sides), its centre, which tier the two spawns stand on, the tiers' rows, the bands and shafts,
  * whether the halls stand by the sides or by the middle, which ledges are boards you jump up through and which are the
  * set's own floor, and which islands of the bottom tier stand on the bottom. It owes no part: every tier is a jump or a
  * drop from the next, shafts are walking jumps (`hopGap`), and the pipeline proves each end reaches the other bare.
@@ -66,11 +71,39 @@ const HALL_ROWS = 9;
 /** Rows a hall's pier hangs under its roof. */
 const PIER = 4;
 
+/**
+ * What the arena is built round (`Shape.centre`): the room its centrepiece stands in, the set's own hazard that goes in
+ * before any other set piece, and the ledges laid to bring the fight to it.
+ * - `pit`: the middle is a pit `PIT_HALF` × 2 columns wide, clear from the top of the view down, with no halls: ledge
+ *   bands all the way to it, every tier's running to its lips, so a knock off one falls in. For what rises out of a pit,
+ *   leaps across one or sweeps it.
+ * - `halls`: the two halls, where they'd stand anyway, for what stands on a floor or hangs from a ceiling: a pair, one
+ *   in each, mirrored across the middle.
+ * - `arch`: the main crossing, a floor across the middle on the bottom tier `ARCH_HALF` columns either side, and a beam
+ *   over its middle `ARCH` rows up with nothing else between, for what swings or drops across the way over: a log, an
+ *   axe, a hook. Tiers go on over the beam; the halls stand only where they keep most of their width.
+ * A kind none of the set's hazards stood in (`SculptCtx.noCentre`) isn't laid again in that draw. Weighted by how
+ * hard bots fight round it (tests/stats/brawl.test.ts): the halls' pair keeps the field apart most (7 to 9 tiles to the
+ * nearest rival, against 5 round a pit or an arch) and kills least, so they come up least, the arch most.
+ */
+const CENTRES = ['pit', 'halls', 'arch'] as const;
+const CENTRE_WEIGHTS: Record<(typeof CENTRES)[number], number> = { pit: 2, halls: 1, arch: 4 };
+/** Half a pit's width: as wide as a walking jump at normal gravity, and as a serpent's leap needs. */
+const PIT_HALF = 2;
+/** Half the crossing under an arch: as wide as a slung log's swing (`jungle.ts` logTraps) and then some. */
+const ARCH_HALF = [4, 5] as const;
+/** Rows from the crossing's stand row up to the beam's: what hangs from it swings through a runner's height over the floor. */
+const ARCH = 7;
+/** Half the beam's width. */
+const BEAM_HALF = 2;
+
 /** A band of the left half's columns, a ledge on it every tier; `b` at the half's last column joins its mirror. */
 interface Band {
   a: number;
   b: number;
   hall: boolean;
+  /** The crossing under an arch: a hall whose roof is the beam, tiers going on over it. */
+  arch?: boolean;
 }
 
 /** One ledge of the left half: stand row `row`, columns [a, b]; `b` at the half's last column joins its mirror. */
@@ -98,6 +131,14 @@ export function sculptArena(ctx: SculptCtx, kit: TallKit): Shape {
   const shape = rng.weighted(SHAPES);
   const half = W >> 1;
   const mid = half - 1;
+  // The centre first, of the kinds the set's hazards haven't turned down: the rest is laid round it.
+  const kinds = CENTRES.filter((c) => !ctx.noCentre?.includes(c));
+  let roll = rng.next() * kinds.reduce((t, c) => t + CENTRE_WEIGHTS[c], 0);
+  const centre = kinds.find((c) => (roll -= CENTRE_WEIGHTS[c]) < 0) ?? kinds.at(-1) ?? null;
+  const pitHalf = centre === 'pit' ? PIT_HALF : 0;
+  const archHalf = centre === 'arch' ? rng.int(ARCH_HALF[0], ARCH_HALF[1]) : 0;
+  // The middle's last column a ledge takes: the pit's lip, or the middle itself.
+  const lip = mid - pitHalf;
 
   // Tier rows, bottom first, evenly from the bottom tier up to the top one near the top of the view: as many as keep
   // them at most a jump apart (one rise up through a board or beside a ledge).
@@ -139,15 +180,19 @@ export function sculptArena(ctx: SculptCtx, kit: TallKit): Shape {
   const side = POCKET + rng.int(SPAWN_STEPS[0], SPAWN_STEPS[1]);
   bands.push({ a: 0, b: side - 1, hall: false });
   const x = side + shaft();
-  const across = rng.chance(0.5) ? rng.int(2, 3) : 0;
-  const end = across ? mid - across - shaft() : mid - 1;
+  // A pit or an arch takes the middle; otherwise a ledge across it beyond a shaft, or a shaft.
+  const across = !pitHalf && !archHalf && rng.chance(0.5) ? rng.int(2, 3) : 0;
+  const end = pitHalf ? lip : archHalf ? mid - archHalf - shaft() : across ? mid - across - shaft() : mid - 1;
   // A pyramid's halls stand by the sides, under the air its drawn-in tiers leave; a bowl's by the middle, under its.
   const inner = shape === 'bowl' || (shape === 'tiers' && rng.chance(0.5));
   const room = end - x + 1;
   const c = shaft();
   let w = rng.int(HALL[0], HALL[1]);
   if (room < w + c + 3) w = room >= HALL[0] - 1 + c + 3 ? room - c - 3 : room;
-  if (w === room) bands.push({ a: x, b: end, hall: true });
+  // A pit is the room its arena's pieces ask for, and the ledges round it are its way in: bands all the way to it.
+  // An arch's halls stand only where they keep most of their width.
+  if (pitHalf || (archHalf && room < HALL[0] - 2)) fill(x, end);
+  else if (w === room) bands.push({ a: x, b: end, hall: true });
   else if (inner) {
     fill(x, end - w - c);
     bands.push({ a: end - w + 1, b: end, hall: true });
@@ -156,13 +201,17 @@ export function sculptArena(ctx: SculptCtx, kit: TallKit): Shape {
     fill(x + w + c, end);
   }
   if (across) bands.push({ a: mid - across + 1, b: mid, hall: false });
+  if (archHalf) bands.push({ a: mid - archHalf + 1, b: mid, hall: true, arch: true });
   // A hall's floor is the bottom tier and its roof `HALL_ROWS` over it, the set's floor whole across the band, a
   // ceiling to hang from; no tier takes its band but the floor, so the roof has the sky over it. The roof counts as
   // the tier at or under its row, for the climbs.
   const roofRow = rows[0] - HALL_ROWS;
   const roof = Math.max(1, rows.filter((r) => r >= roofRow).length - 1);
-  const inHall = (band: Band, t: number) => band.hall && t > 0;
-  const hallEnd = Math.max(...bands.filter((b) => b.hall).map((b) => b.b));
+  // An arch's beam, and the tiers over the crossing that go on over it, with two rows of air over the beam.
+  const beamRow = rows[0] - ARCH;
+  const beam = Math.max(1, rows.filter((r) => r >= beamRow).length - 1);
+  const inHall = (band: Band, t: number) => band.hall && t > 0 && (!band.arch || rows[t] > beamRow - 4);
+  const hallEnd = Math.max(-2, ...bands.filter((b) => b.hall).map((b) => b.b));
 
   const ledges: Ledge[] = [];
   // Bricks in miniature: each tier's ledges step in a column at one end and the next tier's at the other, so every
@@ -185,23 +234,26 @@ export function sculptArena(ctx: SculptCtx, kit: TallKit): Shape {
     bands.forEach((band, i) => {
       if (inHall(band, t)) return;
       const spawn = i === 0 && t === spawnTier;
-      // A hall's floor runs whole, the width of its band; any other ledge steps in, across the middle with its mirror.
-      const whole = band.hall;
+      // A hall's floor runs whole, the width of its band; any other ledge steps in, across the middle with its mirror,
+      // but never back from a pit's lip: every tier runs to the pit, a walking jump across it, and a knock falls in.
+      const whole = band.hall && (!band.arch || t === 0);
       const a = Math.max(lo, band.a + (!right && !spawn && !whole ? 1 : 0));
-      const b = Math.min(hi, band.b - (right && !whole ? 1 : 0));
+      const b = Math.min(hi, band.b - (right && !whole && !(pitHalf && band.b === lip) ? 1 : 0));
       if (b - a + 1 < 2) return;
       const board = !islands && !spawn && rng.chance(sizes.boards);
       // An island at the side floats, so the side stays open down to the pit.
       ledges.push({ t, i, row, a, b, board, ground: islands && i > 0 && rng.chance(MESAS) });
     });
-    // The middle: no wider a void than a gap. A bowl's tiers under the top one, drawn back to the sides, get a board
-    // over it, clear of a hall's air.
+    // The middle: no wider a void than a gap, or than the pit. A bowl's tiers under the top one, drawn back to the
+    // sides, get a board over it, clear of a hall's air, out to the pit's lip.
     const far = ledges.filter((l) => l.row === row).reduce((m, l) => Math.max(m, l.b), lo - 1);
-    const a = Math.max(mid - rng.int(1, 3), hallEnd + 2);
-    if (far < mid && 2 * (mid - far) > widest && t < n - 1 && a <= mid) ledges.push({ t, i: -1, row, a, b: mid, board: true, ground: false });
+    const a = Math.max(lip - rng.int(1, 3), hallEnd + 2);
+    if (far < lip && 2 * (mid - far) > widest && t < n - 1 && a <= lip - (pitHalf ? 1 : 0))
+      ledges.push({ t, i: -1, row, a, b: lip, board: true, ground: false });
   }
   bands.forEach((band, i) => {
-    if (band.hall && roofRow > TOP[0]) ledges.push({ t: roof, i, row: roofRow, a: band.a, b: band.b, board: false, ground: false });
+    if (band.arch) ledges.push({ t: beam, i, row: beamRow, a: mid - BEAM_HALF + 1, b: mid, board: false, ground: false });
+    else if (band.hall && roofRow > TOP[0]) ledges.push({ t: roof, i, row: roofRow, a: band.a, b: band.b, board: false, ground: false });
   });
   climbs(ledges, n, spawnTier, W, most);
 
@@ -237,14 +289,18 @@ export function sculptArena(ctx: SculptCtx, kit: TallKit): Shape {
   // Whatever the set's floor or dressing lays, every ledge keeps two rows of air over it: a thick ledge above only
   // reaches down into them, and is thinned there.
   for (const [row, a, b] of spans) g.clear(a, row - 1, b, row);
-  // The shafts stay open from over the top tier down to the pit, whatever the set's dressing hung in them.
+  // The shafts stay open from over the top tier down to the pit, whatever the set's dressing hung in them; the pit in
+  // the middle from the top of the view, nothing standing anywhere over it.
   bands.forEach((band, i) => {
     const a = band.b + 1;
     const b = i + 1 < bands.length ? bands[i + 1].a - 1 : mid;
     if (a > b) return;
-    g.clear(a, rows[n - 1] - 2, b, H - 1);
-    g.clear(W - 1 - b, rows[n - 1] - 2, W - 1 - a, H - 1);
+    const y0 = pitHalf && b === mid ? 0 : rows[n - 1] - 2;
+    g.clear(a, y0, b, H - 1);
+    g.clear(W - 1 - b, y0, W - 1 - a, H - 1);
   });
+  // Nothing of the set's dressing hangs under an arch's beam, in the swing over the crossing.
+  for (const band of bands) if (band.arch) g.clear(band.a, beamRow + 2, W - 1 - band.a, rows[0]);
   // Each hall's roof steps a row down over its outer half, two heights of room under it (a low roof's gas pocket, a
   // tall one's pendulum), and at its end by the middle a pier hangs `PIER` rows: a wall face to mount on (a broken
   // window's glass), with more than a runner's height of air under it.
@@ -259,7 +315,7 @@ export function sculptArena(ctx: SculptCtx, kit: TallKit): Shape {
     g.fill(W - 1 - x, y0, W - 1 - x, y1, T_SOLID, true);
   };
   for (const band of bands) {
-    if (!band.hall || roofRow <= TOP[0]) continue;
+    if (!band.hall || band.arch || roofRow <= TOP[0]) continue;
     for (let x = band.a; x < (band.a + band.b + 1) >> 1; x++) {
       const c = under(x);
       if (c >= 0) both(x, c + 1, c + 1);
@@ -299,6 +355,9 @@ export function sculptArena(ctx: SculptCtx, kit: TallKit): Shape {
       { x: W - POCKET, y: row - 3, w: POCKET, h: 5 },
     ],
     style: `${kit.style}:arena-${shape}`,
+    ...(centre
+      ? { centre: { kind: centre, rooms: centreRooms(centre, bands, lip, rows[0], centre === 'arch' ? beamRow : roofRow, W, H), alone: centre !== 'halls' } }
+      : {}),
     bridgeHints: [],
     open: bands
       .filter((b) => b.hall)
@@ -311,6 +370,24 @@ export function sculptArena(ctx: SculptCtx, kit: TallKit): Shape {
             ],
       ),
   };
+}
+
+/**
+ * Where the centrepiece stands: a pit's columns from the top down with a lip either side (something rooted on a lip
+ * reaches over it); the air of the halls, floor to roof, both mirrors; or under an arch's beam, down to the crossing and
+ * out over the shafts beside it, which a swing may cross.
+ */
+function centreRooms(centre: (typeof CENTRES)[number], bands: Band[], lip: number, floor: number, roofRow: number, W: number, H: number): TileRect[] {
+  if (centre === 'pit') return [{ x: lip, y: 0, w: W - 2 * lip, h: H }];
+  const arch = bands.find((b) => b.arch);
+  if (arch) return [{ x: arch.a - 2, y: roofRow + 2, w: W - 2 * (arch.a - 2), h: floor - roofRow - 1 }];
+  if (roofRow <= TOP[0]) return [];
+  return bands
+    .filter((b) => b.hall)
+    .flatMap((b) => {
+      const room = (a: number, z: number): TileRect => ({ x: a, y: roofRow + 1, w: z - a + 1, h: floor - roofRow });
+      return b.b === (W >> 1) - 1 ? [room(b.a, W - 1 - b.a)] : [room(b.a, b.b), room(W - 1 - b.b, W - 1 - b.a)];
+    });
 }
 
 /** Columns of air a jump up from one tier onto the next carries across beside a ledge, from a standstill. */

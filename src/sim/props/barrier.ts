@@ -45,7 +45,7 @@ export const BARRIER_SPAN = 720;
 /** A cell clear for this many frames in a row can be slipped through. Anything that hurts in bursts (a sentry) holds fire at least this long between them. */
 export const MIN_OPENING = 30;
 
-const cache = new WeakMap<PlacedProp, { tiles: Uint8Array; w: number; barrier: Barrier }>();
+const cache = new WeakMap<PlacedProp, { tiles: Uint8Array; w: number; barrier: Barrier; hurts: Map<number, number> }>();
 
 /**
  * The part's barrier in `level`, cached per part and terrain (rays stop at
@@ -53,11 +53,27 @@ const cache = new WeakMap<PlacedProp, { tiles: Uint8Array; w: number; barrier: B
  * same tiles, like the one a proof settles time bombs on, still hits.
  */
 export function barrierOf(level: Level, pp: PlacedProp): Barrier {
+  return sampled(level, pp).barrier;
+}
+
+/**
+ * The cells the part's hazards touch and never leave clear for `opening` frames in a row over the span (cell keys,
+ * ascending): where it walls a way for anyone who needs that long to get past. `Infinity` gives every cell they touch
+ * at all. The barrier's own rule is the same with `MIN_OPENING`, but counts everything that holds a cell, not only
+ * what hurts. Cached with the barrier.
+ */
+export function hurtsOf(level: Level, pp: PlacedProp, opening = Infinity): number[] {
+  const out: number[] = [];
+  for (const [k, open] of sampled(level, pp).hurts) if (open < opening) out.push(k);
+  return out.sort((a, b) => a - b);
+}
+
+function sampled(level: Level, pp: PlacedProp): { barrier: Barrier; hurts: Map<number, number> } {
   const hit = cache.get(pp);
-  if (hit && hit.w === level.w && sameTiles(hit.tiles, level.tiles)) return hit.barrier;
-  const barrier = sample(level, resolveProp(pp));
-  cache.set(pp, { tiles: level.tiles.slice(), w: level.w, barrier });
-  return barrier;
+  if (hit && hit.w === level.w && sameTiles(hit.tiles, level.tiles)) return hit;
+  const got = sample(level, resolveProp(pp));
+  cache.set(pp, { tiles: level.tiles.slice(), w: level.w, ...got });
+  return got;
 }
 
 function sameTiles(a: Uint8Array, b: Uint8Array): boolean {
@@ -78,7 +94,7 @@ function groundModules(r: Resolved): Set<number> {
   return out;
 }
 
-function sample(level: Level, r: Resolved): Barrier {
+function sample(level: Level, r: Resolved): { barrier: Barrier; hurts: Map<number, number> } {
   const { w, h } = level;
   const grounded = groundModules(r);
   const ground = new Set<number>();
@@ -91,6 +107,16 @@ function sample(level: Level, r: Resolved): Barrier {
   const state = newPropState();
   const out: Contrib = { solids: [], hazards: [], springs: [], winds: [], triggers: [] };
   const here = new Set<number>();
+  const hurts = new Set<number>();
+  /** Per cell a hazard touches: [last frame it was, longest opening so far (frames)], as `held`. */
+  const hurtHeld = new Map<number, [number, number]>();
+  const cells = (rc: Rect, into: Set<number>) => {
+    const x0 = Math.max(0, Math.floor(rc.x / TILE + 1e-6));
+    const x1 = Math.min(w - 1, Math.ceil((rc.x + rc.w) / TILE - 1e-6) - 1);
+    const y0 = Math.max(0, Math.floor(rc.y / TILE + 1e-6));
+    const y1 = Math.min(h - 1, Math.ceil((rc.y + rc.h) / TILE - 1e-6) - 1);
+    for (let y = y0; y <= y1; y++) for (let x = x0; x <= x1; x++) into.add(y * w + x);
+  };
   const mark = (rc: Rect) => {
     const x0 = Math.max(0, Math.floor(rc.x / TILE + 1e-6));
     const x1 = Math.min(w - 1, Math.ceil((rc.x + rc.w) / TILE - 1e-6) - 1);
@@ -106,24 +132,34 @@ function sample(level: Level, r: Resolved): Barrier {
     buildSolids([r], ctx, out);
     traceRays([r], ctx, out);
     for (const s of out.solids) if (!(s.propUid === r.pp.uid && grounded.has(s.mi)) && !s.oneWay && !s.film) mark(s);
-    for (const hz of out.hazards) markHazard(hz, mark);
+    for (const hz of out.hazards) {
+      markHazard(hz, mark);
+      markHazard(hz, (rc) => cells(rc, hurts));
+    }
     for (const s of out.springs) mark(s.rect);
     for (const wd of out.winds) mark(wd);
     for (const t of out.triggers!) mark(t.r);
-    for (const k of here) {
-      const c = held.get(k);
-      if (c) {
-        c[1] = Math.max(c[1], n - c[0] - 1);
-        c[0] = n;
-      } else held.set(k, [n, n]);
-    }
+    for (const [into, from] of [
+      [held, here],
+      [hurtHeld, hurts],
+    ] as const)
+      for (const k of from) {
+        const c = into.get(k);
+        if (c) {
+          c[1] = Math.max(c[1], n - c[0] - 1);
+          c[0] = n;
+        } else into.set(k, [n, n]);
+      }
+    hurts.clear();
   }
   const noGo = new Set<number>();
   for (const [k, [last, open]] of held) if (Math.max(open, n - last - 1) < MIN_OPENING && !ground.has(k)) noGo.add(k);
   // What a module knows it holds from its own cycle, which may be longer than the span sampled.
   for (const m of r.mods)
     for (const [x, y] of moduleSim(m.type).holds?.(m) ?? []) if (x >= 0 && y >= 0 && x < w && y < h && !ground.has(y * w + x)) noGo.add(y * w + x);
-  return { ground: [...ground].sort((a, b) => a - b), noGo: [...noGo].sort((a, b) => a - b) };
+  const open = new Map<number, number>();
+  for (const [k, [last, gap]] of hurtHeld) open.set(k, Math.max(gap, n - last - 1));
+  return { barrier: { ground: [...ground].sort((a, b) => a - b), noGo: [...noGo].sort((a, b) => a - b) }, hurts: open };
 }
 
 /** Cells a hazard covers: boxes for rects and circles, a chain of boxes along a beam. Generous edges only make the proof stricter. */

@@ -109,6 +109,11 @@ export function sweepFaults(c: BuilderContract, bySet: readonly Built[][]): stri
       mean(xs, (b) => b.m.mirrored),
       all.mirrored,
     );
+    over(
+      'centre',
+      mean(xs, (b) => b.m.centre),
+      all.centre,
+    );
     if (all.shapes) {
       const shapes: Record<string, number> = {};
       for (const b of xs) shapes[shapeOf(b.level)] = (shapes[shapeOf(b.level)] ?? 0) + 1;
@@ -129,7 +134,7 @@ const shapeOf = (level: Level) => level.style.split(':').at(-1)!;
 export function summary(id: BuilderId, bySet: readonly Built[][]): string {
   const xs = bySet.flat();
   const sets = bySet.map((s) => `${s[0].theme} ${mean(s, (b) => fillerOf(b.level).length).toFixed(2)}/${mean(s, (b) => b.asked).toFixed(0)}`).join(', ');
-  return `${id}, ${xs.length} levels: ${pct(mean(xs, (b) => b.m.safe))} of stand cells safe, ${pct(mean(xs, (b) => b.m.hazard))} by a hazard, ${pct(mean(xs, (b) => b.m.edgy))} by a drop, ${pct(mean(xs, (b) => +b.m.high))} reach the top third, ${pct(mean(xs, (b) => b.m.mirrored))} mirrored, side walls ${Math.max(...xs.map((b) => b.m.wall))} rows at most; set pieces stood by set: ${sets}`;
+  return `${id}, ${xs.length} levels: ${pct(mean(xs, (b) => b.m.safe))} of stand cells safe, ${pct(mean(xs, (b) => b.m.hazard))} by a hazard (${pct(mean(xs, (b) => b.m.centre))} by the centrepiece), ${pct(mean(xs, (b) => b.m.edgy))} by a drop, ${pct(mean(xs, (b) => +b.m.high))} reach the top third, ${pct(mean(xs, (b) => b.m.mirrored))} mirrored, side walls ${Math.max(...xs.map((b) => b.m.wall))} rows at most; set pieces stood by set: ${sets}`;
 }
 
 /** Every set's levels from `id` at `seeds`, one array per set. */

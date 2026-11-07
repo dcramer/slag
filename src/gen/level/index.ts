@@ -1,9 +1,21 @@
-import { footprintCells, type PlacedProp } from '../../sim/props';
+import { barrierOf, footprintCells, hurtsOf, type PlacedProp } from '../../sim/props';
 import { BRIDGE_W } from './validate';
 import { deriveSeed, Rng } from '../../core/rng';
 import { type Level, type LevelProfile, LOOP_BAND } from '../../sim/level';
 import { pickThemeId, type ThemeId } from '../../themes';
-import { commit, finalize, type RecipeTry, SET_PIECE_UID, SET_PIECES, shotsIntoSpawns, Site, tellFaults, windowFaults } from '../setpieces';
+import {
+  centreFits,
+  commit,
+  finalize,
+  type RecipeTry,
+  SET_PIECE_RECIPES,
+  SET_PIECE_UID,
+  SET_PIECES,
+  shotsIntoSpawns,
+  Site,
+  tellFaults,
+  windowFaults,
+} from '../setpieces';
 import { type Concept, conceptName, fits, type Landmark, landmarkFaults, rollConcept } from '../stage';
 import { generateTheme, type Theme } from '../theme';
 import { ReachCache } from '../../sim/reach';
@@ -19,7 +31,7 @@ import { DIFFICULTY, setLevelDifficulty } from './difficulty';
 import { levelPrecision } from './precision';
 import { analyzeRoutes, MAX_SHARED } from './routes';
 import { builderFor } from './builders';
-import { builderFaults } from './builders/contract';
+import { builderFaults, clearWayFaults, CROSSING } from './builders/contract';
 import { FALLBACK_SCULPTOR, SCULPTORS } from './sculptors';
 import { LAST_RESORT } from './sculptors/common';
 import type { Shape } from './types';
@@ -68,7 +80,7 @@ export interface GenInfo {
   precision: number;
   draws: number;
   /** The filler set pieces the level asked for (`count`, its landmark's own aside) and each recipe the placer tried (`pnpm level` reports both). */
-  placement?: { asked: number; tries: RecipeTry[] };
+  placement?: { asked: number; tries: RecipeTry[]; centre?: string };
 }
 
 export let lastGenInfo: GenInfo = {
@@ -168,6 +180,8 @@ export function generateLevel(seed: number, themeOverride?: ThemeId, profileOver
     const profile: LevelProfile = { ...drawn.profile, draw: n };
     const rejects = { unsolvable: 0, tooEasy: 0, closed: 0, landmark: 0, precision: turned, contract: 0 };
     const faults: string[] = [];
+    // Centre kinds (Shape.centre) none of the set's hazards stood in: the builder lays others for the rest of the draw.
+    const unfit: string[] = [];
     const lab = (s: string) => (n ? `draw${n}:${s}` : s);
     for (let attempt = 0; attempt < MAX_ATTEMPTS + LEGACY_ATTEMPTS; attempt++) {
       const rng = new Rng(deriveSeed(seed, lab(`level:${attempt}`)));
@@ -175,7 +189,26 @@ export function generateLevel(seed: number, themeOverride?: ThemeId, profileOver
       const sculptor = attempt < MAX_ATTEMPTS || profile.loop ? SCULPTORS[themeId] : FALLBACK_SCULPTOR;
       const live = concept && attempt < MAX_ATTEMPTS && rejects.landmark < MAX_LANDMARK_REJECTS ? concept : undefined;
       const reject = () => rejects.landmark++;
-      const shape = sculptor({ rng, themeId, theme, attempt, profile, challenge, ...(live ? { concept: live } : {}) });
+      const ctx = { themeId, theme, attempt, profile, challenge, ...(live ? { concept: live } : {}) };
+      let shape = sculptor({ rng, ...ctx, ...(unfit.length ? { noCentre: [...unfit] } : {}) });
+      // A level laid round a centre is first asked whether one of the set's hazards stands in it (before any
+      // proof); a kind none does is laid no more this draw, and this attempt sculpts again round another.
+      while (
+        shape.centre &&
+        !centreFits(
+          new Rng(deriveSeed(seed, lab(`centre:${attempt}`))),
+          toLevel(seed, shape, theme, profile),
+          shape.centre.rooms,
+          SET_PIECE_RECIPES[themeId],
+          profile.setPieceRoles,
+        )
+      ) {
+        unfit.push(shape.centre.kind);
+        shape = sculptor({ rng: new Rng(deriveSeed(seed, lab(`level:${attempt}:${unfit.join('+')}`))), ...ctx, noCentre: [...unfit] });
+      }
+      // Every kind turned down on this attempt's sculpts: it goes on without one (its builder's contract has the last
+      // word), and the next attempt's sculpt may fit any of them again.
+      if (!shape.centre && unfit.length) unfit.length = 0;
       const landmark = live ? shape.landmark : undefined;
       if (live && !landmark) {
         reject();
@@ -292,14 +325,22 @@ export function generateLevel(seed: number, themeOverride?: ThemeId, profileOver
       // A Rising Slag tower is several levels tall: its hazards come at the same rate per storey.
       const asked = Math.max(0, profile.hazards * (profile.loop ? Math.max(1, Math.round(profile.h / 50)) : 1) - budget);
       const tries: RecipeTry[] = [];
-      lastGenInfo.placement = { asked, tries };
+      lastGenInfo.placement = { asked, tries, ...(shape.centre ? { centre: shape.centre.kind } : {}) };
+      // A builder that promises a way round every hazard (`clearWay`) has each piece kept to it as it goes in, so the
+      // way is left rather than the level drawn again.
+      const wayRound = !!builderFor(profile).contract?.each?.clearWay;
       const pieces = SET_PIECES[themeId](new Rng(deriveSeed(seed, lab(`setpieces:${attempt}`))), level, {
         count: asked,
         log: tries,
         danger: profile.danger,
         ...(profile.setPieceRoles ? { roles: profile.setPieceRoles } : {}),
+        ...(shape.centre ? { centre: shape.centre } : {}),
         cache,
-        keep: fixed.length ? (ps) => keep([...fixed, ...ps]) : keep,
+        keep: wayRound
+          ? (ps) => keep([...fixed, ...ps]) && (!walls(level, ps[ps.length - 1]) || !clearWayFaults({ ...level, setPieces: [...fixed, ...ps] }, cache).length)
+          : fixed.length
+            ? (ps) => keep([...fixed, ...ps])
+            : keep,
         ...(live && landmark ? { standing: fixed, avoid: landmark.air, family: live.family } : {}),
       });
       // (The placer already avoids these cells; this is a safety net. Keep uids contiguous, the landmark's first.)
@@ -322,7 +363,9 @@ export function generateLevel(seed: number, themeOverride?: ThemeId, profileOver
       // What its builder promises of every level (builders/contract.ts): a level that breaks one is drawn again, until
       // the last resort keeps generation total (and records what it kept broken).
       const promised = builderFor(profile).contract?.each;
-      const unkept = promised ? builderFaults(promised, level, asked, cache) : [];
+      // The way round the hazards was held piece by piece as they went in, and nothing after adds a hazard, so it isn't
+      // proven twice (tests/conformance does).
+      const unkept = promised ? builderFaults(wayRound ? { ...promised, clearWay: undefined } : promised, level, asked, cache) : [];
       if (unkept.length && attempt < LAST_RESORT) {
         rejects.contract++;
         continue;
@@ -406,6 +449,17 @@ function toLevel(seed: number, s: Shape, theme: Theme, profile: LevelProfile): L
     ...(s.spawns ? { spawns: s.spawns } : profile.ends ? { spawns: [{ ...s.goal }] } : {}),
     ...(profile.loop && profile.size === 'tall' ? { loop: profile.h - LOOP_BAND } : {}),
   };
+}
+
+/**
+ * Whether `pp` walls anything a way round the hazards would mind (`clearWayFaults`): cells its hazards hold past
+ * `CROSSING`, or its own blocks and no-go cells. One that walls nothing can't close the way the pieces before it left,
+ * so it needs no reach.
+ */
+function walls(level: Level, pp: PlacedProp | undefined): boolean {
+  if (!pp) return false;
+  const b = barrierOf(level, pp);
+  return b.noGo.length > 0 || b.ground.length > 0 || hurtsOf(level, pp, CROSSING).length > 0;
 }
 
 /** Flat floor, always solvable. Only used if every candidate fails. */
