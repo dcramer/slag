@@ -4,7 +4,7 @@ import { type ModuleOf, mysteryState, surgeFill } from '../../../sim/props';
 import { line } from '../../ink';
 import { boxPts, glint, part, poly, sprite, stamp, tick } from '../../ink-props';
 import { twinkle } from '../../items';
-import { light, type RC } from '../../kit';
+import { circle, type RC } from '../../kit';
 import { defineArt, type DrawCtx } from '../common';
 
 type Surge = ModuleOf<'surge'>;
@@ -76,13 +76,12 @@ function drawSurge(rc: RC, m: Surge, d: DrawCtx) {
     s.fill();
     if (fill >= 1) {
       s.fillStyle = css(SHAKE, 22);
-      for (let i = 0; i < 3; i++) s.fillRect(-2.6 + i * 2, -3 + Math.sin(rc.t * 9 + i) * 0.4, 1.2, 0.9);
+      for (let i = 0; i < 3; i++) circle(s, -2 + i * 2, -2.6 + Math.sin(rc.t * 9 + i) * 0.4, 0.75);
     }
     part(s, boxPts(-3.5, 0.4, 7, 1.8, 0.2, 134, 0.1), BAND, 134, { depth: 0.2, thin: 0.3, thick: 0.6 });
     tick(s, -2.4, -2.2, -2.2, 4, 0.45, 135, 'rgba(255,255,255,0.55)');
     stamp(s, lidSprite());
     s.restore();
-    if (fill >= 1) light(rc, x, y, 22, SHINE, 0.45);
     const since = f - popAt;
     if (since >= 0 && since < FLASH) {
       // Taken: pink sparkles off it.
