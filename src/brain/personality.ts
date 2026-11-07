@@ -13,7 +13,11 @@ import type { BotLevel } from '../game/match';
  * brain the rest: a harder bot is meaner, and better at it.
  */
 export interface Personality {
-  /** Frames it takes to see what's next after a landing or a surprise, holding what it held meanwhile. */
+  /**
+   * Frames it takes to see what's next after a landing or a surprise, holding what it held meanwhile. In a fight
+   * (Intent goTo `haste`) a landing costs only what's left of it once the flight is over, and it's how soon a target
+   * that moved makes it pick again.
+   */
   reaction: number;
   /** Chance a jump comes out a little off: let go early, pressed a beat late or early, or carried on through the landing (gen/level/precision.ts `slip`). */
   slip: number;
