@@ -19,6 +19,7 @@ import {
 import { type Concept, conceptName, fits, type Landmark, landmarkFaults, rollConcept } from '../stage';
 import { generateTheme, type Theme } from '../theme';
 import { ReachCache } from '../../sim/reach';
+import { harmReach } from './harm';
 import { loopBoxes } from './loop-boxes';
 import { slagTide } from './tide';
 import { footing } from '../../sim/weather';
@@ -339,8 +340,10 @@ export function generateLevel(seed: number, themeOverride?: ThemeId, profileOver
       const fitted = [...fixed, ...pieces.filter(clearOfBridges)];
       // An arena's boxes hang only over floors the field can get to; a loop's every floor is on the climb.
       const stands = profile.loop ? undefined : new Set(cache.analyze(level, false).cells);
+      // An arena's stands keep out of whatever its pieces reach (./harm.ts).
+      const harm = profile.stands && stands ? harmReach(level, fitted) : undefined;
       const boxes = profile.boxes
-        ? loopBoxes(level, fitted, keep, new Rng(deriveSeed(seed, lab(`loop-boxes:${attempt}`))), profile.boxes, stands, !!profile.stands)
+        ? loopBoxes(level, fitted, keep, new Rng(deriveSeed(seed, lab(`loop-boxes:${attempt}`))), profile.boxes, stands, !!profile.stands, harm)
         : [];
       level.setPieces = [...fitted, ...boxes].map((p, i) => ({ ...p, uid: SET_PIECE_UID + i }));
       // A field that starts at both ends keeps coming back to them: no gun's shot may get there.

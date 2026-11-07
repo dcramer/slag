@@ -1224,6 +1224,28 @@ export const BRIEFS: Record<string, Brief> = {
     // a boot's sole flapping.
     worn: "a big ragged tear in the parka's hem with a white tuft of stuffing poking out of it; a strip of grey tape (#9a9c98) wrapped round the near sleeve; the grey lunchbox's lid hanging open on one hinge; the back boot's sole flapping loose at the toe. Her face, the red hair's size and shape streaming back and the puffy parka stay exactly as they are.",
   },
+  hitman: {
+    // The nod, each part of the read at race size and each a shape in outline: the big smooth bald head with the barcode
+    // on the back of it (the read: the warrior's and the boxer's bald heads sit on bare-armed fighters; his on a buttoned
+    // suit, upright); the suit with the white shirt and the tie down its front (the V of white on the dark jacket, the
+    // shape nobody else in the cast wears); a pistol held low in each hand, pointing down beside the legs with background
+    // round it (the raider's are held out on a slim woman with a braid; his hang low and out at his sides); the calm, still
+    // stance, never a crouch (the sneak is the stealth kind that hides; this one stands in plain sight).
+    // Ours, and the joke: a bargain-bin knock-off. The barcode is a supermarket price sticker slapped on the back of his
+    // head, half peeling off; the tie is a clip-on hanging crooked; the two silenced pistols are a pair of long staplers.
+    // The palette is neutral (Decisions 4): the suit in the player's colour, the tie a light of it (drawn red, so the map
+    // keeps it apart); the shirt white; the skin, gloves, shoes, staplers and the barcode's ink neutrals.
+    // Drawn lean (four heads and more), he was a stick at the cast's height: sized to its height like every kind, his
+    // staplers and shirt were specks and a design read in an orange suit took him for a thin man in a jumpsuit. So he is
+    // a chunky toy like the rest, tall only beside them, with the staplers big and held out from his sides.
+    design:
+      'The character: a chunky cartoon toy figure of a secret agent in a sharp suit, standing upright and still, about two and a half heads tall. His signature: in each big black-gloved fist (#2a2a30) a big chunky silver office stapler (#b9bdc6) held like a pistol, low and out from his sides, its long nose pointing down and outward, with wide white background between it and his body. ' +
+      'A huge smooth round bald head, pale skin (#f0d2b8), no hair at all, two small calm eyes, a flat mouth, no expression. On the back of his skull a big white supermarket price sticker (#f6f6f2) with five thick black barcode bars. ' +
+      'A boxy buttoned dark slate-blue suit jacket (#3e4a66) with broad square shoulders and sharp lapels, a big white shirt (#f6f6f2) V down his chest with a wide bright red tie (#c8323c) down its middle; short straight trousers, black shoes.',
+    // Off the face and off the head's round outline: the sticker peeling up off his skull, the clip-on tie hanging
+    // crooked off its clip, a staple sticking out of a stapler's jaw, a torn trouser hem.
+    worn: "the white price sticker on the back of his bald head is half peeled off, its top corner curling up and away from his skull, its thick black barcode bars still showing; the red tie is a crooked clip-on, swung off to one side across his white shirt and hanging askew from its clip; a bent staple sticks out of the near stapler's jaw; the hem of one trouser leg is torn into a ragged notch. His face, his huge smooth bald head, the broad square suit and the two staplers held low and out from his sides stay exactly as they are. No drop shadow.",
+  },
 };
 
 function brief(kind: string): Brief {
