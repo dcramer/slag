@@ -22,6 +22,7 @@ import { BotSeats } from '../src/brain/bots';
 import { firstOut, gateShut, leashRows, stepTide, type Tide } from '../src/sim/tide';
 import { analyzeReach } from '../src/sim/reach';
 import { type InputFrame, NO_INPUT } from '../src/sim/types';
+import { arenaSafety } from './lib/arena-safety';
 import { THEME_IDS } from '../src/themes';
 
 const FLOOR = 20; // first solid row
@@ -492,5 +493,12 @@ describe("a brawl's arena", () => {
           if (lv.tiles[y * w + x] === T_ONEWAY) expect([lv.tiles[(y - 1) * w + x], lv.tiles[(y - 2) * w + x]], `board ${x},${y}`).toEqual([0, 0]);
       // No set piece reaches through the arena's ledges or boards.
       expect(lv.setPieces.flatMap((p) => throughFaults(lv, p))).toEqual([]);
+      // Room for nearly all the set pieces it asks for, every one something that kills or knocks, and next to no
+      // place to stand without a way to die near it (the sweep: tests/stats/brawl-arenas.test.ts).
+      const pieces = lv.setPieces.filter((p) => p.def.key !== 'loop-box');
+      expect(pieces.length).toBeGreaterThanOrEqual(MODES.brawl.profile.hazards! - 2);
+      for (const p of pieces) expect(MODES.brawl.profile.setPieceRoles).toContain(p.def.role);
+      const { stands, safe } = arenaSafety(lv);
+      expect(safe.size / stands.length).toBeLessThan(0.3);
     });
 });

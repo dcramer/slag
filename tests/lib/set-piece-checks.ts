@@ -64,9 +64,8 @@ export function expectPlacementRules({ theme, seed, level }: ThemedLevel) {
   });
 }
 
-/** No hazard, moving solid or projectile ever reaches the spawn or goal zones. */
-export function expectClearOfSpawnAndGoal({ theme, seed, level }: ThemedLevel) {
-  const zs = zones(level);
+/** No hazard, moving solid or projectile ever reaches the spawn or goal zones (the placer's, or the ones given). */
+export function expectClearOfSpawnAndGoal({ theme, seed, level, zs = zones(level) }: ThemedLevel & { zs?: readonly Rect[] }) {
   for (const pp of level.setPieces) {
     const r = resolveProp(pp);
     const state = newPropState();

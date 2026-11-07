@@ -37,6 +37,8 @@ export interface Shape {
   crossings?: [number, number][];
   /** The level is cut from solid rock: a second route is a carved gallery, not platforms in the air. */
   carve?: boolean;
+  /** Columns the builder keeps open for set pieces (an arena's halls, [x0, x1] inclusive): a second route keeps out of them. */
+  open?: [number, number][];
   /** Per-tile ground kinds (sim/ground.ts), for themes that lay their own: glacier ice. Becomes Level.ground. */
   ground?: Uint8Array;
   /** The stage concept's landmark, when the sculptor raised one (sculptors/common.ts: claimSite, raiseLandmark). */

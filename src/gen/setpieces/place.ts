@@ -405,6 +405,8 @@ export interface PlacerOpts {
   avoid?: readonly TileRect[];
   /** Draw only from these recipe names (a stage concept's hazard family). */
   family?: readonly string[];
+  /** Draw only recipes of these roles (the level profile's `setPieceRoles`). */
+  roles?: readonly Role[];
 }
 
 /** Recipe weight scaled by the level's danger: hazards up to ×2.4 on nasty levels, ×0.4 on tame ones (and the reverse for helpers). */
@@ -441,7 +443,9 @@ export function makePlacer(themeKey: string, recipes: readonly Recipe[], uidBase
     const danger = opts.danger ?? 0.5;
     const tryCap = Math.round(16 * Math.max(1, Math.sqrt((level.w * level.h) / (48 * 27))));
     const family = opts.family;
-    const pool = (family ? recipes.filter((r) => family.includes(r.name)) : recipes)
+    const roles = opts.roles;
+    const pool = recipes
+      .filter((r) => (!family || family.includes(r.name)) && (!roles || roles.includes(r.role ?? 'hazard')))
       .map((r) => ({ r, k: dpow(rng.next() + 1e-9, 1 / (opts.danger === undefined ? r.weight : dangerWeight(r, danger))) }))
       .sort((a, b) => b.k - a.k);
     const order = [...pool.map((p) => p.r), ...pool.filter((p) => p.r.repeat).map((p) => p.r)];

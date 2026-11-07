@@ -2,7 +2,7 @@ import type { ItemDeal } from './items/types';
 import type { Rect } from '../core/geom';
 import type { TerrainKind, Theme } from '../gen/theme';
 import { TILE } from './constants';
-import type { PlacedProp } from './props/types';
+import type { PlacedProp, Role } from './props/types';
 import type { Tide } from './tide';
 import type { Weather, WeatherKind } from './weather';
 
@@ -41,10 +41,12 @@ export interface LevelProfile {
   h: number;
   /** 0 = sparse (lots of open air, few landmarks) … 1 = dense (packed terrain, ceilings, clutter). */
   density: number;
-  /** Target number of theme set pieces (0–4); the placer may find room for fewer. */
+  /** Target number of theme set pieces (0–4 rolled, more where a mode asks); the placer may find room for fewer. */
   hazards: number;
   /** 0 = tame set-piece mix (platforms, lifts) … 1 = nasty (cannons, saws, presses). */
   danger: number;
+  /** The roles its set pieces are drawn from (a brawl's: what kills or knocks, no platforms or lifts); absent, every one. */
+  setPieceRoles?: readonly Role[];
   route: RouteShape;
   /** World gravity scale (copied to Level.gravity). */
   gravity: number;

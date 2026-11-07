@@ -100,7 +100,7 @@ Every game design decision, preference and direction the owner has given, groupe
 - **Brawl has no safe areas and knocks throw people off ledges: bots don't pause, nearly everywhere to stand has a way to die next to it, and a hit near an edge sends you over.** "also the ai pauses too much on brawl" / "theres too many safe areas, and its hard to push people off ledges etc"
   2026-11-06 · `in progress` · MODES.md → Brawl
 - **Brawl's hazards are amped up: its set pieces are things that kill or knock, more of them, near the ledges.** "we may need to amp up the hazards in brawl"
-  2026-11-06 · `in progress` · MODES.md → Brawl, `src/gen/level/builders/arena.ts`
+  2026-11-06 · `done` (`setPieceRoles`: hazards and utility only; arenas stand 5.8 of 6, factory 2.6 → 5.5; stand cells with no way to die within 3 tiles 52 → 14%; nothing shoots into a spawn) · MODES.md → Brawl, `src/gen/level/builders/arena.ts`
 - **A brawl's arena is deadly by default.** "also the arena could be a little deadly by default, thats a thing we can tweak"
   2026-11-06 · `done` (up to six set pieces from the nastiest mix) · DESIGN.md → Modes, MODES.md · Replaced: four of the usual mix.
 - **In a brawl, if everyone left goes out at once, nobody wins the round.** "Highest one wins" / "actually if you all die no winners maybe?"

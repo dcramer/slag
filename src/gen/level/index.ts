@@ -3,7 +3,7 @@ import { BRIDGE_W } from './validate';
 import { deriveSeed, Rng } from '../../core/rng';
 import { type Level, type LevelProfile, LOOP_BAND } from '../../sim/level';
 import { pickThemeId, type ThemeId } from '../../themes';
-import { commit, finalize, SET_PIECE_UID, SET_PIECES, Site, tellFaults, windowFaults } from '../setpieces';
+import { commit, finalize, SET_PIECE_UID, SET_PIECES, shotsIntoSpawns, Site, tellFaults, windowFaults } from '../setpieces';
 import { type Concept, conceptName, fits, type Landmark, landmarkFaults, rollConcept } from '../stage';
 import { generateTheme, type Theme } from '../theme';
 import { ReachCache } from '../../sim/reach';
@@ -286,6 +286,7 @@ export function generateLevel(seed: number, themeOverride?: ThemeId, profileOver
         // A Rising Slag tower is several levels tall: its hazards come at the same rate per storey.
         count: Math.max(0, profile.hazards * (profile.loop ? Math.max(1, Math.round(profile.h / 50)) : 1) - budget),
         danger: profile.danger,
+        ...(profile.setPieceRoles ? { roles: profile.setPieceRoles } : {}),
         cache,
         keep: fixed.length ? (ps) => keep([...fixed, ...ps]) : keep,
         ...(live && landmark ? { standing: fixed, avoid: landmark.air, family: live.family } : {}),
@@ -301,6 +302,9 @@ export function generateLevel(seed: number, themeOverride?: ThemeId, profileOver
       const stands = profile.loop ? undefined : new Set(cache.analyze(level, false).cells);
       const boxes = profile.boxes ? loopBoxes(level, fitted, keep, new Rng(deriveSeed(seed, lab(`loop-boxes:${attempt}`))), profile.boxes, stands) : [];
       level.setPieces = [...fitted, ...boxes].map((p, i) => ({ ...p, uid: SET_PIECE_UID + i }));
+      // A field that starts at both ends keeps coming back to them: no gun's shot may get there.
+      for (let shots = profile.ends ? shotsIntoSpawns(level) : null; shots?.size; shots = shotsIntoSpawns(level))
+        level.setPieces = level.setPieces.filter((p) => !shots!.has(p.uid)).map((p, i) => ({ ...p, uid: SET_PIECE_UID + i }));
       while (level.setPieces.length && !planHolds(level, [], bridges, cache)) level.setPieces.pop();
       if (level.rides) {
         // A ride is only as good as its carrier.
