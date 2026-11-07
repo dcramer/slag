@@ -51,6 +51,9 @@ export const BUILDERS: Record<BuilderId, BuilderDef> = {
     about: 'Rising Slag: ledges staggered like bricks up a walled shaft that loops, several lines up every height, a wall-jump chimney up one side',
     takes: (p) => p.builder === 'shaft',
     asks: ['floor', 'shell'],
+    // Its hard lines pay (docs/MODES.md → Rising Slag): two Leg Days a lap at least, each on a lip a slip off drops
+    // further than a rise and a half, where a wall-jump chimney or a well opens under it.
+    contract: { each: { surges: { count: 2, drop: 5 } } },
     build: (ctx, set) => (set.tower ? (set.towerPost ?? keep)(sculptShaft(ctx, set.tower), ctx) : onCourse(ctx, set)),
   },
   arena: {

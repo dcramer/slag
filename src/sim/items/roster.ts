@@ -2,6 +2,7 @@ import type { ProjectileSpawn } from '../props/registry';
 import type { Runner, RunWorld } from '../run';
 import type { InputFrame } from '../types';
 import { lobClock } from './clock';
+import { spillSlick, stampJolt, throwGrapple } from './climb';
 import { cx, cy, itemEvent, spawnDrop } from './common';
 import { placeBlock } from './pocket';
 import { castRod } from './rod';
@@ -229,7 +230,7 @@ export const ITEMS: Record<ItemKind, ItemSpec> = {
     kind: 'hook',
     name: 'Queue Jumper',
     verb: 'Cut In',
-    uses: 1,
+    uses: 2,
     use: (w, r) => throwHook(w, r),
   },
   glove: {
@@ -273,11 +274,38 @@ export const ITEMS: Record<ItemKind, ItemSpec> = {
       return true;
     },
   },
+  slick: {
+    kind: 'slick',
+    name: 'Slippery Slope',
+    verb: 'Pour',
+    uses: 1,
+    use(w, r) {
+      spillSlick(w, r);
+      return true;
+    },
+  },
+  jolt: {
+    kind: 'jolt',
+    name: 'Trickle-Down',
+    verb: 'Stamp',
+    uses: 1,
+    use(w, r) {
+      stampJolt(w, r);
+      return true;
+    },
+  },
+  grapple: {
+    kind: 'grapple',
+    name: 'Social Climber',
+    verb: 'Climb',
+    uses: 3,
+    use: (w, r) => throwGrapple(w, r),
+  },
 };
 
 /**
- * What a crate deals unless its mode says otherwise (`CrateMix.items`, gen/props.ts): every item but the two made for a
- * climb (the hook and the punch upward), which only a climb's own boxes deal, and the brawl's own (the punch in a box,
+ * What a crate deals unless its mode says otherwise (`CrateMix.items`, gen/props.ts): every item but those made for a
+ * climb (the hook, the punch upward, the spill, the stamp and the grapple), which only a climb's own boxes deal, and the brawl's own (the punch in a box,
  * the clock and the rod), which only a brawl's boxes deal (game/modes.ts).
  */
 export const CRATE_ITEMS: readonly ItemKind[] = ['sword', 'puck', 'boomerang', 'shield', 'rocket', 'smoke', 'bat', 'tremor', 'tax', 'block'];

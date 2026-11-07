@@ -133,13 +133,17 @@ export const MODES: Record<ModeId, ModeDef> = {
     // A looping shaft of open ledges in every set, owing no part, with boxes of its own up every lap and slag under it.
     // The leader's screen (`SLAG_SCREEN`) is what puts out whoever falls behind.
     // The boxes deal by rank, the way a kart racer's do: whoever is behind draws something that reaches up (the hook
-    // that trades places with the one ahead, the punch that flies up through floors, a burst upward, a step, the
-    // shell that hunts the leader), and whoever leads something to hold on with. None kills.
+    // that trades places with the one ahead twice as often, the punch that flies up through floors, the grapple to a
+    // ledge overhead three times as often, the stamp that shakes off whoever is under them), and whoever leads something
+    // to hold on with (the wrap, the spill on the ledges under them, a step). None kills. The shell that hunted the
+    // leader is out (0.09 rivals knocked a round from these boxes, 0.5 a use against the Upper Hand's 0.8), and so is the
+    // noodle, which swings across where the leader's rivals are under it (0.04). Every lap's riskiest lips hold Leg Days.
     profile: {
       builder: 'shaft',
       loop: true,
       bare: true,
-      boxes: { chase: ['hook', 'upper', 'upper', 'rocket', 'block', 'tax'], lead: ['shield', 'sword', 'block'] },
+      boxes: { chase: ['hook', 'hook', 'upper', 'grapple', 'grapple', 'grapple', 'jolt'], lead: ['shield', 'slick', 'block'] },
+      surges: true,
       tide: true,
     },
     run: { flag: false, lastStanding: true, ahead: 'height', screen: SLAG_SCREEN },

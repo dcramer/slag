@@ -15,7 +15,7 @@ import type { Temperament } from './temperament';
  */
 
 /** Bumped when BrainView changes shape. A player's script will declare the version it was written against. */
-export const BRAIN_VIEW_VERSION = 13;
+export const BRAIN_VIEW_VERSION = 14;
 
 /** A tile it can't see (`BrainView.sight`): neither open nor solid, as far as it knows. */
 export const T_UNKNOWN = 255;
@@ -95,6 +95,13 @@ export interface BoxSense {
   stand: boolean;
   /** What a stand holds, as anyone can see it; null while it refills, and for a box, whose item nobody sees until it pops. */
   kind: ItemKind | null;
+}
+
+/** A Leg Day floating on a lip (a climb's): touch it and every jump springs higher a while. Gone a few seconds once taken. */
+export interface SurgeSense {
+  tx: number;
+  ty: number;
+  ready: boolean;
 }
 
 /** An item lying loose (or still flying), in tiles. Touch it to take it. */
@@ -197,13 +204,15 @@ export interface BrainView {
   /**
    * Race with a leader's screen (src/sim/screen.ts): the topmost row it can see, in its own lap's rows, the screen and
    * a row or two over its top, as a player sees no further. Every row over it is `T_UNKNOWN`, and nothing standing
-   * there (boxes, items, runners, parts) is in the view. Null: it sees the whole level.
+   * there (boxes, boosts, items, runners, parts) is in the view. Null: it sees the whole level.
    */
   sight: number | null;
   /** Race: mystery boxes in the level, set pieces and parts alike. */
   boxes: BoxSense[];
   /** Race: loose items. */
   drops: DropSense[];
+  /** Race: the climb's Leg Days. */
+  surges: SurgeSense[];
   /**
    * Race: tiles of route a stop at stand cell (tx, ty) adds on the way to the objective, rounded as `togo` is;
    * Infinity when no route leads through it.

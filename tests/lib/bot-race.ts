@@ -1,6 +1,6 @@
 import { BotSeats } from '../../src/brain/bots';
 import { deriveSeed, Rng } from '../../src/core/rng';
-import { giveItem } from '../../src/sim/items';
+import { giveItem, slickAt } from '../../src/sim/items';
 import { type Personality, steady as steadyHands } from '../../src/brain/personality';
 import { type BotLevel, Match, type Phase } from '../../src/game/match';
 import type { ProfileOverride } from '../../src/gen/level';
@@ -152,6 +152,19 @@ export interface BotRound {
   pickups: number;
   /** Items boxes popped. */
   pops: number;
+  /**
+   * Rivals knocked, by what knocked them: each new bonk credited to a rival, put down to the item (or the bump) whose
+   * hit that rival's knocker landed on that frame (`?` when none did: a hit with no event of its own).
+   */
+  knocks: Record<string, number>;
+  /** Social Climbers reeled all the way up. */
+  climbs: number;
+  /** Runners who stood on a rival's Slippery Slope spill and next landed three or more rows lower. */
+  slips: number;
+  /** Seconds runners stood on a rival's spill, all of them together. */
+  spilled: number;
+  /** Leg Days taken. */
+  surges: number;
   /** Race frames from GO to the end. */
   frames: number;
   /** Times the lead changed hands after GO: someone else on top for a second straight. */
@@ -318,6 +331,13 @@ function playRound(seed: number, m: Match, bots: BotSeats, { at = 15 * 60, limit
   let pickups = 0;
   let pops = 0;
   let bumps = 0;
+  const knocks: Record<string, number> = {};
+  let climbs = 0;
+  let slips = 0;
+  let spilled = 0;
+  let surges = 0;
+  /** Per runner index: the row it last stood on a spill from (-1: not on one since it last landed elsewhere). */
+  const slicked = run.runners.map(() => -1);
   /** Whoever leads (sim/standing.ts), by slot; -1 if nobody's racing. */
   const top = () => {
     const i = leaderOf(run);
@@ -370,12 +390,36 @@ function playRound(seed: number, m: Match, bots: BotSeats, { at = 15 * 60, limit
       for (const r of run.runners) if (r.alive && !r.finished && !r.items.held) giveItem(r, dealer.pick(r.slot === lead ? CATCH_UP.lead : CATCH_UP.chase));
     }
     const was = run.runners.map((r) => r.alive);
+    const before = run.runners.map((r) => r.items.bonkCredit);
     m.step(bots.frames(m));
+    const hitBy = new Map<number, string>();
     for (const e of m.drainEvents())
       if (e.type === 'item' && e.what === 'use') uses[e.kind] = (uses[e.kind] ?? 0) + 1;
       else if (e.type === 'item' && e.what === 'pickup') pickups++;
       else if (e.type === 'item' && e.what === 'pop') pops++;
-      else if (e.type === 'item' && e.what === 'hit' && e.kind === 'bump') bumps++;
+      else if (e.type === 'item' && e.what === 'surge') surges++;
+      else if (e.type === 'item' && e.what === 'hit') {
+        if (e.kind === 'bump') bumps++;
+        if (e.kind === 'grapple') climbs++;
+        else if (!hitBy.has(e.slot)) hitBy.set(e.slot, e.kind);
+      }
+    run.runners.forEach((r, i) => {
+      const it = r.items;
+      if (r.alive && it.bonkCredit > before[i] && it.bonkedBy >= 0 && it.bonkedBy !== r.slot) {
+        const k = hitBy.get(it.bonkedBy) ?? '?';
+        knocks[k] = (knocks[k] ?? 0) + 1;
+      }
+      if (!r.alive || !r.body.onGround) return;
+      const row = Math.floor((r.body.y + r.body.h - 0.01) / TILE) - r.lap * (run.level.loop ?? 0);
+      const own = run.items.slicks.filter((p) => p.owner !== r.slot);
+      if (slickAt(run.level, own, Math.floor((r.body.x + r.body.w / 2) / TILE), Math.floor((r.body.y + r.body.h + 1) / TILE))) {
+        slicked[i] = row;
+        spilled++;
+      } else if (slicked[i] >= 0) {
+        if (row - slicked[i] >= 3) slips++;
+        slicked[i] = -1;
+      }
+    });
     run.runners.forEach((r, i) => {
       if (!was[i] || r.alive) return;
       const k = `${slagAt(run.slag, m.level, r) ? 'slag' : r.cause}${r.items.bonkCredit > 0 && r.items.bonkedBy !== r.slot ? '+' : ''}`;
@@ -397,6 +441,11 @@ function playRound(seed: number, m: Match, bots: BotSeats, { at = 15 * 60, limit
     uses,
     pickups,
     pops,
+    knocks,
+    climbs,
+    slips,
+    spilled: spilled / 60,
+    surges,
     frames: run.frame - RUN_COUNTDOWN,
     leads,
     bumps,

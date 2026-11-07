@@ -1,6 +1,7 @@
 import type { Level } from '../../../sim/level';
 import type { Role } from '../../../sim/props';
 import type { ReachCache } from '../../../sim/reach';
+import { lipDrop, isSurge } from '../loop-surges';
 import { harmed, harmReach } from '../harm';
 import { unmirrored } from '../loop-boxes';
 import { isBox, type Measures, measureLevel } from '../measure';
@@ -50,6 +51,12 @@ export function builderFaults(each: NonNullable<BuilderContract['each']>, level:
       if (n > each.repeat) out.push(`repeat: ${r} ${n} times, over ${each.repeat}`);
     }
   if (each.boxes !== undefined && level.profile?.boxes && boxesOf(level) < each.boxes) out.push(`boxes: ${boxesOf(level)}, under ${each.boxes}`);
+  if (each.surges && level.profile?.surges) {
+    const lips = level.setPieces.filter((p) => isSurge(p.def.key)).map((p) => p.def.footprint[0]);
+    if (lips.length < each.surges.count) out.push(`surges: ${lips.length}, under ${each.surges.count}`);
+    for (const [x, y] of lips)
+      if (lipDrop(level, x, y) < each.surges.drop) out.push(`surges: the one at (${x},${y}) drops ${lipDrop(level, x, y)} rows, under ${each.surges.drop}`);
+  }
   const boxes = level.setPieces.filter((p) => isBox(p.def.key));
   const cells = boxes.map((p) => p.def.footprint[0]);
   if (each.boxesMirrored) for (const f of unmirrored(level.w, cells)) out.push(`boxesMirrored: ${f}`);

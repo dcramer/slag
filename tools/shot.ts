@@ -26,6 +26,7 @@
  *   pnpm shot pipes [--propseed 3]         → warp pipes facing every way: placing (with the pair tether), close up, and mid-trip
  *   pnpm shot belts [--propseed 1]         → a conveyor at every rotation: as place ghosts, and placed with a runner on each belt face
  *   pnpm shot items --seed abc             → held items: in hand, loose, and each one used (`--give bat,tax` picks them)
+ *   pnpm shot climb --game slag --theme T  → Rising Slag's own items up a shaft (a spill, a shudder, a grapple) and a Leg Day taken
  *   pnpm shot blood --theme farm --players 4 --noletters → staged deaths over four rounds: ooze, settled, place phase, expiry
  *   pnpm shot stack --seed abc             → stepped frames of heads as perches: a stack bucked, a slide, a hard stop, a knock, a tip, a jump off
  *   pnpm shot grabs                        → stepped frames of a rope swing, a keg shot, a backfire and a Y-Fling (aim, fire, snap)

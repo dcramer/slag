@@ -26,6 +26,7 @@ import './rope';
 import './magnet';
 import './mystery';
 import './stand';
+import './surge';
 import './web';
 import './phase';
 import './dropper';

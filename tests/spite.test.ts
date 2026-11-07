@@ -31,6 +31,7 @@ function view(over: Partial<BrainView>): BrainView {
     objective: { kind: 'reach', cell: { tx: 22, ty: 9 } },
     boxes: [],
     drops: [],
+    surges: [],
     detour: () => Infinity,
     sight: null,
     reach: () => Infinity,

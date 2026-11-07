@@ -476,6 +476,12 @@ export type Module =
    */
   | { type: 'stand'; cells: Cell[]; pool: ItemKind[]; refill: number; seed: number }
   /**
+   * A climb's pickup (gen/level/loop-surges.ts, the profile's `surges`): a Leg Day floating in its cell on the lip of a
+   * risky line, no solid. Touch it and every jump springs higher for `frames` (props/status.ts `SURGE`); another stands
+   * there `refill` frames later.
+   */
+  | { type: 'surge'; cells: Cell[]; refill: number; frames: number }
+  /**
    * A swing that hangs `length` tiles from a ceiling (`mount: 'hang'`); `at` is
    * the hook. It holds one runner for `strain` frames, then snaps and takes
    * `regrow` frames to come back.
