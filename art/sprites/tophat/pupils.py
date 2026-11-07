@@ -1,9 +1,9 @@
 """Paints a drawing's two pupils bigger, so the build finds them as eyes.
 
-Args: drawing.png X1,Y1 X2,Y2 R (rewritten in place). Wide-eyed on the fall, the image model draws small pupils in
-big whites, thinner than the map's ink filter, so they were taken for line and the pose traced with no face. Each
+Args: drawing.png X1,Y1 X2,Y2 R (rewritten in place). The image model draws the far pupil (or both, wide-eyed) as a sliver in a
+big white, thinner than the map's ink filter, so they were taken for line and the pose traced with no face. Each
 pupil is a disc of R image px at the given point, in the pupil's own darkest colour found within R of it. Run it once
-on a fresh cut (air-2: 526,562 594,561 11).
+on a fresh cut; the calls are in design.prompt.txt.
 """
 import sys
 from PIL import Image
