@@ -43,7 +43,7 @@ import type { Runner } from './run';
  * identical heads takes the lower slot's (`better`).
  */
 export const COLLIDE = {
-  /** Fraction of a group's unmatched effort that moves it. About a quarter of walking speed against a bystander. */
+  /** Fraction of a group's unmatched effort that moves it in a race. About a quarter of walking speed against a bystander. */
   shove: 0.25,
   /** Frames of being held up by bodies before you slip through them. */
   slipFrames: 45,
@@ -88,16 +88,51 @@ export const BUMP = {
   hop: 180,
 } as const;
 
-/** Someone bumped from below this frame, and by whom, by slot; `side` is the way they're knocked, `stood` whether they were standing. */
+/**
+ * How hard bodies shove, as the race's rules set it (`RunRules.shove`, sim/run.ts): one physics for everyone in a race,
+ * stronger where a mode is about throwing people off things (a brawl). Plain data, so the run knows nothing of modes.
+ */
+export interface ShoveRules {
+  /** Fraction of a group's unmatched effort that moves it (`groupSpeed`): a lone walker shoves a bystander at this share of a walk. */
+  share: number;
+  /** A shoved body keeps the speed it's shoved at, so shoved off a ledge it goes out over the drop instead of straight down. */
+  carry: boolean;
+  /**
+   * A body check: meeting someone who isn't pushing back (`braced`) at this closing speed (px/s) or faster knocks them
+   * like a bump from below, stars and credit (`CHECK`). Infinity: never.
+   */
+  check: number;
+}
+
+/** The race's shove: a quarter of a walk, nothing carried, no body checks. */
+export const RACE_SHOVE: ShoveRules = { share: COLLIDE.shove, carry: false, check: Infinity };
+
+/**
+ * A body check (`ShoveRules.check`): the victim leaves at `carry` times the closing speed, at least `kick` (px/s), with
+ * a hop (px/s up), and sees stars like any bonk, so it can't steer straight back.
+ */
+export const CHECK = {
+  carry: 1.2,
+  kick: 220,
+  hop: 150,
+} as const;
+
+/**
+ * Someone bumped from below this frame, or body-checked from the side, and by whom, by slot; `side` is the way they're
+ * knocked, `stood` whether they were standing, `closing` how fast a check met them (px/s), absent for a bump.
+ */
 export interface Bump {
   victim: number;
   by: number;
   side: -1 | 1;
   stood: boolean;
+  closing?: number;
 }
 
 /** The float slack of `overlaps`: bodies closer than this are touching, not overlapping. */
 const EPS = 1e-4;
+/** A pair further apart than this (px) when the frame began meets afresh; flush from last frame's shove, it doesn't. */
+const FRESH = 0.01;
 /** Feet this far above a head still count as on it. */
 const TOUCH = 0.01;
 
@@ -126,6 +161,9 @@ interface Mover {
   base: Mover | null;
   /** Who bumped it from below this frame, if anyone. */
   bumpedBy: Mover | null;
+  /** Who body-checked it from the side this frame (`ShoveRules.check`), and how fast they closed (px/s). */
+  checkedBy: Mover | null;
+  closing: number;
   /** Sideways motion of its own step. Nobody carries anyone, so that's all it moves before side contact. */
   own: number;
   /** Direction it's slipping through bodies this frame (±1), or 0. */
@@ -145,9 +183,15 @@ interface Mover {
 
 /**
  * Settle one frame of runner contact. Runners that are dead, finished or held by
- * a prop aren't touched and touch nobody. `safe` is the spawn zone.
+ * a prop aren't touched and touch nobody. `safe` is the spawn zone, `shove` how hard bodies shove in this race.
  */
-export function collideRunners(runners: readonly Runner[], start: readonly RunnerStart[], world: CollisionWorld, safe: (r: Runner) => boolean): Bump[] {
+export function collideRunners(
+  runners: readonly Runner[],
+  start: readonly RunnerStart[],
+  world: CollisionWorld,
+  safe: (r: Runner) => boolean,
+  shove: ShoveRules = RACE_SHOVE,
+): Bump[] {
   const ms: Mover[] = [];
   runners.forEach((r, i) => {
     if (r.alive && !r.finished && !r.attach.grip) ms.push(mover(r, start[i], safe(r)));
@@ -164,10 +208,16 @@ export function collideRunners(runners: readonly Runner[], start: readonly Runne
   // Lowest first, so a base has settled before anyone on it. Riders are always above their base at the start of a frame.
   const order = ms.slice().sort((a, b) => b.start.y - a.start.y || a.start.x - b.start.x || a.r.slot - b.r.slot);
   settleVertical(order, world);
-  settleSides(order, world);
+  settleSides(order, world, shove);
+  if (shove.carry) for (const m of order) carry(m);
   catchMissed(order, world);
   for (const m of order) finish(m);
-  return order.flatMap((m) => (m.bumpedBy ? [{ victim: m.r.slot, by: m.bumpedBy.r.slot, side: bumpSide(m, m.bumpedBy), stood: m.b.onGround }] : []));
+  return order.flatMap((m): Bump[] => {
+    if (m.bumpedBy) return [{ victim: m.r.slot, by: m.bumpedBy.r.slot, side: bumpSide(m, m.bumpedBy), stood: m.b.onGround }];
+    if (m.checkedBy)
+      return [{ victim: m.r.slot, by: m.checkedBy.r.slot, side: m.start.x > m.checkedBy.start.x ? 1 : -1, stood: m.b.onGround, closing: m.closing }];
+    return [];
+  });
 }
 
 /** Which way a bump knocks `m`: away from the one under it, else the way it faces. */
@@ -184,6 +234,8 @@ function mover(r: Runner, s: RunnerStart, safe: boolean): Mover {
     rode: null,
     base: null,
     bumpedBy: null,
+    checkedBy: null,
+    closing: 0,
     own,
     slip: r.press >= COLLIDE.slipFrames ? Math.sign(own) : 0,
     slipped: false,
@@ -283,18 +335,19 @@ function pinned(m: Mover, p: Mover, world: CollisionWorld): void {
 
 // ---------------------------------------------------------------- sideways
 
-function settleSides(order: readonly Mover[], world: CollisionWorld): void {
+function settleSides(order: readonly Mover[], world: CollisionWorld, shove: ShoveRules): void {
   const pairs = sidePairs(order);
   if (pairs.length === 0) return;
   order.forEach((m, i) => (m.group = i));
   let t = 0;
   for (let n = 0; n < order.length; n++) {
-    velocities(order, t, world);
+    velocities(order, t, world, shove);
     let at = 1;
     for (const [l, r] of pairs) if (l.group !== r.group) at = Math.min(at, meets(l, r, t));
     if (at >= 1) break;
     // Every pair meeting at that instant joins at once: taking them one by one would let array order pick the group.
     const hits = pairs.filter(([l, r]) => l.group !== r.group && meets(l, r, t) === at);
+    for (const [l, r] of hits) check(l, r, shove);
     for (const m of order) m.x += m.v * (at - t);
     t = at;
     for (const [l, r] of hits) {
@@ -307,7 +360,7 @@ function settleSides(order: readonly Mover[], world: CollisionWorld): void {
       }
     }
   }
-  velocities(order, t, world);
+  velocities(order, t, world, shove);
   for (const m of order) {
     m.x += m.v * (1 - t);
     moveX(m.b, m.x - m.b.x, world);
@@ -344,25 +397,54 @@ function sidePairs(order: readonly Mover[]): [Mover, Mover][] {
   return pairs;
 }
 
+/**
+ * A pair meeting this instant: if the one coming on closes at `ShoveRules.check` or faster on someone who isn't pushing
+ * back toward it (standing, or going its way slower), that's a body check. Only a fresh meeting, apart when the frame
+ * began, and never on someone still seeing stars: leaning on a body, or running on into the one you just knocked, is a
+ * shove, so nobody is stun-locked. Read from the pair's motion as they meet, never their order; a body checked twice in
+ * a frame keeps the harder one, an exact tie the lower slot's.
+ */
+function check(l: Mover, r: Mover, shove: ShoveRules): void {
+  const closing = (l.v - r.v) / DT;
+  if (closing < shove.check || r.start.x - l.start.x - l.b.w <= FRESH) return;
+  // Each one's motion toward the other: the one coming on harder checks the other.
+  const [by, victim, braced] = l.v >= -r.v ? [l, r, -r.v] : [r, l, l.v];
+  if (braced > 1e-9 || victim.bumpedBy || victim.r.items.daze > 0) return;
+  if (victim.checkedBy && (closing < victim.closing || (closing === victim.closing && by.r.slot > victim.checkedBy.r.slot))) return;
+  victim.checkedBy = by;
+  victim.closing = closing;
+}
+
+/**
+ * A body shoved along in the air (`ShoveRules.carry`) leaves at the speed it was shoved, not its own: shoved off a
+ * ledge it goes out over the drop. Only a body moved faster than it was going, the way it was going or standing; one
+ * pushing back keeps its own. On the ground its own footing stops it, so nothing is carried there: written every frame
+ * of a shove, the carried speed would outlast the victim's own braking and they could never push back.
+ */
+function carry(m: Mover): void {
+  if (m.b.onGround || !m.grouped || m.v * m.want < 0 || Math.abs(m.v) <= Math.abs(m.want) + 1e-9) return;
+  m.b.vx = m.v / DT;
+}
+
 /** What everyone does from time t on: its own motion, or its group's. */
-function velocities(order: readonly Mover[], t: number, world: CollisionWorld): void {
+function velocities(order: readonly Mover[], t: number, world: CollisionWorld, shove: ShoveRules): void {
   for (const m of order) if (!m.grouped) m.v = m.want;
   for (const m of order) {
     if (!m.grouped) continue;
     const members = order.filter((o) => o.group === m.group);
     if (members[0] !== m) continue;
-    const u = groupSpeed(members, t, world);
+    const u = groupSpeed(members, t, world, shove.share);
     for (const o of members) o.v = u;
   }
 }
 
 /**
  * The speed of bodies in contact. Whatever motion they all share they keep, and
- * a fraction of the rest moves the group: one walker against a bystander moves
- * both at `shove` of a walk, equal efforts cancel, a stronger push wins by the
+ * a fraction of the rest (`share`) moves the group: one walker against a bystander moves
+ * both at `share` of a walk, equal efforts cancel, a stronger push wins by the
  * difference, and nobody goes faster than the fastest of them is trying to.
  */
-function groupSpeed(members: readonly Mover[], t: number, world: CollisionWorld): number {
+function groupSpeed(members: readonly Mover[], t: number, world: CollisionWorld, share: number): number {
   // Summed smallest first, so bodies at exactly the same spot add up the same in either order.
   const wants = members.map((m) => m.want).sort((a, b) => a - b);
   let sum = 0;
@@ -370,7 +452,7 @@ function groupSpeed(members: readonly Mover[], t: number, world: CollisionWorld)
   const lo = wants[0];
   const hi = wants[wants.length - 1];
   const shared = lo > 0 ? lo : hi < 0 ? hi : 0;
-  const u = clamp(shared + COLLIDE.shove * (sum - members.length * shared), lo, hi);
+  const u = clamp(shared + share * (sum - members.length * shared), lo, hi);
   // No member may end up in terrain over what's left of the frame.
   const left = Math.max(1 - t, 1e-6);
   let min = Number.NEGATIVE_INFINITY;

@@ -6,6 +6,7 @@
 import type { ProfileOverride } from '../gen/level';
 import { type CrateMix, RACE_CRATE } from '../gen/props';
 import type { ThemeId } from '../themes';
+import type { ShoveRules } from '../sim/collide';
 import { TILE } from '../sim/constants';
 import { feetUp, RACE_RUN, type RunRules, type RunWorld } from '../sim/run';
 import { POINTS, type RoundResult, scoreRound, scoreSurvival, type Standing } from './scoring';
@@ -51,6 +52,13 @@ export interface ModeDef {
  * soak the very hit the mode kills with.
  */
 const BRAWL_ITEMS = ['sword', 'sword', 'bat', 'bat', 'glove', 'glove', 'glove', 'puck', 'boomerang', 'tremor', 'upper'] as const;
+
+/**
+ * A brawl's bodies (`RunRules.shove`): for putting each other off ledges, where a race's only jostle. Twice the race's
+ * shove, and a check only from a real run-up (about 11 tiles/s; a run is 13.4): at three quarters, or a check from 150,
+ * bots' rounds ran shorter (19 s with parts placed, 11 of 64 under 10 s) for no more deaths off the sides.
+ */
+const BRAWL_SHOVE: ShoveRules = { share: 0.5, carry: true, check: 180 };
 
 export const MODES: Record<ModeId, ModeDef> = {
   race: {
@@ -115,13 +123,18 @@ export const MODES: Record<ModeId, ModeDef> = {
       ends: true,
       // Mist hides a one-screen arena's edges, the very things that kill in it (owner decision).
       noWeather: ['mist'],
-      // Deadly from round 1: as many set pieces as fit, from the nastiest of the set's mix.
+      // Deadly from round 1: as many set pieces as fit, from the nastiest of the set's mix, and only what kills or
+      // knocks (no platform or lift to stand on).
       hazards: 6,
       danger: 0.9,
+      setPieceRoles: ['hazard', 'utility'],
       boxes: { chase: [...BRAWL_ITEMS], lead: [...BRAWL_ITEMS] },
       tide: { wait: 25, speed: 0.4, gain: 0.04 },
     },
-    run: { flag: false, lastStanding: true, ahead: 'none', seconds: 60 },
+    // Bodies shove hard enough to put someone over an edge (sim/collide.ts `ShoveRules`): a walk moves a bystander at
+    // half a walk, whoever is shoved off goes out over the drop, and a run-up into someone who isn't pushing back knocks
+    // them like a bump. Everyone in the brawl shares it; a race keeps its own.
+    run: { flag: false, lastStanding: true, ahead: 'none', seconds: 60, shove: BRAWL_SHOVE },
     // No gap to cross: the crate leans to hazards to knock people into and utility to throw them about.
     crate: { bridges: false, roles: { hazard: 1.8, utility: 1.2, build: 0.4, demolish: 0.5 } },
     camera: 'pack',

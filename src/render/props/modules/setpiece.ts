@@ -15,11 +15,11 @@ import { circle, type MetalPalette } from '../../kit';
 const RUBBER: HSL = { h: 24, s: 6, l: 20 };
 const shade = (c: HSL, dl: number): HSL => ({ ...c, l: Math.max(0, Math.min(100, c.l + dl)) });
 
-/** Top (px) of the first solid tile at or below y in the column under x; level bottom (+8) if none. */
+/** Top (px) of the first tile at or below y in the column under x, a board as much as a floor (what the placer stands a mast on); level bottom (+8) if none. */
 export function groundBelowPx(level: Level | null, x: number, y: number, fallback = 64): number {
   if (!level) return y + fallback;
   const tx = Math.floor(x / TILE);
-  for (let ty = Math.max(0, Math.floor(y / TILE)); ty < level.h; ty++) if (tileAt(level, tx, ty) === 1) return ty * TILE;
+  for (let ty = Math.max(0, Math.floor(y / TILE)); ty < level.h; ty++) if (tileAt(level, tx, ty) !== 0) return ty * TILE;
   return level.h * TILE + 8;
 }
 

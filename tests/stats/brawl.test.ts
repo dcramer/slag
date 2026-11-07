@@ -65,7 +65,14 @@ function measure(name: Arena, rounds: BotRound[]): Measure {
     `${name}: ${rounds.length} rounds, ${Math.round(m.draws * 100)}% draws, ${m.seconds.toFixed(1)} s a round (${within} in 20–40 s, ${quick.length} under 10 s, ${blind} with nobody knocked or shoved), ${Math.round(m.knocked * 100)}% of ${deaths} deaths knocked into it; ${JSON.stringify(causes)}`,
   );
   console.log(
-    `${name}: first contact ${m.contact.toFixed(1)} s, first bonk ${m.hit.toFixed(1)} s, ${(sum((r) => r.fight.bonks) / rounds.length).toFixed(1)} bonks and ${m.uses.toFixed(1)} uses a round, ${Math.round(m.still * 100)}% still, ${Math.round(m.retreat * 100)}% retreating, ${m.gap.toFixed(1)} tiles to the nearest rival, ${sum((r) => r.fight.shoved)} deaths shoved`,
+    `${name}: first contact ${m.contact.toFixed(1)} s, first bonk ${m.hit.toFixed(1)} s, ${(sum((r) => r.fight.bonks) / rounds.length).toFixed(1)} bonks and ${m.uses.toFixed(1)} uses a round, ${Math.round(m.still * 100)}% still, ${Math.round(m.retreat * 100)}% retreating, ${m.gap.toFixed(1)} tiles to the nearest rival, ${sum((r) => r.fight.shoved)} deaths shoved, ${Math.round(
+      (sum((r) => r.fight.safe) /
+        Math.max(
+          1,
+          sum((r) => r.fight.grounded),
+        )) *
+        100,
+    )}% of the time on the ground somewhere safe`,
   );
   return m;
 }
