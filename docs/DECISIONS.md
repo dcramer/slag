@@ -109,6 +109,8 @@ Every game design decision, preference and direction the owner has given, groupe
   2026-11-07 · `in progress` · MODES.md → Rising Slag
 - **Rising Slag's leader runs free: no solid top on the screen holding them; catch-up comes from items and the rank-based deal instead.** "Let leader run free"
   2026-11-07 · `in progress` · MODES.md → Rising Slag, `src/sim/screen.ts`
+- **A leader never gets more than a tile or two past the top of the screen, and bots see only what's on screen: they never know more of the level than a player can see.** "the AI leaders shouldnt go far beyond the top tho.. like 1-2 blocks might be ok (sort of luck) but they shouldn't be able to see things players cant"
+  2026-11-07 · `in progress` · MODES.md → Rising Slag, src/brain/AGENTS.md
 - **Brawl is won by knocking people out, not by hiding: knockouts pay, each hit you take throws you farther (fresh each bout), and a couple of weapons reach from range.** "you shouldn't be able to win by just standing around" / "maybe just make it easier to get knocked out" / "or we need more weapons or something?" / "Yes, all three"
   2026-11-06 · `in progress`: knockouts pay 5 and the last one standing 5 (`scoreKnockouts`; a still seat wins 0 of 6 matches, from 2) `done`; hits build up a quarter each, up to six (`RunRules.buildup`) `done`; two ranged weapons `done` (Rude Awakening, a lobbed alarm clock that blasts rivals outward; Catch of the Day, a rod that reels one in; brawl boxes only). An earlier slag waits on these · MODES.md → Brawl
 - **Brawl's hazards are amped up: its set pieces are things that kill or knock, more of them, near the ledges.** "we may need to amp up the hazards in brawl"
