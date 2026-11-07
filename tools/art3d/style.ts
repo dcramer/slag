@@ -1224,7 +1224,7 @@ export const BRIEFS: Record<string, Brief> = {
     // a boot's sole flapping.
     worn: "a big ragged tear in the parka's hem with a white tuft of stuffing poking out of it; a strip of grey tape (#9a9c98) wrapped round the near sleeve; the grey lunchbox's lid hanging open on one hinge; the back boot's sole flapping loose at the toe. Her face, the red hair's size and shape streaming back and the puffy parka stay exactly as they are.",
   },
-  hitman: {
+  cleaner: {
     // The nod, each part of the read at race size and each a shape in outline: the big smooth bald head with the barcode
     // on the back of it (the read: the warrior's and the boxer's bald heads sit on bare-armed fighters; his on a buttoned
     // suit, upright); the suit with the white shirt and the tie down its front (the V of white on the dark jacket, the

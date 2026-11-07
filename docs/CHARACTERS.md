@@ -86,7 +86,7 @@ Each kind's entry is its own file in [characters/](characters/): what a stranger
 | [skeleton](characters/skeleton.md) | the punny skeleton in the hoodie | short and stocky, a big round grinning skull with a moulding seam over its crown, black sockets, the far one lit, a baggy hoodie with a fur hood and a ragged hem, hands in pockets, a ketchup bottle in one, shorts and slippers | costume: the hoodie; the ketchup bottle a light of it |
 | [android](characters/android.md) | the blindfolded android with the white bob and the big sword | slim, a white bob, a black blindfold, a short flared dress, thigh-high boots, a huge sword, a floating drone | costume: the dress and boots |
 | [climber](characters/climber.md) | the red-haired mountain climber | a small girl, big red hair floating up, a puffy parka, a small backpack, leaning into a climb | costume: the parka; the bands a light of it |
-| [hitman](characters/hitman.md) | the bald hitman in the black suit and red tie | upright, a huge smooth bald head with a barcode sticker, a boxy dark suit with square shoulders, white shirt and tie, gloves, a pistol held low and out from each side | costume: the suit; the tie a light of it |
+| [cleaner](characters/cleaner.md) | the bald hitman in the black suit and red tie | upright, a huge smooth bald head with a barcode sticker, a boxy dark suit with square shoulders, white shirt and tie, gloves, a pistol held low and out from each side | costume: the suit; the tie a light of it |
 
 **Reserves**, if a kind won't read: the spinning bandicoot (its tuft and grin rhyme with the speedster), the shovel-wielding knight, the red-haired mountain climber, the falling-block party bean (rhymes with the crewmate). The space marine in green armour reads as a generic soldier at 20 px; the plumber's tall brother, the ape's red-capped nephew and the king's turtle foot soldiers rhyme with kinds already in.
 
@@ -173,7 +173,7 @@ The strongest reads first. **Keyed** marks the non-humanoids, the riskiest to dr
 | 49 | skeleton | Humerus | humanoid, stocky | drawn flat; passes the clean colour read ("Sans (Undertale)", medium and low); the hanging loop on the crown cut, every form of it read the skull as a ghost, an onion, an egg or an antenna |
 | 50 | android | B-Minus | humanoid, slim + sword | drawn flat (2026-11-06); the clean colour read fails seven rounds running: the white bob over the blindfold reads as "a white round helmet with a visor" (once "Bomberman is possible"), as "a white hood", and still as a helmet with her face cut out from under the bob; the design read small passed ("2B, medium" twice). Owner to decide; accepted as she is (2026-11-07) |
 | 51 | climber | Maddie Summit | humanoid, small | drawn flat; round 3 (the lunchbox a tan tin: grey, it read as nothing and her parka as "a green shirt") named the homage at medium for both clean colour readers, paired with nobody |
-| 52 | hitman | Agent 46½ | humanoid, chunky | drawn flat; passes the clean colour read on all three sheets ("Agent 47 (Hitman)" medium twice, high on roll 2, medium on roll 3), unpaired; drawn as a chunky toy (lean, he was a stick at the cast's height; an orange suit read as a prisoner's jumpsuit) |
+| 52 | cleaner | Agent 46½ | humanoid, chunky | drawn flat; passes the clean colour read on all three sheets ("Agent 47 (Hitman)" medium twice, high on roll 2, medium on roll 3), unpaired; drawn as a chunky toy (lean, he was a stick at the cast's height; an orange suit read as a prisoner's jumpsuit) |
 
 **What to check.** No two kinds may rhyme. Watch these pairs:
 

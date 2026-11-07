@@ -3,11 +3,11 @@ import { band, mark, poly, Y } from '../kit';
 import { pair } from '../faces';
 
 /**
- * The bargain-bin hitman (docs/characters/hitman.md): a huge smooth bald head with a price sticker half peeled off the
+ * The bargain-bin hitman (docs/characters/cleaner.md): a huge smooth bald head with a price sticker half peeled off the
  * back of it, on a boxy suit with broad square shoulders, the white shirt V and a crooked clip-on tie down it, and a
  * stapler held like a pistol low in his fist. The suit is the player's colour and the tie a light of it; the head, the
  * shirt, the gloves, shoes and stapler are neutrals. A rendered kind draws from its frames
- * (src/render/cast/sprites/hitman/); this is what shows before they load, and on the hand-drawn sheets.
+ * (src/render/cast/sprites/cleaner/); this is what shows before they load, and on the hand-drawn sheets.
  */
 
 const SKIN = '#efc8a6';

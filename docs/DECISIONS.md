@@ -328,6 +328,8 @@ Every game design decision, preference and direction the owner has given, groupe
   2026-11-06 · `done` · docs/characters/junior.md → Palette
 - **Junior, Sentry's robot (the owner's team made it), joins the cast as an easter egg: its own name and look, rolled for about one look in a hundred, never forced onto anyone.** "can you also add this robot from sentry (we made it) as a kind of easter egg character https://junior.sentry.dev/junior-character.png"
   2026-11-06 · `in progress` · docs/characters/junior.md, `EGGS` in `src/gen/character.ts`, public/ASSETS.md
+- **A kind's id names no real game or character either: it is the codex's URL (`/codex/cast/<id>`), so the bald hitman is `cleaner`.** "the slug shouldn't be hitman btw in the url?"
+  2026-11-07 · `done` · AGENTS.md → Extension points (Character kind)
 - **A drawn kind must not look like the original redrawn: its twist has to show at play size, the face included (the puffball, whose seam and tape were dropped as misreads, was left with the original's exact face).** "kirby looks.. too much like kirby right now"
   2026-11-06 · `in progress` (the puffball being redrawn) · CHARACTERS.md → The nod and the twist, docs/characters/puffball.md
 - **The android ships as it is: her white bob reads as a helmet at play size, and the black dress that carries the original takes the player's colour.** "Accept as colour read" (asked after seven rounds read her as "a white round helmet with a visor")

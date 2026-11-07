@@ -276,7 +276,7 @@ const READS_AS: Record<Kind, string> = {
   skeleton: 'the punny skeleton in the hoodie',
   android: 'the blindfolded android with the white bob and the big sword',
   climber: 'the red-haired mountain climber',
-  hitman: 'the bald hitman in the black suit and red tie',
+  cleaner: 'the bald hitman in the black suit and red tie',
 };
 
 /**

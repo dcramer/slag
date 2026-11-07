@@ -62,7 +62,7 @@ export const CAST = [
   'skeleton',
   'android',
   'climber',
-  'hitman',
+  'cleaner',
 ] as const;
 export type Kind = (typeof CAST)[number];
 
@@ -165,7 +165,7 @@ export const KIND_NAMES: Record<Kind, string> = {
   skeleton: 'Humerus',
   android: 'B-Minus',
   climber: 'Maddie Summit',
-  hitman: 'Agent 46½',
+  cleaner: 'Agent 46½',
 };
 
 /**
@@ -224,7 +224,7 @@ const PAINTS: Record<Kind, readonly HSL[]> = {
   skeleton: [hsl3(212, 55, 50)],
   android: [hsl3(250, 20, 30)],
   climber: [hsl3(190, 55, 45)],
-  hitman: [hsl3(0, 0, 18)],
+  cleaner: [hsl3(0, 0, 18)],
 };
 
 /** How many `vary` rolls a character has, and how many of them come from the look's main stream. */
