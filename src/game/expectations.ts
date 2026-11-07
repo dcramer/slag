@@ -54,8 +54,12 @@ export const PASS_BANDS: Partial<Record<ModeId, Record<BotLevel, Record<Difficul
  * with the regroup gates it replaced (512: 53, 49, 51), 59 with neither (256, boxes). About 110 rounds are judged in
  * each, so ±5. `leads`: lead changes a round with the boxes, someone new on top a second straight: 2.5 with the
  * screen (512: 2.4), 3.1 with the gates, 1.4 with neither. With the climb's own items in the deal and Leg Days on its
- * lips (docs/MODES.md → Rising Slag, 8): 45, 39 and 41, and 2.7 lead changes (3.0 with the deal in every hand). The target, from the lead-camera racer, is the early leader
- * winning about half the time (docs/MODES.md); these bands only catch a regression.
+ * lips (docs/MODES.md → Rising Slag, 8): 45, 39 and 41, and 2.7 lead changes (3.0 with the deal in every hand).
+ * Since the leader runs free (owner decision: the screen's solid top went) and bots see only the screen (9): 57, 45
+ * and 54, with 2.4 lead changes (2.6 with the deal in every hand); 512 seeds: 52, 43, 52 and 2.3, 2.7, 2.4. `boxes`
+ * is over its band: the bands measured the solid top, and catch-up is the climb's items' to bring back, not this
+ * band's to move. The target, from the lead-camera racer, is the early leader winning about half the time
+ * (docs/MODES.md); these bands only catch a regression.
  */
 export const LEAD_HOLDS = {
   at: 15 * 60,
@@ -126,7 +130,8 @@ export type BrawlMeasure = 'draws' | 'seconds' | 'knocked' | 'contact' | 'hit' |
 /**
  * How long a Rising Slag round lasts, the same four bots and loop's boxes (tests/stats/slag-catch-up.test.ts): at most
  * `early` of rounds over by 15 s after GO, and the median round inside `median` seconds, the lead-camera racer's short
- * round. Measured 11% and 30.4 s with the leader's screen (512 seeds: 6% and 29.4 s), 4% and 30.8 s with the regroup
+ * round. Measured 15% and 23.9 s with the leader free on the leader's screen and bots that see only it (512 seeds: 12%
+ * and 24.5 s), 11% and 30.4 s with the screen's solid top (512: 6% and 29.4 s), 4% and 30.8 s with the regroup
  * gates before it (512: 4% and 28.4 s), 8% and 25.5 s before those, and 41% and 16 s before the leash opened long and
  * the field started spread out.
  */

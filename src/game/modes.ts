@@ -91,9 +91,10 @@ const BRAWL_BUILDUP: BuildUp = { per: 0.25, max: 6 };
  * (the first lap's leash is 25), with three quarters of a second to climb back. It follows the leader wherever they go
  * (owner decision: the leader runs free). A solid top that rose no faster than 5 rows a second, holding a leader who
  * pulled away until the field came up, brought the 15 s leader's wins to 44%, 47% and 47% (boxes, items, bare; 512
- * seeds) with 2.4 lead changes a round, and was dropped; free, it measured 55% and 1.8 (384 seeds), about what no
- * screen gives (59%), since the slag's leash already kills about where its bottom does. Catch-up is the climb's items'
- * to bring. 29 rows or 34, 45 or 90 frames of grace, moved nothing past the noise.
+ * seeds) with 2.4 lead changes a round, and was dropped. Free, with the climb's items and bots that see only the
+ * screen (brain/view.ts `sight`), 52%, 43% and 52% with 2.3 lead changes; with bots that saw the whole shaft, 67%, 45%
+ * and 68% with 1.5. Catch-up is the climb's items' to bring. 29 rows or 34, 45 or 90 frames of grace, moved nothing
+ * past the noise.
  */
 const SLAG_SCREEN: ScreenRules = { rows: 29, up: 8, grace: 45, follow: 0.08, keep: 4 };
 
