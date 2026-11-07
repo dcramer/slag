@@ -66,6 +66,8 @@ export interface RunnerItems {
   bonkCredit: number;
   /** Can't pick anything up (just tossed an item). */
   noPickup: number;
+  /** Rivals' hits taken this race, under a build-up rule (`RunRules.buildup`): each throws the next one farther. */
+  hits: number;
 }
 
 /** A loose item lying in, or flying through, the level. */
@@ -180,6 +182,7 @@ export function newRunnerItems(): RunnerItems {
     bonkedBy: -1,
     bonkCredit: 0,
     noPickup: 0,
+    hits: 0,
   };
 }
 

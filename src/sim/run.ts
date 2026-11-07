@@ -140,6 +140,19 @@ export interface RunRules {
   seconds?: number;
   /** How hard bodies shove each other (sim/collide.ts), the same for everyone in the race; the race's own (`RACE_SHOVE`) unset. */
   shove?: ShoveRules;
+  /** Hits build up (`BuildUp`): every rival's knock a runner takes throws the next one farther. Unset: every hit throws as the first. */
+  buildup?: BuildUp;
+}
+
+/**
+ * Knockback that builds up, as a platform fighter's damage does: a rival's knock throws its victim `1 + per × hits` times
+ * as hard, `hits` being the rivals' knocks it has taken this race, counted up to `max` (items/common.ts `bonk`). Only a
+ * rival's hit counts and grows (an item, a bump, a body check); the level's own pushes (springs, fans, a launcher's rubber ball)
+ * neither. It never wears off: the race is the bout, and a fresh one starts everyone at none.
+ */
+export interface BuildUp {
+  per: number;
+  max: number;
 }
 
 /** The race the game was built on: run for the flag. */
@@ -478,7 +491,7 @@ export class RunWorld {
     r.body.onGround = false;
     r.body.groundRef = -1;
     r.body.jumping = false;
-    bonk(r, by);
+    bonk(this, r, by);
     this.events.push({ type: 'item', what: 'hit', kind: 'bump', slot: by, x: r.body.x + r.body.w / 2, y: r.body.y + r.body.h });
   }
 
@@ -553,7 +566,7 @@ export class RunWorld {
     return {
       caught: (i, kind) => catchShot(this, this.runners[i], kind),
       loose: (s) => spawnItem(this, s),
-      bonk: (i, owner) => bonk(this.runners[i], owner),
+      bonk: (i, owner) => bonk(this, this.runners[i], owner),
       burst: (x, y) => burstSmoke(this, x, y),
     };
   }

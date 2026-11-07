@@ -103,7 +103,7 @@ function blast(w: RunWorld, s: TaxShell): void {
   for (const r of hit) {
     const side = cx(r) > s.x ? 1 : cx(r) < s.x ? -1 : r.body.facing;
     launch(r.body, side * TAX.knockVx, -TAX.knockVy);
-    bonk(r, s.owner);
+    bonk(w, r, s.owner);
   }
   itemEvent(w, 'hit', 'tax', s.owner, s.x, s.y);
 }

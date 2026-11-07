@@ -6,6 +6,7 @@ import { JumpCache, levelPrecision } from '../gen/level/precision';
 import { analyzeRoutes } from '../gen/level/routes';
 import { type Level, spawnsOf } from '../sim/level';
 import { RUN_COUNTDOWN, TILE } from '../sim/constants';
+import { knockScale } from '../sim/items';
 import { barrierOf, footprint, hangRow, motionOffset, mysterySpent, mysteryState, type PlacedProp, spotAt } from '../sim/props';
 import type { Body } from '../sim/physics';
 import { feetUp, type Runner, type RunWorld } from '../sim/run';
@@ -181,6 +182,7 @@ function selfOf(m: Match, p: Player): SelfSense | null {
     rank: rankOf(run, r),
     held: it.held ? { ...it.held } : null,
     armed: !!it.held && it.cooldown === 0 && it.swing === 0 && it.windup === 0 && it.daze === 0 && it.thrust === 0,
+    hurt: Math.round(knockScale(run, r) * 10) / 10,
   };
 }
 
@@ -250,6 +252,7 @@ export function senseView(m: Match, p: Player): BrainView {
             alive: r.alive,
             finished: r.finished,
             held: r.items.held?.kind ?? null,
+            hurt: Math.round(knockScale(run, r) * 10) / 10,
           }))
       : [],
     rivals: m.players

@@ -3,7 +3,7 @@ import './ammo';
 
 export * from './roster';
 export * from './types';
-export { bonk } from './common';
+export { bonk, knockScale } from './common';
 export { blockCells, buildBlocks, POCKET } from './pocket';
 export { TAX } from './tax';
 export { HOOK, UPPER } from './upward';

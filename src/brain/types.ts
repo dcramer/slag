@@ -14,7 +14,7 @@ import type { Temperament } from './temperament';
  */
 
 /** Bumped when BrainView changes shape. A player's script will declare the version it was written against. */
-export const BRAIN_VIEW_VERSION = 9;
+export const BRAIN_VIEW_VERSION = 10;
 
 /** How fast across the ground, as a player would say it. */
 export type Pace = 'still' | 'walking' | 'running' | 'flying';
@@ -51,6 +51,8 @@ export interface SelfSense {
   held: { kind: ItemKind; uses: number } | null;
   /** It can use its item now: not cooling down, swinging, winding up or seeing stars. */
   armed: boolean;
+  /** How many times as hard a hit throws it now (`RunnerSense.hurt`). */
+  hurt: number;
 }
 
 export interface RunnerSense {
@@ -64,6 +66,8 @@ export interface RunnerSense {
   finished: boolean;
   /** The item in its hands, by its look, or null. */
   held: ItemKind | null;
+  /** How many times as hard a hit throws it now, as its smoke shows (a brawl's build-up), to a tenth: 1 before any, or unset. */
+  hurt?: number;
 }
 
 /** A mystery box standing in the level: hit it from below and it pops an item. */

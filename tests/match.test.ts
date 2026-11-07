@@ -354,8 +354,11 @@ describe('bouts', () => {
     const first = { run: m.run!, props: JSON.stringify(m.run!.propState), spawn: m.run!.runners.map((r) => [r.body.x, r.body.y]), slag: m.run!.slag };
     expect(m.placed.length).toBeGreaterThan(0);
     for (let bout = 2; bout <= 3; bout++) {
+      // Hits built up in one bout don't follow anyone into the next.
+      for (const r of m.run!.runners) r.items.hits = 4;
       until(() => m.phase === 'run' && m.bout === bout);
       const run = m.run!;
+      expect(run.runners.every((r) => r.items.hits === 0)).toBe(true);
       // A fresh race on the same parts: everyone home and standing, set pieces and parts as a run starts, the slag down.
       expect(run).not.toBe(first.run);
       expect(run.frame).toBe(0);

@@ -77,6 +77,7 @@ function round(mood: TemperamentId, { killer = 1, scores = [0, 0] }: { killer?: 
     rank: 0,
     held: null,
     armed: false,
+    hurt: 1,
   } as const;
   for (let f = 0; f < 60; f++) {
     const x = 3 + f / 5;
@@ -229,6 +230,7 @@ function blockRound({ nobody = false } = {}) {
     rank: 0,
     held: null,
     armed: false,
+    hurt: 1,
   } as const;
   for (let f = 0; f < 20; f++)
     brain.think(

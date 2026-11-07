@@ -44,6 +44,7 @@ const SELF: SelfSense = {
   rank: 0,
   held: null,
   armed: true,
+  hurt: 1,
 };
 
 const rival = (x: number, up: number, over: Partial<RunnerSense> = {}): RunnerSense => ({

@@ -116,32 +116,35 @@ export const LEAD_HOLDS = {
  * lined rivals up and fetched boxes. The slag still takes more deaths than anything else. Earlier or faster pours
  * shortened rounds and added draws. The targets are the owner's, from the party brawler: draws rare, rounds of
  * 20–40 s. The bands only catch a regression; the bots before `press` fail the first bonk, uses, retreat and gap
- * bands, and the motor before `haste` the still bands, so a return to turtling does too.
+ * bands, and the motor before `haste` the still bands, so a return to turtling does too. Since hits build up
+ * (`RunRules.buildup`), a hit flies farther and the field ends up further apart: bare 20.0 s (19.3 in a second run), 8.0
+ * uses (7.6) and 6.1 tiles (5.9), from 21.5 s, 8.9 and 5.3; with parts placed 18.1 s, 6.2 uses (6.6), 6.4 tiles and 65%
+ * knocked (70%), from 19.1 s, 6.6, 6.2 and 66%.
  */
 export const BRAWL_ROUNDS = {
   targets: { draws: 0.2, seconds: [20, 40] },
   bands: {
     bare: {
       draws: [0, 0.2],
-      seconds: [20, 29],
+      seconds: [19, 29],
       knocked: [0.55, 0.8],
       contact: [0, 2],
       hit: [0, 4.2],
-      uses: [8.5, 15],
+      uses: [7.5, 15],
       still: [0, 0.14],
       retreat: [0, 0.21],
-      gap: [0, 5.5],
+      gap: [0, 6.5],
     },
     placed: {
       draws: [0, 0.2],
-      seconds: [18, 25],
-      knocked: [0.5, 0.7],
+      seconds: [17.5, 25],
+      knocked: [0.5, 0.75],
       contact: [0, 1.9],
       hit: [0, 5],
-      uses: [6.3, 12],
+      uses: [5.8, 12],
       still: [0, 0.18],
       retreat: [0, 0.21],
-      gap: [0, 6.5],
+      gap: [0, 7],
     },
   },
 } as const satisfies {

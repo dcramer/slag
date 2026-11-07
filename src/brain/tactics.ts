@@ -311,10 +311,15 @@ export function knockLanes(v: BrainView, ends: readonly { tx: number; ty: number
   return [...hits].sort((a, b) => b[1] - a[1] || a[0] - b[0]).map(([c]) => c);
 }
 
-/** Whether a hit from `kind` (or a shove, with none) toward `dir` throws `r` into something that kills, as `me` reads the level. */
+/**
+ * Whether a hit from `kind` (or a shove, with none) toward `dir` throws `r` into something that kills, as `me` reads the
+ * level, as hard as their build-up says (`RunnerSense.hurt`): a hurt rival lines up from more places, so is hit sooner.
+ */
 export function knockedInto(v: BrainView, me: SelfSense, r: RunnerSense, dir: -1 | 1, kind: ItemKind | null): boolean {
   const k = (kind && KNOCKS[kind]) || SHOVE;
-  if (k !== SHOVE) return knockKills(v, r.x, r.y, dir * k.vx, k.vy, slagRow(me));
+  // A hit throws someone farther the more they've taken (their `hurt`); a shove is only a walk, whoever it meets.
+  const hurt = r.hurt ?? 1;
+  if (k !== SHOVE) return knockKills(v, r.x, r.y, dir * k.vx * hurt, k.vy * hurt, slagRow(me));
   // A shove only matters at an edge or a hazard a step or two away.
   const mask = noGoMask(v);
   const ty = Math.round(r.y) - 1;

@@ -153,6 +153,12 @@ export const shots: Scenarios = {
           });
         });
       }
+      // `--hits 0,2,4`: the runners' build-up (RunnerItems.hits) in turn, as if they'd taken that many rivals' hits.
+      const hits = opt('hits')?.split(',').map(Number);
+      if (hits)
+        await page.evaluate((hs) => {
+          (window as any).slagDebug.match.run.runners.forEach((r: any, i: number) => (r.items.hits = hs[i % hs.length]));
+        }, hits);
       // The sim frame alone isn't the same picture: camera smoothing depends on frames rendered before the pause.
       await page.evaluate(
         (v) => {

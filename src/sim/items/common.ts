@@ -42,9 +42,25 @@ export const BONK_DAZE = 28;
 /** A death this soon after a bonk credits the bonker. */
 export const BONK_CREDIT = 150;
 
-/** Stars and kill credit for a bonk, however it landed. */
-export function bonk(r: Runner, by: number): void {
+/** How many times as hard a rival's knock throws `r` now, under the race's build-up rule (`RunRules.buildup`): 1 before any. */
+export function knockScale(w: RunWorld, r: Runner): number {
+  const b = w.rules.buildup;
+  return b ? 1 + b.per * Math.min(r.items.hits, b.max) : 1;
+}
+
+/**
+ * Stars and kill credit for a bonk, however it landed, called once the knock has set the victim's velocity. A rival's
+ * bonk under a build-up rule scales that knock by what the victim has taken so far (`knockScale`), across and up, and
+ * counts one more: every knock in the game reaches a body through here, so none can skip it.
+ */
+export function bonk(w: RunWorld, r: Runner, by: number): void {
   const it = r.items;
+  if (w.rules.buildup && by !== r.slot) {
+    const k = knockScale(w, r);
+    r.body.vx *= k;
+    if (r.body.vy < 0) r.body.vy *= k;
+    it.hits++;
+  }
   it.daze = Math.max(it.daze, BONK_DAZE);
   // A bat's wind-up is lost (the bat isn't).
   it.windup = 0;
