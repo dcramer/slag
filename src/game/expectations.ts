@@ -121,7 +121,7 @@ export const BRAWL_ROUNDS = {
       knocked: [0.5, 0.7],
       contact: [0, 1.9],
       hit: [0, 5],
-      uses: [7, 11],
+      uses: [7, 12],
       still: [0, 0.18],
       retreat: [0, 0.2],
       gap: [0, 4.8],

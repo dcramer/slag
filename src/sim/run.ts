@@ -2,7 +2,7 @@ import { inset, overlaps, type Rect, type Vec } from '../core/geom';
 import { deriveSeed, Rng } from '../core/rng';
 import { type BloodCell, buildBlood, groundOf, spillBlood } from './blood';
 import { FPS, PLAYER_W, POP_HOLD, RUN_COUNTDOWN, TILE } from './constants';
-import { BUMP, type Bump, collideRunners, contactStart, footing as stackFooting } from './collide';
+import { BUMP, type Bump, CHECK, collideRunners, contactStart, type ShoveRules, footing as stackFooting } from './collide';
 import {
   absorbHit,
   bonk,
@@ -138,6 +138,8 @@ export interface RunRules {
   ahead: 'route' | 'height' | 'none';
   /** The round's own time limit, seconds after GO, over the match's race time rule; when it runs out, everyone left is out. */
   seconds?: number;
+  /** How hard bodies shove each other (sim/collide.ts), the same for everyone in the race; the race's own (`RACE_SHOVE`) unset. */
+  shove?: ShoveRules;
 }
 
 /** The race the game was built on: run for the flag. */
@@ -431,7 +433,7 @@ export class RunWorld {
     settleGrabs(this, this.grabs);
 
     // Bodies are solid to each other (sim/collide.ts): everyone has moved, so nobody's order matters.
-    for (const bump of collideRunners(this.runners, start, this.world, (r) => this.isSafe(r))) this.bump(bump);
+    for (const bump of collideRunners(this.runners, start, this.world, (r) => this.isSafe(r), this.rules.shove)) this.bump(bump);
 
     stepItems(this, inputs, live);
     this.stepProjectiles(f);
@@ -453,14 +455,16 @@ export class RunWorld {
   }
 
   /**
-   * A runner bumped from below (sim/collide.ts): knocked sideways, seeing stars, the bump credited like any bonk. Off
-   * a ledge it hops clear; in the air it never leaves faster upward than that hop, so a bump can't lift anyone.
+   * A runner bumped from below or body-checked from the side (sim/collide.ts): knocked sideways, seeing stars, the bump
+   * credited like any bonk. Off a ledge it hops clear; in the air it never leaves faster upward than that hop, so a bump
+   * can't lift anyone. A check throws it on ahead of whoever ran into it.
    */
-  private bump({ victim, by, side, stood }: Bump) {
+  private bump({ victim, by, side, stood, closing }: Bump) {
     const r = this.runners.find((x) => x.slot === victim)!;
+    const k = closing === undefined ? BUMP : { kick: Math.max(CHECK.kick, closing * CHECK.carry), hop: CHECK.hop };
     letGo(r);
-    r.body.vx = side * BUMP.kick;
-    r.body.vy = stood ? -BUMP.hop : Math.max(r.body.vy, -BUMP.hop);
+    r.body.vx = side * k.kick;
+    r.body.vy = stood ? -k.hop : Math.max(r.body.vy, -k.hop);
     r.body.onGround = false;
     r.body.groundRef = -1;
     r.body.jumping = false;
