@@ -220,6 +220,9 @@ const ITEM_KIND_CUE: Record<string, SfxName> = {
   'warn:jolt': 'coins',
   'hit:jolt': 'drop',
   'hit:grapple': 'land',
+  // A Hand-Me-Down (sim/parcels.ts): a whistle as it's let go over the screen, a soft thump on the head it's for.
+  'warn:parcel': 'whoosh',
+  'hit:parcel': 'bounce',
 };
 const itemName = (what: ItemEventKind, kind: string): SfxName | undefined =>
   ITEM_KIND_CUE[`${what}:${kind}`] ?? (what === 'use' ? ITEM_USE_CUE[kind] : ITEM_CUE[what]);

@@ -8,6 +8,8 @@ import { type CrateMix, RACE_CRATE } from '../gen/props';
 import type { ThemeId } from '../themes';
 import type { ShoveRules } from '../sim/collide';
 import type { ScreenRules } from '../sim/screen';
+import type { ItemDeal } from '../sim/items/types';
+import type { ParcelRules } from '../sim/parcels';
 import { TILE } from '../sim/constants';
 import { type Armed, type BuildUp, feetUp, RACE_RUN, type RunRules, type RunWorld } from '../sim/run';
 import { type RoundResult, scoreKnockouts, scoreRound, scoreSurvival, type Standing } from './scoring';
@@ -98,6 +100,24 @@ const BRAWL_BUILDUP: BuildUp = { per: 0.25, max: 6 };
  */
 const SLAG_SCREEN: ScreenRules = { rows: 29, up: 8, grace: 45, follow: 0.08, keep: 4 };
 
+/** What Rising Slag's boxes deal by rank and by how far behind (`ItemDeal`; the reasons are on the mode below), and what its Hand-Me-Downs hold. */
+const SLAG_DEAL: ItemDeal = {
+  chase: ['hook', 'upper', 'grapple', 'grapple', 'jolt', 'block'],
+  lead: ['shield', 'slick', 'block'],
+  behind: [
+    { rows: 6, deal: ['hook', 'hook', 'upper', 'grapple', 'grapple', 'grapple', 'jolt'] },
+    { rows: 12, deal: ['hook', 'hook', 'hook', 'grapple', 'grapple'] },
+  ],
+};
+
+/**
+ * Rising Slag's Hand-Me-Downs (sim/parcels.ts; owner decision: "Add items, no boxes"): a climber `rows` or more under the
+ * leader, hands empty for `wait` frames on end, gets a parcel dropped from the top of the screen holding what the
+ * far-behind table deals, and another `rest` frames after it lands if still that far back with nothing in hand.
+ * Measured in docs/MODES.md → Rising Slag, 11.
+ */
+const SLAG_PARCELS: ParcelRules = { rows: 12, wait: 60, rest: 6 * 60, after: 5 * 60, deal: SLAG_DEAL };
+
 /**
  * What a brawl starts everyone holding (`RunRules.armed`), so the first seconds are a fight: something from the stands'
  * deal, good for one go, and then to a stand for more. With an item's own uses, half the bare rounds with bots ran under
@@ -143,18 +163,11 @@ export const MODES: Record<ModeId, ModeDef> = {
       builder: 'shaft',
       loop: true,
       bare: true,
-      boxes: {
-        chase: ['hook', 'upper', 'grapple', 'grapple', 'jolt', 'block'],
-        lead: ['shield', 'slick', 'block'],
-        behind: [
-          { rows: 6, deal: ['hook', 'hook', 'upper', 'grapple', 'grapple', 'grapple', 'jolt'] },
-          { rows: 12, deal: ['hook', 'hook', 'hook', 'grapple', 'grapple'] },
-        ],
-      },
+      boxes: SLAG_DEAL,
       surges: true,
       tide: true,
     },
-    run: { flag: false, lastStanding: true, ahead: 'height', screen: SLAG_SCREEN },
+    run: { flag: false, lastStanding: true, ahead: 'height', screen: SLAG_SCREEN, parcels: SLAG_PARCELS },
     // A loop climbs bare, so no bridge is owed: the crate leans to what you put in each other's way, and to
     // utility, and away from building (a shortcut for whoever's ahead) and demolition (nothing needs clearing).
     crate: { bridges: false, roles: { hazard: 1.6, utility: 1.3, build: 0.6, demolish: 0.35 } },

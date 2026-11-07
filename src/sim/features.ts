@@ -1,12 +1,13 @@
 import type { Rect } from '../core/geom';
 import { TILE } from './constants';
 import type { DeathCause, Runner, RunWorld } from './run';
+import { stepParcels } from './parcels';
 import { offScreen, stepScreen } from './screen';
 import { firstOut, stepTide } from './tide';
 
 /**
  * What a race has beyond running the level: each is a feature with hooks the run step calls (sim/run.ts), on when the
- * level or the rules call for it. Today that's the slag rising under a climb and the leader's screen over it; a mode's
+ * level or the rules call for it. Today that's the slag rising under a climb, the leader's screen over it and the parcels it drops to whoever falls far behind; a mode's
  * shrinking arena or a team's shared fail is another entry here, not more code in the step. A feature keeps its state as plain data on the
  * RunWorld, so a snapshot carries it.
  */
@@ -46,5 +47,14 @@ const screen: RunFeature = {
   kills: (w, r) => (offScreen(w.rules.screen!, w.screen!, w.runners.indexOf(r)) ? 'screen' : null),
 };
 
+/**
+ * Hand-Me-Downs (sim/parcels.ts): a parcel dropped from the top of the screen onto a climber far behind with nothing in
+ * hand. After the screen, so it comes in from where the window is this frame.
+ */
+const parcels: RunFeature = {
+  on: (w) => w.parcels !== null,
+  step: (w, f) => stepParcels(w, w.rules.parcels!, w.parcels!, f),
+};
+
 /** Every feature, in the order the step runs them. */
-export const RUN_FEATURES: readonly RunFeature[] = [tide, screen];
+export const RUN_FEATURES: readonly RunFeature[] = [tide, screen, parcels];

@@ -32,6 +32,12 @@ Each row gives what the item or part mocks, its silhouette (what must read at ga
 | **Trickle-Down** | The stomp that shakes everyone below off their feet | A fat money bag cinched with twine, a coin stamped on its face | It has a hole in the bottom: what reaches the people below is a shower of falling coins, and it knocks them over. |
 | **Social Climber** | The lead-camera racer's grapple up to the ledge overhead | A gold grapple on a string of pearls, its three tines curled down over the lip it bites | It only goes up; the codex card says "It's who you know." |
 
+## Hand-outs
+
+| Thing | Mocks | Silhouette | Gag |
+|---|---|---|---|
+| **Hand-Me-Down** | The battle royale's supply drop, falling to whoever is losing | A brown-paper parcel tied with string, a loop to carry it by, an address label | The string is in the colour of whoever it's for: it's addressed to the one at the back. |
+
 ## Mystery crate
 
 | Look | Names | Mocks | Silhouette | Gag |

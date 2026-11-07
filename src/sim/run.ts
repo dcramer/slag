@@ -25,6 +25,7 @@ import { goalRect, killY, lapShift, type Level, offMap, spawnsOf, spawnZones, ti
 import type { ItemKind } from './items/types';
 import { behindOf, leaderOf } from './standing';
 import { newScreen, type Screen, type ScreenRules } from './screen';
+import { newParcels, type ParcelRules, type Parcels } from './parcels';
 import { tideStart } from './tide';
 import { type RunFeature, RUN_FEATURES } from './features';
 import { type Body, bodyAtCell, type CollisionWorld, firstOverlap, type Solid, stepBody } from './physics';
@@ -151,6 +152,8 @@ export interface RunRules {
   screen?: ScreenRules;
   /** Everyone starts armed (`Armed`): a brawl's fight starts at GO, not at the first stand. */
   armed?: Armed;
+  /** Hand-Me-Downs (sim/parcels.ts): a climber far behind with empty hands gets an item dropped onto them. Unset: none. */
+  parcels?: ParcelRules;
 }
 
 /**
@@ -198,6 +201,8 @@ export class RunWorld {
   slag: number | null;
   /** The leader's screen (sim/screen.ts), when the rules have one (`RunRules.screen`) and more than one runs; null otherwise. */
   screen: Screen | null;
+  /** Hand-Me-Downs on their way (sim/parcels.ts), when the rules have them (`RunRules.parcels`) and more than one runs; null otherwise. */
+  parcels: Parcels | null;
   /** What this race has beyond running the level (sim/features.ts), from its level and rules. */
   readonly features: readonly RunFeature[];
   propState = new Map<number, PropState>();
@@ -290,6 +295,8 @@ export class RunWorld {
     this.slag = tideStart(level);
     // Alone, nobody falls behind and nothing needs holding back: the screen is for a field.
     this.screen = rules.screen && slots.length > 1 ? newScreen(level, slots.length) : null;
+    // Alone nobody is behind anyone either.
+    this.parcels = rules.parcels && slots.length > 1 ? newParcels(slots.length) : null;
     this.features = RUN_FEATURES.filter((ft) => ft.on(this));
     this.safeZones = spawnZones(level);
     this.safeZone = this.safeZones[0]?.zone ?? null;

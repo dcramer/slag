@@ -189,6 +189,30 @@ export const shots: Scenarios = {
           },
           [Number(under), flag('underall')] as const,
         );
+      // `--parcel` (Rising Slag): on from there to the first Hand-Me-Down (sim/parcels.ts) well on its way down, shot,
+      // then shot again as it lands on whoever it's for.
+      if (flag('parcel')) {
+        const name = `race-${seed}${opt('theme') ? `-${opt('theme')}` : ''}-parcel`;
+        const falling = await page.evaluate(() => {
+          const d = (window as any).slagDebug;
+          for (let f = 0; f < 90 * 60 && d.match.phase === 'run'; f++) {
+            const p = d.match.run.parcels?.falling[0];
+            if (p && d.match.run.frame - p.born >= 24) return true;
+            d.step(1);
+          }
+          return false;
+        });
+        if (!falling) throw new Error('no Hand-Me-Down fell in 90 s: --parcel needs a Rising Slag race with someone far behind (--game slag)');
+        await step(1);
+        await snap(name);
+        await page.evaluate(() => {
+          const d = (window as any).slagDebug;
+          for (let f = 0; f < 120 && d.match.run.parcels.falling.length; f++) d.step(1);
+        });
+        await step(3);
+        await snap(`${name}-landed`);
+        return;
+      }
       // The sim frame alone isn't the same picture: camera smoothing depends on frames rendered before the pause.
       await page.evaluate(
         (v) => {

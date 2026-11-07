@@ -34,6 +34,8 @@ function holds(name: string, opts: Parameters<typeof botRound>[1]): number {
   let slips = 0;
   let spilled = 0;
   let surges = 0;
+  let handed = 0;
+  let handedUsed = 0;
   const used: Record<string, number> = {};
   const knocked: Record<string, number> = {};
   const out: Record<string, number> = {};
@@ -47,6 +49,8 @@ function holds(name: string, opts: Parameters<typeof botRound>[1]): number {
     slips += r.slips;
     spilled += r.spilled;
     surges += r.surges;
+    handed += r.handed;
+    handedUsed += r.handedUsed;
     for (const [k, n] of Object.entries(r.knocks)) knocked[k] = (knocked[k] ?? 0) + n;
     if (r.leader >= 0 && r.winner >= 0) {
       judged++;
@@ -72,7 +76,7 @@ function holds(name: string, opts: Parameters<typeof botRound>[1]): number {
     `${name}: the 15 s leader won ${held} of ${judged} (${Math.round(rate * 100)}%), ${early} over by then${secs}; ${(leads / SEEDS.length).toFixed(1)} lead changes and ${(bumps / SEEDS.length).toFixed(1)} bumps a round; out to ${by}; used ${JSON.stringify(used)}`,
   );
   console.log(
-    `${name}: a round, ${per(surges)} Leg Days taken, ${per(climbs)} climbs reeled up, ${per(spilled)} s stood on a rival's spill and ${per(slips)} slips off one; uses ${each(used)}; rivals knocked ${each(knocked)}`,
+    `${name}: a round, ${per(handed)} Hand-Me-Downs landed (${per(handedUsed)} used), ${per(surges)} Leg Days taken, ${per(climbs)} climbs reeled up, ${per(spilled)} s stood on a rival's spill and ${per(slips)} slips off one; uses ${each(used)}; rivals knocked ${each(knocked)}`,
   );
   return rate;
 }

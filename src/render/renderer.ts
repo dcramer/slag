@@ -29,6 +29,7 @@ import { Hud } from './hud';
 import { raceTagsBottom } from './hud/race';
 import { drawClouds, drawDrops, drawRunnerItems, itemFx } from './items';
 import { drawFists, drawHooks } from './items-climb';
+import { drawParcels } from './items-parcel';
 import { drawClimbs, drawJolts, drawSlicks } from './items-shaft';
 import { drawClocks, drawLines } from './items-reach';
 import { drawPocketBlocks, drawShells, drawShellShadows } from './items-extra';
@@ -508,6 +509,7 @@ export class Renderer {
         }
         if (dy) at(0);
       }
+      drawParcels(rc, run, lap * L, (slot) => m.player(slot)?.character.body);
       each(() => {
         drawClouds(rc, run);
         drawShells(rc, run);

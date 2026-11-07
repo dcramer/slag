@@ -404,6 +404,12 @@ describe('bots use what they hold', () => {
     expect(Object.values(r.uses).reduce((a, b) => a + b, 0)).toBeGreaterThan(0);
   });
 
+  it('in a Rising Slag round, what a Hand-Me-Down hands them', () => {
+    const r = botRound(3, { limit: 40 * 60 });
+    expect(r.handed).toBeGreaterThan(0);
+    expect(r.handedUsed).toBeGreaterThan(0);
+  });
+
   it('in a race, with items in hand', () => {
     const r = botRound(2, { mode: 'race', players: 3, deal: 3 * 60, limit: 40 * 60 });
     expect(Object.values(r.uses).reduce((a, b) => a + b, 0)).toBeGreaterThan(0);

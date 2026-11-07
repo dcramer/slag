@@ -165,6 +165,9 @@ export interface BotRound {
   spilled: number;
   /** Leg Days taken. */
   surges: number;
+  /** Hand-Me-Downs that landed in someone's hands (sim/parcels.ts), and of them those used before the round ended. */
+  handed: number;
+  handedUsed: number;
   /** Race frames from GO to the end. */
   frames: number;
   /** Times the lead changed hands after GO: someone else on top for a second straight. */
@@ -336,6 +339,10 @@ function playRound(seed: number, m: Match, bots: BotSeats, { at = 15 * 60, limit
   let slips = 0;
   let spilled = 0;
   let surges = 0;
+  let handed = 0;
+  let handedUsed = 0;
+  /** What each slot holds from a Hand-Me-Down, until it uses it. */
+  const parcel = new Map<number, string>();
   /** Per runner index: the row it last stood on a spill from (-1: not on one since it last landed elsewhere). */
   const slicked = run.runners.map(() => -1);
   /** Whoever leads (sim/standing.ts), by slot; -1 if nobody's racing. */
@@ -393,10 +400,26 @@ function playRound(seed: number, m: Match, bots: BotSeats, { at = 15 * 60, limit
     const before = run.runners.map((r) => r.items.bonkCredit);
     m.step(bots.frames(m));
     const hitBy = new Map<number, string>();
+    const got = new Map<number, string>();
     for (const e of m.drainEvents())
-      if (e.type === 'item' && e.what === 'use') uses[e.kind] = (uses[e.kind] ?? 0) + 1;
-      else if (e.type === 'item' && e.what === 'pickup') pickups++;
-      else if (e.type === 'item' && e.what === 'pop') pops++;
+      if (e.type === 'item' && e.what === 'use') {
+        uses[e.kind] = (uses[e.kind] ?? 0) + 1;
+        if (parcel.get(e.slot) === e.kind) {
+          handedUsed++;
+          parcel.delete(e.slot);
+        }
+      } else if (e.type === 'item' && e.what === 'pickup') {
+        pickups++;
+        got.set(e.slot, e.kind);
+        parcel.delete(e.slot);
+      } else if (e.type === 'item' && e.what === 'hit' && e.kind === 'parcel') {
+        // A Hand-Me-Down lands: what it handed over is the pickup just before it.
+        const kind = got.get(e.slot);
+        if (kind) {
+          handed++;
+          parcel.set(e.slot, kind);
+        }
+      } else if (e.type === 'item' && e.what === 'pop') pops++;
       else if (e.type === 'item' && e.what === 'surge') surges++;
       else if (e.type === 'item' && e.what === 'hit') {
         if (e.kind === 'bump') bumps++;
@@ -446,6 +469,8 @@ function playRound(seed: number, m: Match, bots: BotSeats, { at = 15 * 60, limit
     slips,
     spilled: spilled / 60,
     surges,
+    handed,
+    handedUsed,
     frames: run.frame - RUN_COUNTDOWN,
     leads,
     bumps,

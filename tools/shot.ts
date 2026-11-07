@@ -76,6 +76,7 @@
  *          --runframe N (race: stop on exact sim frame N)  --campin x,y,zoom (race: pin the view, for before/after sheets)
  *          --under N (race, with --runframe and --game slag: the lowest runner under the leader's screen, N frames into its grace)
  *          --underall (with --under: everyone but the leader under it, every color's mark at once)
+ *          --parcel (race, with --runframe and --game slag: on to the first Hand-Me-Down falling, then as it lands)
  *          --spread (race: stand the runners on open ground)  --hits 0,2,4 (race, with --runframe: the runners' brawl build-up, in turn)
  *          --pop N (race: after --frames, the first runner holds self-destruct N frames: ring and countdown)  --popall (every runner)
  *          --mode keyboard|gamepad|touch (footer prompt glyphs)  --net (fake online-lobby info)

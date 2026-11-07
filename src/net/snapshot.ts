@@ -8,6 +8,7 @@ import type { BloodCell } from '../sim/blood';
 import { isProtected, type Level, T_EMPTY } from '../sim/level';
 import type { PlacedProp } from '../sim/props';
 import { RunWorld } from '../sim/run';
+import type { Parcels } from '../sim/parcels';
 import type { Screen } from '../sim/screen';
 import type { Weather } from '../sim/weather';
 import type { ThemeId } from '../themes';
@@ -52,6 +53,8 @@ export interface RunSnap {
   slag: number | null;
   /** The leader's screen (sim/screen.ts), or null in a race without one. */
   screen?: Screen | null;
+  /** Hand-Me-Downs on their way (sim/parcels.ts), or null in a race without them. */
+  parcels?: unknown;
 }
 
 export interface MatchSnap {
@@ -258,6 +261,7 @@ export function snapshotMatch(m: Match): MatchSnap {
           itemSeed: run.itemSeed,
           slag: run.slag,
           screen: run.screen && { y: run.screen.y, under: [...run.screen.under] },
+          parcels: run.parcels && toWire(run.parcels),
         }
       : null,
   };
@@ -350,6 +354,7 @@ function restoreRun(run: RunWorld, s: RunSnap): RunWorld {
   run.finishOrder = [...s.finishOrder];
   run.slag = s.slag ?? null;
   run.screen = s.screen ? { y: s.screen.y, under: [...s.screen.under] } : null;
+  run.parcels = s.parcels ? (fromWire(s.parcels) as Parcels) : null;
   run.kills = s.kills.map((k) => ({ ...k }));
   run.endFrame = s.endFrame;
   run.propState = fromWire(s.propState) as RunWorld['propState'];
