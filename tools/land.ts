@@ -10,8 +10,9 @@
  *          in what a saved field means); --build forces `pnpm build`; --no-push stops after the gate.
  *
  * Steps: a clean tree; catch up with origin/main; merge the branches in order (a conflict stops
- * here with the merge in progress); `pnpm install` if the lockfile changed; one SNAP_VERSION bump
- * when the batch changed code in src/net/snapshot.ts or the field lists in tests/snapshot.test.ts;
+ * here with the merge in progress, unless the only conflict is the generated shape file: that is
+ * regenerated); `pnpm install` if the lockfile changed; one SNAP_VERSION bump when the batch changed
+ * the wire shape (src/net/snapshot-shape.json), code in src/net/snapshot.ts or the field lists in tests/snapshot.test.ts;
  * `pnpm check`, plus `pnpm build` when the host changed, plus whatever failed in main's last finished
  * CI run (`pnpm test:stats`, `pnpm build`); push HEAD to origin main.
  *
@@ -29,6 +30,8 @@ const branches = argv.filter((a) => !a.startsWith('--'));
 for (const f of flags) if (!['--snap', '--build', '--no-push'].includes(f)) fail(`Unknown option ${f}. Options: --snap, --build, --no-push.`);
 
 const SNAP_FILE = 'src/net/snapshot.ts';
+/** The snapshot's nested wire shape, which branches regenerate with `pnpm snap:shape` (tests/lib/snapshot-shape.ts). */
+const SHAPE_FILE = 'src/net/snapshot-shape.json';
 const SNAP_RE = /export const SNAP_VERSION = (\d+);/;
 /** Files whose change can break `next build` without failing `pnpm check`. */
 const HOST = /^(app\/|next\.config\.ts$|package\.json$|pnpm-lock\.yaml$|instrumentation(-client)?\.ts$)/;
@@ -83,10 +86,21 @@ const conflicts = () => git('diff', '--name-only', '--diff-filter=U')?.split('\n
 if (git('status', '--porcelain', '--untracked-files=no')) fail('the working tree has uncommitted changes. Commit them (or land from a clean checkout) first.');
 for (const b of branches) if (git('rev-parse', '--verify', '--quiet', `${b}^{commit}`) === null) fail(`no branch or commit named ${b}.`);
 
+/**
+ * Finish a merge whose only conflict is the shape file (two branches each added a field beside the other's): it is
+ * generated, so regenerate it from the merged code. The gate's snapshot test then holds it to the code.
+ */
+function reshape(): boolean {
+  const c = conflicts();
+  if (c.length !== 1 || c[0] !== SHAPE_FILE) return false;
+  console.log(`land: ${SHAPE_FILE} conflicted; regenerating it from the merged code`);
+  return run('pnpm', 'snap:shape') && git('add', SHAPE_FILE) !== null && git('commit', '-q', '--no-edit') !== null;
+}
+
 if (git('fetch', '-q', 'origin') === null) fail('git fetch origin failed.');
 if (git('merge-base', '--is-ancestor', 'HEAD', 'origin/main') !== null) {
   git('merge', '-q', '--ff-only', 'origin/main');
-} else if (git('merge-base', '--is-ancestor', 'origin/main', 'HEAD') === null && git('merge', '-q', '--no-edit', 'origin/main') === null) {
+} else if (git('merge-base', '--is-ancestor', 'origin/main', 'HEAD') === null && git('merge', '-q', '--no-edit', 'origin/main') === null && !reshape()) {
   fail(
     `merging origin/main conflicted in: ${conflicts().join(', ')}. Resolve them, \`git commit --no-edit\`, then run \`pnpm land ${branches.join(' ')}\` again.`,
   );
@@ -98,7 +112,7 @@ for (const [i, b] of branches.entries()) {
     console.log(`land: ${b} is already in HEAD, skipping`);
     continue;
   }
-  if (git('merge', '-q', '--no-edit', b) === null) {
+  if (git('merge', '-q', '--no-edit', b) === null && !reshape()) {
     const rest = branches.slice(i + 1);
     fail(
       `merging ${b} conflicted in: ${conflicts().join(', ')}. The merge is left in progress` +
@@ -124,11 +138,18 @@ const code = (s: string) =>
     .replace(/\/\*[\s\S]*?\*\/|\/\/.*$/gm, '')
     .replace(/\s+/g, ' ')
     .trim();
-/** What decides the wire format: snapshot.ts minus its comments, and the test's saved/derived field lists. A doc edit bumps nothing. */
+/**
+ * What decides the wire format: snapshot.ts minus its comments, the test's saved/derived field lists, and the shape
+ * real snapshots have (SHAPE_FILE), which catches the nested fields the code never names: a runner's items, a prop's
+ * state, a level profile knob. A doc edit bumps nothing.
+ */
 const wireAt = (rev: string) =>
   code(git('show', `${rev}:${SNAP_FILE}`) ?? '') +
   (git('show', `${rev}:tests/snapshot.test.ts`)?.match(/const (MATCH|RUN)_FIELDS = \{[\s\S]*?\n\};/g) ?? []).map(code).join('');
-if ((flags.has('--snap') || wireAt('origin/main') !== wireAt('HEAD')) && snapAt('origin/main') === snapAt('HEAD')) {
+const shapeAt = (rev: string) => git('show', `${rev}:${SHAPE_FILE}`);
+// The batch that brings the shape file in has nothing to compare it with.
+const reshaped = shapeAt('origin/main') !== null && shapeAt('origin/main') !== shapeAt('HEAD');
+if ((flags.has('--snap') || reshaped || wireAt('origin/main') !== wireAt('HEAD')) && snapAt('origin/main') === snapAt('HEAD')) {
   const next = Number(snapAt('HEAD')) + 1;
   writeFileSync(SNAP_FILE, readFileSync(SNAP_FILE, 'utf8').replace(SNAP_RE, `export const SNAP_VERSION = ${next};`));
   const why = landed.length ? `${landed.join(', ')} changed the snapshot` : 'the snapshot changed';

@@ -28,6 +28,8 @@
     "determinism": "tsx tools/determinism.ts",
     "perf": "tsx tools/perf.ts",
     "land": "tsx tools/land.ts",
+    "snap:shape": "tsx tools/snap-shape.ts",
+    "stats:compare": "tsx tools/stats-compare.ts",
     "music": "tsx tools/music.ts",
     "samples": "tsx tools/samples.ts"
   },

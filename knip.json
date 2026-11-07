@@ -3,6 +3,7 @@
   "entry": [
     "tools/name-words.ts",
     "tools/sculpt-hash.ts",
+    "tools/lib/stats-reporter.ts",
     "tools/art3d/style.ts",
     "tools/art3d/flat/build.ts",
     "tools/art3d/flat/kinds/*.ts",
