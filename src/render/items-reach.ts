@@ -7,7 +7,7 @@ import type { RC } from './kit';
 
 /**
  * Art for the brawl's two reaching items (docs/PARODY.md, Held items). Rude Awakening: a twin-bell alarm clock, lobbed;
- * once down it rattles on its base, bells hammering, while a flat dial sweeps round the reach of its blast (the tell).
+ * once down it rattles on its base, bells hammering, while a flat dial sweeps over the top of the reach of its blast (the tell).
  * Catch of the Day: a fishing rod with a reel and a red-and-white float on the end of its line. Icons are drawn around
  * (0, 0) in a ~14 px box facing +x; the live pieces read sim state and never write it.
  */
@@ -165,22 +165,23 @@ export function drawClocks(rc: RC, run: RunWorld) {
     if (c.fuse > 0) {
       const bg = rc.bg;
       const R = CLOCK.radius;
-      // The sweep: a flat wedge from twelve o'clock round to where the countdown stands, bright enough to read on
+      // The sweep: a flat wedge over the top half of the dial, nine o'clock round through twelve to three as the
+      // countdown runs (the lower half is in the floor the clock stands on), bright enough to read on
       // any ground, and the hand at its leading edge, inked so it holds on red rock and ice alike.
-      const end = -Math.PI / 2 + u * Math.PI * 2;
+      const end = Math.PI + u * Math.PI;
       bg.fillStyle = css(ALARM, 10, 0.6 + 0.2 * u);
       bg.beginPath();
       bg.moveTo(c.x, c.y);
-      bg.arc(c.x, c.y, R, -Math.PI / 2, end);
+      bg.arc(c.x, c.y, R, Math.PI, end);
       bg.closePath();
       bg.fill();
-      barLine(bg, c.x, c.y - R, c.x, c.y, 1.4, FACE, 130, { rim: 0.6 });
+      barLine(bg, c.x - R, c.y, c.x, c.y, 1.4, FACE, 130, { rim: 0.6 });
       barLine(bg, c.x, c.y, c.x + Math.cos(end) * R, c.y + Math.sin(end) * R, 1.6, FACE, 131, { rim: 0.6 });
       // The swept rim, solid: the countdown as a ring filling, which reads on red rock where the wedge's red can't.
-      const n = Math.max(2, Math.ceil(u * 32));
+      const n = Math.max(2, Math.ceil(u * 16));
       const arc: P[] = [];
       for (let i = 0; i <= n; i++) {
-        const a = -Math.PI / 2 + (u * Math.PI * 2 * i) / n;
+        const a = Math.PI + (u * Math.PI * i) / n;
         arc.push({ x: c.x + Math.cos(a) * R, y: c.y + Math.sin(a) * R });
       }
       bar(bg, arc, 2, FACE, 133, { rim: 0.6 });
