@@ -169,7 +169,7 @@ export function drawClocks(rc: RC, run: RunWorld) {
       const bg = rc.bg;
       const R = CLOCK.radius;
       // The sweep: a flat wedge from twelve o'clock round to where the countdown stands.
-      bg.fillStyle = css(ALARM, 0, 0.16 + 0.14 * u);
+      bg.fillStyle = css(ALARM, 8, 0.2 + 0.2 * u);
       bg.beginPath();
       bg.moveTo(c.x, c.y);
       bg.arc(c.x, c.y, R, -Math.PI / 2, -Math.PI / 2 + u * Math.PI * 2);
@@ -181,7 +181,7 @@ export function drawClocks(rc: RC, run: RunWorld) {
         const a0 = (i / 24) * Math.PI * 2;
         const a1 = a0 + (Math.PI * 2) / 48;
         line(bg, c.x + Math.cos(a0) * R, c.y + Math.sin(a0) * R, c.x + Math.cos(a1) * R, c.y + Math.sin(a1) * R, {
-          w: i % 6 ? 0.9 : 1.6,
+          w: i % 6 ? 1.2 : 2,
           seed: i,
           taper: [0, 0],
           press: 0,
