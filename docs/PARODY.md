@@ -39,7 +39,7 @@ Each row gives what the item or part mocks, its silhouette (what must read at ga
 
 | Look | Names | Mocks | Silhouette | Gag |
 |---|---|---|---|---|
-| prize podium | Weapon Stand | The party brawler's weapon spawner | A squat podium on the floor, the prize bobbing over its lid | It's a game show's prize plinth: maroon plush, a gold lid, marquee bulbs across its front. Taken, the bulbs light again one by one while a ghost of the next prize fills in; full, they chase. |
+| prize podium | Weapon Stand | The party brawler's weapon spawner | A squat podium on the floor, the prize bobbing over its lid | It's a game show's prize plinth: maroon plush, a gold lid, marquee bulbs across its front. Taken, the bulbs light again one by one while the next prize's dark silhouette fills with gold from the bottom; full, they chase. |
 
 ## Parts
 

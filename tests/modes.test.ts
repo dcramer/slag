@@ -24,6 +24,8 @@ import { firstOut, gateShut, leashRows, stepTide, type Tide } from '../src/sim/t
 import { analyzeReach } from '../src/sim/reach';
 import { type InputFrame, NO_INPUT } from '../src/sim/types';
 import { standSafety } from '../src/gen/level/measure';
+import { BUILDERS } from '../src/gen/level/builders';
+import { builderFaults } from '../src/gen/level/builders/contract';
 import { THEME_IDS } from '../src/themes';
 
 const FLOOR = 20; // first solid row
@@ -551,6 +553,23 @@ describe("a brawl's weather", () => {
 });
 
 describe("a brawl's arena", () => {
+  it("its contract catches a stand with no partner across the middle, and one in a set piece's reach", () => {
+    const lv = generateLevel(3, 'castle', MODES.brawl.profile);
+    const each = BUILDERS.arena.contract!.each!;
+    expect(builderFaults(each, lv, 0).filter((f) => f.startsWith('boxes'))).toEqual([]);
+    const stands = lv.setPieces.filter((p) => p.def.key === 'loop-box');
+    const off = stands.find((p) => Math.abs(2 * p.def.footprint[0][0] - (lv.w - 1)) > 1)!;
+    // Its partner gone: the one left is unpaired.
+    const lopsided = { ...lv, setPieces: lv.setPieces.filter((p) => p.def.key !== 'loop-box' || p === off) };
+    expect(builderFaults(each, lopsided, 0).some((f) => f.startsWith('boxesMirrored'))).toBe(true);
+    // Moved onto a set piece's own cell: in its reach.
+    const piece = lv.setPieces.find((p) => p.def.key !== 'loop-box')!;
+    const [px, py] = footprintCells(piece)[0];
+    const moved = { ...off, def: { ...off.def, footprint: [[px, py]] as [number, number][] } };
+    const crowded = { ...lv, setPieces: lv.setPieces.map((p) => (p === off ? moved : p)) };
+    expect(builderFaults(each, crowded, 0).some((f) => f.startsWith('boxesClear'))).toBe(true);
+  });
+
   // A seed per theme in turn: the arena builder's contract over every set is tests/conformance/builders.test.ts, its sweep tests/stats/builder-contracts.test.ts.
   const cases = [1, 2, 3].map((seed) => ({ seed, theme: THEME_IDS[(seed * 4) % THEME_IDS.length] }));
 

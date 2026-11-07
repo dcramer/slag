@@ -58,6 +58,7 @@ import {
   statusPreStep,
   stepHold,
   stepProjectile,
+  type Hazard,
   type TickCtx,
   type TouchCtx,
   touchesHazard,
@@ -290,6 +291,11 @@ export class RunWorld {
   /** Every reach of the last frame built, which is what the art draws: see Beam. */
   get beams(): readonly Beam[] {
     return this.out.beams!;
+  }
+
+  /** Where the last frame built hurts (its parts' hazards): what a generator plays a level for to keep its pickups clear. */
+  get hazards(): readonly Hazard[] {
+    return this.out.hazards;
   }
 
   /** Frames left of the spawn shield (SHIELD_FRAMES from GO), 0 once it's gone: then the zones are just ground. */
