@@ -63,6 +63,7 @@ export const CAST_NOTES: Record<Kind, string> = {
   skeleton: 'Took a shortcut. It was a long one.',
   android: 'Says nothing. Means it.',
   climber: 'Fell a thousand times. Counted.',
+  hitman: 'Silent. Assassin. Mostly the first.',
 };
 
 export interface CastEntry {

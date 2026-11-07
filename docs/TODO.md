@@ -73,7 +73,7 @@ Drawn (2026-11-05): at `LOOK_CAST` 12, `mage`, `creeper` and `tophat` pass the b
 - **Life sims and strategy:** the shopkeeper raccoon in an apron; the villager kid; the "work work" peon (green, tusks, an axe); the red-cloaked settler with a torch.
 - **Sandbox and online:** the noob avatar (a yellow block head, blue torso); the jelly-bean contestant (a bean in a onesie); the cloaked lamb cult leader (a red crown, a wool face); the yordle scout (a mushroom-pointed hat).
 - **Racing and sports:** the skateboarder (a beanie, the board under his arm); the baseball-capped golf pro.
-- **Stealth and spy:** the bald hitman with the barcode (a suit and red tie); the operative with three green lights on his goggles; the parkour runner ★ (a red-tattooed arm, a sprinting lean).
+- **Stealth and spy:** the operative with three green lights on his goggles; the parkour runner ★ (a red-tattooed arm, a sprinting lean).
 - **Point and click:** the mighty pirate (a ponytail, a puffy white shirt); the dog detective and his rabbit (a fedora, long ears).
 - **Rhythm and music:** the guitar hero (a mohawk, a guitar); the crypt dancer (a dagger, a beat in every step).
 - **Indie mixed:** the crying bald kid (tears for a weapon); the god-blooded prince with a laurel (a flaming foot, a sword); the masked rooster in a letterman jacket; the spelunker in a pith helmet with a whip; the fez wearer; the wandering cloaked traveller with a scarf (Journey's red robe, a long scarf).
