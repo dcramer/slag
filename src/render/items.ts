@@ -7,6 +7,7 @@ import type { Fx } from './fx';
 import { BRAWL_ICONS, drawPunch } from './items-brawl';
 import { CLIMB_ICONS } from './items-climb';
 import { drawRod, REACH_ICONS } from './items-reach';
+import { drawSurge, SHAFT_ICONS } from './items-shaft';
 import { drawBat, drawRaisedBrick, EXTRA_ICONS } from './items-extra';
 import { blob, inkFor, line, type P, stroke } from './ink';
 import { ball, boxPts, glint, part, path, pen, poly, sprite, stamp, tick } from './ink-props';
@@ -35,6 +36,9 @@ export const ITEM_HUE: Record<ItemKind, HSL> = {
   glove: { h: 200, s: 55, l: 56 },
   clock: { h: 4, s: 80, l: 56 },
   rod: { h: 190, s: 45, l: 60 },
+  slick: { h: 280, s: 45, l: 58 },
+  jolt: { h: 46, s: 92, l: 58 },
+  grapple: { h: 44, s: 86, l: 60 },
 };
 
 const NOODLE: HSL = { h: 96, s: 72, l: 56 };
@@ -260,6 +264,7 @@ const ICONS: Record<ItemKind, Icon> = {
   ...CLIMB_ICONS,
   ...BRAWL_ICONS,
   ...REACH_ICONS,
+  ...SHAFT_ICONS,
 };
 
 /** Draw an item icon centered at (x, y), scaled by k, mirrored when facing left. */
@@ -593,6 +598,7 @@ export function drawRunnerItems(rc: RC, r: Runner): void {
   if (it.thrust > 0) trialFlame(rc, x - fc * 6, b.y + 15.5, 0.6 + (it.thrust / ROCKET.thrust) * 0.4, fc);
   if (it.guard > 0) bubbleWrap(rc, x, b.y + b.h / 2, r.slot, 1 - it.guard / SHIELD.guard + 0.05);
   if (it.daze > 0) dazeStars(s, x, b.y - 4, rc.t);
+  drawSurge(rc, r);
 }
 
 /**
@@ -801,6 +807,47 @@ const KIND_FX: Record<string, (fx: Fx, e: ItemEvent, shake: (k: number) => void)
   },
   'fizzle:rod'(fx, e) {
     fx.burst('dust', e.x, e.y, 4, 40, [{ h: 30, s: 12, l: 78 }], 0.9, 0.3);
+  },
+  // The can tips: a splash of black off the spout.
+  'use:slick'(fx, e) {
+    fx.burst(
+      'debris',
+      e.x,
+      e.y - 2,
+      8,
+      90,
+      [
+        { h: 260, s: 30, l: 12 },
+        { h: 280, s: 70, l: 55 },
+      ],
+      0.9,
+      0.6,
+      140,
+    );
+  },
+  // The stamp lands: a ring of gold at the user's feet; then each rival shaken off goes over in a spray of coins.
+  'warn:jolt'(fx, e, shake) {
+    fx.add('ring', e.x, e.y, 0, 0, ITEM_HUE.jolt, 26, 0.3);
+    fx.burst('dust', e.x, e.y, 6, 60, [{ h: 30, s: 12, l: 78 }], 1.2, 0.4);
+    shake(4);
+  },
+  'hit:jolt'(fx, e, shake) {
+    fx.add('flash', e.x, e.y, 0, 0, GOLD, 14, 0.18);
+    fx.burst('debris', e.x, e.y - 2, 10, 150, [ITEM_HUE.jolt, GOLD], 0.9, 0.7, 160);
+    shake(3);
+  },
+  // Up and over the lip: a puff of dust where it lands and a glint off the pearls.
+  'hit:grapple'(fx, e) {
+    fx.burst('dust', e.x, e.y, 5, 50, [{ h: 30, s: 12, l: 78 }], 1.1, 0.35);
+    fx.add('ring', e.x, e.y - 6, 0, 0, { h: 40, s: 30, l: 93 }, 12, 0.25);
+  },
+  'fizzle:grapple'(fx, e) {
+    fx.burst('spark', e.x, e.y, 8, 90, [{ h: 40, s: 30, l: 93 }, ITEM_HUE.grapple], 0.8, 0.4);
+  },
+  // A Leg Day taken: a pop of pink.
+  'surge:surge'(fx, e) {
+    fx.add('ring', e.x, e.y + 6, 0, 0, { h: 335, s: 90, l: 70 }, 18, 0.3);
+    fx.burst('spark', e.x, e.y + 6, 10, 120, [{ h: 335, s: 90, l: 75 }, WHITE], 1, 0.4);
   },
   'use:tremor'(fx, e) {
     fx.burst('dust', e.x, e.y + 14, 4, 40, [{ h: 0, s: 0, l: 85 }], 1, 0.3);

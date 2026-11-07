@@ -29,6 +29,7 @@ import { Hud } from './hud';
 import { raceTagsBottom } from './hud/race';
 import { drawClouds, drawDrops, drawRunnerItems, itemFx } from './items';
 import { drawFists, drawHooks } from './items-climb';
+import { drawClimbs, drawJolts, drawSlicks } from './items-shaft';
 import { drawClocks, drawLines } from './items-reach';
 import { drawPocketBlocks, drawShells, drawShellShadows } from './items-extra';
 import { circle, flutter, type Light, light, type RC } from './kit';
@@ -460,6 +461,7 @@ export class Renderer {
       each((k) => {
         for (const p of run.projectiles) drawProjectile(rc, p, k === 0 ? emit : () => {});
         drawPocketBlocks(rc, run);
+        drawSlicks(rc, run);
         drawShellShadows(rc, run);
         drawDrops(rc, run);
       });
@@ -473,6 +475,7 @@ export class Renderer {
         if (r.alive && pl) this.drawTrail(pl.character, r.slot, r.body.x + r.body.w / 2, r.body.y + r.body.h - up(r), r.body.vx, r.body.vy, dt);
       }
       drawHooks(rc, run, up);
+      drawClimbs(rc, run, up);
       for (const r of run.runners) {
         if (!r.alive) continue;
         const pl = m.player(r.slot);
@@ -509,6 +512,7 @@ export class Renderer {
         drawClouds(rc, run);
         drawShells(rc, run);
         drawFists(rc, run);
+        drawJolts(rc, run);
         drawClocks(rc, run);
         drawLines(rc, run);
       });

@@ -76,7 +76,7 @@ describe('Queue Jumper', () => {
     const [wasA, wasB, wasC] = [at(a), at(b), at(c)];
     giveItem(a, 'hook');
     use(run, 0);
-    expect(a.items.held).toBeNull();
+    expect(a.items.held?.uses).toBe(1);
     expect(run.items.hooks[0].target).toBe(1);
     steps(run, HOOK.reel - 2);
     expect(at(b)).toEqual(wasB);

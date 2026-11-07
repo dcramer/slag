@@ -417,6 +417,22 @@ export const SFX = {
     for (let i = 0; i < 12; i++) tone(v, 'square', 2600 * o.pitch, 2200 * o.pitch, t + i * 0.022, 0.001, 0.008, 0.6 * (1 - i / 14), hp);
     burst(v, 'pink', t, 0.04, 0.22, 0.5, 'bandpass', 2400 * o.pitch, 900 * o.pitch, 3);
   }),
+  // An oil can tipped out: a few thick glugs, low and wet, sliding down.
+  glug: P(1, 0.28, 0.1, 3, 0.2, (v, t, o) => {
+    const lp = v.filter(v.out, 'lowpass', 900);
+    for (let i = 0; i < 4; i++) tone(v, 'sine', (240 - i * 30) * o.pitch, (150 - i * 18) * o.pitch, t + i * 0.085, 0.004, 0.07, 0.9, lp);
+    burst(v, 'brown', t, 0.02, 0.32, 0.5, 'lowpass', 500);
+  }),
+  // A money bag let go: coins pouring out, each a little ping lower than the last.
+  coins: P(1, 0.28, 0.2, 3, 0.2, (v, t, o) => {
+    for (let i = 0; i < 9; i++) metal(v, t + i * 0.045 + rnd(0, 0.012), (3200 - i * 170) * o.pitch, 0.06, 0.55, [1, 2.7, 4.1]);
+  }),
+  // A protein shaker: two rattles of the ball inside and a quick rising whistle.
+  shaker: P(1, 0.48, 0.1, 3, 0.2, (v, t, o) => {
+    burst(v, 'white', t, 0.004, 0.05, 0.7, 'bandpass', 4200, 4200, 2);
+    burst(v, 'white', t + 0.09, 0.004, 0.05, 0.7, 'bandpass', 4600, 4600, 2);
+    tone(v, 'triangle', 520 * o.pitch, 1560 * o.pitch, t + 0.12, 0.004, 0.16, 0.8);
+  }),
   'ui-hover': P(0, 0.226, 0, 4, 0.06, (v, t, o) => {
     tone(v, 'sine', 1250 * o.pitch, 1250 * o.pitch, t, 0.002, 0.03, 1);
   }),

@@ -9,6 +9,7 @@ import type { DeathCause, Runner, RunWorld } from '../run';
 import { type InputFrame, NO_INPUT } from '../types';
 import { bonk, cx, cy, giveOrDrop, isActive, itemEvent, launch, moveBox, spawnDrop } from './common';
 import { stepClocks } from './clock';
+import { stepClimbItems } from './climb';
 import { stepBlocks } from './pocket';
 import { stepLines } from './rod';
 import { BAT, GLOVE, ITEMS, ROCKET, SHIELD, SMOKE, SWORD, swingBat, TREMOR, tossHeld } from './roster';
@@ -42,10 +43,10 @@ export function giveItem(r: Runner, kind: ItemKind, uses = ITEMS[kind].uses): vo
 
 /**
  * The controls a runner actually gets. Like freezing, a daze leaves only giving up (alt), and so does a rod's line
- * going out; winding up a bat leaves that and letting go.
+ * going out or a grapple reeling you up; winding up a bat leaves that and letting go.
  */
 export function itemInput(it: RunnerItems, inp: InputFrame): InputFrame {
-  if (it.daze > 0 || it.cast > 0) return inp.altPressed ? { ...NO_INPUT, altPressed: true } : NO_INPUT;
+  if (it.daze > 0 || it.cast > 0 || it.reel > 0) return inp.altPressed ? { ...NO_INPUT, altPressed: true } : NO_INPUT;
   if (it.windup > 0) return inp.altPressed || inp.usePressed ? { ...NO_INPUT, altPressed: inp.altPressed, usePressed: inp.usePressed } : NO_INPUT;
   return inp;
 }
@@ -314,6 +315,7 @@ export function stepItems(w: RunWorld, inputs: readonly InputFrame[], live: bool
   stepFists(w);
   stepClocks(w);
   stepLines(w);
+  stepClimbItems(w);
   stepBlocks(w);
   pickUp(w);
   stepDrops(w);

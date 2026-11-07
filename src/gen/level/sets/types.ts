@@ -187,6 +187,8 @@ export interface BuilderContract {
     repeat?: number;
     /** Loot boxes it hangs when its profile deals them, at least. */
     boxes?: number;
+    /** Leg Days it floats when its profile asks for them, at least `count`, each on a lip a slip off falls `drop` rows or more. */
+    surges?: { count: number; drop: number };
     /** Its boxes (or stands) in mirrored pairs across the middle, an odd one on the middle. */
     boxesMirrored?: true;
     /** No box or stand in or beside a set piece, its hazards' reach or its shots' line over its cycle (gen/level/harm.ts: a simulation). */

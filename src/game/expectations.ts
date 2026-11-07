@@ -53,7 +53,8 @@ export const PASS_BANDS: Partial<Record<ModeId, Record<BotLevel, Record<Difficul
  * (src/sim/screen.ts; 512 seeds: 44, 47, 47), whose top holds a leader who climbs faster than it rises; 43, 50 and 49
  * with the regroup gates it replaced (512: 53, 49, 51), 59 with neither (256, boxes). About 110 rounds are judged in
  * each, so ±5. `leads`: lead changes a round with the boxes, someone new on top a second straight: 2.5 with the
- * screen (512: 2.4), 3.1 with the gates, 1.4 with neither. The target, from the lead-camera racer, is the early leader
+ * screen (512: 2.4), 3.1 with the gates, 1.4 with neither. With the climb's own items in the deal and Leg Days on its
+ * lips (docs/MODES.md → Rising Slag, 8): 45, 39 and 41, and 2.7 lead changes (3.0 with the deal in every hand). The target, from the lead-camera racer, is the early leader
  * winning about half the time (docs/MODES.md); these bands only catch a regression.
  */
 export const LEAD_HOLDS = {

@@ -113,6 +113,7 @@ export function wordFor(e: GameEvent): Pick | null {
       if (e.kind === 'homer') return { text: `${380 + Math.floor(Math.random() * 120)} FT`, fill: WHITE, burst: RED, size: 22 };
       if (e.kind === 'tremor') return { text: 'THOOM!', fill: ORANGE, burst: WHITE, size: 22 };
       if (e.kind === 'tax') return { text: 'AUDIT!', fill: RED, burst: WHITE, size: 20 };
+      if (e.kind === 'jolt') return { text: 'CHA-CHING!', fill: YELLOW, burst: WHITE, size: 16 };
       return null;
     case 'prop':
       if (e.kind === 'keg-fire') return { text: 'FOOMP!', fill: YELLOW, burst: ORANGE, size: 16 };

@@ -6,8 +6,9 @@ import type { BrainView, Intent, SelfSense } from '../types';
 
 /**
  * What every mode's strategy does with items: use the one in hand when its tactic (tactics.ts) says it's worth it,
- * and with empty hands, go for a box or a loose item near the way it's going. How often a bot sees its chance is its
- * `knack`: at 0 it never uses an item or goes out of its way for one.
+ * and with empty hands, go for a box or a loose item near the way it's going. A climb's Leg Days are worth a step
+ * whatever it holds. How often a bot sees its chance is its `knack`: at 0 it never uses an item or goes out of its way
+ * for one.
  */
 
 /** Frames between looks at its item, staggered by seat: a player doesn't check every frame either. */
@@ -51,6 +52,8 @@ interface Errand {
   tx: number;
   ty: number;
   box: { tx: number; ty: number; hands: boolean; stand: boolean } | null;
+  /** A Leg Day floating in the stand cell, rather than a loose item lying there. */
+  surge?: boolean;
   until: number;
   hops: number;
 }
@@ -82,11 +85,12 @@ export class ItemPlay {
       const use = ITEM_TACTICS[me.held.kind].when({ v, me, stalled });
       if (use && this.rng.chance(this.traits.knack)) return use;
     }
-    if (me.held) return (this.errand = null);
+    // Full hands only go out of their way for a Leg Day.
+    if (me.held && !this.errand?.surge) this.errand = null;
     // The slag is close enough that any detour could cost it the climb: no time for errands.
     if (this.budget(me) <= 0) return (this.errand = null);
     // It weighs a detour from where it stands: in the air its own cell has no route yet.
-    if (!this.errand && me.grounded && (this.frame + v.slot) % SCAN_EVERY === 0) this.errand = this.scan(v, me);
+    if (!this.errand && me.grounded && (this.frame + v.slot) % SCAN_EVERY === 0) this.errand = this.scan(v, me, !!me.held);
     return this.errand ? this.run(v, me, this.errand) : null;
   }
 
@@ -95,7 +99,9 @@ export class ItemPlay {
       if (this.reach.shun) this.passed.set(key(e, v.level.w), this.frame + PASS_FRAMES);
       return (this.errand = null);
     }
-    if (e.box) {
+    if (e.surge) {
+      if (!v.surges.some((q) => q.tx === e.tx && q.ty === e.ty && q.ready)) return (this.errand = null);
+    } else if (e.box) {
       const ready = v.boxes.some((b) => b.tx === e.box!.tx && b.ty === e.box!.ty && b.ready);
       // Popped (or someone took what the stand held): whatever it dropped is the next errand.
       if (!ready) return (this.errand = null);
@@ -115,21 +121,22 @@ export class ItemPlay {
     return { do: 'goTo', tx: e.tx, ty: e.ty };
   }
 
-  /** The nearest thing worth fetching: a loose item, or a full box to knock, a short way off its route. */
-  private scan(v: BrainView, me: SelfSense): Errand | null {
+  /** The nearest thing worth fetching: a Leg Day, a loose item, or a full box to knock, a short way off its route (only a Leg Day with `full` hands). */
+  private scan(v: BrainView, me: SelfSense, full: boolean): Errand | null {
     const climbing = v.objective.kind === 'climb';
     // Climbing, only what's level with it or above is on the way.
     const near = (x: number, y: number) =>
       Math.abs(x - me.tx) <= this.reach.across && me.ty - y <= this.reach.rows && y - me.ty <= (climbing ? 1 : this.reach.rows);
     const spots: Spot[] = [];
-    for (const d of v.drops) {
+    for (const q of v.surges) if (q.ready && near(q.tx, q.ty)) spots.push({ tx: q.tx, ty: q.ty, box: null, surge: true });
+    for (const d of full ? [] : v.drops) {
       const tx = Math.floor(d.x);
       const ty = Math.floor(d.y);
       if (near(tx, ty)) spots.push({ tx, ty, box: null });
     }
     // Round a climb the slag is leashed to the leader, so a detour costs it the climb, and a box deals it only
     // something to hold on with: boxes are for whoever is behind.
-    const boxes = climbing && me.rank === 0 ? [] : v.boxes;
+    const boxes = full || (climbing && me.rank === 0) ? [] : v.boxes;
     for (const b of boxes) {
       if (!b.ready) continue;
       // A stand is on the floor in its own cell: walk in.
@@ -155,7 +162,7 @@ export class ItemPlay {
     fresh.sort((a, b) => far(a) - far(b));
     const s = fresh[0];
     if (!s) return null;
-    if (this.worth(v, me, s)) return { tx: s.tx, ty: s.ty, box: s.box, until: this.frame + ERRAND_FRAMES, hops: 0 };
+    if (this.worth(v, me, s)) return { tx: s.tx, ty: s.ty, box: s.box, ...(s.surge && { surge: true }), until: this.frame + ERRAND_FRAMES, hops: 0 };
     this.passed.set(key(s, v.level.w), this.frame + PASS_FRAMES);
     return null;
   }
@@ -177,5 +184,5 @@ export class ItemPlay {
 }
 
 /** A spot to fetch from, and how many tiles nearer it counts for what it holds. */
-type Spot = Pick<Errand, 'tx' | 'ty' | 'box'> & { worth?: number };
+type Spot = Pick<Errand, 'tx' | 'ty' | 'box' | 'surge'> & { worth?: number };
 const key = (s: Spot, w: number) => (s.box ? -1 - (s.box.ty * w + s.box.tx) : s.ty * w + s.tx);
