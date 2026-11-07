@@ -16,7 +16,7 @@ import { NO_INPUT } from '../../src/sim/types';
 import { MODES } from '../../src/game/modes';
 import { DEFAULT_RULES, withMode } from '../../src/game/rules';
 import type { ThemeId } from '../../src/themes';
-import { deadlyCells } from './arena-safety';
+import { deadlyCells } from '../../src/gen/level/measure';
 
 export interface BotRace {
   finished: boolean;
@@ -190,7 +190,7 @@ export interface Fight {
   gap: number;
   /** Deaths with no knock credited that came within `SHOVED` frames of touching a rival: shoved in, or tangled with one. */
   shoved: number;
-  /** Of the counted frames, those standing on the ground, and of them those with no way to die near (`arenaSafety`): Brawl only. */
+  /** Of the counted frames, those standing on the ground, and of them those with no way to die near (`standSafety`): Brawl only. */
   grounded: number;
   safe: number;
   /** Race frame each slot last touched a rival. */

@@ -3,7 +3,7 @@ import { BRIDGE_W } from './validate';
 import { deriveSeed, Rng } from '../../core/rng';
 import { type Level, type LevelProfile, LOOP_BAND } from '../../sim/level';
 import { pickThemeId, type ThemeId } from '../../themes';
-import { commit, finalize, SET_PIECE_UID, SET_PIECES, shotsIntoSpawns, Site, tellFaults, windowFaults } from '../setpieces';
+import { commit, finalize, type RecipeTry, SET_PIECE_UID, SET_PIECES, shotsIntoSpawns, Site, tellFaults, windowFaults } from '../setpieces';
 import { type Concept, conceptName, fits, type Landmark, landmarkFaults, rollConcept } from '../stage';
 import { generateTheme, type Theme } from '../theme';
 import { ReachCache } from '../../sim/reach';
@@ -18,6 +18,7 @@ import { DIFFICULTY, setLevelDifficulty } from './difficulty';
 import { levelPrecision } from './precision';
 import { analyzeRoutes, MAX_SHARED } from './routes';
 import { builderFor } from './builders';
+import { builderFaults } from './builders/contract';
 import { FALLBACK_SCULPTOR, SCULPTORS } from './sculptors';
 import { LAST_RESORT } from './sculptors/common';
 import type { Shape } from './types';
@@ -59,9 +60,13 @@ export interface GenInfo {
   landmark?: Landmark;
   /** Why landmark attempts broke the concept's contract (../stage/contract.ts), one line per rejected attempt. */
   landmarkFaults?: string[];
+  /** Promises of its builder's the level breaks (`BuilderContract.each`, ./builders/contract.ts): conformance fails on them. */
+  contractFaults?: string[];
   /** Tight jumps on the level's more forgiving route (./precision.ts), and the sculpts drawn to fit its difficulty (the tier's `draws` + 1 when none fit and the nearest was redrawn). */
   precision: number;
   draws: number;
+  /** The filler set pieces the level asked for (`count`, its landmark's own aside) and each recipe the placer tried (`pnpm level` reports both). */
+  placement?: { asked: number; tries: RecipeTry[] };
 }
 
 export let lastGenInfo: GenInfo = {
@@ -282,9 +287,13 @@ export function generateLevel(seed: number, themeOverride?: ThemeId, profileOver
         draws: 0,
       };
       const budget = live ? (live.budget ?? fixed.length) : 0;
+      // A Rising Slag tower is several levels tall: its hazards come at the same rate per storey.
+      const asked = Math.max(0, profile.hazards * (profile.loop ? Math.max(1, Math.round(profile.h / 50)) : 1) - budget);
+      const tries: RecipeTry[] = [];
+      lastGenInfo.placement = { asked, tries };
       const pieces = SET_PIECES[themeId](new Rng(deriveSeed(seed, lab(`setpieces:${attempt}`))), level, {
-        // A Rising Slag tower is several levels tall: its hazards come at the same rate per storey.
-        count: Math.max(0, profile.hazards * (profile.loop ? Math.max(1, Math.round(profile.h / 50)) : 1) - budget),
+        count: asked,
+        log: tries,
         danger: profile.danger,
         ...(profile.setPieceRoles ? { roles: profile.setPieceRoles } : {}),
         cache,
@@ -306,6 +315,11 @@ export function generateLevel(seed: number, themeOverride?: ThemeId, profileOver
       for (let shots = profile.ends ? shotsIntoSpawns(level) : null; shots?.size; shots = shotsIntoSpawns(level))
         level.setPieces = level.setPieces.filter((p) => !shots!.has(p.uid)).map((p, i) => ({ ...p, uid: SET_PIECE_UID + i }));
       while (level.setPieces.length && !planHolds(level, [], bridges, cache)) level.setPieces.pop();
+      // What its builder promises of every level (builders/contract.ts), recorded rather than enforced: rejecting the
+      // attempt would change levels that already shipped (a mine arena from seed 0 hangs 2 boxes of its 3).
+      const promised = builderFor(profile).contract?.each;
+      const unkept = promised ? builderFaults(promised, level, asked, cache) : [];
+      if (unkept.length) lastGenInfo.contractFaults = unkept;
       if (level.rides) {
         // A ride is only as good as its carrier.
         level.rides = level.rides.filter((r) => level.setPieces.some((p) => p.uid === r.uid));

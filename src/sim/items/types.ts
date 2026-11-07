@@ -194,6 +194,9 @@ export interface CastLine {
   out: number;
   /** Reeling back in (it snagged someone or ran out of line): it only comes home now. */
   back: boolean;
+  /** Runner index the float is hooked on, riding with them as they're yanked (-1: none), and frames it has been. */
+  hooked: number;
+  held: number;
 }
 
 /** Item state for one race (lives on RunWorld). */
