@@ -893,23 +893,24 @@ export const BRIEFS: Record<string, Brief> = {
   },
   vampire: {
     // The nod, each part of the read at race size and each a shape in outline: her height, the tallest and slimmest
-    // figure in the cast, straight up and down (the read: everyone else is a small toy; a tall one for once); the wide
-    // sun hat on a low flat crown over a small head (a flat crown and no point, on a tall slim body: the mage's brim
-    // sits on a small round robed figure, his crown bent into a point; the top-hat girl's is a tall crown); the long
-    // fitted gown falling to the floor and flaring at the hem, hiding her feet (a lady's gown, never a coat over two
-    // legs, the slayer's); one hand raised out in front, clear of her, with five long claws.
-    // Ours, and the joke: the hat's brim was sat on and droops on one side, the hem is torn, and the claws are false
-    // nails, one missing.
-    // The palette is neutral (Decisions 4): the gown in the player's colour; the hat a dark neutral, the skin pale,
-    // the pearls and nails neutrals, the lips a face mark. The colours lead the brief: the image model drops what
-    // comes last.
+    // figure in the cast, straight up and down (the read: everyone else is a small toy; a tall one for once); a huge
+    // pale sun hat, far wider than her shoulders, on a low flat crown with a dark band over a small head (pale, it
+    // stands off any gown colour; dark, the clean colour read took it for her hair; a flat crown and no point: the
+    // mage's brim sits on a small round robed figure, his crown bent into a point); the gown pulled in at the waist
+    // and flaring to the floor (a lady's gown, never a coat over two legs, the slayer's); one hand held out in front,
+    // clear of her and of the brim, four long blade claws fanned (small nails were lost at play size; the claws are
+    // what the clean read named her by, 2026-11-06).
+    // Ours, and the joke: the hat's brim was sat on and droops at the back, the hem is torn, and the claws are false
+    // nails, one missing (four, not five).
+    // The palette is neutral (Decisions 4): the gown in the player's colour; the hat a pale neutral with a near-black
+    // band, the hair near black, the skin pale, the pearls and claws neutrals, the lips a face mark. The colours lead
+    // the brief: the image model drops what comes last.
     design:
       'The character: a very tall, slim, elegant cartoon lady in three-quarter view facing right, three times as tall as she is wide, standing straight and haughty. ' +
-      'Colours: a plum gown (#7a2e4a), a black hat (#2a2630), very pale skin (#eee4e0), red lips (#d42a2a), white pearls (#f4f0e8), silver nails (#b8bcc4). ' +
-      'Her signature: a wide black sun hat with a low flat crown and a flat round brim wider than her shoulders, over a small head, her chin up, looking down her nose. ' +
-      'A long fitted gown with a narrow waist falls straight to the floor and flares a little at the hem, hiding her feet. A string of big white pearls round her neck. ' +
-      'Her front hand is raised at shoulder height out in front of her, clear of her body, five very long pointed silver nails splayed like claws.',
-    worn: "the hat's wide brim is bent and droops down steeply on its back side where it was sat on, a big crease across it, the crown still low and flat; one of the five long silver nails is missing, that fingertip short and bare; the hem of the gown is torn into a big ragged notch at the front; there is a gap in the string of pearls where one is gone. Her face, her height and the raised hand stay as they are.",
+      'Colours: a plum gown (#7a2e4a), a pale cream hat (#e4dccb) with a black band (#2e2a30), short black hair, very pale skin (#eee4e0), red lips (#d42a2a), white pearls (#f4f0e8), silver claws (#b8b4c8). ' +
+      'Her signature: a huge pale sun hat with a low flat crown and a black band, its flat round brim far wider than her shoulders, over a small head, her chin up, looking down her nose. Her front hand held out at chest height in front of her, clear of her body and well below the brim, four very long pointed silver blade claws fanned out forward, white background between each claw. ' +
+      'A wide neckline showing pale collarbones and a string of big white pearls. A long fitted gown pulled in tight at the waist falls to the floor and flares wide at the hem.',
+    worn: "the hat's wide brim is bent and droops down at its back end where it was sat on, the crown still low and flat; only four claws, one finger short and bare where a false nail is missing; the hem of the gown is torn into ragged notches. Her face, her height and the held-out claws stay as they are.",
   },
   sim: {
     // The nod, each part of the read at race size and each a shape in outline: the green diamond floating above her
