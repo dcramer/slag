@@ -6,7 +6,7 @@ import { generateCrate } from '../src/gen/props';
 import { throughFaults } from '../src/gen/setpieces';
 import { leaderOf as leaderIndex } from '../src/sim/standing';
 import { POINTS, scoreKnockouts, scoreSurvival, SURVIVE_PLACES, UNDERDOG_ROUNDS } from '../src/game/scoring';
-import { creditKill } from '../src/sim/items';
+import { creditKill, dealFor } from '../src/sim/items';
 import { generateLevel } from '../src/gen/level';
 import { LOOP_ROWS, LOOP_W, rollProfile } from '../src/gen/level/profile';
 import { LOOP_HEAD_START } from '../src/gen/level/tide';
@@ -14,12 +14,17 @@ import { rollKind } from '../src/gen/level/weather';
 import { generateTheme } from '../src/gen/theme';
 import { hashMatch, restoreMatch, snapshotMatch } from '../src/net/snapshot';
 import { FPS, LEVEL_H, LEVEL_W, POP_HOLD, RUN_COUNTDOWN, TILE } from '../src/sim/constants';
-import { isProtected, lapShift, type Level, LOOP_BAND, LOOP_SPAWN, T_ONEWAY } from '../src/sim/level';
+import { isProtected, lapShift, type Level, LOOP_BAND, LOOP_SPAWN, T_ONEWAY, T_SOLID } from '../src/sim/level';
 import { footprintCells, moduleSim, newPropState } from '../src/sim/props';
 import { bodyAtCell } from '../src/sim/physics';
 import { feetUp, RunWorld } from '../src/sim/run';
 import { BotSeats } from '../src/brain/bots';
 import { Predictor } from '../src/net/predict';
+import { senseView } from '../src/brain/view';
+import { slagStrategy } from '../src/brain/strategies/slag';
+import { rollPersonality } from '../src/brain/personality';
+import { BRAIN_VIEW_VERSION, type BrainView, T_UNKNOWN } from '../src/brain/types';
+import { Rng } from '../src/core/rng';
 import { screenEdges } from '../src/sim/screen';
 import { firstOut, leashRows, stepTide, type Tide } from '../src/sim/tide';
 import { analyzeReach } from '../src/sim/reach';
@@ -273,7 +278,7 @@ describe('Rising Slag parts and items', () => {
 });
 
 describe("a loop's mystery boxes", () => {
-  it('deal catch-up to whoever is behind and defence to the leader', () => {
+  it('deal catch-up to whoever is behind, stronger the further behind, and defence to the leader', () => {
     const box = {
       type: 'mystery' as const,
       cells: [[10, 10]] as [number, number][],
@@ -303,16 +308,28 @@ describe("a loop's mystery boxes", () => {
         ],
         // Higher up leads (sim/standing.ts): the lower feet.
         leader: () => (up < other ? 0 : 1),
+        behind: (i: number) => Math.max(0, ((i === 0 ? up : other) - Math.min(up, other)) / TILE),
         spawnItem: (s: { kind: string }) => got.push(s.kind),
         emit: () => {},
       };
       moduleSim('mystery').tick!(box, ctx as never);
       return got[0];
     };
+    // The further behind, the stronger the table (`ItemDeal.behind`): a few rows back the mild one, a screen's half
+    // back the next, further still the strongest.
+    const tiers = box.deal.behind!;
+    expect(tiers.length).toBeGreaterThan(0);
     for (let uid = 1; uid <= 8; uid++) {
-      expect(box.deal.chase).toContain(knock(uid, 500, 100));
+      expect(box.deal.chase).toContain(knock(uid, 100 + 2 * TILE, 100));
+      for (const [i, t] of tiers.entries()) {
+        const rows = i + 1 < tiers.length ? (t.rows + tiers[i + 1].rows) / 2 : t.rows + 4;
+        expect(t.deal).toContain(knock(uid, 100 + rows * TILE, 100));
+      }
       expect(box.deal.lead).toContain(knock(uid, 100, 500));
     }
+    expect(dealFor(box.deal, false, 0)).toBe(box.deal.chase);
+    expect(dealFor(box.deal, true, 30)).toBe(box.deal.lead);
+    expect(dealFor(box.deal, false, tiers[tiers.length - 1].rows)).toBe(tiers[tiers.length - 1].deal);
   });
 });
 
@@ -371,20 +388,140 @@ describe("the leader's screen", () => {
     expect(v.runners[1].alive).toBe(true);
   });
 
-  it('follows the leader up no faster than it rises, and its top holds them', () => {
+  it('follows the leader wherever they go, never out of it', () => {
     const w = race(false);
     run(w, RUN_COUNTDOWN);
     const y0 = w.screen!.y;
-    // The leader flung up faster than any climb: the window rises at most `rise` rows a second after them.
+    let lowest = Infinity;
+    // Whoever leads, every frame: head under the top, feet `keep` rows over the bottom.
+    const check = (x: RunWorld) => {
+      const r = x.runners[leaderIndex(x)];
+      const { top, bottom } = screenEdges(screen, x.screen!);
+      expect(feetUp(x.level, r) - r.body.h).toBeGreaterThanOrEqual(top - 1e-6);
+      expect(feetUp(x.level, r)).toBeLessThanOrEqual(bottom - screen.keep * TILE + 1e-6);
+      lowest = Math.min(lowest, feetUp(x.level, r));
+    };
+    // Flung up faster than any climb for a second, then let fall back past the ledge.
     run(w, RUN_COUNTDOWN + FPS, (x) => {
+      check(x);
       x.runners[0].body.vy = -300;
     });
-    expect(y0 - w.screen!.y).toBeLessThanOrEqual(screen.rise * TILE + 1e-6);
-    expect(y0 - w.screen!.y).toBeGreaterThan(screen.rise * TILE * 0.9);
-    // The top is solid: it holds them under it.
-    const { top } = screenEdges(screen, w.screen!);
-    for (const r of w.runners) expect(feetUp(w.level, r) - r.body.h).toBeGreaterThanOrEqual(top - 1e-6);
-    expect(w.solids.some((s) => s.propUid === -1 && Math.abs(s.y + s.h - top) < 1e-6)).toBe(true);
+    expect(y0 - lowest).toBeGreaterThan(15 * TILE);
+    run(w, RUN_COUNTDOWN + 4 * FPS, check);
+  });
+
+  it('bots see only the screen and a row or two over it: no tiles, boxes or rivals beyond', { timeout: 60_000 }, () => {
+    const m = new Match(3, 'mine', SLAG);
+    const bots = new BotSeats();
+    for (let i = 0; i < 4; i++) m.join(bots.add(m));
+    m.startMatch();
+    m.startRun();
+    const run = m.run!;
+    let looked = 0;
+    while (run.endFrame < 0 && run.frame < RUN_COUNTDOWN + 20 * FPS) {
+      m.step(bots.frames(m));
+      if (run.frame % 20) continue;
+      const L = (m.level.loop ?? 0) * TILE;
+      const top = screenEdges(screen, run.screen!).top;
+      for (const p of m.players) {
+        const r = run.runners.find((x) => x.slot === p.slot)!;
+        if (!r.alive) continue;
+        const v = senseView(m, p);
+        // A row or two over the screen's top, in this runner's own lap's rows.
+        expect(v.sight).toBe(Math.floor((top - 2 * TILE + r.lap * L) / TILE));
+        const sight = v.sight!;
+        for (let y = 0; y < Math.min(sight, v.level.h); y++) for (let x = 0; x < v.level.w; x++) expect(v.level.tiles[y * v.level.w + x]).toBe(T_UNKNOWN);
+        if (sight > 0 && sight < v.level.h) expect(v.level.tiles.slice(sight * v.level.w)).toEqual(m.level.tiles.slice(sight * v.level.w));
+        for (const b of v.boxes) expect(b.ty).toBeGreaterThanOrEqual(sight);
+        for (const q of v.runners) expect(q.up).toBeLessThanOrEqual(((run.level.spawn.ty + 1) * TILE - top + 2 * TILE + r.body.h) / TILE + 1.25);
+        looked++;
+      }
+    }
+    expect(looked).toBeGreaterThan(20);
+  });
+
+  it("a bot under the lap line, out of sight, climbs to what it sees, not to a way it can't", () => {
+    // A shaft 24 wide: the bot on a floor at row 30, ledges it can see over it at rows 26 and 22, and out of sight
+    // (rows under 18) the lap line at row 2 with the only way to it far off to the left.
+    const W2 = 24;
+    const H2 = 34;
+    const t = new Uint8Array(W2 * H2);
+    for (let x = 0; x < W2; x++) t[31 * W2 + x] = T_SOLID;
+    for (let x = 8; x < 16; x++) t[27 * W2 + x] = T_ONEWAY;
+    for (let x = 9; x < 14; x++) t[23 * W2 + x] = T_ONEWAY;
+    for (let x = 1; x < 4; x++) t[12 * W2 + x] = T_ONEWAY;
+    const sees = (sight: number | null) => {
+      const tiles = t.slice();
+      if (sight !== null) tiles.fill(T_UNKNOWN, 0, sight * W2);
+      return tiles;
+    };
+    const self = {
+      x: 12.5,
+      y: 31,
+      tx: 12,
+      ty: 30,
+      pace: 'still',
+      lift: 'level',
+      facing: 1,
+      grounded: true,
+      wall: 0,
+      alive: true,
+      finished: false,
+      togo: 40,
+      away: 40,
+      up: 0,
+      slag: null,
+      screen: 20,
+      rank: 0,
+      held: null,
+      armed: false,
+      hurt: 1,
+      shielded: false,
+    } as const;
+    const asked: [number, number][] = [];
+    const view = (sight: number | null) =>
+      ({
+        version: BRAIN_VIEW_VERSION,
+        phase: 'run',
+        mode: 'slag',
+        shove: MODES.slag.run.shove,
+        phaseFrame: 300,
+        slot: 0,
+        ready: true,
+        score: 0,
+        level: { w: W2, h: H2, tiles: sees(sight), spawn: { tx: 12, ty: 30 }, plan: [] },
+        props: [],
+        crate: [],
+        claim: -1,
+        placed: true,
+        objective: { kind: 'climb', lapLine: { tx: 2, ty: 2 }, loop: 30 },
+        sight,
+        boxes: [],
+        drops: [],
+        detour: () => 0,
+        reach: (tx: number, ty: number) => {
+          asked.push([tx, ty]);
+          return ty >= 22 ? Math.abs(tx - 12) + (30 - ty) : Infinity;
+        },
+        self,
+        runners: [],
+        rivals: [],
+        kills: [],
+        live: true,
+        canPlace: () => false,
+        keepsWay: () => false,
+        route: () => ({ cells: [], tight: 0, length: 0 }),
+        assess: () => null,
+      }) as unknown as BrainView;
+    const traits = { ...rollPersonality(1, 'normal'), knack: 0, block: 0 };
+    const go = (sight: number | null) => slagStrategy.make(new Rng(2), traits).think(view(sight), self);
+    const blind = go(18);
+    expect(blind.do).toBe('goTo');
+    // Up to the highest ledge it sees, never past its sight, and it never asked the route about anything it can't see.
+    expect(blind).toMatchObject({ ty: 22 });
+    for (const [, ty] of asked) expect(ty).toBeGreaterThanOrEqual(18);
+    // Seeing the whole shaft, it heads for the lap line from the start.
+    expect(go(null)).toMatchObject({ do: 'goTo', ty: 2 });
   });
 
   it("a guest's predicted copy steps a screen of its own, never the confirmed one", () => {

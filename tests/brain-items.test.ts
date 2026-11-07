@@ -84,6 +84,8 @@ function view(over: Partial<BrainView> & { tiles?: Uint8Array }): BrainView {
     drops: [],
     surges: [],
     detour: () => 0,
+    sight: null,
+    reach: () => 0,
     self: SELF,
     runners: [],
     rivals: [],

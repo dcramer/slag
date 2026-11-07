@@ -1,8 +1,7 @@
 import type { Rect } from '../core/geom';
 import { TILE } from './constants';
 import type { DeathCause, Runner, RunWorld } from './run';
-import type { Solid } from './physics';
-import { offScreen, screenSolids, stepScreen } from './screen';
+import { offScreen, stepScreen } from './screen';
 import { firstOut, stepTide } from './tide';
 
 /**
@@ -14,9 +13,7 @@ import { firstOut, stepTide } from './tide';
 export interface RunFeature {
   /** Whether this race has it. Asked once, when the race starts. */
   on(w: RunWorld): boolean;
-  /** Solids of its own (`out`), built every frame with the parts' (sim/run.ts `buildProps`), after every feature's step. */
-  build?(w: RunWorld, out: Solid[]): void;
-  /** Once a frame, before anyone moves and before anything is built. */
+  /** Once a frame, before anyone moves. */
   step?(w: RunWorld, f: number): void;
   /** Whether it kills `r` this frame (`hb` is the hurtbox): the cause, or null. Asked after the level's own kills. */
   kills?(w: RunWorld, r: Runner, hb: Rect): DeathCause | null;
@@ -45,7 +42,6 @@ const tide: RunFeature = {
  */
 const screen: RunFeature = {
   on: (w) => w.screen !== null,
-  build: (w, out) => screenSolids(w, w.rules.screen!, w.screen!, out),
   step: (w, f) => stepScreen(w, w.rules.screen!, w.screen!, f),
   kills: (w, r) => (offScreen(w.rules.screen!, w.screen!, w.runners.indexOf(r)) ? 'screen' : null),
 };

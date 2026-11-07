@@ -88,17 +88,15 @@ const BRAWL_BUILDUP: BuildUp = { per: 0.25, max: 6 };
 
 /**
  * Rising Slag's screen (sim/screen.ts): fall off the bottom of the leader's and you're out, 21 rows under their feet
- * (the first lap's leash is 25), with three quarters of a second to climb back. It rises no faster than 5 rows a
- * second, under the 5.5 a bot climbs, and its top holds whoever gets there, so a leader who pulls away waits at the top
- * of the screen for the field: the regroup the gates were, without a shut gate to die under. Four Normal bots, 512
- * seeds, the 15 s leader winning with the boxes, items in every hand and items never used: 44%, 47% and 47%, 2.4, 2.6
- * and 2.4 lead changes a round; rising at 5.25, 49%, 42% and 48%; at 5.5, 51% and 44% with 2.1 and 2.5 lead changes;
- * at 4.5, 45%, 41% and 43% with rounds a second longer; never held back, 55% and 1.8 (384 seeds), about what no screen
- * gives (59%), since the slag's leash already kills about where its bottom does. A top 6 rows over the leader's feet
- * clipped their jumps (41%, and more rounds with nobody left standing); 8 clears a jump. 29 rows or 34, 45 or 90 frames
- * of grace, moved nothing past the noise.
+ * (the first lap's leash is 25), with three quarters of a second to climb back. It follows the leader wherever they go
+ * (owner decision: the leader runs free). A solid top that rose no faster than 5 rows a second, holding a leader who
+ * pulled away until the field came up, brought the 15 s leader's wins to 44%, 47% and 47% (boxes, items, bare; 512
+ * seeds) with 2.4 lead changes a round, and was dropped. Free, with the climb's items and bots that see only the
+ * screen (brain/view.ts `sight`), 52%, 43% and 52% with 2.3 lead changes; with bots that saw the whole shaft, 67%, 45%
+ * and 68% with 1.5. Catch-up is the climb's items' to bring. 29 rows or 34, 45 or 90 frames of grace, moved nothing
+ * past the noise.
  */
-const SLAG_SCREEN: ScreenRules = { rows: 29, up: 8, grace: 45, follow: 0.08, keep: 4, rise: 5 };
+const SLAG_SCREEN: ScreenRules = { rows: 29, up: 8, grace: 45, follow: 0.08, keep: 4 };
 
 /**
  * What a brawl starts everyone holding (`RunRules.armed`), so the first seconds are a fight: something from the stands'
@@ -134,7 +132,7 @@ export const MODES: Record<ModeId, ModeDef> = {
   slag: {
     label: 'Rising Slag',
     // A looping shaft of open ledges in every set, owing no part, with boxes of its own up every lap and slag under it.
-    // The leader's screen (`SLAG_SCREEN`) is what puts out whoever falls behind, and holds back a leader who pulls away.
+    // The leader's screen (`SLAG_SCREEN`) is what puts out whoever falls behind.
     // The boxes deal by rank, the way a kart racer's do: whoever is behind draws something that reaches up (the hook
     // that trades places with the one ahead twice as often, the punch that flies up through floors, the grapple to a
     // ledge overhead three times as often, the stamp that shakes off whoever is under them), and whoever leads something
@@ -145,7 +143,14 @@ export const MODES: Record<ModeId, ModeDef> = {
       builder: 'shaft',
       loop: true,
       bare: true,
-      boxes: { chase: ['hook', 'hook', 'upper', 'grapple', 'grapple', 'grapple', 'jolt'], lead: ['shield', 'slick', 'block'] },
+      boxes: {
+        chase: ['hook', 'upper', 'grapple', 'grapple', 'jolt', 'block'],
+        lead: ['shield', 'slick', 'block'],
+        behind: [
+          { rows: 6, deal: ['hook', 'hook', 'upper', 'grapple', 'grapple', 'grapple', 'jolt'] },
+          { rows: 12, deal: ['hook', 'hook', 'hook', 'grapple', 'grapple'] },
+        ],
+      },
       surges: true,
       tide: true,
     },

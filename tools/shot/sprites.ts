@@ -283,7 +283,7 @@ export const shots: Scenarios = {
         Array.from({ length: 8 }, () => kind),
       );
     }
-    await lineup('cast', [...kinds, 'elf', 'hunter', 'zapmouse', 'impostor', 'goose', 'engineer', 'puffball'].slice(0, 8));
+    await lineup('cast', [...kinds, 'elf', 'hunter', 'zapmouse', 'visor', 'goose', 'engineer', 'puffball'].slice(0, 8));
   },
   async sprites() {
     const art = resolve('art/sprites', KIND);
@@ -291,7 +291,7 @@ export const shots: Scenarios = {
       KIND,
       Array.from({ length: 8 }, () => KIND),
     );
-    const others = ['plumber', 'hedgehog', 'elf', 'hunter', 'zapmouse', 'impostor', 'goose', 'engineer', 'puffball'].filter((k) => k !== KIND);
+    const others = ['plumber', 'hedgehog', 'elf', 'hunter', 'zapmouse', 'visor', 'goose', 'engineer', 'puffball'].filter((k) => k !== KIND);
     const mixed = await lineup(`${KIND}-cast`, [KIND, ...others.slice(0, 7)]);
     const film = await filmstrip();
     const lb = await lobby();

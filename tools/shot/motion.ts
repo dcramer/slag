@@ -25,7 +25,6 @@ export const shots: Scenarios = {
           b.groundRef = -1;
           // The last sequence may have flung them onto the flag or into something.
           Object.assign(run.runners[0], { alive: true, finished: false });
-          run.endFrame = -1;
           run.runners[0].items.daze = 0;
           return [m.at[0], m.at[1]];
         },
@@ -517,10 +516,7 @@ export const shots: Scenarios = {
           r.body.vx = r.body.vy = 0;
           r.items.held = { kind: ['slick', 'jolt', 'grapple', 'grapple'][i], uses: 1 };
         });
-        const view = d.renderer.cam;
-        view.update = () => {};
-        view.snap({ cx: c[0] * 16 + 8, cy: c[1] * 16 + 24, zoom: 2 });
-        view.shake = 0;
+        d.renderer.pin = { cx: c[0] * 16 + 8, cy: c[1] * 16 + 24, zoom: 2 };
       },
       [column, cam] as const,
     );
@@ -546,38 +542,83 @@ export const shots: Scenarios = {
     await snap(name('jolt'));
     await step(10);
     await snap(name('jolt-hit'));
-    // A Leg Day: the level's own, pinned in view, then taken.
-    const surge = await page.evaluate(() => {
-      const run = (window as any).slagDebug.match.run;
-      const rp = run.resolved.find((x: any) => x.mods[0].type === 'surge');
-      return rp ? (rp.mods[0].cells[0] as [number, number]) : null;
-    });
-    if (!surge) throw new Error('this shaft has no Leg Day');
-    await page.evaluate((c) => {
+    // A Leg Day: the level's own with the most open air over it, pinned in view, then taken, then a jump from it to its
+    // top, which prints how many rows it rose against a plain full jump. Everyone is put back on their feet beside it
+    // first, so whatever happened to them above, the round is still on.
+    const surges: [number, number][] = await page.evaluate(() =>
+      (window as any).slagDebug.match.run.resolved.filter((x: any) => x.mods[0].type === 'surge').map((x: any) => x.mods[0].cells[0] as [number, number]),
+    );
+    if (!surges.length) throw new Error('this shaft has no Leg Day');
+    const headroom = ([x, y]: [number, number]) => {
+      let k = 0;
+      while (k < 12 && at(x, y - 1 - k) !== 1 && at(x - 1, y - 1 - k) !== 1 && at(x + 1, y - 1 - k) !== 1) k++;
+      return k;
+    };
+    // The highest with room over it for a sprung jump, so neither a ceiling nor the slag gets in the way.
+    const approach = ([x, y]: [number, number]) => (stands(x - 1, y) ? -1 : stands(x + 1, y) ? 1 : 0);
+    const reachable = surges.filter((c) => approach(c) !== 0);
+    if (!reachable.length) throw new Error('no Leg Day on this shaft can be walked up to');
+    const roomy = reachable.filter((c) => headroom(c) >= 7);
+    const surge = roomy.length ? roomy.reduce((a, b) => (b[1] < a[1] ? b : a)) : reachable.reduce((a, b) => (headroom(b) > headroom(a) ? b : a));
+    // A fresh race, past the countdown: the items above may have ended the round, and the slag has risen.
+    await page.evaluate(() => {
       const d = (window as any).slagDebug;
-      d.renderer.cam.snap({ cx: c[0] * 16 + 8, cy: c[1] * 16, zoom: 2.5 });
-      const r = d.match.run.runners[2];
-      r.items.daze = 0;
-      r.body.x = (c[0] - 2) * 16 + 3;
-      r.body.y = (c[1] + 1) * 16 - r.body.h;
-      r.body.vx = r.body.vy = 0;
-    }, surge);
-    await step(2);
+      d.match.startRun();
+      d.step(200);
+    });
+    // Walk in from the side its ledge carries on.
+    const side = approach(surge);
+    // The others wait level with it a few tiles off, so the screen follows the taker's height.
+    let aside = surge[0];
+    for (let d = 4; d < lv.w && aside === surge[0]; d++) for (const x of [surge[0] + d, surge[0] - d]) if (aside === surge[0] && stands(x, surge[1])) aside = x;
+    await page.evaluate(
+      ([c, k, o]) => {
+        const d = (window as any).slagDebug;
+        const run = d.match.run;
+        run.runners.forEach((r: any, i: number) => {
+          Object.assign(r, { alive: true, finished: false, lap: 0 });
+          Object.assign(r.items, { daze: 0, reel: 0, held: null, cooldown: 0 });
+          r.status.surge = 0;
+          r.body.x = (i === 2 ? c[0] + k : o) * 16 + 3;
+          r.body.y = (c[1] + 1) * 16 - r.body.h;
+          r.body.vx = r.body.vy = 0;
+        });
+        d.renderer.pin = { cx: c[0] * 16 + 8, cy: c[1] * 16 - 40, zoom: 2.2 };
+      },
+      [surge, side, aside] as const,
+    );
+    // Let the leader's screen settle on them (it eases and rises at its own pace), so its top is a screen over them.
+    await step(150);
     await snap(name('legday'));
     await page.evaluate((c) => {
       const r = (window as any).slagDebug.match.run.runners[2];
       r.body.x = c[0] * 16 + 3;
     }, surge);
     await step(3);
+    const took = await page.evaluate(() => (window as any).slagDebug.match.run.runners[2].status.surge > 0);
+    if (!took)
+      throw new Error(
+        `the Leg Day was not taken: ${await page.evaluate(() => JSON.stringify((window as any).slagDebug.match.run.runners.map((r: any) => [r.alive, r.cause, Math.round(r.body.x), Math.round(r.body.y)])))}`,
+      );
     await snap(name('legday-taken'));
     await page.evaluate(() => {
       const d = (window as any).slagDebug;
       d.step(1, { [d.match.players[2].device]: { jump: true, jumpPressed: true } });
     });
+    // To the top of the jump.
     await page.evaluate(() => {
       const d = (window as any).slagDebug;
-      d.step(9, { [d.match.players[2].device]: { jump: true } });
+      const b = d.match.run.runners[2].body;
+      for (let f = 0; f < 40 && b.vy < 0; f++) d.step(1, { [d.match.players[2].device]: { jump: true } });
     });
+    const [rose, gravity] = await page.evaluate((c) => {
+      const d = (window as any).slagDebug;
+      const r = d.match.run.runners[2];
+      // Laps and all: a sprung jump can carry over the loop's line.
+      const feet = r.body.y + r.body.h - r.lap * (d.match.level.loop ?? 0) * 16;
+      return [((c[1] + 1) * 16 - feet) / 16, d.match.level.gravity ?? 1];
+    }, surge);
+    console.log(`leg day jump rose ${rose.toFixed(1)} rows; a plain one at this gravity (${gravity}) rises ${(3.7 / gravity).toFixed(1)}`);
     await snap(name('legday-jump'));
   },
   async blood() {

@@ -6,7 +6,7 @@ import { T_EMPTY, T_SOLID } from '../sim/level';
 import type { Runner, RunWorld } from '../sim/run';
 import { inkFor, line, type P, stroke } from './ink';
 import { ball, boxPts, glint, ovalPts, part, poly, sprite, stamp, tick } from './ink-props';
-import { circle, ellipse, glowDot, light, type RC } from './kit';
+import { circle, ellipse, type RC } from './kit';
 
 /**
  * Art for the three items made for a shaft (docs/PARODY.md, Held items): Slippery Slope, a dented oil can with a long
@@ -25,22 +25,26 @@ const COIN: HSL = { h: 46, s: 92, l: 58 };
 const GILT: HSL = { h: 44, s: 86, l: 54 };
 const PEARL: HSL = { h: 40, s: 30, l: 93 };
 
-/** The can, spout toward +x: a squat drum with a dent, a ring handle on top, and the spout off its shoulder. */
+/**
+ * The can, spout toward +x: a squat flat-topped drum with a dent in its side, a tin cone off its top narrowing into a
+ * long thin spout, and a loop handle at its back.
+ */
 const canSprite = () =>
-  sprite('it|oilcan', -7, -8, 15, 15, (g) => {
-    // The spout, long and thin, tipped with a drip.
+  sprite('it|oilcan', -8, -9, 16, 16, (g) => {
+    // The handle: a loop off its back.
     g.fillStyle = inkFor(TIN);
-    stroke(g, poly(1.6, -1.8, 4.6, -4.2, 6.8, -6), { w: 1.6, seed: 91, taper: [0, 0.4], press: 0 });
+    stroke(g, poly(-4.6, 0.2, -6.6, -0.4, -6.8, 3.2, -4.6, 4.2), { w: 1.3, seed: 95, taper: [0, 0], press: 0 });
+    // The spout: a long tapered tube off the cone, up and out.
+    stroke(g, poly(0.6, -3.6, 3.6, -5.8, 6.8, -7.6), { w: 1.7, seed: 91, taper: [0, 0.55], press: 0 });
     g.fillStyle = css(TIN);
-    stroke(g, poly(1.6, -1.8, 4.6, -4.2, 6.8, -6), { w: 0.9, seed: 91, taper: [0, 0.4], press: 0 });
-    part(g, ovalPts(-1.2, 1.6, 5, 4.6, 92, 0.06), CAN, 92, { depth: 0.6, thin: 0.45, thick: 1.1 });
-    // The dent, and a band of tin round its middle.
-    tick(g, -4.2, 0.4, -3, 2.6, 0.5, 93, css(CAN, -24));
-    part(g, boxPts(-5.6, 1.4, 8.8, 1.4, 0.3, 94, 0.1), TIN, 94, { depth: 0.2, thin: 0.3, thick: 0.6 });
-    // The handle ring on top.
-    g.fillStyle = inkFor(TIN);
-    stroke(g, poly(-3.6, -2.6, -2.8, -5.2, 0.4, -5.4, 1, -2.8), { w: 1.2, seed: 95, taper: [0, 0], press: 0 });
-    glint(g, poly(-4.4, -0.6, -3.2, -2.2), 'rgba(255,220,210,0.85)', 0.5);
+    stroke(g, poly(0.6, -3.6, 3.6, -5.8, 6.8, -7.6), { w: 0.9, seed: 91, taper: [0, 0.55], press: 0 });
+    // The drum, flat on top and bottom, and the cone on its lid.
+    part(g, boxPts(-4.8, -1.2, 9, 7.6, 0.7, 92, 0.15), CAN, 92, { depth: 0.6, thin: 0.45, thick: 1.1 });
+    part(g, poly(-3.8, -1.2, -1, -4.2, 1.6, -4.2, 3.8, -1.2), TIN, 96, { depth: 0.3, thin: 0.35, thick: 0.8 });
+    // A rim round the top, the dent, and a shine down its side.
+    tick(g, -4.6, -0.6, 4, -0.6, 0.45, 97, css(CAN, -26));
+    part(g, ovalPts(1.6, 2.6, 1.4, 1.1, 93, 0.12), { ...CAN, l: CAN.l - 12 }, 93, { depth: 0.2, thin: 0.25, thick: 0.5 });
+    glint(g, poly(-3.4, 0.6, -3.4, 4.6), 'rgba(255,220,210,0.85)', 0.5);
   });
 
 /** The money bag: a sack cinched at the neck with twine, the hole in its bottom. */
@@ -59,17 +63,28 @@ const bagSprite = () =>
     ball(g, 1.6, 7.2, 0.9, COIN, 106);
   });
 
-/** The grapple: three gold tines curling up off a shank, an eye at its foot. */
+/**
+ * The grapple, as it bites a lip: the eye at the foot of a shank, a crown at its top, and three tines curling out and
+ * down from the crown, barbed, over the edge it's caught on.
+ */
+const GRAPPLE_STROKES = [
+  poly(0, 5, 0, -3.6),
+  poly(0, -3.6, -2.6, -4.2, -4.4, -2.6, -4.6, 0.2),
+  poly(0, -3.6, 2.6, -4.2, 4.4, -2.6, 4.6, 0.2),
+  poly(0, -3.6, 0.6, -5.4, 1.6, -5.2),
+];
 const grappleSprite = () =>
-  sprite('it|grapple', -6, -7, 12, 13, (g) => {
+  sprite('it|grapple', -7, -8, 14, 15, (g) => {
     g.fillStyle = inkFor(GILT);
-    for (const pts of [poly(0, 4, 0, -4.6), poly(0, 0.6, -2.6, -0.6, -4, -3.4, -3.2, -4.8), poly(0, 0.6, 2.6, -0.6, 4, -3.4, 3.2, -4.8)])
-      stroke(g, pts, { w: 1.7, seed: 111, taper: [0, 0.35], press: 0 });
+    for (const pts of GRAPPLE_STROKES) stroke(g, pts, { w: 1.8, seed: 111, taper: [0, 0.3], press: 0 });
     g.fillStyle = css(GILT);
-    for (const pts of [poly(0, 4, 0, -4.6), poly(0, 0.6, -2.6, -0.6, -4, -3.4, -3.2, -4.8), poly(0, 0.6, 2.6, -0.6, 4, -3.4, 3.2, -4.8)])
-      stroke(g, pts, { w: 0.95, seed: 111, taper: [0, 0.35], press: 0 });
-    ball(g, 0, 4.8, 1.3, GILT, 112);
-    glint(g, poly(-0.3, -3.6, -0.3, 0), 'rgba(255,250,215,0.9)', 0.4);
+    for (const pts of GRAPPLE_STROKES) stroke(g, pts, { w: 1, seed: 111, taper: [0, 0.3], press: 0 });
+    // Barbs at the tines' tips, the crown's knob and the eye.
+    part(g, poly(-4.6, 0.4, -3.4, -0.6, -4.4, -1), GILT, 113, { depth: 0.2, thin: 0.25, thick: 0.5 });
+    part(g, poly(4.6, 0.4, 3.4, -0.6, 4.4, -1), GILT, 114, { depth: 0.2, thin: 0.25, thick: 0.5 });
+    ball(g, 0, -3.8, 1.2, GILT, 115);
+    ball(g, 0, 5.4, 1.3, GILT, 112);
+    glint(g, poly(-0.3, -2.4, -0.3, 3), 'rgba(255,250,215,0.9)', 0.4);
   });
 
 /** A string of pearls through `pts`: a bead every couple of px. */
@@ -121,11 +136,12 @@ function tileOf(run: RunWorld, x: number, y: number): number {
 }
 
 /**
- * Slippery Slope spills: a black gloss on the top of every floor in the spill, a petrol rainbow sliding over it, and
+ * Slippery Slope spills: a black gloss on the top of every floor in the spill, an oily sheen sliding over it, and
  * slow drips off its lips. It seeps in from the user's row down and dries from the edges in its last second.
  */
 export function drawSlicks(rc: RC, run: RunWorld) {
   const s = rc.s;
+  const bg = rc.bg;
   for (const p of run.items.slicks) {
     const age = run.frame - p.born;
     const left = p.until - run.frame;
@@ -141,16 +157,21 @@ export function drawSlicks(rc: RC, run: RunWorld) {
         const y = ty * TILE;
         const dry = hash2(tx, ty, p.id) > a * 1.15;
         if (dry) continue;
-        // A thick black gloss pooled on the top, a hard white shine along it, and a petrol rainbow sliding over it.
-        s.fillStyle = css(OIL, 0, 0.94 * a);
-        s.fillRect(x, y - 1.6, TILE, 4.6);
-        s.fillStyle = `rgba(255,255,255,${0.55 * a})`;
-        s.fillRect(x + 1 + hash2(tx, ty, 3) * 4, y - 1.2, 5 + hash2(tx, ty, 4) * 5, 0.7);
-        const ph = (rc.t * 0.6 + hash2(tx, ty, 7)) % 1;
-        for (let k = 0; k < 3; k++) {
-          s.fillStyle = `hsla(${(ph * 360 + k * 70) % 360} 95% 62% / ${0.8 * a})`;
-          s.fillRect(x + ((ph * TILE + k * 4.5) % TILE), y + 0.2 + k * 0.8, 3.6, 0.7);
-        }
+        // A black pool standing on the top (over it, where no terrain hides the layer that gets no ink), a soft
+        // shine along it and a slow oily sheen.
+        bg.fillStyle = css(OIL, 0, a);
+        ellipse(bg, x + TILE / 2, y - 0.6, TILE / 2 + 1.2, 2.6 + hash2(tx, ty, 2) * 0.6);
+        // The sheen is what shows it on a dark set, where black oil alone would vanish: blue, violet and green
+        // swirls drifting over it, and a white shine.
+        const ph = (rc.t * 0.25 + hash2(tx, ty, 7)) % 1;
+        bg.fillStyle = `hsla(${205 + 40 * ph} 60% 64% / ${0.6 * a})`;
+        ellipse(bg, x + ph * TILE, y - 1.5, 5, 1.1);
+        bg.fillStyle = `hsla(${285 + 30 * ph} 45% 62% / ${0.5 * a})`;
+        ellipse(bg, x + ((ph + 0.4) % 1) * TILE, y - 1.1, 4, 0.9);
+        bg.fillStyle = `hsla(${145 + 30 * ph} 40% 56% / ${0.45 * a})`;
+        ellipse(bg, x + ((ph + 0.75) % 1) * TILE, y - 1.8, 3, 0.8);
+        bg.fillStyle = `rgba(245,248,255,${0.7 * a})`;
+        ellipse(bg, x + 4 + hash2(tx, ty, 3) * 8, y - 2.3, 2.5 + hash2(tx, ty, 4) * 2, 0.5);
         // A lip: a drip slowly letting go off the edge.
         for (const side of [-1, 1]) {
           if (tileOf(run, tx + side, ty) !== T_EMPTY || tileOf(run, tx + side, ty - 1) !== T_EMPTY) continue;
@@ -164,8 +185,8 @@ export function drawSlicks(rc: RC, run: RunWorld) {
 }
 
 /**
- * Trickle-Down shudders: the stamp's ring at the user's feet, then a line of gold coins and speed streaks falling
- * down the whole shaft, fading as it nears the end of its pour.
+ * Trickle-Down shudders: the stamp's ring at the user's feet, then a shower of gold coins and speed streaks falling
+ * down the whole shaft, fading as it nears the end of its pour, which a faint line of dust marks.
  */
 export function drawJolts(rc: RC, run: RunWorld) {
   const s = rc.s;
@@ -184,21 +205,27 @@ export function drawJolts(rc: RC, run: RunWorld) {
     }
     const y = j.from + j.down;
     const a = 1 - (j.down / JOLT.depth) * 0.7;
-    // Streaks trailing up from the front, and the shimmer line itself.
-    s.fillStyle = css(COIN, 18, 0.35 * a);
+    // Where it stops: a faint line of dust at the bottom of its pour, so its reach shows while it falls.
+    const bg = rc.bg;
+    bg.fillStyle = `rgba(240,220,160,${0.18 * a})`;
+    for (let x = 4; x < w; x += 9) bg.fillRect(x, j.from + JOLT.depth - 0.5, 4, 1);
+    // Speed streaks trailing up from the coins, on the layer that gets no ink.
+    bg.fillStyle = css(COIN, 18, 0.4 * a);
     for (let x = 6; x < w; x += 11) {
       const len = 8 + hash2(x, j.id, 3) * 14;
-      line(s, x + hash2(x, j.id, 5) * 4, y - len, x + hash2(x, j.id, 5) * 4, y - 1, { w: 0.8, seed: x, taper: [0.9, 0.1], press: 0 });
+      const sx = x + hash2(x, j.id, 5) * 4;
+      line(bg, sx, y - len, sx, y - 1, { w: 0.8, seed: x, taper: [0.9, 0.1], press: 0 });
     }
-    s.fillStyle = css(COIN, 12, 0.7 * a);
-    const pts: P[] = [];
-    for (let x = 0; x <= w; x += 6) pts.push({ x, y: y + Math.sin(x * 0.21 + rc.t * 18) * 1.4 });
-    stroke(s, pts, { w: 1.4, seed: j.id, taper: [0, 0], press: 0 });
-    for (let x = 10; x < w; x += 23) {
-      const cx = x + hash2(x, j.id, 9) * 10;
-      ball(s, cx, y + 1 + hash2(x, j.id, 11) * 3, 1.5, COIN, x + j.id);
+    // The coins themselves, falling at their own heights and tumbling: a shower, not a string.
+    for (let x = 8; x < w; x += 13) {
+      const cx = x + hash2(x, j.id, 9) * 8;
+      const cy = y - hash2(x, j.id, 11) * 10;
+      const flip = Math.abs(Math.sin(rc.t * 14 + x));
+      s.fillStyle = inkFor(COIN);
+      ellipse(s, cx, cy, 1.9 * flip + 0.5, 1.9);
+      s.fillStyle = css(COIN, flip > 0.5 ? 8 : -6);
+      ellipse(s, cx, cy, 1.5 * flip + 0.3, 1.5);
     }
-    light(rc, j.x, y, 60, COIN, 0.35 * a);
   }
 }
 
@@ -220,31 +247,42 @@ export function drawClimbs(rc: RC, run: RunWorld, up: (r: Runner) => number) {
     // Up first, it bends round the lip until the climber is level with it.
     const pts = c.up && b.y > c.ey + 1 ? poly(ax, ay, ax, hy, hx, hy) : poly(ax, ay, hx, hy);
     pearls(s, pts, c.id);
-    s.save();
-    s.translate(hx, hy);
-    s.rotate(Math.atan2(hy - ay, hx - ax) + Math.PI / 2);
-    stamp(s, grappleSprite());
-    s.restore();
-    glowDot(rc.g, hx, hy, 5, GILT, 0.5);
+    // Upright on the lip, its tines curled down over the edge.
+    stamp(s, grappleSprite(), hx, hy + 1);
   }
 }
 
-/** A Leg Day's spring on a runner: gold chevrons pumping under its feet and a sweatband glint, fading in its last second. */
+/** A coil spring standing on (x, y), `h` px tall: a gold zigzag in a dark pen, read on any character. */
+function coil(g: CanvasRenderingContext2D, x: number, y: number, h: number) {
+  const pts: P[] = [];
+  for (let k = 0; k <= 6; k++) pts.push({ x: x + (k % 2 ? 1.9 : -1.9) * (k === 0 || k === 6 ? 0 : 1), y: y - (k / 6) * h });
+  g.fillStyle = inkFor(GILT);
+  stroke(g, pts, { w: 1.6, seed: 7, taper: [0, 0], press: 0 });
+  g.fillStyle = css(GILT, 10);
+  stroke(g, pts, { w: 0.8, seed: 7, taper: [0, 0], press: 0 });
+}
+
+/**
+ * A Leg Day's spring on a runner, whatever its colour: a gold coil at each ankle, squashed on the ground and sprung in
+ * the air, and a gold double chevron bobbing over its head, both in a dark pen; blinking out in its last second.
+ */
 export function drawSurge(rc: RC, r: Runner) {
   const left = r.status.surge;
-  if (left <= 0) return;
+  if (left <= 0 || (left < 60 && Math.floor(left / 5) % 2 === 0)) return;
   const s = rc.s;
   const b = r.body;
-  const a = Math.min(1, left / 40) * (left < 60 && Math.floor(left / 5) % 2 === 0 ? 0.4 : 1);
   const x = b.x + b.w / 2;
   const y = b.y + b.h;
-  const pump = (rc.t * 3) % 1;
-  s.fillStyle = css(COIN, 14, a);
+  // Squashed over its ankles on the ground; sprung out under its feet in the air.
+  const [foot, h] = b.onGround ? [y, 3] : [y + 5, 5];
+  coil(s, x - 2.6, foot, h);
+  coil(s, x + 2.6, foot, h);
+  const cy = b.y - 11 + Math.sin(rc.t * 7) * 1.2;
   for (let k = 0; k < 2; k++) {
-    const cy = y + 1 + k * 2.6 - pump * 2.6;
-    stroke(s, poly(x - 3.4, cy + 1.6, x, cy, x + 3.4, cy + 1.6), { w: 0.9, seed: k + 3, taper: [0.2, 0.2], press: 0 });
+    const pts = poly(x - 5, cy + 3.5 + k * 3.6, x, cy + k * 3.6, x + 5, cy + 3.5 + k * 3.6);
+    s.fillStyle = inkFor(GILT);
+    stroke(s, pts, { w: 2.6, seed: k + 3, taper: [0.1, 0.1], press: 0 });
+    s.fillStyle = css(COIN, 14);
+    stroke(s, pts, { w: 1.5, seed: k + 3, taper: [0.1, 0.1], press: 0 });
   }
-  s.fillStyle = `hsla(330 85% 66% / ${a})`;
-  s.fillRect(b.x + 0.5, b.y + 2.2, b.w - 1, 1.3);
-  if (b.vy < -60) for (let i = 0; i < 2; i++) glowDot(rc.g, x + (i ? 3 : -3), y + 3 + ((rc.t * 40 + i * 5) % 6), 2.2, COIN, 0.7 * a);
 }

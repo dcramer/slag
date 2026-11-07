@@ -5,7 +5,7 @@ import type { FlatKind } from '../kinds';
 // it showed the level, a light patch in a colour, and the read went with it (the clean audit's "magenta striped
 // cylinder"). The box is painted in square pixel tiles, a light and a dark of his colour, and nothing crosses it: a band
 // of packing tape read as stripes. Drawn from one game-size design, worn in one edit, the poses three to a 16:9 image
-// and cut apart (art/sprites/creeper/design.prompt.txt).
+// and cut apart (art/sprites/hisser/design.prompt.txt).
 const KEEP =
   'no arms ever, his head and body always crisp square boxes with sharp corners, his four short block feet always clear of each other with white between them, the big black frowning face and the lit candle stub always on his head';
 
@@ -13,7 +13,7 @@ export const kind: FlatKind = {
   body: 177,
   map: {
     roles: ['green', 'light', 'dark', 'card', 'wax', 'flame', 'ink'],
-    // Sampled from the design (art/sprites/creeper/design.png, `swatch.py`).
+    // Sampled from the design (art/sprites/hisser/design.png, `swatch.py`).
     families: [
       // The painted box, and its pixel tiles a light and a dark of it.
       ['green', [84, 154, 69]],
@@ -110,7 +110,7 @@ export const kind: FlatKind = {
     // Toppled on his side, the candle blown out.
     death: { frames: ['death'], loop: false, fps: 1, eyes: false, centre: 'box', scale: 0.8 },
   },
-  // Each pose alone, for a redraw; the sheets' prompts are in art/sprites/creeper/design.prompt.txt.
+  // Each pose alone, for a redraw; the sheets' prompts are in art/sprites/hisser/design.prompt.txt.
   poses: {
     idle2: { pose: `standing on all four feet, leaning back a little, his head tipped up as if looking at the candle flame; ${KEEP}.` },
     'walk-1': {

@@ -51,6 +51,18 @@ export function progressOf(race: Pick<Race, 'level' | 'rules'>, r: Runner): numb
   return -routeDistance(race.level, r);
 }
 
+/**
+ * How far `r` is behind whoever leads, in tiles: rows climbed (a climb), tiles of route (a race); 0 for the leader,
+ * where nobody is ahead, or where it can't be told (no route).
+ */
+export function behindOf(race: Race, r: Runner): number {
+  const lead = leaderOf(race);
+  if (lead < 0 || race.rules.ahead === 'none') return 0;
+  const gap = progressOf(race, race.runners[lead]) - progressOf(race, r);
+  const tiles = race.rules.ahead === 'height' ? gap / TILE : gap / 10;
+  return Number.isFinite(tiles) ? Math.max(0, tiles) : 0;
+}
+
 /** Between two runners equally far along: nearer the flag in a straight line (a race), then the lower slot. */
 function tiebreak(race: Race, a: Runner, b: Runner): number {
   if (race.rules.ahead === 'route') {

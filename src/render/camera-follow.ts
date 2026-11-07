@@ -147,7 +147,7 @@ export class FollowCam {
  * The pose that shows the leader's screen (sim/screen.ts) whole, `edges` in climbed px and `shift` the lap the view is
  * on (world px): as close as the window's width and its height under view y `under` (the race's name tags) both fit,
  * its bottom edge on the bottom of the window, so what's off the bottom of the screen is what's out. What shows over
- * its top (the tags' row, or more on a window of another shape) is out of play, and the HUD draws it shut.
+ * its top (the tags' row, or more on a window of another shape) is the HUD's, drawn shut behind the tags.
  */
 export function screenPose(cam: Pick<Camera, 'frame' | 'ww'>, edges: { top: number; bottom: number }, shift: number, under = 0): ViewXform {
   const f = cam.frame;

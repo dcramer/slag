@@ -187,6 +187,8 @@ export interface TickCtx extends PropCtx {
   itemSeed?: number;
   /** The runner index that leads the race (sim/standing.ts), worked out when asked; -1 if nobody's racing. */
   leader?(): number;
+  /** Tiles runner index `i` is behind whoever leads, as the race ranks it (sim/standing.ts `behindOf`): rows, round a climb. */
+  behind?(i: number): number;
   /** This frame's solids, for anything that looks or moves through the world. Optional so headless callers can omit them. */
   solids?: readonly Solid[];
   /** This frame's hazards, for parts set off by what touches them (Fuse Crates). Optional so headless callers can omit them. */

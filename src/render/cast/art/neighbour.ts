@@ -2,10 +2,10 @@ import { band, type D, inked, type KindArt, oval, poly, Y } from '../kit';
 import { pair } from '../faces';
 
 /**
- * The lady of the house (docs/characters/sim.md): a chunky little woman with a round black bob, in a bell of a dress
+ * The lady of the house (docs/characters/neighbour.md): a chunky little woman with a round black bob, in a bell of a dress
  * in the player's colour, and over her head, with a clear gap of background under it, the green diamond, a wide
  * double point hanging a little crooked and bobbing a beat behind her. The gap is the read, so the diamond is never
- * drawn touching her. A rendered kind draws from its frames (src/render/cast/sprites/sim/); this is what shows before
+ * drawn touching her. A rendered kind draws from its frames (src/render/cast/sprites/neighbour/); this is what shows before
  * they load, and on the hand-drawn sheets.
  */
 

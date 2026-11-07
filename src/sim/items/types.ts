@@ -49,10 +49,23 @@ export const ITEM_KINDS: readonly ItemKind[] = [
   'grapple',
 ];
 
-/** What a box deals by rank (a mode's `boxes`, game/modes.ts): one table for whoever leads, one for the rest. */
+/**
+ * What a box deals by rank (a mode's `boxes`, game/modes.ts): one table for whoever leads, one for the rest, and for
+ * the rest, tables that take over the further behind they are (`behind`), the kart racer's way.
+ */
 export interface ItemDeal {
   chase: readonly ItemKind[];
   lead: readonly ItemKind[];
+  /** Chasers `rows` or more behind the leader (sim/standing.ts `behindOf`) draw from `deal` instead: the deepest that applies. */
+  behind?: readonly { rows: number; deal: readonly ItemKind[] }[];
+}
+
+/** The table a runner draws from: the leader's (`lead`), or a chaser's `rows` behind the leader. */
+export function dealFor(d: ItemDeal, lead: boolean, rows: number): readonly ItemKind[] {
+  if (lead) return d.lead;
+  let pool = d.chase;
+  for (const t of d.behind ?? []) if (rows >= t.rows) pool = t.deal;
+  return pool;
 }
 
 /** What a runner holds. */

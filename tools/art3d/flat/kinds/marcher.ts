@@ -2,10 +2,10 @@ import type { FlatKind } from '../kinds';
 
 // A pixel crab from space cut from big square tiles, seen flat from the front, wider than tall: two antennae, a claw
 // raised off each side, a row of stubby legs. Its two square eye holes are cut through the frame
-// (art/sprites/invader/holes.py paints the drawing's black squares white and `holes` cuts them), the level showing
+// (art/sprites/marcher/holes.py paints the drawing's black squares white and `holes` cuts them), the level showing
 // through as through the arcade's. The stepped edge is the read, so nothing rounds it (`smooth: 0`). Drawn from one
 // game-size design, worn in one edit (a tile fallen out and taped back on crooked, the near antenna bent at its tip),
-// the poses three to a 16:9 image and cut apart (art/sprites/invader/design.prompt.txt).
+// the poses three to a 16:9 image and cut apart (art/sprites/marcher/design.prompt.txt).
 const KEEP =
   'every figure keeps its outline stepped square by square in big pixel tiles, both antennae (the left one bent over at the tip), the taped tile on top, the two square eye holes, and its two claws clear of the body';
 
@@ -13,7 +13,7 @@ export const kind: FlatKind = {
   body: 273,
   map: {
     roles: ['body', 'tape', 'ink'],
-    // Sampled from the design (art/sprites/invader/design.png, `swatch.py`); the cel shadow folds into the body.
+    // Sampled from the design (art/sprites/marcher/design.png, `swatch.py`); the cel shadow folds into the body.
     families: [
       ['body', [158, 124, 221]],
       ['body', [157, 127, 219]],
@@ -106,7 +106,7 @@ export const kind: FlatKind = {
     // Flipped on its back, legs in the air.
     death: { frames: ['death'], loop: false, fps: 1, eyes: false, centre: 'box', scale: 0.85 },
   },
-  // Each pose alone, for a redraw; the sheets' prompts are in art/sprites/invader/design.prompt.txt.
+  // Each pose alone, for a redraw; the sheets' prompts are in art/sprites/marcher/design.prompt.txt.
   poses: {
     idle2: { pose: `standing, its legs pinched in close together under its body, both claws raised; ${KEEP}.` },
     'walk-1': { pose: `stepping, its legs spread far out wide to both sides, both claws raised high; ${KEEP}.` },

@@ -14,7 +14,7 @@ import type { SpriteSet } from './types';
  */
 export const LOADERS: Partial<Record<Kind, () => Promise<{ sprites: SpriteSet }>>> = {
   plumber: () => import('./plumber/frames'),
-  impostor: () => import('./impostor/frames'),
+  visor: () => import('./visor/frames'),
   hedgehog: () => import('./hedgehog/frames'),
   jelly: () => import('./jelly/frames'),
   chomper: () => import('./chomper/frames'),
@@ -44,12 +44,12 @@ export const LOADERS: Partial<Record<Kind, () => Promise<{ sprites: SpriteSet }>
   fighter: () => import('./fighter/frames'),
   stinger: () => import('./stinger/frames'),
   mage: () => import('./mage/frames'),
-  creeper: () => import('./creeper/frames'),
+  hisser: () => import('./hisser/frames'),
   tophat: () => import('./tophat/frames'),
   pyramid: () => import('./pyramid/frames'),
-  invader: () => import('./invader/frames'),
+  marcher: () => import('./marcher/frames'),
   vampire: () => import('./vampire/frames'),
-  sim: () => import('./sim/frames'),
+  neighbour: () => import('./neighbour/frames'),
   assistant: () => import('./assistant/frames'),
   slime: () => import('./slime/frames'),
   archer: () => import('./archer/frames'),
@@ -64,7 +64,7 @@ export const LOADERS: Partial<Record<Kind, () => Promise<{ sprites: SpriteSet }>
   climber: () => import('./climber/frames'),
   skeleton: () => import('./skeleton/frames'),
   android: () => import('./android/frames'),
-  hitman: () => import('./hitman/frames'),
+  cleaner: () => import('./cleaner/frames'),
 };
 
 const loaded: Partial<Record<Kind, SpriteSet>> = {};

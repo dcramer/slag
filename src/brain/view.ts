@@ -16,6 +16,7 @@ import { screenEdges } from '../sim/screen';
 import { rankOf } from '../sim/standing';
 import {
   BRAIN_VIEW_VERSION,
+  T_UNKNOWN,
   type BoxSense,
   type BrainView,
   type Lift,
@@ -74,6 +75,37 @@ const OBJECTIVES: Record<ModeId, (m: Match) => Objective> = {
     ends: spawnsOf(m.level).map((c) => ({ ...c })),
   }),
 };
+
+/**
+ * Rows over the top of the leader's screen a runner sees (owner decision: a row or two, a jump's luck, never the level
+ * beyond): what the race camera shows, as a player sees it.
+ */
+const SIGHT_MARGIN = 2;
+
+/** The topmost row `r` sees, in its own lap's rows, or null where it sees the whole level (`BrainView.sight`). */
+function sightOf(run: RunWorld | null, r: Runner | undefined): number | null {
+  if (!run?.screen || !r || !r.alive || r.finished) return null;
+  const top = screenEdges(run.rules.screen!, run.screen).top - SIGHT_MARGIN * TILE;
+  return Math.floor((top + r.lap * (run.level.loop ?? 0) * TILE) / TILE);
+}
+
+/** The level's tiles with every row over `sight` unknown, kept per level version: a bot's sight moves a row at a time. */
+const masks = new WeakMap<Level, { version: number; rows: Map<number, Uint8Array> }>();
+const MAX_MASKS = 64;
+
+function tilesSeen(level: Level, sight: number | null): Uint8Array {
+  if (sight === null || sight <= 0) return level.tiles;
+  let hit = masks.get(level);
+  if (!hit || hit.version !== level.version) masks.set(level, (hit = { version: level.version, rows: new Map() }));
+  let t = hit.rows.get(sight);
+  if (!t) {
+    t = level.tiles.slice();
+    t.fill(T_UNKNOWN, 0, Math.min(sight, level.h) * level.w);
+    if (hit.rows.size >= MAX_MASKS) hit.rows.delete(hit.rows.keys().next().value!);
+    hit.rows.set(sight, t);
+  }
+  return t;
+}
 
 /** Rows `r`'s feet stand above the spawn's floor, laps and all. */
 const upOf = (run: RunWorld, r: Runner) => round4(((run.level.spawn.ty + 1) * TILE - feetUp(run.level, r)) / TILE);
@@ -240,10 +272,31 @@ function detourOf(m: Match, p: Player, tx: number, ty: number): number {
   return Math.max(0, Math.round((there - (Number.isFinite(now) ? now : map.rough(goal)[here])) / 10));
 }
 
+/** Tiles of route from `p`'s runner to stand cell (tx, ty), rounded; Infinity where none leads there. */
+function reachOf(m: Match, p: Player, tx: number, ty: number): number {
+  const run = m.phase === 'run' ? m.run : null;
+  const r = run?.runners.find((x) => x.slot === p.slot);
+  if (!run || !r) return Infinity;
+  const map = raceMap(run);
+  const w = map.field.w;
+  const b = r.body;
+  const hx = Math.floor((b.x + b.w / 2) / TILE);
+  const hy = Math.floor((b.y + b.h - 1) / TILE);
+  if (hx < 0 || hx >= w || hy < 0 || hy >= map.field.h || tx < 0 || tx >= w || ty < 0 || ty >= map.field.h) return Infinity;
+  const d = map.dist(ty * w + tx)[hy * w + hx];
+  return Number.isFinite(d) ? Math.round(d / 10) : Infinity;
+}
+
 /** The view for seat `p` of `m` this frame. */
 export function senseView(m: Match, p: Player): BrainView {
   const run = m.phase === 'run' ? m.run : null;
   const held = p.claim >= 0 ? m.crate[p.claim]?.def : undefined;
+  const me = run?.runners.find((r) => r.slot === p.slot);
+  const sight = sightOf(run, me);
+  // Out of sight: a row over `sight` in this runner's rows, or a runner whose head is over it, laps and all.
+  const hidden = (row: number) => sight !== null && row < sight;
+  const unseen = (r: Runner) => sight !== null && !!me && feetUp(run!.level, r) - r.body.h < (sight - me.lap * (run!.level.loop ?? 0)) * TILE;
+  const w = m.level.w;
   return {
     version: BRAIN_VIEW_VERSION,
     phase: m.phase,
@@ -256,11 +309,20 @@ export function senseView(m: Match, p: Player): BrainView {
     level: {
       w: m.level.w,
       h: m.level.h,
-      tiles: m.level.tiles,
+      tiles: tilesSeen(m.level, sight),
       spawn: { ...m.level.spawn },
       plan: m.plan.map((b) => ({ tx: b.x, ty: b.y })),
     },
-    props: m.phase === 'lobby' ? [] : propsOf(m),
+    props:
+      m.phase === 'lobby'
+        ? []
+        : sight === null
+          ? propsOf(m)
+          : propsOf(m).map((s) => ({
+              ...s,
+              ground: s.ground.filter((c) => !hidden(Math.floor(c / w))),
+              noGo: s.noGo.filter((c) => !hidden(Math.floor(c / w))),
+            })),
     crate: m.crate.map((c) => ({
       claimed: c.claimedBy >= 0,
       by: c.claimedBy,
@@ -269,16 +331,20 @@ export function senseView(m: Match, p: Player): BrainView {
       clears: !!c.clears,
     })),
     objective: OBJECTIVES[m.rules.mode](m),
-    boxes: run ? boxesOf(run) : [],
-    drops: run ? run.items.drops.map((d) => ({ x: round4(d.x / TILE), y: round4(d.y / TILE), kind: d.kind })) : [],
-    surges: run ? surgesOf(run) : [],
+    sight,
+    boxes: run ? boxesOf(run).filter((b) => !hidden(b.ty)) : [],
+    drops: run
+      ? run.items.drops.filter((d) => !hidden(Math.floor(d.y / TILE))).map((d) => ({ x: round4(d.x / TILE), y: round4(d.y / TILE), kind: d.kind }))
+      : [],
+    surges: run ? surgesOf(run).filter((s) => !hidden(s.ty)) : [],
     detour: (tx, ty) => detourOf(m, p, tx, ty),
+    reach: (tx, ty) => reachOf(m, p, tx, ty),
     claim: p.claim,
     placed: p.placed,
     self: selfOf(m, p),
     runners: run
       ? run.runners
-          .filter((r) => r.slot !== p.slot)
+          .filter((r) => r.slot !== p.slot && !unseen(r))
           .map((r) => ({
             slot: r.slot,
             x: round4((r.body.x + r.body.w / 2) / TILE),

@@ -1,6 +1,6 @@
 import type { FlatKind } from '../kinds';
 
-// Every pose keeps what carries him (art/sprites/hitman/design.prompt.txt): the huge smooth bald head with the white
+// Every pose keeps what carries him (art/sprites/cleaner/design.prompt.txt): the huge smooth bald head with the white
 // price sticker and its barcode on the back of the skull; the broad square suit with the white shirt V and the tie
 // down it (in an orange suit, the V and the tie are what make it a suit, not a jumpsuit); a stapler held like a pistol
 // in each black-gloved fist, low and out from his sides with background round it (hung against the legs, they were
@@ -13,7 +13,7 @@ export const kind: FlatKind = {
   map: {
     // Back to front: the sticker's white is drawn over the head (under it, the head's skin covered it).
     roles: ['suit', 'tie', 'skin', 'white', 'glove', 'steel', 'eye', 'dark'],
-    // Sampled from the design (art/sprites/hitman/design.png, `swatch.py` and by hand).
+    // Sampled from the design (art/sprites/cleaner/design.png, `swatch.py` and by hand).
     families: [
       // The suit, its cel shade and the lapels' (one shape: the lapels are only its shade).
       ['suit', [76, 87, 111]],
@@ -28,7 +28,7 @@ export const kind: FlatKind = {
       ['tie', [185, 48, 58]],
       ['tie', [186, 46, 57]],
       ['tie', [132, 46, 51]],
-      // The shirt, the cuffs and the price sticker (made one white label by art/sprites/hitman/sticker.py).
+      // The shirt, the cuffs and the price sticker (made one white label by art/sprites/cleaner/sticker.py).
       ['white', [245, 246, 240]],
       ['white', [255, 255, 247]],
       ['white', [244, 244, 238]],
@@ -120,7 +120,7 @@ export const kind: FlatKind = {
     death: { frames: ['death'], loop: false, fps: 1, eyes: false, centre: 'box', scale: 0.8 },
   },
   // Drawn three to a 16:9 image and cut apart (README → 3. Poses); the sheets' prompts are in
-  // art/sprites/hitman/design.prompt.txt. These are each pose alone, for a redraw.
+  // art/sprites/cleaner/design.prompt.txt. These are each pose alone, for a redraw.
   poses: {
     idle2: {
       pose: `standing still, the near stapler raised and held out level ahead of him at chest height like a pistol, white background round it, the other held low, ${KEEP}.`,

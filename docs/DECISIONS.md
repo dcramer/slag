@@ -108,9 +108,9 @@ Every game design decision, preference and direction the owner has given, groupe
 - **Rising Slag: fall off the bottom of the leader's screen and you're out, in place of the regroup gates; climb items made for a shaft; boosts on the hard lines.** "Yeah lets work through that"
   2026-11-07 · `done` (`RunRules.screen`, gates deleted; Social Climber, Trickle-Down, Slippery Slope; Leg Day boosts) · MODES.md → Rising Slag
 - **Rising Slag's leader runs free: no solid top on the screen holding them; catch-up comes from items and the rank-based deal instead.** "Let leader run free"
-  2026-11-07 · `in progress` · MODES.md → Rising Slag, `src/sim/screen.ts`
+  2026-11-07 · `done` (the box deal grades by rows behind, `ItemDeal.behind`; 15 s leader 47% over 512 seeds) · MODES.md → Rising Slag, `src/sim/screen.ts`
 - **A leader never gets more than a tile or two past the top of the screen, and bots see only what's on screen: they never know more of the level than a player can see.** "the AI leaders shouldnt go far beyond the top tho.. like 1-2 blocks might be ok (sort of luck) but they shouldn't be able to see things players cant"
-  2026-11-07 · `in progress` · MODES.md → Rising Slag, src/brain/AGENTS.md
+  2026-11-07 · `done` (`BrainView.sight`, `T_UNKNOWN` above it; the leader's head never past the top) · MODES.md → Rising Slag, src/brain/AGENTS.md
 - **Brawl is won by knocking people out, not by hiding: knockouts pay, each hit you take throws you farther (fresh each bout), and a couple of weapons reach from range.** "you shouldn't be able to win by just standing around" / "maybe just make it easier to get knocked out" / "or we need more weapons or something?" / "Yes, all three"
   2026-11-06 · `in progress`: knockouts pay 5 and the last one standing 5 (`scoreKnockouts`; a still seat wins 0 of 6 matches, from 2) `done`; hits build up a quarter each, up to six (`RunRules.buildup`) `done`; two ranged weapons `done` (Rude Awakening, a lobbed alarm clock that blasts rivals outward; Catch of the Day, a rod that reels one in; brawl boxes only). An earlier slag waits on these · MODES.md → Brawl
 - **Brawl's hazards are amped up: its set pieces are things that kill or knock, more of them, near the ledges.** "we may need to amp up the hazards in brawl"
@@ -328,6 +328,8 @@ Every game design decision, preference and direction the owner has given, groupe
   2026-11-06 · `done` · docs/characters/junior.md → Palette
 - **Junior, Sentry's robot (the owner's team made it), joins the cast as an easter egg: its own name and look, rolled for about one look in a hundred, never forced onto anyone.** "can you also add this robot from sentry (we made it) as a kind of easter egg character https://junior.sentry.dev/junior-character.png"
   2026-11-06 · `in progress` · docs/characters/junior.md, `EGGS` in `src/gen/character.ts`, public/ASSETS.md
+- **A kind's id names no real game or character either: it is the codex's URL (`/codex/cast/<id>`), so the bald hitman is `cleaner`, and the creeper, impostor, sim and invader are `hisser`, `visor`, `neighbour` and `marcher`.** "the slug shouldn't be hitman btw in the url?", then "Yes, rename them"
+  2026-11-07 · `done` · AGENTS.md → Extension points (Character kind)
 - **A drawn kind must not look like the original redrawn: its twist has to show at play size, the face included (the puffball, whose seam and tape were dropped as misreads, was left with the original's exact face).** "kirby looks.. too much like kirby right now"
   2026-11-06 · `in progress` (the puffball being redrawn) · CHARACTERS.md → The nod and the twist, docs/characters/puffball.md
 - **The android ships as it is: her white bob reads as a helmet at play size, and the black dress that carries the original takes the player's colour.** "Accept as colour read" (asked after seven rounds read her as "a white round helmet with a visor")
