@@ -26,6 +26,8 @@ Each row gives what the item or part mocks, its silhouette (what must read at ga
 | **Queue Jumper** | The lead-camera racer's golden hook that swaps you with the runner ahead | A brass hook on a rope, flung out and reeled | It's the hook off a queue post, on red velvet rope: you're cutting in line. |
 | **Upper Hand** | The fighting game's rising anti-air, as a firework | A boxing glove, fist up, riding a rocket on a stick | The glove is strapped to a bottle rocket; it goes off with the punch. |
 | **Sucker Punch** | The prank gift box with a boxing glove on a spring | A gift box, lid ajar, a glove shooting out of it on a coiled spring | It's wrapped, with a bow; the codex card says "For you." |
+| **Rude Awakening** | The party brawler's thrown bomb that blasts everyone near it | A round red twin-bell alarm clock, bells and hammer on top | It's set to ten to six. It rattles on the floor ringing, and its blast's reach sweeps round it like the hand on a dial. |
+| **Catch of the Day** | The grappling hook that drags a rival to you, as a fishing rod | A bent rod with a cork grip and a reel, a line off its tip | The hook is a red-and-white float; the codex card brags "It was this big." |
 
 ## Mystery crate
 
