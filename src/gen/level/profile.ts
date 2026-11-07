@@ -117,6 +117,7 @@ export type ProfileOverride = Partial<
     | 'gates'
     | 'tide'
     | 'ends'
+    | 'noWeather'
     | 'curve'
   >
 > & {
@@ -224,6 +225,7 @@ export function rollProfile(seed: number, themeId: ThemeId, o: ProfileOverride =
     ...(o.gates ? { gates: true } : {}),
     ...(o.tide ? { tide: o.tide } : {}),
     ...(o.ends ? { ends: true } : {}),
+    ...(o.noWeather?.length ? { noWeather: [...o.noWeather] } : {}),
     // A loop's laps climb the difficulty curve unless the host fixed one difficulty for every level.
     ...(o.loop && size === 'tall' && (o.curve ?? !o.difficulty) ? { curve: true } : {}),
   };

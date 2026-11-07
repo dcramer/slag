@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { BotSeats } from '../src/brain/bots';
 import { rollPersonality } from '../src/brain/personality';
-import { botDevice, isBotDevice } from '../src/brain/device';
+import { botDevice, isBotDevice } from '../src/game/device';
 import { Match } from '../src/game/match';
 import { Motor } from '../src/brain/motor';
 import { Rng } from '../src/core/rng';
@@ -183,6 +183,9 @@ describe('bots', () => {
     expect(easy.block).toBeLessThan(normal.block);
     expect(normal.block).toBeLessThan(hard.block);
     expect(easy.weigh).toBeLessThan(hard.weigh);
+    // And presses a brawl harder.
+    expect(easy.press).toBeLessThan(normal.press);
+    expect(normal.press).toBeLessThan(hard.press);
     // Two bots at one level don't play alike.
     expect(rollPersonality(8, 'normal')).not.toEqual(normal);
     expect(rollPersonality(7, 'normal')).toEqual(normal);

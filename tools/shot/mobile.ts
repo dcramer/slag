@@ -154,6 +154,33 @@ async function mobile(deviceName: string) {
         if ([1, 4, 5, 8].includes(n)) await shotM(`lobby-${n}p-${o}`);
         await checkTargets(`lobby ${n}p ${o}`);
         bad.push(...(await overlaps(`lobby ${n}p ${o}`)));
+        // Everyone ready: Start shows under the bays, offline here and at the room panel's end hosting below.
+        const allReady = [2, 5, 8].includes(n);
+        if (allReady) {
+          // Readying is input, so nobody stays AFK from the long run of shots before this one.
+          await mp.evaluate(() =>
+            (window as any).slagDebug.match.players.forEach((p: any) => {
+              p.ready = true;
+              delete p.afk;
+            }),
+          );
+          const shown = await mp
+            .waitForFunction(() => (window as any).slagDebug.renderer.hud.canStart, null, { timeout: 5000 })
+            .then(
+              () => true,
+              () => false,
+            );
+          if (!shown) {
+            const why = await mp.evaluate(() => {
+              const m = (window as any).slagDebug.match;
+              return JSON.stringify({ phase: m.phase, canStart: m.canStart(), players: m.players.map((p: any) => [p.device, p.ready, !!p.afk]) });
+            });
+            bad.push(`lobby ${n}p ${o}: no Start with everyone ready ${why}`);
+          }
+          if ([2, 8].includes(n)) await shotM(`lobby-${n}p-${o}-ready`);
+          await checkTargets(`lobby ${n}p ${o} ready`);
+          bad.push(...(await overlaps(`lobby ${n}p ${o} ready`)));
+        }
         // Hosting online, staged on a paused frame: the room panel takes height, our card gains Watch, everyone else's a Kick.
         await mp.evaluate(() => {
           const d = (window as any).slagDebug;
@@ -175,12 +202,15 @@ async function mobile(deviceName: string) {
           };
           d.render();
         });
-        if ([1, 4, 5, 8].includes(n)) await shotM(`lobby-${n}p-${o}-online`);
-        await checkTargets(`lobby ${n}p ${o} online`);
-        bad.push(...(await overlaps(`lobby ${n}p ${o} online`)));
+        const online = `lobby-${n}p-${o}-online${allReady ? '-ready' : ''}`;
+        if ([1, 4, 5, 8].includes(n) || (allReady && n === 2)) await shotM(online);
+        await checkTargets(online);
+        bad.push(...(await overlaps(online)));
         await mp.evaluate(() => {
           const d = (window as any).slagDebug;
           d.renderer.hud.devices = d.renderer.hud.shotDevices;
+          // Back to one seat ready (the second), as the next count expects.
+          d.match.players.forEach((p: any, i: number) => (p.ready = i === 1));
           d.pause(false);
         });
       }
@@ -232,6 +262,8 @@ async function mobile(deviceName: string) {
   await checkTargets('lobby-joined');
   // Solo on purpose: the close follow only exists with one player in the match.
   await tapHud('ready');
+  await mp.waitForTimeout(300);
+  await tapHud('start');
   await phase('pick');
   await mp.waitForTimeout(500);
   await shotM('pick');

@@ -508,7 +508,9 @@ export const BRIEFS: Record<string, Brief> = {
     // The palette is neutral (Decisions 4): the apron in the player's colour, the pig a light of it; the rust, the
     // grey skin, the steel and the boots all their own. The slicer leads the brief: the model drops what comes last,
     // and asked for last it came back small and in front of him. The design shipped is an edit of the wedge's worn
-    // design to this (art/sprites/pyramid/design.prompt.txt); this brief is it, for a redraw.
+    // design to this (art/sprites/pyramid/design.prompt.txt); this brief is it, for a redraw. The model draws the cowl
+    // soft and head-sized whatever the brief says, and traced it was a hood: every drawing's cowl is repainted a hard
+    // two-faced pyramid as wide as his shoulders (art/sprites/pyramid/cowl.py), so a redraw runs that too.
     design:
       'The character: a big hulking cartoon toy brute, in five colours: a blue apron (#4f7fae), a rusty orange metal helmet (#b8683e), pale grey skin (#bdb8b2), a steel blade (#c4c8ce), dark brown boots (#4a3e38). ' +
       'He drags a giant flat steel cheese slicer as long as he is tall behind him: its long broad paddle blade with a slot across it slants steeply from his back fist down to the ground behind his back heel. ' +
@@ -873,44 +875,45 @@ export const BRIEFS: Record<string, Brief> = {
   },
   tophat: {
     // The nod, each part of the read at race size and each a shape in outline: the top hat as tall as the rest of
-    // her, a clean cylinder standing straight up off a small girl's head with a brim (the read: nobody else in the
-    // cast wears one; the plumber's cap and the elf's are low and soft, the robot's helmet a round dome); the short
-    // cape flaring off her shoulders with its high collar (the time-travelling girl's other shape); the small size,
-    // a little girl's big head on short legs. The ponytail stays short, so the hat is the outline, not the hair
-    // (long hair behind a slim girl paired the raider with the puppy).
+    // her, a clean cylinder standing straight up off a small girl's head on a wide brim, with a wide band (the read:
+    // nobody else in the cast wears one; the plumber's cap and the elf's are low and soft, the robot's helmet a round
+    // dome); the short cape flaring off her shoulders with its high collar; the long ponytail out of the back under the
+    // brim; the umbrella, plainly one (the clean colour read, 2026-11-06: held out open and low, it read as "a shield
+    // or a fan"): closed with a hook handle on the ground, open over her in the air; the small size under all of it.
     // Ours, and the joke: the hat is a stovepipe made from a tin can, its band a fat hair tie, and the umbrella is a
-    // paper cocktail umbrella grown huge.
+    // paper cocktail umbrella grown huge on a toothpick.
     // The palette is neutral (Decisions 4): the hat and cape in the player's colour, the band and the cape's lining a
     // light of it; the skin, hair, shorts, socks, boots and umbrella neutrals. The colours lead the brief: the image
     // model drops what comes last.
     design:
       'The character: a tiny cheeky cartoon girl, three-quarter view facing right. Colours: a plum (#963c8f) hat and cape, a pale lilac (#e0b0dc) hat band and cape lining, peach skin (#f2cba8), brown hair (#7a4a2a), dark grey shorts (#4a4650), a cream paper umbrella (#f2e8cc). ' +
-      'Her signature: a huge stovepipe top hat as tall as the rest of her, standing straight up off her head, a tall plain plum tin can with ridged rims on a flat brim, a fat lilac hair tie round its base for a band. ' +
-      'A short plum cape with a high stiff collar flares out off her shoulders. A short brown ponytail out the back under the brim. Big round eyes, a wide cheeky grin. ' +
-      'Shorts, grey-and-white striped socks, little dark boots. Her front hand holds out a huge open paper cocktail umbrella on a wooden toothpick stick, low and clear of her body.',
-    // The design came back close to the original redrawn (a plain top hat with a band), so the edit carries the
-    // twist with the wear: the tin can's ridges and dent, the hair tie, the umbrella grown huge.
-    worn: "the top hat is now clearly an old tin can: two raised ridged rings run round it near its top and its bottom, and a big dent is knocked into its side, its brim still wide and flat and the hat still straight up; its band is a fat lilac hair tie (#e0b0dc) knotted at the side; the umbrella grows huge: an open paper cocktail umbrella as wide as she is, on a long wooden toothpick stick, held out at arm's length in front of her, with white background all round it; the hem of the cape is torn into a big ragged notch; one striped sock has slipped down round her boot. Her face and the ponytail stay as they are.",
+      'Her signature: a huge stovepipe top hat as tall as the rest of her, standing straight up off her head, a tall plain plum tin can with ridged rims on a wide flat brim, a wide fat lilac hair tie round its base for a band, a third of its height. ' +
+      'A short plum cape with a high stiff collar ends at her waist, its sides flaring out off her shoulders. A long brown ponytail hangs out of the back under the brim to her waist. Big round eyes, a wide cheeky grin. ' +
+      'Shorts, grey-and-white striped socks, little dark boots. Her front hand leans on a closed, furled cream paper cocktail umbrella with a curved hook handle, its point on the floor, like a cane.',
+    // The drawn design is the 2026-11-05 one edited twice (art/sprites/tophat/design.prompt.txt): the wear is the tin
+    // can's dent, the cape's torn hem and the slipped sock.
+    worn: 'the top hat is now clearly an old tin can: two raised ridged rings run round it near its top, and a big dent is knocked into its side, its brim still wide and flat and the hat still straight up; its wide band is a fat lilac hair tie (#e0b0dc) knotted at the side in a bow; the hem of the short cape is torn into a big ragged notch; one striped sock has slipped down round her boot. Her face, the long ponytail and the closed umbrella stay as they are.',
   },
   vampire: {
     // The nod, each part of the read at race size and each a shape in outline: her height, the tallest and slimmest
-    // figure in the cast, straight up and down (the read: everyone else is a small toy; a tall one for once); the wide
-    // sun hat on a low flat crown over a small head (a flat crown and no point, on a tall slim body: the mage's brim
-    // sits on a small round robed figure, his crown bent into a point; the top-hat girl's is a tall crown); the long
-    // fitted gown falling to the floor and flaring at the hem, hiding her feet (a lady's gown, never a coat over two
-    // legs, the slayer's); one hand raised out in front, clear of her, with five long claws.
-    // Ours, and the joke: the hat's brim was sat on and droops on one side, the hem is torn, and the claws are false
-    // nails, one missing.
-    // The palette is neutral (Decisions 4): the gown in the player's colour; the hat a dark neutral, the skin pale,
-    // the pearls and nails neutrals, the lips a face mark. The colours lead the brief: the image model drops what
-    // comes last.
+    // figure in the cast, straight up and down (the read: everyone else is a small toy; a tall one for once); a huge
+    // pale sun hat, far wider than her shoulders, on a low flat crown with a dark band over a small head (pale, it
+    // stands off any gown colour; dark, the clean colour read took it for her hair; a flat crown and no point: the
+    // mage's brim sits on a small round robed figure, his crown bent into a point); the gown pulled in at the waist
+    // and flaring to the floor (a lady's gown, never a coat over two legs, the slayer's); one hand held out in front,
+    // clear of her and of the brim, four long blade claws fanned (small nails were lost at play size; the claws are
+    // what the clean read named her by, 2026-11-06).
+    // Ours, and the joke: the hat's brim was sat on and droops at the back, the hem is torn, and the claws are false
+    // nails, one missing (four, not five).
+    // The palette is neutral (Decisions 4): the gown in the player's colour; the hat a pale neutral with a near-black
+    // band, the hair near black, the skin pale, the pearls and claws neutrals, the lips a face mark. The colours lead
+    // the brief: the image model drops what comes last.
     design:
       'The character: a very tall, slim, elegant cartoon lady in three-quarter view facing right, three times as tall as she is wide, standing straight and haughty. ' +
-      'Colours: a plum gown (#7a2e4a), a black hat (#2a2630), very pale skin (#eee4e0), red lips (#d42a2a), white pearls (#f4f0e8), silver nails (#b8bcc4). ' +
-      'Her signature: a wide black sun hat with a low flat crown and a flat round brim wider than her shoulders, over a small head, her chin up, looking down her nose. ' +
-      'A long fitted gown with a narrow waist falls straight to the floor and flares a little at the hem, hiding her feet. A string of big white pearls round her neck. ' +
-      'Her front hand is raised at shoulder height out in front of her, clear of her body, five very long pointed silver nails splayed like claws.',
-    worn: "the hat's wide brim is bent and droops down steeply on its back side where it was sat on, a big crease across it, the crown still low and flat; one of the five long silver nails is missing, that fingertip short and bare; the hem of the gown is torn into a big ragged notch at the front; there is a gap in the string of pearls where one is gone. Her face, her height and the raised hand stay as they are.",
+      'Colours: a plum gown (#7a2e4a), a pale cream hat (#e4dccb) with a black band (#2e2a30), short black hair, very pale skin (#eee4e0), red lips (#d42a2a), white pearls (#f4f0e8), silver claws (#b8b4c8). ' +
+      'Her signature: a huge pale sun hat with a low flat crown and a black band, its flat round brim far wider than her shoulders, over a small head, her chin up, looking down her nose. Her front hand held out at chest height in front of her, clear of her body and well below the brim, four very long pointed silver blade claws fanned out forward, white background between each claw. ' +
+      'A wide neckline showing pale collarbones and a string of big white pearls. A long fitted gown pulled in tight at the waist falls to the floor and flares wide at the hem.',
+    worn: "the hat's wide brim is bent and droops down at its back end where it was sat on, the crown still low and flat; only four claws, one finger short and bare where a false nail is missing; the hem of the gown is torn into ragged notches. Her face, her height and the held-out claws stay as they are.",
   },
   sim: {
     // The nod, each part of the read at race size and each a shape in outline: the green diamond floating above her
@@ -1041,22 +1044,23 @@ export const BRIEFS: Record<string, Brief> = {
     worn: "the hem of the near leg of her puffy trousers is snagged and torn into a big ragged hanging strip; the tin-foil tiara has its front point bent over; a strip of grey tape (#9a9c98) is wrapped round the middle of the ponytail where it was mended; the trailing end of the dark sash hangs frayed into ragged tatters. Her face, the ponytail's length and shape straight out behind her head, the white ring at her crown and the hoop earrings stay exactly as they are.",
   },
   bear: {
-    // The nod, each part of the read at race size and each a shape in outline: the tiny top hat perched upright
-    // between two round ears, with background between the hat and each ear (the read: parts that touch become one
+    // The nod, each part of the read at race size and each a shape in outline: the top hat perched upright
+    // between two round ears, tall enough to read as a top hat at play size (the clean colour read went from low to
+    // medium and high when it and the bow tie grew), with background between the hat and each ear (the read: parts that touch become one
     // shape, so the ears sit far out on the head's sides; the top-hat girl's hat is as tall as she is, his is small);
     // the microphone held up in front of the mouth, clear of the face (the puppy's mic sits under a beanie on a
     // skinny card; this is a stocky bear); the round head with a big muzzle on a big round belly, stiff jointed limbs
     // (upright and stiff, never the ape's hunch and long arms). The head faces us, so both ears show apart.
-    // Ours, and the joke: a coin-op kiddie ride gone walkabout: the mic is a shower head on its hose, a coin slot in
-    // the belly, one eye's bulb blown, the jaw stuck half open.
+    // Ours, and the joke: a coin-op kiddie ride gone walkabout: the mic is a shower head on a stub of hose, a coin slot
+    // in the belly, the jaw stuck hanging open on its hinge.
     // The palette is neutral (Decisions 4): the fur in the player's colour, the belly and muzzle a light of it; the
     // hat and bow tie dark neutrals, the shower head metal, the eyes a pale glow. The colours lead the brief: the
     // image model drops what comes last.
     design:
       'The character: a stocky cartoon animatronic bear, a creepy old coin-operated kiddie ride come to life, standing upright, his head turned to face us so both ears show. Colours: brown fur (#8f6432), a pale tan belly and muzzle (#e0bc90), a black top hat and bow tie (#2a2428), a steel grey shower head and hose (#a8acb0), pale yellow glowing eyes (#f4ecb0). ' +
-      'His signature, big and bold: a tiny black top hat, taller than it is wide, perched upright on the very top of his big round head, with clear white gaps between it and his two round ears, which sit far out on the sides of his head. ' +
-      'His near hand holds a steel shower head on a hose up in front of his mouth like a microphone, out clear of his face. ' +
-      'A big round muzzle, a black bow tie, a big round belly with a coin slot in it, short stiff jointed limbs with gaps at the elbows and knees.',
+      'His signature, big and bold: a tall black top hat, taller than it is wide, perched upright on the very top of his big round head, with clear white gaps between it and his two round ears, which sit far out on the sides of his head. ' +
+      'His near hand holds a steel shower head on a short stub of hose up in front of his mouth like a microphone, out clear of his face. ' +
+      'A big round muzzle with the lower jaw hanging open on its hinge, a dark mouth with a row of pointed teeth, a big black bow tie, a big round belly with a small coin slot in it, short stiff jointed limbs with gaps at the elbows and knees.',
     // The edit carries the rest of the twist with the wear, all off the face (the kit draws the eyes): the coin jammed
     // in the belly's slot, the fur torn open at a joint with the metal showing, the hat dented. The hose stays short:
     // a cord coiled by the feet reads as a tail.

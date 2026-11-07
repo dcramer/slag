@@ -1,12 +1,12 @@
 import type { FlatKind } from '../kinds';
 
-// Every pose keeps the shapes that carry him (art/sprites/bear/design.prompt.txt): the tiny black top hat upright on
+// Every pose keeps the shapes that carry him (art/sprites/bear/design.prompt.txt): the tall black top hat upright on
 // top of his head with background between it and each round ear (the read: hat and ears touching trace as one
-// crown); the shower head held up in front of his mouth like a microphone, clear of his face, its hose hanging short
-// (coiled by the feet, a cord reads as a tail); the big round belly with the coin jammed in its slot and the stiff
-// jointed limbs, so he is an upright stiff toy, never the ape's hunch.
+// crown; the tiny hat read low); the big black bow tie; the jaw hung open; the shower head held up in front of his
+// mouth like a microphone, clear of his face, its hose a stub (a hanging hose reads as a tail); the big round belly
+// with the small coin slot and the stiff jointed limbs, so he is an upright stiff toy, never the ape's hunch.
 const KEEP =
-  'the tiny black top hat always upright on top of his head with white gaps between it and both round ears, the shower head on its short hose always held up in front of his mouth like a microphone, clear of his face with white background round it, the big round tan belly with the coin, the stiff jointed limbs';
+  'the tall black top hat always upright on top of his head with white gaps between it and both round ears, the big black bow tie, his jaw always hanging open with its pointed teeth, the shower head on its short stub of hose always held up in front of his mouth like a microphone, clear of his face with white background round it, the big round tan belly with the small coin slot, the stiff jointed limbs';
 
 export const kind: FlatKind = {
   body: 173,
@@ -25,7 +25,7 @@ export const kind: FlatKind = {
       ['fur', [169, 111, 62]],
       ['fur', [183, 127, 66]],
       ['fur', [94, 56, 46]],
-      // The belly, the muzzle and the ears' insides.
+      // The belly, the muzzle, the ears' insides and the teeth.
       ['belly', [244, 197, 128]],
       ['belly', [242, 211, 153]],
       ['belly', [240, 203, 150]],
@@ -46,11 +46,12 @@ export const kind: FlatKind = {
       // The glowing eyes.
       ['glow', [252, 251, 189]],
       ['glow', [254, 254, 195]],
-      // The ink and the nose.
+      // The ink, the nose and the open jaw's mouth.
       ['dark', [12, 1, 1]],
       ['dark', [36, 10, 7]],
       ['dark', [13, 8, 8]],
       ['dark', [50, 24, 12]],
+      ['dark', [42, 14, 10]],
     ],
     line: 'dark',
     thin: ['fur', 'belly', 'tear', 'hat', 'metal', 'glow'],
@@ -65,9 +66,10 @@ export const kind: FlatKind = {
     min: { dark: 0.3, tear: 0.4, metal: 0.3, hat: 0.3, belly: 0.4 },
   },
   roles: [
-    // The costume: the fur suit in the player's colour, the belly, muzzle and ears' insides a light of it.
+    // The costume: the fur suit in the player's colour, the belly, muzzle and ears' insides a light of it (+46 went
+    // white on every colour).
     { name: 'fur', color: '#a05c26', slot: 'player' },
-    { name: 'belly', color: '#808080', on: 0, tone: 34 },
+    { name: 'belly', color: '#808080', on: 0, tone: 40 },
     // The torn fur's inside, a dark of it round the metal: drawn in the ink, the tears were black blotches.
     { name: 'tear', color: '#808080', on: 0, tone: -30 },
     // The hat and bow tie: a charcoal, light enough to stay a shape on a dark theme (black, the hat sank into the
@@ -94,8 +96,8 @@ export const kind: FlatKind = {
   // On the cheek: on the crown it lands on the hat, and the hat stops reading as a top hat.
   accessories: [{ slot: 'plaster', role: 'plaster', at: 'cheek', size: [1.2, 0.5] }],
   // The drawing's eyes are lit bulbs with no pupil: the kit's `bulb`, inked in its socket so it stays a shape on a
-  // light fur, where the mage's `glow` sank.
-  face: { r: 0.62, iris: '#f6f2b8', eye: 'bulb' },
+  // light fur, where the mage's `glow` sank. At 0.8 they read as goggles.
+  face: { r: 0.72, iris: '#f6f2b8', eye: 'bulb' },
   gait: { bounce: [0.1, 0.5], lean: [0, 0.02] },
   clips: {
     idle: { frames: ['idle'], loop: true, fps: 1 },

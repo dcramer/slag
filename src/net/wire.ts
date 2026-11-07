@@ -165,6 +165,7 @@ const ACTION_PARSERS: { [K in NetAction['t']]: (a: Record<string, unknown>) => E
     return id(a.dev) && to ? { t: 'adopt', dev: a.dev, to } : null;
   },
   salt: (a) => (int(a.salt) ? { t: 'salt', salt: a.salt } : null),
+  start: () => ({ t: 'start' }),
   // Which values each rule allows is a game rule: applyAction clamps them (sanitizeRules).
   rules: (a) => (isObj(a.rules) ? { t: 'rules', rules: a.rules as unknown as MatchRules } : null),
   level: (a) => (int(a.seed) && (a.theme === null || oneOf(THEME_IDS)(a.theme)) ? { t: 'level', seed: a.seed, theme: a.theme } : null),

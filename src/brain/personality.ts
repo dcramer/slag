@@ -9,7 +9,7 @@ import type { BotLevel } from '../game/match';
  * stops to think on ground it doesn't know and now and then takes a worse
  * line, so a hard level beats it some of the time. It gets harder by being
  * quicker to save a fumble, slower to doubt and better at seeing the forgiving way, not by never making one. The
- * motor reads the hands (everything but pace, spite, block, weigh and knack), the
+ * motor reads the hands (everything but pace, spite, block, weigh, knack and press), the
  * brain the rest: a harder bot is meaner, and better at it.
  */
 export interface Personality {
@@ -43,6 +43,12 @@ export interface Personality {
   weigh: number;
   /** Chance it sees its moment for the item in its hands when one comes (tactics.ts), each time it looks; at 0 it never uses one or goes for one. */
   knack: number;
+  /**
+   * How hard it presses a fight (Brawl, strategies/brawl.ts), 0 to 1: how soon it takes a hit that isn't lined up,
+   * how near a rival has to be before it fights empty-handed rather than fetch a box, how long it shoves getting
+   * nowhere before it tries another way in. A pushy bot still dodges a hit that's coming and climbs from the slag.
+   */
+  press: number;
 }
 
 type Ranges = { [K in keyof Personality]: readonly [number, number] };
@@ -64,6 +70,7 @@ const RANGES: Record<BotLevel, Ranges> = {
     block: [0.15, 0.3],
     weigh: [1, 2],
     knack: [0.2, 0.4],
+    press: [0.2, 0.45],
   },
   normal: {
     reaction: [5, 10],
@@ -81,6 +88,7 @@ const RANGES: Record<BotLevel, Ranges> = {
     block: [0.65, 0.8],
     weigh: [2, 4],
     knack: [0.5, 0.7],
+    press: [0.55, 0.75],
   },
   hard: {
     reaction: [2, 5],
@@ -98,6 +106,7 @@ const RANGES: Record<BotLevel, Ranges> = {
     block: [0.9, 1],
     weigh: [6, 9],
     knack: [0.8, 0.95],
+    press: [0.8, 0.95],
   },
 };
 
@@ -123,6 +132,8 @@ export function rollPersonality(seed: number, level: BotLevel): Personality {
     weigh: Math.round(roll(r.weigh)),
     // Rolled last, so every trait before it sits where it did before items.
     knack: roll(r.knack),
+    // After knack, for the same reason.
+    press: roll(r.press),
   };
 }
 

@@ -16,6 +16,8 @@ function play(s: NetSession, f: number, rng: Rng): Record<string, InputFrame> {
   const m = s.match;
   if (m.phase === 'lobby') {
     const me = m.players.find((p) => p.device === s.globalDevice('kb1'));
+    // The host presses Start once everyone is ready, as its screen would.
+    if (s.isHost && m.canStart()) s.act({ t: 'start' });
     return (!me || (!me.ready && m.players.length >= 2)) && f % 20 === 0 ? { kb1: press({ confirmPressed: true }) } : {};
   }
   if (m.phase === 'pick' || m.phase === 'place')

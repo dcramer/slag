@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { Rng } from '../src/core/rng';
 import { rollPersonality } from '../src/brain/personality';
+import { brawlStrategy } from '../src/brain/strategies/brawl';
 import { ItemPlay } from '../src/brain/strategies/items';
 import { ITEM_TACTICS, knockedInto, type Moment } from '../src/brain/tactics';
 import { BRAIN_VIEW_VERSION, type BrainView, type RunnerSense, type SelfSense } from '../src/brain/types';
@@ -172,6 +173,53 @@ describe('knocking someone into something (a brawl)', () => {
     // The floor a row down is safe, until the slag covers it.
     expect(knockedInto(view({ tiles: shelf }), me, rival(4.5, 0), 1, 'sword')).toBe(false);
     expect(knockedInto(view({ tiles: shelf }), { ...me, slag: 0.5 }, rival(4.5, 0), 1, 'sword')).toBe(true);
+  });
+});
+
+describe('pressing a brawl (strategies/brawl.ts)', () => {
+  /** Walls up both sides, so a knock throws nobody anywhere; a shelf at row 9 over columns 2 to 5, the high ground. */
+  const ARENA = tiles((set) => {
+    for (let y = 6; y < 14; y++) {
+      set(0, y, T_SOLID);
+      set(W - 1, y, T_SOLID);
+    }
+    for (let x = 2; x <= 5; x++) set(x, 9, T_SOLID);
+  });
+  const fight = { kind: 'fight' as const, cell: { tx: 13, ty: 13 }, ends: [{ tx: 1, ty: 13 }] };
+  const brawler = (level: 'easy' | 'normal' | 'hard', seed = 1) => brawlStrategy.make(new Rng(seed), { ...rollPersonality(seed, level), knack: 1 });
+
+  /** Frames until a brawler holding a sword, with a rival in reach on open floor, swings. */
+  function swingsAfter(level: 'easy' | 'normal' | 'hard'): number {
+    const me: SelfSense = { ...SELF, held: { kind: 'sword', uses: 3 } };
+    const r = rival(7, 0);
+    const v = view({ tiles: ARENA, objective: fight, runners: [r], self: me });
+    expect(knockedInto(v, me, r, 1, 'sword') || knockedInto(v, me, r, -1, 'sword')).toBe(false);
+    const s = brawler(level);
+    for (let f = 1; f <= 10 * 60; f++) if (s.think(v, me).do === 'use') return f;
+    return Infinity;
+  }
+
+  it('swings at a rival in reach within a couple of seconds, though the hit throws them into nothing; a pushier bot sooner', () => {
+    expect(swingsAfter('normal')).toBeLessThanOrEqual(2 * 60);
+    expect(swingsAfter('hard')).toBeLessThan(swingsAfter('easy'));
+  });
+
+  it('stays in the fight while the slag only boils, and climbs once it pours in under it', () => {
+    const s = brawler('normal');
+    const r = rival(13.5, 0);
+    // The view rounds its feet and the slag apart: a slag that hasn't moved reads a quarter row nearer now and then.
+    for (let f = 0; f < 90; f++) {
+      const me: SelfSense = { ...SELF, slag: f % 2 ? 2.75 : 3 };
+      const go = s.think(view({ tiles: ARENA, objective: fight, runners: [r], self: me }), me);
+      expect(go.do === 'goTo' && go.ty < SELF.ty, `frame ${f}: ${JSON.stringify(go)}`).toBe(false);
+    }
+    let up = false;
+    for (let f = 0; f < 30 && !up; f++) {
+      const me: SelfSense = { ...SELF, slag: 1 };
+      const go = s.think(view({ tiles: ARENA, objective: fight, runners: [r], self: me }), me);
+      up = go.do === 'goTo' && go.ty < SELF.ty - 1;
+    }
+    expect(up).toBe(true);
   });
 });
 

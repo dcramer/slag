@@ -89,7 +89,7 @@ function peers(hud: Hud, m: Match, a: NetArrival, cy: number) {
 }
 
 /** A stamped button with its input glyphs before the label; `action` undefined draws it disabled. */
-function promptButton(
+export function promptButton(
   hud: Hud,
   m: Match,
   b: { x: number; y: number; w: number; h: number },

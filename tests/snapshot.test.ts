@@ -134,6 +134,7 @@ describe('match snapshots', () => {
         f += 119;
         continue;
       }
+      if (f === 2) a.start(); // everyone joined and ready
       a.step(inputsAt(a, f));
       a.drainEvents();
     }

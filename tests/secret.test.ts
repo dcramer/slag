@@ -152,8 +152,8 @@ describe('every peer rolls the same secret part', () => {
     a.act({ t: 'rules', rules: { ...DEFAULT_RULES, secretParts: true } });
     const ready = press({ confirmPressed: true });
     tick({ aaaa: { kb1: ready }, bbbb: { kb1: ready }, cccc: { kb1: ready } });
-    run(30);
-    tick({ aaaa: { kb1: ready }, bbbb: { kb1: ready }, cccc: { kb1: ready } });
+    for (let i = 0; i < 90 && !a.match.canStart(); i++) tick();
+    a.act({ t: 'start' });
     for (let i = 0; i < 90 && a.match.phase !== 'pick'; i++) tick();
     run(40);
     for (const s of peers.values()) {

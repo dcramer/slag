@@ -54,6 +54,8 @@ function inPick(after = 40) {
   r.run(30);
   const ready = press({ confirmPressed: true });
   r.tick({ aaaa: { kb1: ready }, bbbb: { kb1: ready }, cccc: { kb1: ready } });
+  for (let i = 0; i < 90 && !a.match.canStart(); i++) r.tick();
+  a.act({ t: 'start' });
   for (let i = 0; i < 90 && a.match.phase !== 'pick'; i++) r.tick();
   r.run(after);
   if (after >= 40) expect(c.match.phase).toBe('pick');
@@ -276,6 +278,8 @@ function inRace(latency: number) {
   r.run(30);
   const ready = press({ confirmPressed: true });
   r.tick({ aaaa: { kb1: ready }, bbbb: { kb1: ready } });
+  for (let i = 0; i < 90 && !a.match.canStart(); i++) r.tick();
+  a.act({ t: 'start' });
   for (let i = 0; i < 3000 && (a.match.phase as string) !== 'run'; i++) r.tick();
   for (let i = 0; i < 80; i++) r.tick({ aaaa: { kb1: press({}) } });
   expect(a.match.phase).toBe('run');
