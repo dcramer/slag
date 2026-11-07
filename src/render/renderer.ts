@@ -459,7 +459,8 @@ export class Renderer {
         drawShellShadows(rc, run);
         drawDrops(rc, run);
       });
-      this.drawSafeZone(rc, level, run);
+      const shield = shieldShows(run.shieldLeft);
+      if (shield) this.drawSafeZone(rc, level, run);
       // Runners round a loop stand on the leader's lap, each a loop up or down by its own: drawn once, there.
       const up = (r: { lap: number }) => (r.lap - lap) * L;
       // All trails first: in a pack, nobody's trail may paint over another runner.
@@ -493,7 +494,7 @@ export class Renderer {
             dt,
             r.body.wallDir,
           );
-          if (!r.finished && run.isSafe(r)) this.drawShield(rc, level, r.body.x + r.body.w / 2, r.body.y + r.body.h, r.slot);
+          if (shield && !r.finished && run.isSafe(r)) this.drawShield(rc, level, r.body.x + r.body.w / 2, r.body.y + r.body.h, r.slot);
           drawRunnerStatus(rc, r.body, r.status, r.attach.soot - run.frame);
           drawRunnerItems(rc, r);
         }
@@ -714,7 +715,7 @@ export class Renderer {
     light(rc, gx, gy - 20, 90, ac, 0.7);
   }
 
-  /** Faint shimmer over each spawn's safe zone during a race (runners touching one are immune to props). */
+  /** Faint shimmer over each spawn's safe zone while the shield lasts (runners touching one are immune to props). */
   private drawSafeZone(rc: RC, level: Level, run: RunWorld) {
     for (const { cell, zone } of run.safeZones) this.drawZone(rc, level, zone, cell);
   }
@@ -1102,4 +1103,14 @@ function lapCopies(vis: { y: number; h: number }, wh: number, lap: number): numb
   const out: number[] = [0];
   for (let k = -2; k <= 2; k++) if (k && k * lap < vis.y + vis.h && k * lap + wh > vis.y) out.push(k);
   return out;
+}
+
+/**
+ * Whether the spawn shield (zones and bubbles) shows this frame: always while it lasts, blinking through its last
+ * second, quicker in the last half, so it reads as running out without a word; never once it's gone.
+ */
+function shieldShows(left: number): boolean {
+  if (left <= 0) return false;
+  if (left >= FPS) return true;
+  return Math.floor(left / (left < FPS / 2 ? 3 : 6)) % 2 === 0;
 }

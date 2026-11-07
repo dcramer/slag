@@ -181,13 +181,15 @@ describe('sentry', () => {
   });
 
   it('cools down after a burst, longer than the opening a route needs', () => {
-    const p = place(sentry(), AT, LANE);
+    // A shorter cool than GUN's, so three bursts land while the spawn shield lasts.
+    const cool = 60;
+    const p = place(sentry({ cool }), AT, LANE);
     // The runner stands in a safe zone, so the rounds pop on it and it stays a target burst after burst.
     const level = { ...testLevel(), spawn: { tx: AT + 6, ty: LANE }, protectedRects: [{ x: AT + 5, y: LANE - 2, w: 3, h: 3 }] };
     const { run, r } = race([p], level);
     standAt(r, AT + 6);
     const fired: number[] = [];
-    for (let i = 0; i < 400; i++) {
+    while (run.shieldLeft > 0) {
       const before = run.events.length;
       step(run);
       if (run.events.slice(before).some((e) => e.type === 'fire')) fired.push(run.frame - 1);
@@ -197,7 +199,7 @@ describe('sentry', () => {
     const gaps = fired.slice(1).map((f, i) => f - fired[i]);
     const lulls = gaps.filter((g) => g > GUN.gap);
     expect(lulls.length).toBeGreaterThan(1);
-    for (const g of lulls) expect(g).toBe(GUN.cool + GUN.spin);
+    for (const g of lulls) expect(g).toBe(cool + GUN.spin);
     for (const g of lulls) expect(g).toBeGreaterThan(MIN_OPENING);
   });
 

@@ -241,7 +241,7 @@ export function goalRect(level: Level): Rect {
 /**
  * The spawn safe zone in world px: the protected rect that holds the spawn
  * cell (the starting pocket). Runners touching it can't be killed by props
- * (see RunWorld). Null when the level has no protected rect around spawn.
+ * while the shield lasts (RunWorld.isSafe). Null when the level has no protected rect around spawn.
  */
 export function spawnZone(level: Level): Rect | null {
   return zoneAt(level, level.spawn);
