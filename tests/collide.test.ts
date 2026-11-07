@@ -8,7 +8,7 @@ import { Predictor } from '../src/net/predict';
 import { drawnVelocity } from '../src/net/session';
 import { hashMatch, restoreMatch, snapshotMatch } from '../src/net/snapshot';
 import { BUMP, COLLIDE, PERCH } from '../src/sim/collide';
-import { DT, LEVEL_H, LEVEL_W, PHYS, RUN_COUNTDOWN, TILE } from '../src/sim/constants';
+import { DT, FPS, LEVEL_H, LEVEL_W, PHYS, RUN_COUNTDOWN, SHIELD_FRAMES, TILE } from '../src/sim/constants';
 import { giveItem } from '../src/sim/items';
 import { type Level, spawnZone, tileAt } from '../src/sim/level';
 import { type Body, bodyAtCell, firstOverlap, stepBody } from '../src/sim/physics';
@@ -129,6 +129,19 @@ describe('spawn safe zone', () => {
     expect(outside.runners[0].alive).toBe(false);
     expect(outside.runners[0].cause).toBe('hazard');
     expect(outside.runners[0].killer).toBe(7);
+  });
+
+  it('shields for 5 s from GO and then for nobody: still standing at 4 s, killed by the same hazard by 6 s', () => {
+    const run = new RunWorld(level, [spikeAt(2)], [0]);
+    const r = run.runners[0];
+    while (run.frame < RUN_COUNTDOWN + 4 * FPS) run.step([NO_INPUT]);
+    expect(run.isSafe(r)).toBe(true);
+    expect(r.alive).toBe(true);
+    while (run.frame < RUN_COUNTDOWN + 6 * FPS) run.step([NO_INPUT]);
+    expect(run.isSafe(r)).toBe(false);
+    expect(r.alive).toBe(false);
+    expect(r.cause).toBe('hazard');
+    expect(r.deathFrame).toBe(RUN_COUNTDOWN + SHIELD_FRAMES);
   });
 
   it('projectiles reaching a protected runner pop harmlessly; outside they kill', () => {
