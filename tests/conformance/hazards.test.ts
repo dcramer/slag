@@ -2,7 +2,7 @@ import { describe, it } from 'vitest';
 import { Rng } from '../../src/core/rng';
 import { DIFFICULTIES, generateLevel, lastGenInfo } from '../../src/gen/level';
 import { noFreeRide } from '../../src/gen/level/winnable';
-import { hazardSignature, type Recipe, SET_PIECE_RECIPES, SET_PIECES } from '../../src/gen/setpieces';
+import { hazardSignature, type Recipe, SET_PIECE_RECIPES, SET_PIECES, throughFaults } from '../../src/gen/setpieces';
 import { CONCEPTS, ownPieces } from '../../src/gen/stage';
 import type { Level, SizeClass } from '../../src/sim/level';
 import type { PlacedProp } from '../../src/sim/props';
@@ -157,6 +157,11 @@ function recipeSuite(theme: ThemeId, r: Recipe) {
       key('hazards'),
       'warns before it hurts, draws what hurts, and leaves a window',
       each(({ level, pp }) => hazardFaults(level, pp)),
+    );
+    rule(
+      key('through'),
+      'reaches through no terrain: no board or ledge inside its footprint',
+      each(({ level, pp }) => throughFaults(level, pp)),
     );
     rule(
       key('free-ride'),

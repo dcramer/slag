@@ -72,8 +72,8 @@ export const LEAD_HOLDS = {
  * `BONK_CREDIT`), thrown or bumped into the level. How hard it's fought (tests/lib/bot-race.ts `Fight`): `contact`
  * and `hit`, seconds from GO to the first touch or bonk and to the first bonk; `uses`, items used a round; `still`
  * and `retreat`, the shares of frames in it standing still and moving away from the nearest rival; `gap`, the tiles
- * to that rival. Measured bare 4%, 25.7 s, 66%, 1.4 s, 3.5 s, 12.9 uses, 10%, 20%, 4.7 tiles; placed 3%, 22.8 s, 61%,
- * 1.2 s, 3.1 s, 9.6 uses, 10%, 18%, 4.2 tiles (29 of 48 and 27 of 64 rounds in 20–40 s, 4 and 6 under 10 s; 28 and 29
+ * to that rival. Measured bare 6%, 25.6 s, 68%, 1.6 s, 3.8 s, 12.9 uses, 10%, 20%, 4.8 tiles; placed 2%, 23.7 s, 58%,
+ * 1.3 s, 3.4 s, 10.8 uses, 10%, 19%, 4.3 tiles (25 of 48 and 31 of 64 rounds in 20–40 s, 4 and 5 under 10 s; 32 and 22
  * deaths off the sides of the map), on arenas of their own (gen/level/builders/arena.ts): tiers of ledges to the top
  * of the screen, open sides, three boxes or more, the middle filled. A knock kills more often, so rounds are a little
  * shorter, and the field, spread over the tiers, meets a little later and goes round more to get at a rival. The
