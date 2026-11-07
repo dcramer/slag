@@ -96,7 +96,7 @@ Every game design decision, preference and direction the owner has given, groupe
 - **Brawl gets arenas of its own, built for knocking people off things: tiers of ledges up the whole screen, edges with drops beside them, sides open to the drop, two mirrored ends.** "the brawl elvel designs might need more edges and stuff?"
   2026-11-06 · `done` (the `arena` builder; each spawn pocket keeps a two-row lip so nobody walks off at GO; deaths off the sides 13 → 41 in 48 bare rounds, knocked share 53 → 66%, draws 8 → 0%) · MODES.md → Brawl, DESIGN.md → Modes, `src/gen/level/builders/arena.ts`
 - **The start's safe zone shields you for 5 s from GO, in every mode, then it's gone.** "in brawl, the 'safe zone' of your start lasts forever.. that should time out in all modes after 5s"
-  2026-11-06 · `in progress` · AGENTS.md → Game rules, `src/sim/run.ts`
+  2026-11-06 · `done` (`SHIELD_FRAMES`; each bout's own GO; the shield blinks through its last second; placement's protected rects unchanged) · AGENTS.md → Game rules, DESIGN.md, `src/sim/run.ts`
 - **Brawl has no safe areas and knocks throw people off ledges: bots don't pause, nearly everywhere to stand has a way to die next to it, and a hit near an edge sends you over.** "also the ai pauses too much on brawl" / "theres too many safe areas, and its hard to push people off ledges etc"
   2026-11-06 · `in progress` · MODES.md → Brawl
 - **A brawl's arena is deadly by default.** "also the arena could be a little deadly by default, thats a thing we can tweak"
