@@ -1,11 +1,11 @@
 import { describe, expect, it } from 'vitest';
 import { BRAWL_ROUNDS, type BrawlMeasure } from '../../src/game/expectations';
-import { type BotRound, botRound, botRounds } from '../lib/bot-race';
+import { type BotRound, botRound, botRounds, PAUSE } from '../lib/bot-race';
 
 /**
  * Brawl with bots (src/game/expectations.ts `BRAWL_ROUNDS`, docs/MODES.md → Brawl): four Normal bots, how often a
  * round is a draw, how long rounds run, the share of deaths a rival's knock put there, and how hard it's fought:
- * how soon they meet and hit, how often they swing, and how much they stand still, back off or keep their distance. On the bare arena (round 1
+ * how soon they meet and hit, how often they swing, and how much they stand still (and how often for half a second or more), back off or keep their distance. On the bare arena (round 1
  * before anyone has placed a part, `botRound`) and through the first rounds of a match, picking and placing, as the
  * parts pile up (`botRounds`).
  */
@@ -25,12 +25,14 @@ interface Measure extends Record<BrawlMeasure, number> {
   /** Seconds from GO to the first touch or bonk, and to the first bonk, mean over rounds (a round with none counts its length). */
   contact: number;
   hit: number;
-  /** Items used a round. */
+  /** Items used a minute of fighting (from GO to the round's end), so a shorter round doesn't read as fewer swings. */
   uses: number;
   /** Shares of the frames someone was in it standing still, and moving away from the nearest rival, and the mean tiles to that rival. */
   still: number;
   retreat: number;
   gap: number;
+  /** Times someone stood still `PAUSE` frames running, per minute of a bot in it: what a person sees as a pause. */
+  pauses: number;
 }
 
 function measure(name: Arena, rounds: BotRound[]): Measure {
@@ -52,20 +54,21 @@ function measure(name: Arena, rounds: BotRound[]): Measure {
     knocked: knocked / deaths,
     contact: sum((r) => (r.fight.contact < 0 ? r.frames : r.fight.contact)) / 60 / rounds.length,
     hit: sum((r) => (r.fight.hit < 0 ? r.frames : r.fight.hit)) / 60 / rounds.length,
-    uses: sum((r) => Object.values(r.uses).reduce((a, b) => a + b, 0)) / rounds.length,
+    uses: sum((r) => Object.values(r.uses).reduce((a, b) => a + b, 0)) / (sum((r) => r.frames) / 3600),
     still: sum((r) => r.fight.still) / frames,
     retreat: sum((r) => r.fight.retreat) / frames,
     gap: sum((r) => r.fight.gap) / frames,
+    pauses: sum((r) => r.fight.pauses) / (frames / 3600),
   };
   const within = secs.filter((s) => s >= BRAWL_ROUNDS.targets.seconds[0] && s <= BRAWL_ROUNDS.targets.seconds[1]).length;
   const quick = rounds.filter((r) => r.frames < 10 * 60);
   // A quick round nobody was knocked or shoved out of: the field walked into the level by itself.
   const blind = quick.filter((r) => r.fight.shoved === 0 && !Object.keys(r.causes).some((k) => k.endsWith('+'))).length;
   console.log(
-    `${name}: ${rounds.length} rounds, ${Math.round(m.draws * 100)}% draws, ${m.seconds.toFixed(1)} s a round (${within} in 20–40 s, ${quick.length} under 10 s, ${blind} with nobody knocked or shoved), ${Math.round(m.knocked * 100)}% of ${deaths} deaths knocked into it; ${JSON.stringify(causes)}`,
+    `${name}: ${rounds.length} rounds, ${Math.round(m.draws * 100)}% draws, ${m.seconds.toFixed(1)} s a round (${within} in ${BRAWL_ROUNDS.targets.seconds[0]}–${BRAWL_ROUNDS.targets.seconds[1]} s, ${quick.length} under 10 s, ${blind} with nobody knocked or shoved), ${Math.round(m.knocked * 100)}% of ${deaths} deaths knocked into it; ${JSON.stringify(causes)}`,
   );
   console.log(
-    `${name}: first contact ${m.contact.toFixed(1)} s, first bonk ${m.hit.toFixed(1)} s, ${(sum((r) => r.fight.bonks) / rounds.length).toFixed(1)} bonks and ${m.uses.toFixed(1)} uses a round, ${Math.round(m.still * 100)}% still, ${Math.round(m.retreat * 100)}% retreating, ${m.gap.toFixed(1)} tiles to the nearest rival, ${sum((r) => r.fight.shoved)} deaths shoved, ${Math.round(
+    `${name}: first contact ${m.contact.toFixed(1)} s, first bonk ${m.hit.toFixed(1)} s, ${(sum((r) => r.fight.bonks) / rounds.length).toFixed(1)} bonks a round, ${m.uses.toFixed(1)} uses a minute of fighting, ${Math.round(m.still * 100)}% still, ${Math.round(m.retreat * 100)}% retreating, ${m.gap.toFixed(1)} tiles to the nearest rival, ${sum((r) => r.fight.shoved)} deaths shoved, ${Math.round(
       (sum((r) => r.fight.safe) /
         Math.max(
           1,
@@ -74,6 +77,7 @@ function measure(name: Arena, rounds: BotRound[]): Measure {
         100,
     )}% of the time on the ground somewhere safe`,
   );
+  console.log(`${name}: ${m.pauses.toFixed(2)} pauses of ${PAUSE}+ frames a bot-minute, the longest ${Math.max(...rounds.map((r) => r.fight.longest))} frames`);
   return m;
 }
 

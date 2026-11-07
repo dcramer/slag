@@ -15,7 +15,7 @@ import type { PlacedProp } from '../src/sim/props';
 import { brakeFrom, movesFrom } from '../src/sim/reach';
 import { RUN_COUNTDOWN, TILE } from '../src/sim/constants';
 import { NO_INPUT } from '../src/sim/types';
-import { botRace } from './lib/bot-race';
+import { botRace, botRound } from './lib/bot-race';
 
 /** A hard level with a tight jump on a Hard bot's way (THINK), and one where a fumble there is a fall (CHOKE). */
 const THINK_SEED = 3;
@@ -26,6 +26,13 @@ describe('bots', () => {
   it.each([1, 3, 12])('runs seed %i to the flag with the plan built', (seed) => {
     const r = botRace(seed, { steady: true });
     expect(r, `seed ${seed}: died of ${r.cause} at race frame ${r.frames}`).toMatchObject({ finished: true });
+  });
+
+  // Seeds where four Normal bots used to stand still 432 and 111 frames on end (in a part's way with no move out, and
+  // beside a rival in its own cell). How often over many rounds is tests/stats/brawl.test.ts (`pauses`).
+  it.each([17, 28])('never stands a second in a brawl, seed %i: it is always at something', (seed) => {
+    const r = botRound(seed, { mode: 'brawl', limit: RUN_COUNTDOWN + 25 * 60 });
+    expect(r.fight.longest).toBeLessThan(60);
   });
 
   it('plays a whole round on its own: ready, pick, place, race', () => {
@@ -248,11 +255,17 @@ describe('the motor’s own moves', () => {
     expect(stood).toBe(true);
   });
 
-  it('in a fight it reads its landings in the air: slow hands cost a run across the arena no stops, where a race still pays them', () => {
-    // Across a brawl arena, end to end, with hands that take 18 frames to see what's next and no other lapses.
-    // Seed 4's arena: a run across it lands a few times on the way.
+  // Across a brawl arena, end to end, with hands that take 18 frames to see what's next and no other lapses: a run
+  // across each of these lands a few times on the way, over shafts and up and down the bands.
+  // Seed 2's way across waits for a hazard to pass, and quick hands wait it out too: there only what slow hands add
+  // counts. The others have nothing to wait for, so every still frame counts.
+  it.each([
+    [2, false],
+    [3, true],
+    [4, true],
+  ])('in a fight it reads its landings in the air: slow hands cost a run across arena %i no stops, where a race still pays them', (seed, clear) => {
     const across = (reaction: number, haste: boolean) => {
-      const m = new Match(4, undefined, { ...DEFAULT_RULES, mode: 'brawl' });
+      const m = new Match(seed, undefined, { ...DEFAULT_RULES, mode: 'brawl' });
       const { spawn, goal } = m.level;
       const { p, r } = standing(m, spawn.tx, spawn.ty);
       const motor = new Motor({ ...rollPersonality(1, 'normal'), reaction, slip: 0, think: 0, stray: 0 }, 1);
@@ -267,7 +280,8 @@ describe('the motor’s own moves', () => {
     const quick = across(0, true);
     const slow = across(18, true);
     expect(quick.f).toBeGreaterThan(0);
-    expect(slow.still).toBeLessThan(10);
+    expect(slow.still - quick.still, `still: slow ${slow.still}, quick ${quick.still}`).toBeLessThan(10);
+    if (clear) expect(slow.still).toBeLessThan(10);
     expect(slow.f).toBeLessThanOrEqual(quick.f + 10);
     expect(across(18, false).still).toBeGreaterThan(30);
   });

@@ -38,6 +38,9 @@ const ERRAND_SLAG = 4;
 const ERRAND_FRAMES = 4 * 60;
 /** Frames it hops under a box before giving up on it. */
 const HOP_FRAMES = 90;
+/** Tiles across between its middle and a loose item's past which it isn't touching it: half a body and half an item. */
+const TOUCH = 0.6;
+const standable = (v: BrainView, x: number, y: number) => tile(v, x, y) === 0 && floorAt(v, x, y + 1);
 /** Frames a spot it turned down stays turned down: round a loop it comes past again, and its boxes refill. */
 const PASS_FRAMES = 3 * 60;
 
@@ -99,7 +102,14 @@ export class ItemPlay {
         if (++e.hops > HOP_FRAMES) return (this.errand = null);
         return { do: 'hop', tx: e.tx };
       }
-    } else if (!v.drops.some((d) => Math.floor(d.x) === e.tx && Math.floor(d.y) === e.ty)) return (this.errand = null);
+    } else {
+      const d = v.drops.find((q) => Math.floor(q.x) === e.tx && Math.floor(q.y) === e.ty);
+      if (!d) return (this.errand = null);
+      // In its cell but not on it (it lies at the cell's edge): on over it, into the next cell that way.
+      const by = d.x < me.x ? -1 : 1;
+      if (me.tx === e.tx && me.ty === e.ty && me.grounded && Math.abs(d.x - me.x) > TOUCH && standable(v, e.tx + by, e.ty))
+        return { do: 'goTo', tx: e.tx + by, ty: e.ty };
+    }
     return { do: 'goTo', tx: e.tx, ty: e.ty };
   }
 
