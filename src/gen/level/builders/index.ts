@@ -67,7 +67,18 @@ export const BUILDERS: Record<BuilderId, BuilderDef> = {
     // side, nearly every place to stand with a way to die near it, and laid round a centrepiece of the set's own that
     // much of the field fights near.
     contract: {
-      each: { fill: 0.5, repeat: 2, boxes: 3, boxesMirrored: true, boxesClear: true, tiers: 3, sideWall: LEVEL_H / 4, clearSpawns: true, centre: 0.06 },
+      each: {
+        fill: 0.5,
+        repeat: 2,
+        boxes: 3,
+        boxesMirrored: true,
+        boxesClear: true,
+        tiers: 3,
+        sideWall: LEVEL_H / 4,
+        clearSpawns: true,
+        clearWay: true,
+        centre: 0.06,
+      },
       set: { fill: 5 / 6, kinds: 4, stands: 0.8 },
       all: {
         safe: 0.2,

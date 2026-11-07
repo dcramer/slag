@@ -1,10 +1,11 @@
-import type { Level } from '../../../sim/level';
-import type { Role } from '../../../sim/props';
-import type { ReachCache } from '../../../sim/reach';
+import { type Level, T_EMPTY } from '../../../sim/level';
+import { hurtsOf, type Role } from '../../../sim/props';
+import { analyzeReach, type ReachCache, T_NOGO } from '../../../sim/reach';
 import { lipDrop, isSurge } from '../loop-surges';
 import { harmed, harmReach } from '../harm';
+import { fieldOf } from '../winnable';
 import { unmirrored } from '../loop-boxes';
-import { isBox, type Measures, measureLevel } from '../measure';
+import { CENTRE_KEY, isBox, type Measures, measureLevel } from '../measure';
 import type { BuilderContract } from '../sets/types';
 
 /**
@@ -64,6 +65,7 @@ export function builderFaults(each: NonNullable<BuilderContract['each']>, level:
     const harm = harmReach(level, level.setPieces);
     for (const [x, y] of cells) if (harmed(harm, level.w, x, y)) out.push(`boxesClear: ${x},${y} is within a tile of where a set piece reaches`);
   }
+  if (each.clearWay) out.push(...clearWayFaults(level));
   if (SHAPED.some((k) => each[k] !== undefined)) {
     const m = measured ?? measureLevel(level, cache);
     if (each.tiers !== undefined && m.tiers < each.tiers) out.push(`tiers: the field stands on ${m.tiers} rows, under ${each.tiers}`);
@@ -76,3 +78,46 @@ export function builderFaults(each: NonNullable<BuilderContract['each']>, level:
 }
 
 const pct = (x: number) => `${Math.round(x * 100)}%`;
+
+/** Tiles from a centrepiece's cells a way has to come within to count as getting to it: about a knock. */
+const NEAR_CENTRE = 3;
+
+/**
+ * Where `level` has no way round its hazards (`BuilderContract.each.clearWay`): every cell a set piece that hurts takes
+ * (a patrol's run, a long-on blast, a drop's fall, whatever its timing) made a wall no move enters or stands on, and
+ * from each end a bare reach to the other end and to within `NEAR_CENTRE` tiles of the centrepiece. One reach each way
+ * over the walled grid: a timed hazard across the only way out of a spawn holds the field at home a round's first
+ * seconds, and a bot can't wait it out.
+ */
+export function clearWayFaults(level: Level): string[] {
+  const { w } = level;
+  // The field the proof walks (parts' blocks as ground, what they hold as no-go), and every cell a set piece that
+  // hurts can reach at all, whatever its timing, a wall too.
+  const tiles = fieldOf({ ...level, setPieces: [] }, level.setPieces).tiles;
+  const centre = new Set<number>();
+  for (const p of level.setPieces) {
+    if (p.def.role !== 'hazard' || isBox(p.def.key) || isSurge(p.def.key)) continue;
+    for (const k of hurtsOf(level, p)) {
+      if (tiles[k] === T_EMPTY) tiles[k] = T_NOGO;
+      if (p.def.key.endsWith(CENTRE_KEY)) centre.add(k);
+    }
+  }
+  const walled: Level = { ...level, tiles };
+  const out: string[] = [];
+  for (const [from, to] of [
+    [level.spawn, level.goal],
+    [level.goal, level.spawn],
+  ] as const) {
+    const { reachable, goalReached } = analyzeReach({ ...walled, spawn: from, goal: to }, false);
+    const at = `from (${from.tx},${from.ty})`;
+    if (!goalReached) out.push(`clearWay: ${at} no way to the other end round the hazards`);
+    if (centre.size && ![...reachable].some((k) => nearAny(centre, w, k % w, Math.floor(k / w))))
+      out.push(`clearWay: ${at} no way to the centrepiece round the hazards`);
+  }
+  return out;
+}
+
+const nearAny = (cells: ReadonlySet<number>, w: number, x: number, y: number) => {
+  for (let dy = -NEAR_CENTRE; dy <= NEAR_CENTRE; dy++) for (let dx = -NEAR_CENTRE; dx <= NEAR_CENTRE; dx++) if (cells.has((y + dy) * w + x + dx)) return true;
+  return false;
+};

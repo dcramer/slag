@@ -200,6 +200,11 @@ export interface BuilderContract {
     /** No set piece's hazard, moving solid or shot gets into a spawn's safe zone over its cycle (conformance only: a simulation). */
     clearSpawns?: true;
     /**
+     * From each end a bare way to the other end, and to the centrepiece, with every cell a set piece that hurts takes
+     * counted as a wall whatever its timing: hazards stay, but there's always a way round them (`clearWayFaults`).
+     */
+    clearWay?: true;
+    /**
      * A centrepiece stands (`Shape.centre`: the set's hazard laid first, in the room the builder built round it), and
      * at least this share of the stand cells the field reaches are near it.
      */

@@ -45,7 +45,7 @@ export const BARRIER_SPAN = 720;
 /** A cell clear for this many frames in a row can be slipped through. Anything that hurts in bursts (a sentry) holds fire at least this long between them. */
 export const MIN_OPENING = 30;
 
-const cache = new WeakMap<PlacedProp, { tiles: Uint8Array; w: number; barrier: Barrier }>();
+const cache = new WeakMap<PlacedProp, { tiles: Uint8Array; w: number; barrier: Barrier; hurts: number[] }>();
 
 /**
  * The part's barrier in `level`, cached per part and terrain (rays stop at
@@ -53,11 +53,23 @@ const cache = new WeakMap<PlacedProp, { tiles: Uint8Array; w: number; barrier: B
  * same tiles, like the one a proof settles time bombs on, still hits.
  */
 export function barrierOf(level: Level, pp: PlacedProp): Barrier {
+  return sampled(level, pp).barrier;
+}
+
+/**
+ * Every cell one of the part's hazards touches at some frame of the span, whatever its timing (cell keys, ascending):
+ * where it can hurt at all, as against the barrier, which a timed opening passes. Cached with the barrier.
+ */
+export function hurtsOf(level: Level, pp: PlacedProp): number[] {
+  return sampled(level, pp).hurts;
+}
+
+function sampled(level: Level, pp: PlacedProp): { barrier: Barrier; hurts: number[] } {
   const hit = cache.get(pp);
-  if (hit && hit.w === level.w && sameTiles(hit.tiles, level.tiles)) return hit.barrier;
-  const barrier = sample(level, resolveProp(pp));
-  cache.set(pp, { tiles: level.tiles.slice(), w: level.w, barrier });
-  return barrier;
+  if (hit && hit.w === level.w && sameTiles(hit.tiles, level.tiles)) return hit;
+  const got = sample(level, resolveProp(pp));
+  cache.set(pp, { tiles: level.tiles.slice(), w: level.w, ...got });
+  return got;
 }
 
 function sameTiles(a: Uint8Array, b: Uint8Array): boolean {
@@ -78,7 +90,7 @@ function groundModules(r: Resolved): Set<number> {
   return out;
 }
 
-function sample(level: Level, r: Resolved): Barrier {
+function sample(level: Level, r: Resolved): { barrier: Barrier; hurts: number[] } {
   const { w, h } = level;
   const grounded = groundModules(r);
   const ground = new Set<number>();
@@ -91,6 +103,14 @@ function sample(level: Level, r: Resolved): Barrier {
   const state = newPropState();
   const out: Contrib = { solids: [], hazards: [], springs: [], winds: [], triggers: [] };
   const here = new Set<number>();
+  const hurts = new Set<number>();
+  const cells = (rc: Rect, into: Set<number>) => {
+    const x0 = Math.max(0, Math.floor(rc.x / TILE + 1e-6));
+    const x1 = Math.min(w - 1, Math.ceil((rc.x + rc.w) / TILE - 1e-6) - 1);
+    const y0 = Math.max(0, Math.floor(rc.y / TILE + 1e-6));
+    const y1 = Math.min(h - 1, Math.ceil((rc.y + rc.h) / TILE - 1e-6) - 1);
+    for (let y = y0; y <= y1; y++) for (let x = x0; x <= x1; x++) into.add(y * w + x);
+  };
   const mark = (rc: Rect) => {
     const x0 = Math.max(0, Math.floor(rc.x / TILE + 1e-6));
     const x1 = Math.min(w - 1, Math.ceil((rc.x + rc.w) / TILE - 1e-6) - 1);
@@ -106,7 +126,10 @@ function sample(level: Level, r: Resolved): Barrier {
     buildSolids([r], ctx, out);
     traceRays([r], ctx, out);
     for (const s of out.solids) if (!(s.propUid === r.pp.uid && grounded.has(s.mi)) && !s.oneWay && !s.film) mark(s);
-    for (const hz of out.hazards) markHazard(hz, mark);
+    for (const hz of out.hazards) {
+      markHazard(hz, mark);
+      markHazard(hz, (rc) => cells(rc, hurts));
+    }
     for (const s of out.springs) mark(s.rect);
     for (const wd of out.winds) mark(wd);
     for (const t of out.triggers!) mark(t.r);
@@ -123,7 +146,7 @@ function sample(level: Level, r: Resolved): Barrier {
   // What a module knows it holds from its own cycle, which may be longer than the span sampled.
   for (const m of r.mods)
     for (const [x, y] of moduleSim(m.type).holds?.(m) ?? []) if (x >= 0 && y >= 0 && x < w && y < h && !ground.has(y * w + x)) noGo.add(y * w + x);
-  return { ground: [...ground].sort((a, b) => a - b), noGo: [...noGo].sort((a, b) => a - b) };
+  return { barrier: { ground: [...ground].sort((a, b) => a - b), noGo: [...noGo].sort((a, b) => a - b) }, hurts: [...hurts].sort((a, b) => a - b) };
 }
 
 /** Cells a hazard covers: boxes for rects and circles, a chain of boxes along a beam. Generous edges only make the proof stricter. */

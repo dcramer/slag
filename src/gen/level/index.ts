@@ -31,7 +31,7 @@ import { DIFFICULTY, setLevelDifficulty } from './difficulty';
 import { levelPrecision } from './precision';
 import { analyzeRoutes, MAX_SHARED } from './routes';
 import { builderFor } from './builders';
-import { builderFaults } from './builders/contract';
+import { builderFaults, clearWayFaults } from './builders/contract';
 import { FALLBACK_SCULPTOR, SCULPTORS } from './sculptors';
 import { LAST_RESORT } from './sculptors/common';
 import type { Shape } from './types';
@@ -326,6 +326,9 @@ export function generateLevel(seed: number, themeOverride?: ThemeId, profileOver
       const asked = Math.max(0, profile.hazards * (profile.loop ? Math.max(1, Math.round(profile.h / 50)) : 1) - budget);
       const tries: RecipeTry[] = [];
       lastGenInfo.placement = { asked, tries, ...(shape.centre ? { centre: shape.centre.kind } : {}) };
+      // A builder that promises a way round every hazard (`clearWay`) has each piece kept to it as it goes in, so the
+      // way is left rather than the level drawn again.
+      const wayRound = !!builderFor(profile).contract?.each?.clearWay;
       const pieces = SET_PIECES[themeId](new Rng(deriveSeed(seed, lab(`setpieces:${attempt}`))), level, {
         count: asked,
         log: tries,
@@ -333,7 +336,11 @@ export function generateLevel(seed: number, themeOverride?: ThemeId, profileOver
         ...(profile.setPieceRoles ? { roles: profile.setPieceRoles } : {}),
         ...(shape.centre ? { centre: shape.centre } : {}),
         cache,
-        keep: fixed.length ? (ps) => keep([...fixed, ...ps]) : keep,
+        keep: wayRound
+          ? (ps) => keep([...fixed, ...ps]) && !clearWayFaults({ ...level, setPieces: [...fixed, ...ps] }).length
+          : fixed.length
+            ? (ps) => keep([...fixed, ...ps])
+            : keep,
         ...(live && landmark ? { standing: fixed, avoid: landmark.air, family: live.family } : {}),
       });
       // (The placer already avoids these cells; this is a safety net. Keep uids contiguous, the landmark's first.)
