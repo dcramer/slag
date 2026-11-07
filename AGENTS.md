@@ -25,7 +25,7 @@ Package manager is **pnpm** (`packageManager` in package.json). Never use npm or
 | `pnpm music [--themes farm,title] [--seeds 1,2] [--solo lead]` | Renders songs through the real mixer offline into `shots/music/*.wav` and prints loudness and voice-limiter numbers (`tools/music.ts`). Listen to it after changing music; balance new layers by their `--solo` loudness. `--sfx all` renders every sound effect and variant into `shots/sfx/`; level a new one against the targets in `src/audio/sfx.ts`. |
 | `pnpm samples [--only violin]` | Rebuilds the music's recorded instruments in `public/samples/` from the CC0 libraries listed in `tools/samples.ts` (downloads cached in `.cache/samples`; needs ffmpeg), and the note map and credits beside them. Only when adding or changing a sample set. |
 | `pnpm brand [icons\|og\|preview]` | Regenerate the favicon, app icons and link-preview cards (`tools/brand.ts`); `preview` → `shots/brand-icons.png`. |
-| `pnpm level <seed> [--theme farm]` | ASCII level dump: `#` solid, `=` one-way, `S`/`G` spawn/goal, `·` reachable stand cell, `P` set piece. |
+| `pnpm level <seed> [--theme farm] [--mode brawl]` | ASCII level dump of the level the game builds for that seed (read as the game reads it: base 36, `tools/lib/level-request.ts`): `#` solid, `=` one-way, `S`/`G` spawn/goal, `·` reachable stand cell, `P` set piece. |
 | `pnpm level --stats 50` | Per-theme stats over N seeds: ms/level, styles, `needBridges`, `fallbacks` (~2 min at 50). |
 | `pnpm dev` | Dev server at http://localhost:3000; `/` is the main menu (Play opens a fresh lobby `/r/<code>`, passing `?seed`/`?theme` through). |
 | `pnpm online-test` | Real WebRTC between headless Chromium pages against the signaling routes. `-- --only lobby`, `migration`, `feel` or `misc` runs a group (about 15 min for all). `-- --engines chromium,firefox,webkit` mixes engines in each room (the first named hosts). |
@@ -50,7 +50,7 @@ Lint: `oxlint` (type-aware; slag's own rules are a JS plugin, `tools/lint/slag-p
 - `race --seed S --race saw,laser,launcher --frames 200` (`--race all` = one of every archetype)
 - `lobby` | `pick` | `place` with `--seed S --players N` (`lobby --bots N` seats that many bots after them)
 - `mobile [--device "iPhone SE landscape"] [--only lobby]`: emulated phone, real multi-touch, fails on a tap target under 44 CSS px, two lobby tap targets that overlap (1–8 players, on its side and upright), or a runner off screen
-- `levels --count 9`, `--seeds a,b,c` or `--themes all` → contact sheet `shots/levels.png`
+- `levels --count 9`, `--seeds a,b,c` or `--themes all` (`--game brawl`, `--difficulty hard`) → contact sheet `shots/levels.png`: each level whole, spawns (`S1`…) and goal (`G`) marked, a JSON card beside each PNG (seed typed and as number, size, set pieces, loot boxes, the `pnpm level` command that dumps it). It fails if the page built another level than `pnpm level` would.
 - `cast`: the character cast, lineups at play scale on farm and mine, a close-up, deaths, the lobby, the "is it the homage?" sheet, the silhouette test and a catalog of every kind (`--only catalog`)
 - `artqa --theme T` (`--themes all`): every landmark, hazard and decor piece of a theme beside its terrain and three parts, at play scale and 2× (`src/render/AGENTS.md` → Drawing a landmark, hazard or decor piece)
 - `props --count 24` (crate cards), `codex [--map castle]` (the `/codex` page: parts, a theme's maps, a landmark and a hazard up close, on a desktop and a phone), `stack` (heads as perches: bucked, slid, knocked and tipped off, as stepped frames)
