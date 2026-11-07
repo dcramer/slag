@@ -379,11 +379,16 @@ export const shots: Scenarios = {
             }
           }
         }
-        // With a gap, the first spot whose floor carries on that far at the same height, so the rival stands level.
+        // With a gap, the first spot whose floor carries on that far at the same height, unbroken, so the rival stands level.
+        // (No named helpers in here: the page has no __name for them.)
         const first = off
           ? Math.max(
               0,
-              spots.findIndex(([x, y]) => L.tiles[y * L.w + x + off] === 1 && !L.tiles[(y - 1) * L.w + x + off]),
+              spots.findIndex(([x, y]) => {
+                for (let k = 0; k <= off; k++)
+                  if (L.tiles[y * L.w + x + k] !== 1 || L.tiles[(y - 1) * L.w + x + k] || L.tiles[(y - 2) * L.w + x + k]) return false;
+                return true;
+              }),
             )
           : 0;
         run.runners.forEach((r: any, i: number) => {
