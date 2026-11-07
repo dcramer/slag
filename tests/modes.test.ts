@@ -5,7 +5,8 @@ import { DEFAULT_RULES } from '../src/game/rules';
 import { generateCrate } from '../src/gen/props';
 import { throughFaults } from '../src/gen/setpieces';
 import { leaderOf as leaderIndex } from '../src/sim/standing';
-import { POINTS, scoreSurvival, SURVIVE_PLACES } from '../src/game/scoring';
+import { POINTS, scoreKnockouts, scoreSurvival, SURVIVE_PLACES, UNDERDOG_ROUNDS } from '../src/game/scoring';
+import { creditKill } from '../src/sim/items';
 import { generateLevel, planHolds } from '../src/gen/level';
 import { GATE_AT, GATE_HOLD } from '../src/gen/level/loop-gates';
 import { LOOP_ROWS, LOOP_W, rollProfile } from '../src/gen/level/profile';
@@ -441,6 +442,71 @@ describe('survival scoring', () => {
     expect(scoreSurvival([fate(0, 900)], [], {}, () => 0.5).awards).toEqual([{ slot: 0, points: POINTS.survive / 2, reason: 'survive' }]);
     expect(scoreSurvival([fate(0, 900)], [], {}, () => 1.2).finishers).toEqual([0]);
     expect(scoreSurvival([fate(0, 90)], [], {}, () => 0).verdict).toBe('too-hard');
+  });
+});
+
+describe('knockout scoring', () => {
+  const fate = (slot: number, deathFrame: number) => ({ slot, alive: deathFrame < 0, deathFrame });
+  const total = (r: ReturnType<typeof scoreKnockouts>, slot: number) => r.awards.filter((a) => a.slot === slot).reduce((s, a) => s + a.points, 0);
+
+  it('pays the fighter who knocked out two and fell over the one who hid to the end', () => {
+    // 1 knocks out 0 and 3, then falls on their own; 2 never touched anyone and is last standing.
+    const r = scoreKnockouts(
+      [fate(0, 200), fate(1, 500), fate(2, -1), fate(3, 300)],
+      [
+        { victim: 0, killer: 1 },
+        { victim: 3, killer: 1 },
+      ],
+    );
+    expect(total(r, 1)).toBe(2 * POINTS.knockout);
+    expect(total(r, 2)).toBe(POINTS.lastStanding);
+    expect(total(r, 1)).toBeGreaterThan(total(r, 2));
+    expect(r.finishers).toEqual([2]);
+    expect(r.awards.filter((a) => a.slot === 1).map((a) => a.reason)).toEqual(['knockout', 'knockout']);
+  });
+
+  it('pays nobody for a fall of their own or one nobody knocked', () => {
+    const r = scoreKnockouts([fate(0, 200), fate(1, 300), fate(2, -1)], [{ victim: 0, killer: 0 }]);
+    expect(total(r, 0)).toBe(0);
+    expect(total(r, 1)).toBe(0);
+    expect(r.awards).toEqual([{ slot: 2, points: POINTS.lastStanding, reason: 'survive' }]);
+  });
+
+  it('a draw with no knockouts pays nobody; a draw keeps its knockouts but has no winner', () => {
+    const none = scoreKnockouts([fate(0, 700), fate(1, 700), fate(2, 700)], []);
+    expect(none.verdict).toBe('too-hard');
+    expect(none.awards).toEqual([]);
+    const fought = scoreKnockouts([fate(0, 300), fate(1, 700), fate(2, 700)], [{ victim: 0, killer: 2 }]);
+    expect(fought.verdict).toBe('normal');
+    expect(fought.finishers).toEqual([]);
+    expect(fought.awards).toEqual([{ slot: 2, points: POINTS.knockout, reason: 'knockout' }]);
+  });
+
+  it('gives the last one out the win, even caught after the round ended', () => {
+    expect(scoreKnockouts([fate(0, 300), fate(1, 900)], []).finishers).toEqual([1]);
+  });
+
+  it('keeps the comeback: a trailing scorer who had gone a while without points gets the underdog bonus', () => {
+    const standings = { 0: { score: 40, scoreless: 0 }, 1: { score: 5, scoreless: UNDERDOG_ROUNDS }, 2: { score: 5, scoreless: UNDERDOG_ROUNDS } };
+    const r = scoreKnockouts([fate(0, 300), fate(1, 400), fate(2, -1)], [{ victim: 0, killer: 1 }], standings);
+    expect(total(r, 1)).toBe(POINTS.knockout + POINTS.survivor);
+    expect(total(r, 2)).toBe(POINTS.lastStanding + POINTS.survivor);
+    expect(total(r, 0)).toBe(0);
+  });
+
+  it('credits the knock, not the part it threw them into', () => {
+    const run = new RunWorld(flatLevel(QUICK), [], [0, 1, 2]);
+    const r = run.runners[0];
+    // A part of their own, or of someone else, while a rival's bonk still counts: the rival's knockout.
+    r.items.bonkedBy = 1;
+    r.items.bonkCredit = 10;
+    expect(creditKill(r, 0, 'hazard')).toBe(1);
+    expect(creditKill(r, 2, 'hazard')).toBe(1);
+    expect(creditKill(r, -1, 'out')).toBe(1);
+    // Once the bonk's credit runs out, whoever owns what killed them.
+    r.items.bonkCredit = 0;
+    expect(creditKill(r, 2, 'hazard')).toBe(2);
+    expect(creditKill(r, -1, 'fall')).toBe(-1);
   });
 });
 

@@ -9,7 +9,7 @@ import type { ThemeId } from '../themes';
 import type { ShoveRules } from '../sim/collide';
 import { TILE } from '../sim/constants';
 import { type BuildUp, feetUp, RACE_RUN, type RunRules, type RunWorld } from '../sim/run';
-import { POINTS, type RoundResult, scoreRound, scoreSurvival, type Standing } from './scoring';
+import { type RoundResult, scoreKnockouts, scoreRound, scoreSurvival, type Standing } from './scoring';
 
 export type ModeId = 'race' | 'slag' | 'brawl';
 
@@ -151,13 +151,12 @@ export const MODES: Record<ModeId, ModeDef> = {
     bouts: 3,
     minPlayers: 2,
     builds: () => true,
+    // Knockouts pay, and the last one standing one knockout's worth: hiding while the others fight doesn't win (owner decision).
     score: ({ run, standings }) =>
-      scoreSurvival(
+      scoreKnockouts(
         run.runners.map((r) => ({ slot: r.slot, alive: r.alive, deathFrame: r.deathFrame })),
         run.kills,
         standings,
-        () => 0,
-        [POINTS.survive],
       ),
   },
 };
