@@ -34,7 +34,7 @@ export const ROD = {
 } as const;
 
 /** Where the line leaves the rod: out in front of the caster at about chest height. */
-export const rodTip = (r: Runner) => ({ x: cx(r) + r.body.facing * 6, y: r.body.y + 5 });
+const rodTip = (r: Runner) => ({ x: cx(r) + r.body.facing * 6, y: r.body.y + 5 });
 
 /** Cast from the runner's rod: straight ahead, or slanting up with up held. */
 export function castRod(w: RunWorld, r: Runner, up: boolean): void {

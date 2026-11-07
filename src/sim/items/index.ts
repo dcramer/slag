@@ -6,7 +6,7 @@ export * from './types';
 export { bonk, knockScale } from './common';
 export { blastThrow, CLOCK } from './clock';
 export { blockCells, buildBlocks, POCKET } from './pocket';
-export { ROD, rodTip, yankVx } from './rod';
+export { ROD, yankVx } from './rod';
 export { TAX } from './tax';
 export { HOOK, UPPER } from './upward';
 export { absorbHit, burstSmoke, catchShot, creditKill, giveItem, itemInput, itemPostStep, spawnItem, stepItems } from './world';
