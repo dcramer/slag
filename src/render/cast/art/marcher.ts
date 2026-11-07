@@ -13,10 +13,10 @@ const PINCHED =
   'M -0.75 -1 L -0.65 -1 L -0.65 -0.75 L -0.55 -0.75 L -0.55 -1 L -0.45 -1 L -0.45 -0.625 L -0.55 -0.625 L -0.55 -0.5 L -0.35 -0.5 L -0.35 -0.625 L -0.25 -0.625 L -0.25 -0.75 L -0.35 -0.75 L -0.35 -1 L -0.25 -1 L -0.25 -0.875 L -0.15 -0.875 L -0.15 -0.75 L 0.15 -0.75 L 0.15 -1 L 0.25 -1 L 0.25 -0.625 L 0.35 -0.625 L 0.35 -0.5 L 0.55 -0.5 L 0.55 -0.625 L 0.45 -0.625 L 0.45 -1 L 0.55 -1 L 0.55 -0.75 L 0.65 -0.75 L 0.65 -1 L 0.75 -1 L 0.75 -0.625 L 0.65 -0.625 L 0.65 -0.375 L 0.45 -0.375 L 0.45 -0.25 L 0.55 -0.25 L 0.55 -0.125 L 0.45 -0.125 L 0.45 0 L 0.35 0 L 0.35 -0.125 L 0.25 -0.125 L 0.25 0 L 0.15 0 L 0.15 -0.125 L -0.15 -0.125 L -0.15 0 L -0.25 0 L -0.25 -0.125 L -0.35 -0.125 L -0.35 0 L -0.45 0 L -0.45 -0.125 L -0.55 -0.125 L -0.55 -0.25 L -0.45 -0.25 L -0.45 -0.375 L -0.65 -0.375 L -0.65 -0.625 L -0.75 -0.625 Z';
 
 /**
- * The pixel crab from space (docs/characters/invader.md): wider than tall, cut from square tiles with a stepped edge
+ * The pixel crab from space (docs/characters/marcher.md): wider than tall, cut from square tiles with a stepped edge
  * all round, two antennae, a claw raised off each side, stubby legs, two square eye holes. Ours: a tile fallen out of
  * its top and taped back on crooked, the back antenna bent over. Hand-inked from its design for the hand-drawn sheets
- * and the frames before its rendered ones load (src/render/cast/sprites/invader/). Its gait is the arcade's two-step:
+ * and the frames before its rendered ones load (src/render/cast/sprites/marcher/). Its gait is the arcade's two-step:
  * the legs spread and pinch on each beat, the whole crab jumping a tile's height and dropping, never gliding.
  */
 export const art: KindArt = {

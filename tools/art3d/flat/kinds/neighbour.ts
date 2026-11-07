@@ -3,16 +3,16 @@ import type { FlatKind } from '../kinds';
 // A chunky little woman with a black bob in a bell of a dress, and over her head, with background all round it, the
 // green diamond: a long double point, cracked and taped, hanging crooked (the twist), a beat behind her on the run.
 // The diamond is the read and the gap under it the whole of it: joined to her head it is a pointed hat. So no drawing's
-// own diamond ships: each is painted out and one diamond, drawn once (art/sprites/sim/gem.py), is hung back over her
-// head the same gap above her in every pose (art/sprites/sim/float.py, floats.txt). Drawn three to a 16:9 image with
-// the design as the reference and cut apart (art/sprites/sim/design.prompt.txt).
+// own diamond ships: each is painted out and one diamond, drawn once (art/sprites/neighbour/gem.py), is hung back over her
+// head the same gap above her in every pose (art/sprites/neighbour/float.py, floats.txt). Drawn three to a 16:9 image with
+// the design as the reference and cut apart (art/sprites/neighbour/design.prompt.txt).
 const KEEP = 'her own green diamond floating high above her head with wide white background under it, never touching her hair, her black bob, her blue dress';
 
 export const kind: FlatKind = {
   body: 104,
   map: {
     roles: ['dress', 'shoe', 'skin', 'hair', 'gem', 'gemlit', 'tape', 'dark'],
-    // Sampled from the design (art/sprites/sim/design.png, `swatch.py`); the diamond's are gem.py's own.
+    // Sampled from the design (art/sprites/neighbour/design.png, `swatch.py`); the diamond's are gem.py's own.
     families: [
       ['dress', [65, 110, 175]],
       ['dress', [63, 111, 174]],
@@ -96,7 +96,7 @@ export const kind: FlatKind = {
     death: { frames: ['death'], loop: false, fps: 1, eyes: false, centre: 'box' },
   },
   // Drawn three to a 16:9 image and cut apart (README → 3. Poses); the sheets' prompts are in
-  // art/sprites/sim/design.prompt.txt. These are each pose alone, for a redraw.
+  // art/sprites/neighbour/design.prompt.txt. These are each pose alone, for a redraw.
   poses: {
     idle2: { pose: `standing politely with both hands clasped in front of her dress, head tilted, a vacant smile, her eyes open; ${KEEP}.` },
     'walk-1': { pose: `walking briskly to the right, mid-step, the near shoe forward and the far shoe back, the arms swinging, her eyes open; ${KEEP}.` },

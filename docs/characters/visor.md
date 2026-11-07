@@ -1,6 +1,6 @@
 # The impostor crewmate
 
-- **Kind:** `impostor` · **Name:** Sussy
+- **Kind:** `visor` · **Name:** Sussy
 - **A stranger should say:** "the crewmate from the impostor game."
 - **Silhouette:** a bean on two stubby legs, a wide visor standing proud of the front, and a pack behind.
 - **Traits:** a smooth bean body; a wide pale visor; a backpack; no arms.

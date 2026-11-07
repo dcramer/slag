@@ -266,7 +266,7 @@ export const BRIEFS: Record<string, Brief> = {
     build:
       'Proportions for a tiny game sprite: one bold simple round shape that still reads at 20 pixels tall, no limbs at all. A chunky toy, never realistic.',
   },
-  impostor: {
+  visor: {
     // The nod, each part of the read at race size: the bean on two stubby legs (the whole silhouette, and no
     // arms: arms make it a mascot), the wide pale visor standing proud of the front (the face; without it,
     // a jelly bean), and the pack on its back (it breaks the outline behind and is half the read in profile).
@@ -830,7 +830,7 @@ export const BRIEFS: Record<string, Brief> = {
       'A small tan school satchel (#b8925e) at her back hip on a strap across her chest. Bare arms and legs, big chunky boots.',
     worn: "the satchel's strap is torn and tied back together in a big knot, its flap hanging open; a strip of grey tape (#9a9c98) is wrapped round the near water pistol's cracked tank; one knee of her shorts' hem is torn into a ragged notch; one boot's sole is flapping loose at the toe. Her face, the braid and its shoelace bow stay as they are.",
   },
-  creeper: {
+  hisser: {
     // The nod, each part of the read at race size and each a shape in outline: the tall upright box body with a big
     // cube head exactly as wide on top and no neck, crisp square corners (taller than wide, so not the sneak's box on
     // legs; the head no wider than the body, so not the miner's cube head over arms; square, so never a cylinder); four
@@ -846,7 +846,7 @@ export const BRIEFS: Record<string, Brief> = {
     // the clean colour audit as "a magenta striped cylinder": the holes showed the level, a light patch, the tape a
     // stripe, the shaded side a cylinder's. So the face is ink, nothing crosses the box, and he faces us: the drawing
     // asked for "seen almost straight from the front" in place of DESIGN's three-quarter view
-    // (art/sprites/creeper/design.prompt.txt).
+    // (art/sprites/hisser/design.prompt.txt).
     design:
       'The character: a tall cartoon creature made from cardboard boxes, its face square to us and only a thin sliver of its right side showing. ' +
       'Colours: green cardboard (#5aa846) painted all over in a grid of big square pixel tiles in a lighter (#8cd06a) and a darker (#3c7a34) green, like low-resolution pixel camouflage, the face solid near-black (#1e2a1e), a white wax candle (#f2eee4) with a yellow flame (#f6c443). ' +
@@ -859,7 +859,7 @@ export const BRIEFS: Record<string, Brief> = {
     // no tape, which read as a stripe. A second edit took the wax drips off the head's edges: they traced as horns.
     worn: 'he is an old painted cardboard box: the top left corner of his head is dented in, a big notch in its outline; the bottom right corner of his body is torn open, a big ragged triangle of brown corrugated cardboard (#b8925e) showing; the birthday candle is stuck in crooked, leaning back, its melted wax only a small flat puddle round its foot. The big black face stays exactly as it is. Nothing else changes: no tape, no stripes, no dirt, no texture.',
   },
-  invader: {
+  marcher: {
     // The nod, each part of the read at race size and each a shape in outline: the crab cut from big square pixels,
     // its outline stepping square by square all round (the read: nobody else in the cast is made of square steps; the
     // creeper's box is smooth-sided and tall, the miner's cube a head on a body); wider than tall, so never a block
@@ -920,7 +920,7 @@ export const BRIEFS: Record<string, Brief> = {
       'A wide neckline showing pale collarbones and a string of big white pearls. A long fitted gown pulled in tight at the waist falls to the floor and flares wide at the hem.',
     worn: "the hat's wide brim is bent and droops down at its back end where it was sat on, the crown still low and flat; only four claws, one finger short and bare where a false nail is missing; the hem of the gown is torn into ragged notches. Her face, her height and the held-out claws stay as they are.",
   },
-  sim: {
+  neighbour: {
     // The nod, each part of the read at race size and each a shape in outline: the green diamond floating above her
     // head, a long double point top and bottom, with a clear gap of background under it (the read: nobody else in the
     // cast has a part hanging in the air over the head, and only while the gap shows; joined to the head it is a
@@ -934,7 +934,7 @@ export const BRIEFS: Record<string, Brief> = {
     // the skin neutral; the diamond keeps its green, a fixed mark like the zapmouse's cheeks. The diamond leads the
     // brief: the image model drops what comes last. Asked for a slim woman, it drew a realistic one, a stick under a
     // dot at play size, so she is a chunky toy. No drawn diamond ships: one drawn once is hung over her head in every
-    // drawing (art/sprites/sim/design.prompt.txt).
+    // drawing (art/sprites/neighbour/design.prompt.txt).
     design:
       'The character: a chunky little cartoon woman like a toy figure, three-quarter view facing right, her head a third of her height. Her signature: a huge bright green crystal diamond (#46c84a, its lit facets #9ee87a) floating in the air above her head, a long double point, pointed top and bottom, as tall as her head and half as wide, with a clear gap of white background between it and her hair: it never touches her. ' +
       'A big glossy black bob haircut (#24202a), round and wider than her face, to her jaw, with a straight fringe. Peach skin (#efc9a4). ' +
