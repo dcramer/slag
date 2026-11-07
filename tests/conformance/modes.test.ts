@@ -1,6 +1,7 @@
 import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import { MODE_IDS, MODES } from '../../src/game/modes';
+import { decorFaults, placeDecor } from '../../src/gen/decor';
 import { generateLevel } from '../../src/gen/level';
 import { BUILDERS, type BuilderId } from '../../src/gen/level/builders';
 import { THEME_IDS } from '../../src/themes';
@@ -9,7 +10,7 @@ import { botRound } from '../lib/bot-race';
 /**
  * The mode contract (AGENTS.md → Extension points → Playstyle mode): every mode in `MODES` is listed, has its section
  * in docs/MODES.md against its reference game, builds the level it asks for (each of `ModeDef.profile`'s asks, in a
- * theme that takes turns by mode), and plays a round of bots to its end. The registries keyed by mode (bot strategies
+ * theme that takes turns by mode, its decor kept off its boxes and stands), and plays a round of bots to its end. The registries keyed by mode (bot strategies
  * and objectives, the difficulty bands, the emblem) are typecheck's: a mode missing from one doesn't compile.
  */
 
@@ -42,6 +43,7 @@ describe('every mode', () => {
           lv.setPieces.some((p) => p.def.key === 'loop-box'),
           'boxes of its own',
         ).toBe(true);
+      expect(decorFaults(lv, placeDecor(lv, lv.theme)), 'decor off its spawn, flag, boxes and stands').toEqual([]);
     });
 
     it(`${id}: plays a round of bots to its end`, { timeout: 60_000 }, () => {

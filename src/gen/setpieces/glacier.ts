@@ -98,8 +98,19 @@ export function thinIce(rng: Rng, cells: Cell[], depth: number): Module {
 }
 
 /**
+ * Whether rock holds the water under ice over columns x0..x1 at row y, `depth` rows deep: both lips run deeper than
+ * the ice, and no row of the water has open air on both sides. A gap between two ledges over a pit (a brawl arena's)
+ * has none, and its water would stand in mid-air as a pillar.
+ */
+function held(s: Site, x0: number, x1: number, y: number, depth: number): boolean {
+  if (!s.solid(x0 - 1, y + 1) || !s.solid(x1 + 1, y + 1)) return false;
+  for (let r = y + 2; r < Math.min(s.h, y + depth); r++) if (!s.solid(x0 - 1, r) && !s.solid(x1 + 1, r)) return false;
+  return true;
+}
+
+/**
  * Thin ice: a narrow crevasse (a hop wide) in the route, banks of solid ground level either side, iced
- * over flush with them.
+ * over flush with them, its water held by rock.
  */
 function* thinIces(rng: Rng, s: Site): Generator<Piece> {
   const spots: { x0: number; x1: number; y: number; depth: number }[] = [];
@@ -116,7 +127,7 @@ function* thinIces(rng: Rng, s: Site): Generator<Piece> {
       const depth = floor < 0 ? s.h - y : floor - y;
       let open = depth >= 2 && (floor < 0 || depth <= 3);
       for (let c = x; c <= e && open; c++) if (s.groundBelow(c, y) !== floor || !s.free(c, y + 1)) open = false;
-      if (open) spots.push({ x0: x, x1: e, y, depth });
+      if (open && held(s, x, e, y, depth)) spots.push({ x0: x, x1: e, y, depth });
     }
   for (const c of best(rng, spots, (c) => c.x1 - c.x0))
     yield {

@@ -60,7 +60,7 @@ A `Recipe` in `setpieces/<theme>.ts` (`defineSetPiece` types one), in `SET_PIECE
 
 An entry in `RULES` in `decor/index.ts` (`defineDecor`): `place` (`top` grows on the ground, `under` hangs from a ceiling), `themes`, `weight`, `clear` (its room, at most `DECOR_MAX_CLEAR`), `span` for a run like a fence. Its kind becomes a `DecorKind`, so tsc asks for its art in `render/decor.ts` (`color`, `bake` and/or `live`). Every theme it lists draws from it from then on (`pickDecor`); a look with variants (space's station and asteroids) narrows its pool with `from`.
 
-- While generating: `placeDecor` only puts a piece on a solid tile with its room open, off the spawn and the flag, and off a landmark that wears its own skin.
+- While generating: `placeDecor` only puts a piece on a solid tile with its room open, off the spawn and the flag, off every loot box and item stand (and the cell over it), and off a landmark that wears its own skin.
 - Conformance: the same on real levels of every theme (`decorFaults`), its art exists, the level reaches exactly the same with decor placed (decor is cosmetic), placement and the look's pick vary with the seed, and a theme shows only decor registered for it, with at least one kind of its own.
 
 ### Add a part
