@@ -4,6 +4,9 @@
  */
 import { mkdirSync, writeFileSync } from 'node:fs';
 import { resolve } from 'node:path';
+import type { ProfileOverride } from '../../src/gen/level';
+import type { Difficulty, SizeClass } from '../../src/sim/level';
+import type { WeatherKind } from '../../src/sim/weather';
 import { argReader, type Engine, engineList, launchEngine, startServer, watchdog } from '../lib/server';
 
 export const argv = process.argv.slice(2);
@@ -16,13 +19,23 @@ export const theme = opt('theme');
 const world = opt('world');
 const weather = opt('weather');
 const concept = opt('concept');
-const game = opt('game');
+const difficulty = opt('difficulty');
+/** `--game brawl`: the match's playstyle mode (`--mode` is the input prompts'). */
+export const game = opt('game');
+/** The profile knobs the URL forces (src/debug.ts), as `pnpm level` takes them: what `levels` checks its levels against. */
+export const levelForce: ProfileOverride = {
+  ...(world ? { size: world as SizeClass } : {}),
+  ...(weather ? { weather: weather as WeatherKind } : {}),
+  ...(concept ? { concept } : {}),
+  ...(difficulty ? { difficulty: difficulty as Difficulty } : {}),
+};
 export const tq =
   (game ? `&mode=${game}` : '') +
   (theme ? `&theme=${theme}` : '') +
   (world ? `&size=${world}` : '') +
   (weather ? `&weather=${weather}` : '') +
   (concept ? `&concept=${concept}` : '') +
+  (difficulty ? `&difficulty=${difficulty}` : '') +
   (flag('noui') ? '&ui=0' : '') +
   (opt('q') ? `&q=${opt('q')}` : '') +
   (flag('noletters') ? '&lettering=0' : '');
@@ -126,18 +139,20 @@ export async function addParts() {
   const kinds = opt('parts')?.split(',').filter(Boolean);
   if (kinds?.length) await page.evaluate(([k, s]) => (window as any).slagDebug.addProps(k, s), [kinds, Number(opt('propseed', '1'))] as const);
 }
-export async function snap(name: string) {
+/** Shoot the window, or only `clip` of it (CSS px), at `out/<name>.png`. */
+export async function snap(name: string, clip?: { x: number; y: number; width: number; height: number }) {
   const p = `${out}/${name}.png`;
-  await page.screenshot({ path: p });
+  await page.screenshot({ path: p, clip });
   console.log(p);
   pet();
   return p;
 }
+/** A contact sheet of `files`, each fitted whole into a window-shaped cell (a tall level's shot stays as small as a wide one's). */
 export async function sheet(name: string, files: string[], cols = 3) {
   const html = `<html><body style="margin:0;background:#111;display:grid;grid-template-columns:repeat(${cols},1fr);gap:4px">${files
     .map(
       (f) =>
-        `<div style="position:relative"><img src="file://${f}" style="width:100%;display:block"><span style="position:absolute;left:6px;top:4px;color:#fff;font:12px monospace;text-shadow:0 0 3px #000">${f.split('/').pop()}</span></div>`,
+        `<div style="position:relative;aspect-ratio:${W}/${H}"><img src="file://${f}" style="width:100%;height:100%;object-fit:contain;display:block"><span style="position:absolute;left:6px;top:4px;color:#fff;font:12px monospace;text-shadow:0 0 3px #000">${f.split('/').pop()}</span></div>`,
     )
     .join('')}</body></html>`;
   const hp = `${out}/${name}.html`;
