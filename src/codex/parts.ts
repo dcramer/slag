@@ -15,6 +15,7 @@ import {
   type MysteryLook,
   type PropDef,
   type PropStyle,
+  SURGE,
   type Trim,
 } from '../sim/props';
 
@@ -150,6 +151,9 @@ const ITEM_NOTES: Record<ItemKind, string> = {
   glove: 'For you.',
   clock: 'Rise and shine.',
   rod: 'It was this big.',
+  slick: 'All downhill from here.',
+  jolt: 'Any day now.',
+  grapple: 'It’s who you know.',
 };
 
 const crate = (name: string, pool: ItemKind[], uses: number, look: MysteryLook): PropDef =>
@@ -702,6 +706,12 @@ export function partGroups(): PartGroup[] {
       entries: [
         { id: 'lootbox', title: 'loot box', note: 'Contents may vary.', def: crate('loot box', [...ITEM_KINDS], 0, 'crate') },
         ...ITEM_KINDS.map((k) => ({ id: k, title: ITEMS[k].name.toLowerCase(), note: ITEM_NOTES[k], def: crate(ITEMS[k].name, [k], 0, 'crate'), item: k })),
+        {
+          id: 'legday',
+          title: 'leg day',
+          note: 'Never skip it.',
+          def: def('leg day', [{ type: 'surge', cells: [[0, 0]], refill: SURGE.refill, frames: SURGE.frames }]),
+        },
       ],
     },
     {

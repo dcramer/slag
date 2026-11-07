@@ -28,12 +28,21 @@ Each row gives what the item or part mocks, its silhouette (what must read at ga
 | **Sucker Punch** | The prank gift box with a boxing glove on a spring | A gift box, lid ajar, a glove shooting out of it on a coiled spring | It's wrapped, with a bow; the codex card says "For you." |
 | **Rude Awakening** | The party brawler's thrown bomb that blasts everyone near it | A round red twin-bell alarm clock, bells and hammer on top | It's set to ten to six. It rattles on the floor ringing, and its blast's reach sweeps round it like the hand on a dial. |
 | **Catch of the Day** | The grappling hook that drags a rival to you, as a fishing rod | A bent rod with a cork grip and a reel, a line off its tip | The hook is a red-and-white float; the codex card brags "It was this big." |
+| **Slippery Slope** | The kart racer's oil slick, dropped behind you | A dented red oil can with a long thin spout, a drip at its tip | The spill is a black gloss with a petrol rainbow sliding over it, dripping off every lip; the name is the argument. |
+| **Trickle-Down** | The stomp that shakes everyone below off their feet | A fat money bag cinched with twine, a coin stamped on its face | It has a hole in the bottom: what reaches the people below is a line of falling coins, and it knocks them over. |
+| **Social Climber** | The lead-camera racer's grapple up to the ledge overhead | A gold three-tined grapple on a string of pearls | It only goes up; the codex card says "It's who you know." |
 
 ## Mystery crate
 
 | Look | Names | Mocks | Silhouette | Gag |
 |---|---|---|---|---|
 | loot box | Loot Box, Surprise Mechanic, Lucky Block | The floating question block, as a loot box | A chunky bevelled cube with our own question glyph, punched from below | It pops and squashes when hit; a coin slot on top; dark and dented once spent. |
+
+## Leg Day
+
+| Look | Names | Mocks | Silhouette | Gag |
+|---|---|---|---|---|
+| protein shaker | Leg Day | The kart racer's boost mushroom and the platformer's power-up | A clear gym shaker cup, black screw lid with a spout, floating in a ring of shine over a lip | Strawberry shake inside and a pink sweatband round the cup; taking it puts one on you, and the empty cup fills back up from the bottom while it refills. |
 
 ## Weapon stand
 

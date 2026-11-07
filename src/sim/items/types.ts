@@ -23,7 +23,10 @@ export type ItemKind =
   | 'upper'
   | 'glove'
   | 'clock'
-  | 'rod';
+  | 'rod'
+  | 'slick'
+  | 'jolt'
+  | 'grapple';
 
 export const ITEM_KINDS: readonly ItemKind[] = [
   'sword',
@@ -41,6 +44,9 @@ export const ITEM_KINDS: readonly ItemKind[] = [
   'glove',
   'clock',
   'rod',
+  'slick',
+  'jolt',
+  'grapple',
 ];
 
 /** What a box deals by rank (a mode's `boxes`, game/modes.ts): one table for whoever leads, one for the rest. */
@@ -87,6 +93,8 @@ export interface RunnerItems {
   cast: number;
   /** Rivals' hits taken this race, under a build-up rule (`RunRules.buildup`): each throws the next one farther. */
   hits: number;
+  /** Frames a Social Climber's line is reeling this runner up (0: none): controls ignored, as a cast roots you. */
+  reel: number;
 }
 
 /** A loose item lying in, or flying through, the level. */
@@ -199,6 +207,52 @@ export interface CastLine {
   held: number;
 }
 
+/** A Slippery Slope's spill: the ledges in a box of tiles (inclusive; rows may run past a loop's ends) slick until `until`. */
+export interface SlickPatch {
+  id: number;
+  owner: number;
+  x0: number;
+  x1: number;
+  y0: number;
+  y1: number;
+  born: number;
+  until: number;
+}
+
+/** A Trickle-Down: a shudder pouring down the shaft from where it was used, knocking whoever stands in its way. */
+export interface JoltWave {
+  id: number;
+  /** Slot credited for its knocks. */
+  owner: number;
+  /** Where it was used (px): the middle across, and the user's feet as `progressOf` reads them (laps and all). */
+  x: number;
+  from: number;
+  /** How far down it has poured (px; 0 until the stamp lands). */
+  down: number;
+  /** Frames since it was used. */
+  t: number;
+  /** Bitmask of runner indices it has already knocked. */
+  hit: number;
+}
+
+/** A Social Climber's line: the hook caught on a ledge above, reeling its thrower up from where they stood. */
+export interface ClimbLine {
+  id: number;
+  /** Runner index of the climber. */
+  owner: number;
+  /** Where the body's top-left started and where it ends (px), as of lap `lap`. */
+  sx: number;
+  sy: number;
+  ex: number;
+  ey: number;
+  /** Straight up first, then over onto the ledge; or over first, then up through it. */
+  up: boolean;
+  lap: number;
+  /** Frames since it caught, and frames the reel takes. */
+  t: number;
+  frames: number;
+}
+
 /** Item state for one race (lives on RunWorld). */
 export interface ItemWorld {
   drops: ItemDrop[];
@@ -209,6 +263,9 @@ export interface ItemWorld {
   fists: UpperFist[];
   clocks: AlarmClock[];
   lines: CastLine[];
+  slicks: SlickPatch[];
+  jolts: JoltWave[];
+  climbs: ClimbLine[];
   nextId: number;
 }
 
@@ -241,11 +298,12 @@ export function newRunnerItems(): RunnerItems {
     noPickup: 0,
     cast: 0,
     hits: 0,
+    reel: 0,
   };
 }
 
 export function newItemWorld(): ItemWorld {
-  return { drops: [], clouds: [], shells: [], blocks: [], hooks: [], fists: [], clocks: [], lines: [], nextId: 1 };
+  return { drops: [], clouds: [], shells: [], blocks: [], hooks: [], fists: [], clocks: [], lines: [], slicks: [], jolts: [], climbs: [], nextId: 1 };
 }
 
 /** Loose items vanish this long after they appear, blinking for the last DROP_BLINK frames. */

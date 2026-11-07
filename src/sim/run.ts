@@ -7,6 +7,7 @@ import {
   absorbHit,
   bonk,
   buildBlocks,
+  applySlicks,
   burstSmoke,
   catchShot,
   creditKill,
@@ -57,6 +58,7 @@ import {
   statusInput,
   statusPostStep,
   statusPreStep,
+  takeoffMark,
   stepHold,
   stepProjectile,
   type Hazard,
@@ -369,6 +371,13 @@ export class RunWorld {
         this.events.push({ type: 'item', what: 'pickup', kind, slot: r.slot, x: r.body.x + r.body.w / 2, y: r.body.y });
         return true;
       },
+      surge: (i, frames) => {
+        const r = this.runners[i];
+        if (!r || !r.alive || r.finished) return false;
+        r.status.surge = frames;
+        this.events.push({ type: 'item', what: 'surge', kind: 'surge', slot: r.slot, x: r.body.x + r.body.w / 2, y: r.body.y });
+        return true;
+      },
       itemSeed: this.itemSeed,
       leader: () => (leader ??= leaderOf(this)),
       solids: this.solids,
@@ -408,6 +417,7 @@ export class RunWorld {
       // A rope, keg or pipe moves this body instead of the controller, and a held runner skips springs, fields and kickers.
       const held = stepHold(this, r, inp, f);
       if (!held) statusPreStep(r.status, b);
+      const takeoff = held ? null : takeoffMark(r.status, b);
 
       // Wind is a velocity field applied inside stepBody (sim/wind.ts); grounding stays physics' call.
       if (!held && !stepBody(b, inp, this.world, windAt(b, this.out.winds)) && !this.isSafe(r)) {
@@ -416,7 +426,7 @@ export class RunWorld {
         const owner = s ? (this.resolved.find((x) => x.pp.uid === s.propUid)?.pp.owner ?? -1) : -1;
         return this.kill(r, owner, 'crush');
       }
-      statusPostStep(r.status, b);
+      statusPostStep(r.status, b, takeoff);
       // Round a loop: climbing into its top band carries on from the same place in the bottom one, a lap up.
       const laps = lapShift(this.level, b.y + b.h);
       if (laps) {
@@ -591,6 +601,7 @@ export class RunWorld {
     traceRays(this.resolved, ctx, this.out); // Last, so what travels sees every solid whatever order the props came in.
     for (const ft of this.features) ft.build?.(this, this.solids);
     wetSolids(this.solids, this.level);
+    applySlicks(this, this.solids); // A Slippery Slope's spill, on top of the weather.
     const gust = gustWind(this.level, f);
     if (gust) this.out.winds.push(gust);
   }

@@ -8,13 +8,23 @@ import { analyzeRoutes } from '../gen/level/routes';
 import { type Level, spawnsOf } from '../sim/level';
 import { RUN_COUNTDOWN, TILE } from '../sim/constants';
 import { knockScale } from '../sim/items';
-import { barrierOf, footprint, hangRow, motionOffset, mysterySpent, mysteryState, type PlacedProp, spotAt, standHolds } from '../sim/props';
+import { barrierOf, footprint, hangRow, motionOffset, mysterySpent, mysteryState, type PlacedProp, spotAt, standHolds, surgeReady } from '../sim/props';
 import type { Body } from '../sim/physics';
 import { feetUp, type Runner, type RunWorld } from '../sim/run';
 import { raceMap } from './route';
 import { screenEdges } from '../sim/screen';
 import { rankOf } from '../sim/standing';
-import { BRAIN_VIEW_VERSION, type BoxSense, type BrainView, type Lift, type Objective, type Pace, type PropSense, type SelfSense } from './types';
+import {
+  BRAIN_VIEW_VERSION,
+  type BoxSense,
+  type BrainView,
+  type Lift,
+  type Objective,
+  type Pace,
+  type PropSense,
+  type SelfSense,
+  type SurgeSense,
+} from './types';
 
 /**
  * What a seat senses: the match as a player would read it, never the sim's
@@ -85,6 +95,19 @@ function boxesOf(run: RunWorld): BoxSense[] {
       const pops = mysteryState(st, mi);
       const ready = !mysterySpent(mod, pops.pops) && run.frame >= pops.ready;
       for (const [cx, cy] of mod.cells) out.push({ ...at(cx, cy), ready, hands: !!mod.deal, stand: false, kind: null });
+    });
+  return out;
+}
+
+/** The Leg Days in the race, where they float now, and whether each is there to take. */
+function surgesOf(run: RunWorld): SurgeSense[] {
+  const out: SurgeSense[] = [];
+  for (const rp of run.resolved)
+    rp.mods.forEach((mod, mi) => {
+      if (mod.type !== 'surge') return;
+      const [ox, oy] = motionOffset(rp, run.frame);
+      const ready = surgeReady(run.propState.get(rp.pp.uid), mi, run.frame);
+      for (const [cx, cy] of mod.cells) out.push({ tx: Math.round(cx + ox / TILE), ty: Math.round(cy + oy / TILE), ready });
     });
   return out;
 }
@@ -248,6 +271,7 @@ export function senseView(m: Match, p: Player): BrainView {
     objective: OBJECTIVES[m.rules.mode](m),
     boxes: run ? boxesOf(run) : [],
     drops: run ? run.items.drops.map((d) => ({ x: round4(d.x / TILE), y: round4(d.y / TILE), kind: d.kind })) : [],
+    surges: run ? surgesOf(run) : [],
     detour: (tx, ty) => detourOf(m, p, tx, ty),
     claim: p.claim,
     placed: p.placed,

@@ -106,7 +106,7 @@ Every game design decision, preference and direction the owner has given, groupe
 - **Brawl: weapons on mirrored stands that respawn, everyone starts a bout armed, arenas built around one or two centrepiece hazards, and the slag only ends a stalemate.** "Yeah lets work through that"
   2026-11-07 · `in progress` · MODES.md → Brawl
 - **Rising Slag: fall off the bottom of the leader's screen and you're out, in place of the regroup gates; climb items made for a shaft; boosts on the hard lines.** "Yeah lets work through that"
-  2026-11-07 · `in progress` · MODES.md → Rising Slag
+  2026-11-07 · `done` (`RunRules.screen`, gates deleted; Social Climber, Trickle-Down, Slippery Slope; Leg Day boosts) · MODES.md → Rising Slag
 - **Rising Slag's leader runs free: no solid top on the screen holding them; catch-up comes from items and the rank-based deal instead.** "Let leader run free"
   2026-11-07 · `in progress` · MODES.md → Rising Slag, `src/sim/screen.ts`
 - **A leader never gets more than a tile or two past the top of the screen, and bots see only what's on screen: they never know more of the level than a player can see.** "the AI leaders shouldnt go far beyond the top tho.. like 1-2 blocks might be ok (sort of luck) but they shouldn't be able to see things players cant"

@@ -21,6 +21,7 @@ import { generateTheme, type Theme } from '../theme';
 import { ReachCache } from '../../sim/reach';
 import { harmReach } from './harm';
 import { loopBoxes } from './loop-boxes';
+import { loopSurges } from './loop-surges';
 import { slagTide } from './tide';
 import { footing } from '../../sim/weather';
 import { openUp } from './lanes';
@@ -345,7 +346,9 @@ export function generateLevel(seed: number, themeOverride?: ThemeId, profileOver
       const boxes = profile.boxes
         ? loopBoxes(level, fitted, keep, new Rng(deriveSeed(seed, lab(`loop-boxes:${attempt}`))), profile.boxes, stands, !!profile.stands, harm)
         : [];
-      level.setPieces = [...fitted, ...boxes].map((p, i) => ({ ...p, uid: SET_PIECE_UID + i }));
+      // A loop that asks for Leg Days gets them on its riskiest lips, clear of everything else (./loop-surges.ts).
+      const surges = profile.surges ? loopSurges(level, [...fitted, ...boxes], new Rng(deriveSeed(seed, lab(`loop-surges:${attempt}`)))) : [];
+      level.setPieces = [...fitted, ...boxes, ...surges].map((p, i) => ({ ...p, uid: SET_PIECE_UID + i }));
       // A field that starts at both ends keeps coming back to them: no gun's shot may get there.
       for (let shots = profile.ends ? shotsIntoSpawns(level) : null; shots?.size; shots = shotsIntoSpawns(level))
         level.setPieces = level.setPieces.filter((p) => !shots!.has(p.uid)).map((p, i) => ({ ...p, uid: SET_PIECE_UID + i }));

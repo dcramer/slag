@@ -15,7 +15,7 @@ import type { Temperament } from './temperament';
  */
 
 /** Bumped when BrainView changes shape. A player's script will declare the version it was written against. */
-export const BRAIN_VIEW_VERSION = 12;
+export const BRAIN_VIEW_VERSION = 13;
 
 /** How fast across the ground, as a player would say it. */
 export type Pace = 'still' | 'walking' | 'running' | 'flying';
@@ -92,6 +92,13 @@ export interface BoxSense {
   stand: boolean;
   /** What a stand holds, as anyone can see it; null while it refills, and for a box, whose item nobody sees until it pops. */
   kind: ItemKind | null;
+}
+
+/** A Leg Day floating on a lip (a climb's): touch it and every jump springs higher a while. Gone a few seconds once taken. */
+export interface SurgeSense {
+  tx: number;
+  ty: number;
+  ready: boolean;
 }
 
 /** An item lying loose (or still flying), in tiles. Touch it to take it. */
@@ -195,6 +202,8 @@ export interface BrainView {
   boxes: BoxSense[];
   /** Race: loose items. */
   drops: DropSense[];
+  /** Race: the climb's Leg Days. */
+  surges: SurgeSense[];
   /**
    * Race: tiles of route a stop at stand cell (tx, ty) adds on the way to the objective, rounded as `togo` is;
    * Infinity when no route leads through it.

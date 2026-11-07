@@ -181,6 +181,8 @@ export interface TickCtx extends PropCtx {
   spawnItem?(s: ItemSpawn): void;
   /** Put an item straight into runner `i`'s hands (a loop's boxes); false, and nothing given, if they hold one already. */
   handItem?(i: number, kind: ItemKind): boolean;
+  /** Give runner `i` a Leg Day's spring for `frames` (a climb's pickups); false, and nothing given, if they can't take one. */
+  surge?(i: number, frames: number): boolean;
   /** Seed of this race's item rolls: differs per round, so a crate that survives a round doesn't repeat itself. */
   itemSeed?: number;
   /** The runner index that leads the race (sim/standing.ts), worked out when asked; -1 if nobody's racing. */

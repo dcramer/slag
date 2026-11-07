@@ -477,6 +477,109 @@ export const shots: Scenarios = {
     await step(70);
     await shot('crumble');
   },
+  async climb() {
+    // Rising Slag's own items and its Leg Days (docs/MODES.md → Rising Slag), on a shaft (`--game slag`, any `--theme`):
+    // four runners up a column of ledges, the top one pouring a Slippery Slope, the third hooking a Social Climber, the
+    // second stamping a Trickle-Down on those under it, then a Leg Day taken, with the view pinned on each.
+    await open(`seed=${seed}&players=4&race=,`);
+    await step(200);
+    const lv = await page.evaluate(() => {
+      const L = (window as any).slagDebug.match.run.level;
+      return { w: L.w as number, h: L.h as number, tiles: Array.from(L.tiles as Uint8Array), loop: (L.loop ?? 0) as number };
+    });
+    const at = (x: number, y: number) => (x < 0 || x >= lv.w || y < 0 || y >= lv.h ? 1 : lv.tiles[y * lv.w + x]);
+    const stands = (x: number, y: number) => at(x, y) === 0 && at(x, y - 1) === 0 && (at(x, y + 1) === 1 || at(x, y + 1) === 2);
+    // A column of four stand cells, each 4–8 rows under the last, within a few tiles across, from mid-shaft.
+    let column: [number, number][] = [];
+    for (let x0 = 6; x0 < lv.w - 6 && column.length < 4; x0++) {
+      column = [];
+      let y = Math.floor(lv.h / 2) - 14;
+      let x = x0;
+      while (column.length < 4 && y < lv.h - 4) {
+        let found: [number, number] | null = null;
+        for (let dy = column.length ? 3 : 0; dy <= (column.length ? 8 : 4) && !found; dy++)
+          for (const dx of [0, 1, -1, 2, -2, 3, -3]) if (stands(x + dx, y + dy)) found ??= [x + dx, y + dy];
+        if (!found) break;
+        column.push(found);
+        [x, y] = found;
+      }
+    }
+    if (column.length < 4) throw new Error('no column of ledges to stage the climb items on');
+    const cam = column[1];
+    await page.evaluate(
+      ([cells, c]) => {
+        const d = (window as any).slagDebug;
+        const run = d.match.run;
+        run.runners.forEach((r: any, i: number) => {
+          const [tx, ty] = cells[i];
+          r.body.x = tx * 16 + 3;
+          r.body.y = (ty + 1) * 16 - r.body.h;
+          r.body.vx = r.body.vy = 0;
+          r.items.held = { kind: ['slick', 'jolt', 'grapple', 'grapple'][i], uses: 1 };
+        });
+        const view = d.renderer.cam;
+        view.update = () => {};
+        view.snap({ cx: c[0] * 16 + 8, cy: c[1] * 16 + 24, zoom: 2 });
+        view.shake = 0;
+      },
+      [column, cam] as const,
+    );
+    const press = (who: number) =>
+      page.evaluate((k) => {
+        const d = (window as any).slagDebug;
+        const dev = d.match.players[k].device;
+        d.step(1, { [dev]: { usePressed: true } });
+      }, who);
+    const name = (n: string) => `climb-${seed}${opt('theme') ? `-${opt('theme')}` : ''}-${n}`;
+    await step(2);
+    await snap(name('held'));
+    await press(0);
+    await step(14);
+    await snap(name('slick'));
+    await press(2);
+    await step(5);
+    await snap(name('grapple'));
+    await step(18);
+    await snap(name('grapple-up'));
+    await press(1);
+    await step(14);
+    await snap(name('jolt'));
+    await step(10);
+    await snap(name('jolt-hit'));
+    // A Leg Day: the level's own, pinned in view, then taken.
+    const surge = await page.evaluate(() => {
+      const run = (window as any).slagDebug.match.run;
+      const rp = run.resolved.find((x: any) => x.mods[0].type === 'surge');
+      return rp ? (rp.mods[0].cells[0] as [number, number]) : null;
+    });
+    if (!surge) throw new Error('this shaft has no Leg Day');
+    await page.evaluate((c) => {
+      const d = (window as any).slagDebug;
+      d.renderer.cam.snap({ cx: c[0] * 16 + 8, cy: c[1] * 16, zoom: 2.5 });
+      const r = d.match.run.runners[2];
+      r.items.daze = 0;
+      r.body.x = (c[0] - 2) * 16 + 3;
+      r.body.y = (c[1] + 1) * 16 - r.body.h;
+      r.body.vx = r.body.vy = 0;
+    }, surge);
+    await step(2);
+    await snap(name('legday'));
+    await page.evaluate((c) => {
+      const r = (window as any).slagDebug.match.run.runners[2];
+      r.body.x = c[0] * 16 + 3;
+    }, surge);
+    await step(3);
+    await snap(name('legday-taken'));
+    await page.evaluate(() => {
+      const d = (window as any).slagDebug;
+      d.step(1, { [d.match.players[2].device]: { jump: true, jumpPressed: true } });
+    });
+    await page.evaluate(() => {
+      const d = (window as any).slagDebug;
+      d.step(9, { [d.match.players[2].device]: { jump: true } });
+    });
+    await snap(name('legday-jump'));
+  },
   async blood() {
     // Stage deaths on open floors over four rounds: fresh ooze, a settled puddle with someone on it, the place phase, and the first round's blood gone.
     await open(`seed=${seed}&players=${players}${tq}`);

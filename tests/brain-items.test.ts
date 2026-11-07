@@ -82,6 +82,7 @@ function view(over: Partial<BrainView> & { tiles?: Uint8Array }): BrainView {
     objective: { kind: 'climb', lapLine: { tx: 8, ty: 1 }, loop: 0 },
     boxes: [],
     drops: [],
+    surges: [],
     detour: () => 0,
     self: SELF,
     runners: [],
@@ -163,6 +164,29 @@ describe('item tactics', () => {
     expect(ITEM_TACTICS.bat.when(moment({ grounded: false }, { runners: [rival(6.5, 0)] }))).toBeNull();
     expect(ITEM_TACTICS.bat.when(moment({}, { runners: [rival(6.5, 0)] }))).toEqual({ do: 'use', dir: 1 });
     expect(ITEM_TACTICS.shield.when(moment({ slag: 1, rank: 2 }, { runners: [rival(6, 0)] }))).toBeNull();
+  });
+});
+
+describe('the climb’s own items', () => {
+  it('pours the Slippery Slope from a floor while a rival climbs the ledges under it', () => {
+    expect(ITEM_TACTICS.slick.when(moment({}, { runners: [rival(9, -5)] }))).toEqual({ do: 'use' });
+    expect(ITEM_TACTICS.slick.when(moment({}, { runners: [rival(9, 4)] }))).toBeNull();
+    expect(ITEM_TACTICS.slick.when(moment({ grounded: false }, { runners: [rival(9, -5)] }))).toBeNull();
+  });
+
+  it('stamps the Trickle-Down while a rival below stands on something in its reach', () => {
+    expect(ITEM_TACTICS.jolt.when(moment({}, { runners: [rival(2, -6)] }))).toEqual({ do: 'use' });
+    expect(ITEM_TACTICS.jolt.when(moment({}, { runners: [rival(2, -6, { grounded: false })] }))).toBeNull();
+    expect(ITEM_TACTICS.jolt.when(moment({}, { runners: [rival(2, -20)] }))).toBeNull();
+  });
+
+  it('hooks a Social Climber on a ledge higher than a jump goes, and not on one a jump reaches', () => {
+    expect(ITEM_TACTICS.grapple.when(moment({}, { tiles: LEDGE }))).toEqual({ do: 'use' });
+    const low = tiles((set) => {
+      for (let x = 3; x <= 7; x++) set(x, 11, T_ONEWAY);
+    });
+    expect(ITEM_TACTICS.grapple.when(moment({}, { tiles: low }))).toBeNull();
+    expect(ITEM_TACTICS.grapple.when(moment({}))).toBeNull();
   });
 });
 
@@ -334,6 +358,16 @@ describe('going for boxes', () => {
     const there = { ...me, tx: 7, x: 7.5 };
     expect(play.think(view({ boxes: [stand(7, 'sword')], self: there }), there, false)).toEqual({ do: 'goTo', tx: 7, ty: 13 });
     expect(play.think(view({ boxes: [{ ...stand(7, 'sword'), ready: false, kind: null }], self: there }), there, false)).toBeNull();
+  });
+
+  it('steps over for a Leg Day on its way, whatever it holds, and lets it go once it is taken', () => {
+    const me = { ...SELF, held: { kind: 'shield' as const, uses: 1 } };
+    const surges = (ready: boolean) => [{ tx: 9, ty: 13, ready }];
+    const play = new ItemPlay(new Rng(1), traits);
+    let intent = null;
+    for (let f = 0; f < 20 && !intent; f++) intent = play.think(view({ surges: surges(true), self: me }), me, false);
+    expect(intent).toEqual({ do: 'goTo', tx: 9, ty: 13 });
+    expect(play.think(view({ surges: surges(false), self: me }), me, false)).toBeNull();
   });
 
   it('hops at once on arriving at a walk, rather than turning back and forth under the box', () => {

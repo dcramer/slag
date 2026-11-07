@@ -1,5 +1,5 @@
 import { DT, PHYS, PLAYER_H, TILE } from '../sim/constants';
-import { blastThrow, CLOCK, ROD, yankVx } from '../sim/items';
+import { blastThrow, CLOCK, climbTarget, JOLT, ROD, SLICK, yankVx } from '../sim/items';
 import { CHECK } from '../sim/collide';
 import { BAT, GLOVE, PUCK, SWORD } from '../sim/items/roster';
 import type { ItemKind } from '../sim/items/types';
@@ -43,6 +43,12 @@ const PUNCH_REACH = 3.5;
 /** Where an Upper Hand reaches: rows up (it rises about 20) and tiles across (it leans about two on the way). */
 const PUNCH_RISE = [1.5, 16] as const;
 const PUNCH_ACROSS = 2.5;
+/** Rows under its floor a Slippery Slope slicks, past the row it stands on: a rival there is worth pouring on. */
+const SPILL_ROWS = [2, SLICK.depth] as const;
+/** Rows under its feet a Trickle-Down pours (less a little, for whoever it reaches in the air), and the nearest worth it. */
+const JOLT_ROWS = [1, JOLT.depth / TILE - 1] as const;
+/** Rows up a Social Climber has to reach to be worth a go: past a jump's own reach. */
+const CLIMB_WORTH = 4;
 
 /** A rod's reach in tiles: its line, less a little, past which the lure comes back empty. */
 const CAST_RANGE = ROD.range / TILE - 0.5;
@@ -276,6 +282,28 @@ export const ITEM_TACTICS: Record<ItemKind, ItemTactic> = {
           }
         }
       return best && { do: 'use', dir: best.dir, ...(best.up && { up: true }) };
+    },
+  },
+  // Slippery Slope: poured from a floor onto the ledges under it while a rival is climbing them. The leader's way to
+  // keep it, and anyone's against whoever is below.
+  slick: {
+    when({ v, me }) {
+      if (!me.grounded) return null;
+      return rivals(v).some((r) => -rise(me, r) >= SPILL_ROWS[0] && -rise(me, r) <= SPILL_ROWS[1]) ? { do: 'use' } : null;
+    },
+  },
+  // Trickle-Down: stamped while a rival stands on something below, in reach of the shudder.
+  jolt: {
+    when({ v, me }) {
+      return rivals(v).some((r) => r.grounded && -rise(me, r) >= JOLT_ROWS[0] && -rise(me, r) <= JOLT_ROWS[1]) ? { do: 'use' } : null;
+    },
+  },
+  // Social Climber: hooked from a floor on the highest ledge it reaches, when that's higher than a jump goes.
+  grapple: {
+    when({ v, me }) {
+      if (!me.grounded) return null;
+      const t = climbTarget((x, y) => tile(v, x, y), me.x * TILE, me.y * TILE, HALF_W * 2 * TILE, BODY_H * TILE, me.facing);
+      return t && me.ty - t.ty >= CLIMB_WORTH ? { do: 'use' } : null;
     },
   },
   // The Tremor Brick bonks every rival standing on something when it comes down.

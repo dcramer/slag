@@ -30,7 +30,12 @@ function holds(name: string, opts: Parameters<typeof botRound>[1]): number {
   let early = 0;
   let leads = 0;
   let bumps = 0;
+  let climbs = 0;
+  let slips = 0;
+  let spilled = 0;
+  let surges = 0;
   const used: Record<string, number> = {};
+  const knocked: Record<string, number> = {};
   const out: Record<string, number> = {};
   for (const seed of SEEDS) {
     const r = botRound(seed, { ...opts, at: LEAD_HOLDS.at, limit: 3 * 60 * 60 });
@@ -38,6 +43,11 @@ function holds(name: string, opts: Parameters<typeof botRound>[1]): number {
     if (name === 'boxes') lengths.push(r.frames / 60);
     leads += r.leads;
     bumps += r.bumps;
+    climbs += r.climbs;
+    slips += r.slips;
+    spilled += r.spilled;
+    surges += r.surges;
+    for (const [k, n] of Object.entries(r.knocks)) knocked[k] = (knocked[k] ?? 0) + n;
     if (r.leader >= 0 && r.winner >= 0) {
       judged++;
       if (r.leader === r.winner) held++;
@@ -51,6 +61,8 @@ function holds(name: string, opts: Parameters<typeof botRound>[1]): number {
   const rate = held / judged;
   changes.set(name, leads / SEEDS.length);
   const secs = name === 'boxes' ? `, median round ${median(lengths).toFixed(1)} s` : '';
+  const per = (n: number) => (n / SEEDS.length).toFixed(2);
+  const each = (o: Record<string, number>) => JSON.stringify(Object.fromEntries(Object.entries(o).map(([k, n]) => [k, Number(per(n))])));
   const gone = Object.values(out).reduce((a, b) => a + b, 0);
   const by = Object.entries(out)
     .sort(([a], [b]) => a.localeCompare(b))
@@ -58,6 +70,9 @@ function holds(name: string, opts: Parameters<typeof botRound>[1]): number {
     .join(', ');
   console.log(
     `${name}: the 15 s leader won ${held} of ${judged} (${Math.round(rate * 100)}%), ${early} over by then${secs}; ${(leads / SEEDS.length).toFixed(1)} lead changes and ${(bumps / SEEDS.length).toFixed(1)} bumps a round; out to ${by}; used ${JSON.stringify(used)}`,
+  );
+  console.log(
+    `${name}: a round, ${per(surges)} Leg Days taken, ${per(climbs)} climbs reeled up, ${per(spilled)} s stood on a rival's spill and ${per(slips)} slips off one; uses ${each(used)}; rivals knocked ${each(knocked)}`,
   );
   return rate;
 }

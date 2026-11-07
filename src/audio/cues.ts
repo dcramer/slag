@@ -183,6 +183,7 @@ const ITEM_CUE: Partial<Record<ItemEventKind, SfxName>> = {
   smoke: 'pop-cannonball',
   hit: 'land',
   warn: 'sentry-beep',
+  surge: 'shaker',
 };
 const ITEM_USE_CUE: Record<string, SfxName> = {
   sword: 'walljump',
@@ -199,6 +200,9 @@ const ITEM_USE_CUE: Record<string, SfxName> = {
   glove: 'spring',
   clock: 'swoosh',
   rod: 'reel',
+  slick: 'glug',
+  jolt: 'piston-slam',
+  grapple: 'reel',
 };
 /** Moments that sound different from their `what`, keyed `what:kind`. */
 const ITEM_KIND_CUE: Record<string, SfxName> = {
@@ -213,6 +217,9 @@ const ITEM_KIND_CUE: Record<string, SfxName> = {
   'hit:clock': 'explosion',
   'hit:rod': 'whoosh',
   'fizzle:block': 'crumble-break',
+  'warn:jolt': 'coins',
+  'hit:jolt': 'drop',
+  'hit:grapple': 'land',
 };
 const itemName = (what: ItemEventKind, kind: string): SfxName | undefined =>
   ITEM_KIND_CUE[`${what}:${kind}`] ?? (what === 'use' ? ITEM_USE_CUE[kind] : ITEM_CUE[what]);
