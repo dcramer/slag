@@ -320,6 +320,8 @@ Every game design decision, preference and direction the owner has given, groupe
   2026-11-06 · `in progress` · docs/characters/junior.md, `EGGS` in `src/gen/character.ts`, public/ASSETS.md
 - **A drawn kind must not look like the original redrawn: its twist has to show at play size, the face included (the puffball, whose seam and tape were dropped as misreads, was left with the original's exact face).** "kirby looks.. too much like kirby right now"
   2026-11-06 · `in progress` (the puffball being redrawn) · CHARACTERS.md → The nod and the twist, docs/characters/puffball.md
+- **The android ships as it is: her white bob reads as a helmet at play size, and the black dress that carries the original takes the player's colour.** "Accept as colour read" (asked after seven rounds read her as "a white round helmet with a visor")
+  2026-11-07 · `done` · CHARACTERS.md → Production order, TODO.md → 32
 - **The warrior, the slayer and the assistant dog ship as colour reads: in colour they read as their homages, in black they don't, and they pair with no other kind.** "Keep as colour reads" (asked, after their retries stopped under the two-round rule: keep them or swap them for other kinds)
   2026-11-06 · `done` · CHARACTERS.md → Production order, TODO.md → 31, tools/art3d/CHECKLIST.md → Done when
 - **A kind's name is never a respelling of the original's (one letter off, or the same sound): it is a looser sound-alike, ideally carrying the kind's own joke (Zoomic, Kilowatchu, Clara Loft, Space Evader).** "we also might need to make the parody's SLIGHTLY less obvious for a few" (asked names or drawings, and which: "The names", "Every one-letter-off")
