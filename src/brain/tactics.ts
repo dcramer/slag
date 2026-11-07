@@ -1,4 +1,5 @@
 import { DT, PHYS, PLAYER_H, TILE } from '../sim/constants';
+import { CHECK } from '../sim/collide';
 import { BAT, GLOVE, PUCK, SWORD } from '../sim/items/roster';
 import type { ItemKind } from '../sim/items/types';
 import { T_ONEWAY, T_SOLID } from '../sim/level';
@@ -193,8 +194,17 @@ export const KNOCKS: Partial<Record<ItemKind, { vx: number; vy: number }>> = {
   boomerang: { vx: 300, vy: 220 },
 };
 
-/** A shove: a walk's worth off whatever edge it ends at. */
-const SHOVE = { vx: PHYS.walkSpeed * 0.6, vy: 0 } as const;
+/**
+ * A shove off whatever edge it ends at, as the mode's bodies shove (`BrainView.shove`): a walker moves a bystander at
+ * its `share` of a walk, kept over the drop where the mode carries it, straight down where it doesn't.
+ */
+const shoveOf = (v: BrainView) => ({ vx: v.shove.carry ? PHYS.walkSpeed * v.shove.share : 0, vy: 0 });
+
+/**
+ * Px/s a run-up of a few tiles meets a standing rival at, about: most of a run. What a body check (sim/collide.ts
+ * `CHECK`) throws them at follows from it.
+ */
+const CHARGE_SPEED = 200;
 
 /** Frames a knocked body is followed through the air before it counts as having come down safe. */
 const FLIGHT = 90;
@@ -232,19 +242,23 @@ type Landing = 'dies' | 'safe' | 'open';
  * A body with its feet at (x, y) tiles, thrown at (vx, vy) px/s (up positive) with nobody at its controls, the way a
  * dazed one flies, followed until it meets something that kills (a part or a set piece that hurts, a side of the
  * map, the pit or the slag at row `slag`) or comes down on a floor. A sketch of the body's flight, not the sim's: its
- * middle column, the dazed body's gravity and air drag, and a wall it meets stopping it dead. `pass` hears each cell
- * the body's column passes through, and the rock cell of a wall it hits.
+ * middle column, the dazed body's gravity and air drag, and a wall it meets stopping it dead. `slide`: it comes down
+ * still going and skids on along the floor (a body check's victim does) until it stops or goes off the end. `pass`
+ * hears each cell the body's column passes through, and the rock cell of a wall it hits.
  */
-function fly(v: BrainView, x: number, y: number, vx: number, vy: number, slag: number, pass?: (cx: number, cy: number) => void): Landing {
+function fly(v: BrainView, x: number, y: number, vx: number, vy: number, slag: number, pass?: (cx: number, cy: number) => void, slide = false): Landing {
   const { w, h } = v.level;
   const mask = noGoMask(v);
   let px = x * TILE;
   let py = y * TILE;
   let sx = vx;
   let sy = -vy;
+  let ground = false;
   for (let f = 0; f < FLIGHT; f++) {
-    sx = sx > 0 ? Math.max(0, sx - PHYS.airDecel * DT) : Math.min(0, sx + PHYS.airDecel * DT);
-    sy = Math.min(PHYS.maxFall, sy + PHYS.gravity * (sy > 0 ? PHYS.fallGravityMult : 1) * DT);
+    const decel = ground ? (Math.abs(sx) > PHYS.walkSpeed ? PHYS.runDecel : PHYS.groundDecel) : PHYS.airDecel;
+    sx = sx > 0 ? Math.max(0, sx - decel * DT) : Math.min(0, sx + decel * DT);
+    if (ground && sx === 0) return 'safe';
+    sy = ground ? 0 : Math.min(PHYS.maxFall, sy + PHYS.gravity * (sy > 0 ? PHYS.fallGravityMult : 1) * DT);
     let nx = px + sx * DT;
     let ny = py + sy * DT;
     let cx = Math.floor(nx / TILE);
@@ -267,18 +281,23 @@ function fly(v: BrainView, x: number, y: number, vx: number, vy: number, slag: n
       if (harms(v, mask, cx, ty)) return 'dies';
       pass?.(cx, ty);
     }
-    // Coming down onto a floor: it's down, and safe.
+    // Coming down onto a floor: it's down, and safe, or skids on. Skidding off the end, it falls from there.
     const row = Math.floor(ny / TILE);
-    if (sy > 0 && py <= row * TILE && floorAt(v, cx, row)) return 'safe';
+    if (ground) ground = floorAt(v, cx, row);
+    else if (sy > 0 && py <= row * TILE && floorAt(v, cx, row)) {
+      if (!slide) return 'safe';
+      ground = true;
+      ny = row * TILE;
+    }
     px = nx;
     py = ny;
   }
   return 'open';
 }
 
-/** Whether a body thrown as `fly` throws it meets something that kills before it comes down on a floor. */
-export function knockKills(v: BrainView, x: number, y: number, vx: number, vy: number, slag: number): boolean {
-  return fly(v, x, y, vx, vy, slag) === 'dies';
+/** Whether a body thrown as `fly` throws it meets something that kills before it comes down on a floor (or, sliding, stops on one). */
+export function knockKills(v: BrainView, x: number, y: number, vx: number, vy: number, slag: number, slide = false): boolean {
+  return fly(v, x, y, vx, vy, slag, undefined, slide) === 'dies';
 }
 
 /** Tiles round where a field starts that a knock lane keeps clear of: a part there would catch everyone at GO. */
@@ -311,11 +330,22 @@ export function knockLanes(v: BrainView, ends: readonly { tx: number; ty: number
   return [...hits].sort((a, b) => b[1] - a[1] || a[0] - b[0]).map(([c]) => c);
 }
 
+/**
+ * Whether a body check toward `dir` (a run-up into `r`, where the mode has them: `BrainView.shove`) throws them into
+ * something that kills, as `me` reads the level: they leave at `CHECK.carry` times the closing speed, with a hop, and
+ * skid on where they land (a check throws someone six or seven tiles along a flat floor).
+ */
+export function checkedInto(v: BrainView, me: SelfSense, r: RunnerSense, dir: -1 | 1): boolean {
+  if (!Number.isFinite(v.shove.check) || CHARGE_SPEED < v.shove.check) return false;
+  return knockKills(v, r.x, r.y, dir * Math.max(CHECK.kick, CHECK.carry * CHARGE_SPEED), CHECK.hop, slagRow(me), true);
+}
+
 /** Whether a hit from `kind` (or a shove, with none) toward `dir` throws `r` into something that kills, as `me` reads the level. */
 export function knockedInto(v: BrainView, me: SelfSense, r: RunnerSense, dir: -1 | 1, kind: ItemKind | null): boolean {
-  const k = (kind && KNOCKS[kind]) || SHOVE;
-  if (k !== SHOVE) return knockKills(v, r.x, r.y, dir * k.vx, k.vy, slagRow(me));
+  const k = kind && KNOCKS[kind];
+  if (k) return knockKills(v, r.x, r.y, dir * k.vx, k.vy, slagRow(me));
   // A shove only matters at an edge or a hazard a step or two away.
+  const shove = shoveOf(v);
   const mask = noGoMask(v);
   const ty = Math.round(r.y) - 1;
   for (let i = 1; i <= 2; i++) {
@@ -323,7 +353,7 @@ export function knockedInto(v: BrainView, me: SelfSense, r: RunnerSense, dir: -1
     if (x < 0 || x >= v.level.w) return true;
     if (tile(v, x, ty) === T_SOLID) return false;
     if (ty >= 0 && harms(v, mask, x, ty)) return true;
-    if (!floorAt(v, x, ty + 1)) return knockKills(v, x + 0.5, r.y, dir * SHOVE.vx, 0, slagRow(me));
+    if (!floorAt(v, x, ty + 1)) return knockKills(v, x + 0.5, r.y, dir * shove.vx, shove.vy, slagRow(me));
   }
   return false;
 }

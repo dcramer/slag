@@ -91,10 +91,30 @@ type Act =
   /** Standing (against the gust, if one blows) until race frame `until`, unless something comes for it first. */
   | { kind: 'wait'; until: number }
   /** A leap of faith: run at it, jump off the edge or at the wall, hold on until it lands. */
-  | { kind: 'leap'; dir: -1 | 1; t: number; jumped: boolean; flown: boolean };
+  | { kind: 'leap'; dir: -1 | 1; t: number; jumped: boolean; flown: boolean }
+  /** A charge (a body check): run toward `dir` until its middle passes x `limit` (px), then brake. */
+  | { kind: 'charge'; dir: -1 | 1; limit: number; t: number; x: number; held: number };
 
 /** Tiles off its column a hop steers back from. */
 const HOP_SLACK = 0.15;
+/** Frames a charge may run and brake for, and is played out for before it's taken, and frames it goes nowhere before it's over. */
+const CHARGE_FRAMES = 60;
+const CHARGE_STALL = 4;
+
+/** A charge's controls for the body as it is: run toward `dir` until its middle passes `limit` (px), then back against the speed. */
+function charging(b: Body, dir: -1 | 1, limit: number): Controls {
+  const short = (limit - (b.x + b.w / 2)) * dir > 0;
+  const back = !short && b.vx * dir > BRAKE_TO;
+  return {
+    left: (short && dir < 0) || (back && dir > 0),
+    right: (short && dir > 0) || (back && dir < 0),
+    run: short,
+    jump: false,
+    jumpPressed: false,
+    down: false,
+  };
+}
+
 /** Frames a hop is played out for before it's pressed: a full jump and its fall. */
 const HOP_FRAMES = 90;
 /** Frames a coast to a stop is played out for: past a run's skid. */
@@ -183,6 +203,8 @@ export class Motor {
   /** Where the body was a frame ago, and whether pressing across left it there: held in place (a wind-up roots it). */
   private was = { x: NaN, y: NaN };
   private pinned = false;
+  /** Looks in a row that ended in standing a beat for something that hurts to pass. */
+  private hemmed = 0;
 
   constructor(
     /** Its hands: how quick, clean and careful it is. Set again when the room's Bots rule changes. */
@@ -249,6 +271,9 @@ export class Motor {
         return this.leap(m, p, intent.tx, intent.ty);
       case 'hop':
         return this.hop(m, p, intent.tx);
+      case 'charge':
+        this.haste = true;
+        return this.charge(m, p, intent.dir, intent.tx, intent.ty);
       case 'use':
         // An edge, so never on two frames running; the arrows turn it to face its mark as it lets go.
         if (this.prev.usePressed || m.phase !== 'run') return NO_INPUT;
@@ -323,6 +348,48 @@ export class Motor {
     const press = b.onGround && !act.jumped && leapJumps(raceMap(run).field, dir, b, act.t);
     if (press) act.jumped = true;
     return { ...NO_INPUT, left: dir < 0, right: dir > 0, run: true, jump: act.jumped, jumpPressed: press };
+  }
+
+  /**
+   * Run at whoever stands in column `tx` toward `dir`, holding run, and brake once through it: a body check, as
+   * a player charges someone off a ledge. It plays the charge out first, as it does a hop, and takes it only if it stays
+   * on its feet, meets nothing that hurts and comes to a stop (the rival's body only slows it more); otherwise, or
+   * from the air, it goes to (tx, ty) by the route as a fight does.
+   */
+  private charge(m: Match, p: Player, dir: -1 | 1, tx: number, ty: number): InputFrame {
+    const run = m.phase === 'run' ? m.run : null;
+    const r = run?.runners.find((x) => x.slot === p.slot);
+    if (!run || !r || !r.alive || r.finished) return NO_INPUT;
+    const b = r.body;
+    let act = this.act?.kind === 'charge' ? this.act : null;
+    if (!act) {
+      // On through their column to its far side: the check lands as the bodies meet, at full speed.
+      const limit = (tx + 0.5 + dir / 2) * TILE;
+      if (!b.onGround || (limit - (b.x + b.w / 2)) * dir <= 0) return this.race(m, p, tx, ty);
+      const map = raceMap(run);
+      this.fore = foresight(run, map);
+      const play = playFrom(
+        map.field,
+        b,
+        (_, at, c) => Object.assign(c, charging(at, dir, limit)),
+        CHARGE_FRAMES,
+        run.solids,
+        gustAir(run.level, run.frame),
+        columns(map, run.frame),
+      );
+      const stops = play.fate === 'open' && play.end.onGround && Math.abs(play.end.vx) <= BRAKE_TO;
+      if (!stops || !this.clear(map, run, b, play, shotsAhead(run, map), this.traits.margin)) return this.race(m, p, tx, ty);
+      act = this.act = { kind: 'charge', dir, limit, t: 0, x: b.x, held: 0 };
+    }
+    const c = charging(b, act.dir, act.limit);
+    // Pressing on and going nowhere: a body pushing back has stopped it, and that's a shove, not a check.
+    act.held = Math.abs(b.x - act.x) < 0.25 ? act.held + 1 : 0;
+    act.x = b.x;
+    if (act.t++ > CHARGE_FRAMES || !b.onGround || (!c.left && !c.right) || act.held > CHARGE_STALL) {
+      this.act = null;
+      return this.still(b);
+    }
+    return this.press(c);
   }
 
   /** Would letting go here leave it standing, still on this ground and clear of anything that hurts? */
@@ -401,6 +468,7 @@ export class Motor {
     this.aim = ty * map.field.w + tx;
     this.chose = run.frame;
     this.act = this.choose(map, run, b, this.aim);
+    this.hemmed = this.act?.kind === 'wait' ? this.hemmed + 1 : 0;
     return this.follow(b) ?? NO_INPUT;
   }
 
@@ -464,7 +532,8 @@ export class Motor {
         return this.press({ left: off < 0 && act.t % 3 === 0, right: off > 0 && act.t % 3 === 0, jump: false, jumpPressed: false });
       }
       case 'leap':
-        return (this.act = null); // a leap belongs to the leap intent; a route picks afresh
+      case 'charge':
+        return (this.act = null); // these belong to their own intents; a route picks afresh
     }
   }
 
@@ -545,7 +614,8 @@ export class Motor {
       if (out) return out;
     }
     // Standing here is about to hurt: no waiting for a better moment.
-    const margin = this.traits.margin;
+    // In a fight, kept standing a while by moves that all pass too near something, it takes one with no room to spare.
+    const margin = this.haste && this.hemmed > HEMMED ? 0 : this.traits.margin;
     const exposed = hurtsStill(map, this.fore, f, b, shots, margin);
     const blocked = (mv: Move) => hurts(map, this.fore, mv, f, b, shots, margin) || (mv.air && gusty(run.level, mv, f, air));
     // Nothing clear, and nowhere to stop and wait for it: on a short ledge at a run, coasting is a fall.
@@ -640,9 +710,10 @@ export class Motor {
       }
     }
     if (exposed || cornered || !b.onGround) return this.escape(map, run, b, shots, moves, target);
-    // No move goes anywhere but where it stands. On a ledge's lip with its middle over the drop, the moves it has are
-    // the lip's own: it steps in over the cell, where the route's moves start, and looks again.
-    if (Math.floor((b.x + b.w / 2) / TILE) !== here % map.field.w && air === 0) return { kind: 'settle', at: here, t: 0 };
+    // No move goes anywhere but where it stands: off the middle of its cell (on a ledge's lip with its middle over the
+    // drop, say) the moves it has are that spot's own. It steps in to the middle, where the route's moves start, and
+    // looks again.
+    if (Math.abs((here % map.field.w) * TILE + (TILE - b.w) / 2 - b.x) > 1 && air === 0) return { kind: 'settle', at: here, t: 0 };
     return null;
   }
 
@@ -752,7 +823,7 @@ export class Motor {
         }
         continue;
       }
-      for (let k = WAIT_STEP; k <= WAIT_AHEAD && p + k * FRAME_COST < value; k += WAIT_STEP) {
+      for (let k = WAIT_STEP; k <= (this.haste ? FIGHT_WAIT : WAIT_AHEAD) && p + k * FRAME_COST < value; k += WAIT_STEP) {
         if (!hurts(map, this.fore, mv, f + k, b, NO_SHOTS, margin) && !(mv.air && gusty(run.level, mv, f + k, gustAir(run.level, f + k)))) {
           value = p + k * FRAME_COST;
           until = f + k;
@@ -887,6 +958,10 @@ const NO_SHOTS: readonly Shot[] = [];
 const BLIND: Foresight = { watch: () => ({ at: () => ({ hazards: [], moved: [] }) }) };
 /** How far ahead (frames) and how finely it watches a blocked move for its moment, and how many blocked moves it watches. */
 const WAIT_AHEAD = 150;
+/** Looks in a row a fight (Intent `haste`) stands waiting for something that hurts to pass before it takes a move with no room to spare. */
+const HEMMED = 20;
+/** How far ahead it waits for a hazard in a fight (Intent `haste`): its target moves on long before a slow one passes. */
+const FIGHT_WAIT = 45;
 const WAIT_STEP = 3;
 const WAIT_LOOKS = 3;
 /** Frames a trap is reckoned to take to pass, when weighing it against a clear move. */

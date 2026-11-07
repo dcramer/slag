@@ -72,9 +72,19 @@ export const LEAD_HOLDS = {
  * `BONK_CREDIT`), thrown or bumped into the level. How hard it's fought (tests/lib/bot-race.ts `Fight`): `contact`
  * and `hit`, seconds from GO to the first touch or bonk and to the first bonk; `uses`, items used a round; `still`
  * and `retreat`, the shares of frames in it standing still and moving away from the nearest rival; `gap`, the tiles
- * to that rival. Measured bare 2%, 24.5 s, 75%, 1.6 s, 3.3 s, 11.1 uses, 9%, 20%, 5.0 tiles; placed 2%, 24.2 s, 62%,
- * 1.3 s, 3.3 s, 10.5 uses, 10%, 20.1%, 4.9 tiles (22 of 48 and 24 of 64 rounds in 20–40 s, 2 and 4 under 10 s; 29 and 30
- * deaths off the sides) since a brawl's bodies shove harder and a run-up body-checks (game/modes.ts `BRAWL_SHOVE`): a
+ * to that rival; `pauses`, times a bot stood still half a second on end (`PAUSE` frames), per bot-minute: a person
+ * sees a pause as a stretch, not a share. Measured bare 0%, 20.7 s, 76%, 1.3 s, 3.2 s, 10.0 uses, 6%, 20%, 4.9 tiles,
+ * 0.42 pauses (the longest 58 frames); placed 2%, 19.3 s, 73%, 1.4 s, 2.9 s, 10.4 uses, 7%, 20%, 4.8 tiles, 0.54 (83)
+ * (22 of 48 and 21 of 64 rounds in 20–40 s, 9 and 9 under 10 s; 35 and 41 deaths off the sides) since a fighting bot
+ * is always at something (src/brain/strategies/brawl.ts, motor.ts): from 2.12 and 2.44 pauses, the longest 578 and
+ * 1021 frames. It takes an unlined hit after a moment's aim when neither way would throw them anywhere, never sends
+ * itself to the cell it's in, shoves with a swing winding back up, jumps at a rival overhead, charges a rival a body
+ * check would throw into something (about one check landed a round, as many as bodies running into each other
+ * landed before: a rival turning to meet it is braced), thinks only for a glance, waits on a hazard only a moment,
+ * and walks out of a part's no-go cells and off a lip's spot rather than stand there. Rounds are shorter and more of
+ * them are quick: nobody stands still while the fight goes on. From bare 2%, 24.5 s, 75%, 1.6 s, 3.3 s, 11.1 uses,
+ * 9%, 20%, 5.0 tiles; placed 2%, 24.2 s, 62%, 1.3 s, 3.3 s, 10.5 uses, 10%, 20.1%, 4.9 tiles (22 of 48 and 24 of 64
+ * rounds in 20–40 s, 2 and 4 under 10 s; 29 and 30 deaths off the sides) since a brawl's bodies shove harder and a run-up body-checks (game/modes.ts `BRAWL_SHOVE`): a
  * check throws a rival several tiles off, so the field ends up further apart and more of it is sliding away. Bots don't
  * line a check up yet, so the rest is within the noise. From bare 2%, 23.4 s, 77%, 1.6 s, 3.6 s, 11.0 uses, 10%, 20%,
  * 5.2 tiles; placed 5%, 22.9 s, 63%, 1.3 s, 3.0 s, 10.2 uses, 11%, 19%, 4.2 tiles (22 of 48 and 27 of 64 rounds in
@@ -107,7 +117,8 @@ export const LEAD_HOLDS = {
  * lined rivals up and fetched boxes. The slag still takes more deaths than anything else. Earlier or faster pours
  * shortened rounds and added draws. The targets are the owner's, from the party brawler: draws rare, rounds of
  * 20–40 s. The bands only catch a regression; the bots before `press` fail the first bonk, uses, retreat and gap
- * bands, and the motor before `haste` the still bands, so a return to turtling does too.
+ * bands, the motor before `haste` the still bands and the bots before they kept at something the pauses bands, so a
+ * return to turtling does too.
  */
 export const BRAWL_ROUNDS = {
   targets: { draws: 0.2, seconds: [20, 40] },
@@ -119,22 +130,22 @@ export const BRAWL_ROUNDS = {
       contact: [0, 2],
       hit: [0, 4.2],
       uses: [9, 15],
-      still: [0, 0.14],
+      still: [0, 0.09],
       retreat: [0, 0.21],
       gap: [0, 5.2],
-      pauses: [0, 99],
+      pauses: [0, 1],
     },
     placed: {
       draws: [0, 0.2],
       seconds: [18, 25],
-      knocked: [0.5, 0.7],
+      knocked: [0.5, 0.8],
       contact: [0, 1.9],
       hit: [0, 5],
       uses: [7, 12],
-      still: [0, 0.18],
+      still: [0, 0.09],
       retreat: [0, 0.21],
       gap: [0, 5],
-      pauses: [0, 99],
+      pauses: [0, 1],
     },
   },
 } as const satisfies {
