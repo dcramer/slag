@@ -106,7 +106,12 @@ def whites(im):
     return eyes
 
 
-for path in sys.argv[1:]:
+args = sys.argv[1:]
+if args and args[0].startswith('--open='):
+    # A thinner opening for a drawing whose neck is narrower than the disc (round 8's knockout, the neck lying
+    # limp): the default cut the head off with the dropped dryer.
+    OPEN = int(args.pop(0).split('=')[1])
+for path in args:
     im = Image.open(path).convert('RGB')
     gone = decord(im)
     eyes = whites(im)
