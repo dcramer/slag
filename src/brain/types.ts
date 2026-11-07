@@ -15,7 +15,7 @@ import type { Temperament } from './temperament';
  */
 
 /** Bumped when BrainView changes shape. A player's script will declare the version it was written against. */
-export const BRAIN_VIEW_VERSION = 11;
+export const BRAIN_VIEW_VERSION = 12;
 
 /** How fast across the ground, as a player would say it. */
 export type Pace = 'still' | 'walking' | 'running' | 'flying';
@@ -46,6 +46,11 @@ export interface SelfSense {
   up: number;
   /** Rising Slag: rows from its feet down to the slag, rounded; null with no slag. */
   slag: number | null;
+  /**
+   * Rising Slag: rows from its feet down to the bottom edge of the leader's screen, rounded; null with no screen. Under
+   * it a moment and it's out, as it is in the slag. The screen's top holds whoever reaches it; that it plays into.
+   */
+  screen: number | null;
   /** Its place in the race, 0 leading: nearest the flag by route, or round a climb, highest. */
   rank: number;
   /** The item in its hands and the uses left on it, or null. */
@@ -75,14 +80,18 @@ export interface RunnerSense {
   shielded: boolean;
 }
 
-/** A mystery box standing in the level: hit it from below and it pops an item. */
+/** A mystery box standing in the level: hit it from below and it pops an item. Or an item stand: walk into it and take what it shows. */
 export interface BoxSense {
   tx: number;
   ty: number;
-  /** Full: it pops something when hit now. */
+  /** Full: it pops something when hit now (a stand: it holds something). */
   ready: boolean;
   /** A loop's box: it puts what it deals straight into empty hands rather than popping it out. */
   hands: boolean;
+  /** A stand, standing on the floor in its own cell: empty hands walking into it take what it holds. */
+  stand: boolean;
+  /** What a stand holds, as anyone can see it; null while it refills, and for a box, whose item nobody sees until it pops. */
+  kind: ItemKind | null;
 }
 
 /** An item lying loose (or still flying), in tiles. Touch it to take it. */

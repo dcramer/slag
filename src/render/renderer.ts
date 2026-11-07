@@ -26,6 +26,7 @@ import { drawBuildUp } from './buildup';
 import { Fx, type Part } from './fx';
 import { frameReach, VIEW_FRAME, type ViewFrame, viewFrame } from './frame';
 import { Hud } from './hud';
+import { raceTagsBottom } from './hud/race';
 import { drawClouds, drawDrops, drawRunnerItems, itemFx } from './items';
 import { drawFists, drawHooks } from './items-climb';
 import { drawClocks, drawLines } from './items-reach';
@@ -443,6 +444,7 @@ export class Renderer {
           beams,
           solids,
           runners: pushers,
+          itemSeed: run?.itemSeed,
         });
       }
     });
@@ -594,6 +596,7 @@ export class Renderer {
     }
     this.cam.setBounds(ww, wh, raceFloor(lv));
     if (m.phase === 'run' && m.run) {
+      this.phone.tags = raceTagsBottom(this.hud, m.players.length, Number.isFinite(m.run.timeLeft));
       this.phone.frameRace(m, dt);
       return;
     }
@@ -924,13 +927,13 @@ export class Renderer {
         case 'death': {
           const c = m.player(e.slot)?.character;
           const body = c?.body ?? { h: 0, s: 0, l: 80 };
-          if (c && e.cause !== 'fall' && e.cause !== 'out' && spritesOf(c))
+          if (c && e.cause !== 'fall' && e.cause !== 'out' && e.cause !== 'screen' && spritesOf(c))
             this.fallen.push({ c, x: e.x, y: e.y + PLAYER_H / 2, facing: Math.sign(e.vx) || 1, age: 0 });
           if (e.cause === 'fall') {
             const pool = m.level.h * TILE;
             this.fx.burst('splash', e.x, Math.min(e.y, pool - 10), 26, 180, [th.liquid.glow, th.liquid.color], 2, 0.9, 120);
             this.fx.burst('smoke', e.x, Math.min(e.y, pool - 12), 8, 30, [{ h: 0, s: 0, l: 50 }], 3, 1.4);
-          } else if (e.cause !== 'out') {
+          } else if (e.cause !== 'out' && e.cause !== 'screen') {
             // The character comes apart: its own parts, if it has any, and shards of its colors and the player's.
             const parts = c ? partsOf(c) : ['shard' as const];
             for (let i = 0; i < 14; i++) {

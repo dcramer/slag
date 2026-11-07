@@ -127,7 +127,7 @@ function sample(level: Level, r: Resolved): Barrier {
 }
 
 /** Cells a hazard covers: boxes for rects and circles, a chain of boxes along a beam. Generous edges only make the proof stricter. */
-function markHazard(hz: Hazard, mark: (r: Rect) => void): void {
+export function markHazard(hz: Hazard, mark: (r: Rect) => void): void {
   if (hz.kind === 'rect') return mark(hz.r);
   if (hz.kind === 'circle') return mark({ x: hz.x - hz.r, y: hz.y - hz.r, w: hz.r * 2, h: hz.r * 2 });
   const dx = hz.x2 - hz.x1;

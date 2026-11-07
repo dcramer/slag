@@ -7,8 +7,9 @@ import type { ProfileOverride } from '../gen/level';
 import { type CrateMix, RACE_CRATE } from '../gen/props';
 import type { ThemeId } from '../themes';
 import type { ShoveRules } from '../sim/collide';
+import type { ScreenRules } from '../sim/screen';
 import { TILE } from '../sim/constants';
-import { type BuildUp, feetUp, RACE_RUN, type RunRules, type RunWorld } from '../sim/run';
+import { type Armed, type BuildUp, feetUp, RACE_RUN, type RunRules, type RunWorld } from '../sim/run';
 import { type RoundResult, scoreKnockouts, scoreRound, scoreSurvival, type Standing } from './scoring';
 
 export type ModeId = 'race' | 'slag' | 'brawl';
@@ -85,6 +86,36 @@ const BRAWL_SHOVE: ShoveRules = { share: 0.5, carry: true, check: 180 };
  */
 const BRAWL_BUILDUP: BuildUp = { per: 0.25, max: 6 };
 
+/**
+ * Rising Slag's screen (sim/screen.ts): fall off the bottom of the leader's and you're out, 21 rows under their feet
+ * (the first lap's leash is 25), with three quarters of a second to climb back. It rises no faster than 5 rows a
+ * second, under the 5.5 a bot climbs, and its top holds whoever gets there, so a leader who pulls away waits at the top
+ * of the screen for the field: the regroup the gates were, without a shut gate to die under. Four Normal bots, 512
+ * seeds, the 15 s leader winning with the boxes, items in every hand and items never used: 44%, 47% and 47%, 2.4, 2.6
+ * and 2.4 lead changes a round; rising at 5.25, 49%, 42% and 48%; at 5.5, 51% and 44% with 2.1 and 2.5 lead changes;
+ * at 4.5, 45%, 41% and 43% with rounds a second longer; never held back, 55% and 1.8 (384 seeds), about what no screen
+ * gives (59%), since the slag's leash already kills about where its bottom does. A top 6 rows over the leader's feet
+ * clipped their jumps (41%, and more rounds with nobody left standing); 8 clears a jump. 29 rows or 34, 45 or 90 frames
+ * of grace, moved nothing past the noise.
+ */
+const SLAG_SCREEN: ScreenRules = { rows: 29, up: 8, grace: 45, follow: 0.08, keep: 4, rise: 5 };
+
+/**
+ * What a brawl starts everyone holding (`RunRules.armed`), so the first seconds are a fight: something from the stands'
+ * deal, good for one go, and then to a stand for more. With an item's own uses, half the bare rounds with bots ran under
+ * 15 s (47 of 96) and 31 in 15–30 s; one go, 41 and 43.
+ */
+const BRAWL_ARMED: Armed = { deal: BRAWL_ITEMS, uses: 1 };
+
+/**
+ * A brawl's slag (`LevelProfile.tide`): the last resort that ends a stalemate, not what does the killing. It starts
+ * `deep` rows under the arena, out of sight, so till then the drop is only a drop, and pours up `wait` s after GO at
+ * `speed` tiles/s gaining `gain` tiles/s², in view about 4 s later. Pooled in the drop from GO, it took 101 of 144
+ * deaths on the bare arena, nearly all falls into it; from under, 8, the rest knocks into the drop, a hazard or off the
+ * side. Waiting 30 s left as many rounds in 15–30 s and stalemates running longer.
+ */
+const BRAWL_TIDE = { wait: 25, speed: 0.4, gain: 0.04, deep: 2 };
+
 export const MODES: Record<ModeId, ModeDef> = {
   race: {
     label: 'Race',
@@ -102,8 +133,8 @@ export const MODES: Record<ModeId, ModeDef> = {
    */
   slag: {
     label: 'Rising Slag',
-    // A looping shaft of open ledges in every set, owing no part, with boxes of its own up every lap, two gates across it
-    // that shut on a cycle so the leader waits for the pack (gen/level/loop-gates.ts), and slag under it.
+    // A looping shaft of open ledges in every set, owing no part, with boxes of its own up every lap and slag under it.
+    // The leader's screen (`SLAG_SCREEN`) is what puts out whoever falls behind, and holds back a leader who pulls away.
     // The boxes deal by rank, the way a kart racer's do: whoever is behind draws something that reaches up (the hook
     // that trades places with the one ahead, the punch that flies up through floors, a burst upward, a step, the
     // shell that hunts the leader), and whoever leads something to hold on with. None kills.
@@ -112,10 +143,9 @@ export const MODES: Record<ModeId, ModeDef> = {
       loop: true,
       bare: true,
       boxes: { chase: ['hook', 'upper', 'upper', 'rocket', 'block', 'tax'], lead: ['shield', 'sword', 'block'] },
-      gates: true,
       tide: true,
     },
-    run: { flag: false, lastStanding: true, ahead: 'height' },
+    run: { flag: false, lastStanding: true, ahead: 'height', screen: SLAG_SCREEN },
     // A loop climbs bare, so no bridge is owed: the crate leans to what you put in each other's way, and to
     // utility, and away from building (a shortcut for whoever's ahead) and demolition (nothing needs clearing).
     crate: { bridges: false, roles: { hazard: 1.6, utility: 1.3, build: 0.6, demolish: 0.35 } },
@@ -138,7 +168,7 @@ export const MODES: Record<ModeId, ModeDef> = {
    */
   brawl: {
     label: 'Brawl',
-    // 25 s in, slag pours in from below and the arena closes in, so a round always comes to a fight; 60 s is the end.
+    // Late in a round slag pours in from below and the arena closes in, so a stalemate always comes to an end; 60 s is the end.
     profile: {
       // Its own arena in every set: ledges in tiers to the top of the screen, open at the sides (gen/level/builders/arena.ts).
       builder: 'arena',
@@ -153,13 +183,16 @@ export const MODES: Record<ModeId, ModeDef> = {
       hazards: 6,
       danger: 0.9,
       setPieceRoles: ['hazard', 'utility'],
+      // Its boxes are weapon stands, as the party brawler's spawners are: on the floor, showing what they hold, taken by
+      // walking in, a fresh one a few seconds on (gen/level/loop-boxes.ts, sim/props/modules/stand.ts).
       boxes: { chase: [...BRAWL_ITEMS], lead: [...BRAWL_ITEMS] },
-      tide: { wait: 25, speed: 0.4, gain: 0.04 },
+      stands: true,
+      tide: BRAWL_TIDE,
     },
     // Bodies shove hard enough to put someone over an edge (sim/collide.ts `ShoveRules`): a walk moves a bystander at
     // half a walk, whoever is shoved off goes out over the drop, and a run-up into someone who isn't pushing back knocks
     // them like a bump. Everyone in the brawl shares it; a race keeps its own.
-    run: { flag: false, lastStanding: true, ahead: 'none', seconds: 60, shove: BRAWL_SHOVE, buildup: BRAWL_BUILDUP },
+    run: { flag: false, lastStanding: true, ahead: 'none', seconds: 60, shove: BRAWL_SHOVE, buildup: BRAWL_BUILDUP, armed: BRAWL_ARMED },
     // No gap to cross: the crate leans to hazards to knock people into and utility to throw them about.
     crate: { bridges: false, roles: { hazard: 1.8, utility: 1.2, build: 0.4, demolish: 0.5 } },
     camera: 'pack',

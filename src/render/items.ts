@@ -272,8 +272,8 @@ export function drawItemIcon(s: CanvasRenderingContext2D, kind: ItemKind, x: num
   s.restore();
 }
 
-/** Ring of shine lines round a loose item, cut once per hue. */
-const shine = (kind: ItemKind) =>
+/** Ring of shine lines round a loose item (or one on a stand), cut once per hue. */
+export const itemShine = (kind: ItemKind) =>
   sprite(`it|shine|${kind}`, -13, -13, 26, 26, (g) => {
     g.fillStyle = css(ITEM_HUE[kind], 14);
     for (let i = 0; i < 8; i++) {
@@ -301,7 +301,7 @@ export function drawDrops(rc: RC, run: RunWorld): void {
     bg.translate(d.x, y);
     bg.rotate(rc.t * 0.8 + d.id);
     bg.scale(pulse, pulse);
-    stamp(bg, shine(d.kind));
+    stamp(bg, itemShine(d.kind));
     bg.restore();
     drawItemIcon(rc.s, d.kind, d.x, y, 1, rc.t);
     // A twinkle, so items read as pick-ups and not scenery.
@@ -311,7 +311,7 @@ export function drawDrops(rc: RC, run: RunWorld): void {
 }
 
 /** A four-point twinkle: two crossed pen flicks. */
-function twinkle(c: CanvasRenderingContext2D, x: number, y: number, r: number, col: string) {
+export function twinkle(c: CanvasRenderingContext2D, x: number, y: number, r: number, col: string) {
   if (r < 0.4) return;
   c.fillStyle = col;
   line(c, x - r, y, x + r, y, { w: r * 0.45, seed: 1, taper: [0.5, 0.5], press: 0 });

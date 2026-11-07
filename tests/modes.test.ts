@@ -7,23 +7,26 @@ import { throughFaults } from '../src/gen/setpieces';
 import { leaderOf as leaderIndex } from '../src/sim/standing';
 import { POINTS, scoreKnockouts, scoreSurvival, SURVIVE_PLACES, UNDERDOG_ROUNDS } from '../src/game/scoring';
 import { creditKill } from '../src/sim/items';
-import { generateLevel, planHolds } from '../src/gen/level';
-import { GATE_AT, GATE_HOLD } from '../src/gen/level/loop-gates';
+import { generateLevel } from '../src/gen/level';
 import { LOOP_ROWS, LOOP_W, rollProfile } from '../src/gen/level/profile';
 import { LOOP_HEAD_START } from '../src/gen/level/tide';
 import { rollKind } from '../src/gen/level/weather';
 import { generateTheme } from '../src/gen/theme';
 import { hashMatch, restoreMatch, snapshotMatch } from '../src/net/snapshot';
 import { FPS, LEVEL_H, LEVEL_W, POP_HOLD, RUN_COUNTDOWN, TILE } from '../src/sim/constants';
-import { isProtected, lapShift, type Level, LOOP_BAND, LOOP_SPAWN, T_ONEWAY, T_SOLID } from '../src/sim/level';
-import { barrierOf, footprintCells, MIN_OPENING, type ModuleOf, moduleSim, newPropState, phaseCycle, type PlacedProp, resolveProp } from '../src/sim/props';
+import { isProtected, lapShift, type Level, LOOP_BAND, LOOP_SPAWN, T_ONEWAY } from '../src/sim/level';
+import { footprintCells, moduleSim, newPropState } from '../src/sim/props';
 import { bodyAtCell } from '../src/sim/physics';
 import { feetUp, RunWorld } from '../src/sim/run';
 import { BotSeats } from '../src/brain/bots';
-import { firstOut, gateShut, leashRows, stepTide, type Tide } from '../src/sim/tide';
+import { Predictor } from '../src/net/predict';
+import { screenEdges } from '../src/sim/screen';
+import { firstOut, leashRows, stepTide, type Tide } from '../src/sim/tide';
 import { analyzeReach } from '../src/sim/reach';
 import { type InputFrame, NO_INPUT } from '../src/sim/types';
 import { standSafety } from '../src/gen/level/measure';
+import { BUILDERS } from '../src/gen/level/builders';
+import { builderFaults } from '../src/gen/level/builders/contract';
 import { THEME_IDS } from '../src/themes';
 
 const FLOOR = 20; // first solid row
@@ -313,94 +316,109 @@ describe("a loop's mystery boxes", () => {
   });
 });
 
-describe("a loop's regroup gates", () => {
-  const lv = generateLevel(2, 'mine', MODES.slag.profile);
-  const gates = lv.setPieces.filter((p) => p.def.key === 'loop-gate');
-  const phase = (pp: PlacedProp) => pp.def.modules[0] as ModuleOf<'phase'>;
-
-  it('shut across the shaft from wall to wall, every lap, on the cycle the slag reads', () => {
-    expect(gates.length).toBe(GATE_AT.length);
-    expect(lv.tide!.gates!.map((g) => g.row)).toEqual(gates.map((p) => phase(p).cells[0][1]));
-    for (const [i, pp] of gates.entries()) {
-      const g = lv.tide!.gates![i];
-      // Every cell of its row between the walls is the gate's or rock: shut, nothing gets up past it.
-      const cells = new Set(pp.def.modules.flatMap((m) => (m as ModuleOf<'phase'>).cells.map(([x]) => x)));
-      for (let x = 1; x < lv.w - 1; x++) expect(cells.has(x) || lv.tiles[g.row * lv.w + x] === T_SOLID, `x ${x}`).toBe(true);
-      // Open at the start, then on the race clock: its blink blocks and the slag agree on every frame.
-      const r = resolveProp(pp);
-      expect(gateShut(g, 0)).toBe(false);
-      let shut = 0;
-      for (let f = 0; f < 2 * (g.shut + g.open); f++) {
-        for (const m of pp.def.modules) expect(phaseCycle(m as ModuleOf<'phase'>, f, r.phase).seg === 0).toBe(gateShut(g, f));
-        if (gateShut(g, f)) shut++;
-      }
-      expect(shut).toBe(2 * g.shut);
+describe("the leader's screen", () => {
+  const screen = MODES.slag.run.screen!;
+  /**
+   * A tall level: a ledge on the left at row 30 (the spawn's), and a floor across at row 60, further under the ledge
+   * than the screen reaches. Runner 0 on the ledge, runner 1 on the floor below, right of the ledge.
+   */
+  const race = (low = true) => {
+    const w0 = 40;
+    const h = 80;
+    const tiles = new Uint8Array(w0 * h);
+    for (let x = 0; x < 16; x++) tiles[30 * w0 + x] = 1;
+    for (let y = 60; y < h; y++) for (let x = 0; x < w0; x++) tiles[y * w0 + x] = 1;
+    const level: Level = { ...flatLevel(), w: w0, h, tiles, spawn: { tx: 4, ty: 29 }, goal: { tx: 36, ty: 59 }, protectedRects: [] };
+    const w = new RunWorld(level, [], [0, 1], 0, 1, [], false, MODES.slag.run);
+    const b = w.runners[1].body;
+    b.x = 30 * TILE;
+    b.y = low ? 60 * TILE - b.h : 29 * TILE;
+    return w;
+  };
+  /** Steps `w` to frame `to` with nobody pressing anything, `place` moving runners where a test wants them first. */
+  const run = (w: RunWorld, to: number, place: (w: RunWorld) => void = () => {}) => {
+    while (w.frame < to) {
+      place(w);
+      w.step([NO_INPUT, NO_INPUT]);
     }
+  };
+
+  it('only a field has one: alone, nothing falls behind', () => {
+    expect(race().screen).not.toBeNull();
+    expect(new RunWorld(flatLevel(), [], [0], 0, 1, [], false, MODES.slag.run).screen).toBeNull();
+    expect(new RunWorld(flatLevel(), [], [0, 1], 0, 1, [], false, MODES.race.run).screen).toBeNull();
   });
 
-  it('holds the slag while the leader waits under one that is shut, and not once it opens', () => {
-    const g = lv.tide!.gates![0];
-    const go = RUN_COUNTDOWN + 10 * FPS;
-    const shut = Array.from({ length: g.shut + g.open }, (_, i) => go + i).find((f) => gateShut(g, f))!;
-    const open = Array.from({ length: g.shut + g.open }, (_, i) => go + i).find((f) => !gateShut(g, f))!;
-    // Feet on a ledge two rows under the gate's cells, a lap up as well as in the first.
-    for (const lap of [0, 1]) {
-      const feet = (g.row + 3 - lap * lv.loop!) * TILE;
-      const line = feet + 5 * TILE;
-      expect(stepTide(lv, line, shut, feet)).toBe(line);
-      expect(stepTide(lv, line, open, feet)).toBeLessThan(line);
-    }
+  it('puts out a runner under its bottom edge after the grace, and not one inside it', () => {
+    const w = race();
+    const { bottom } = screenEdges(screen, w.screen!);
+    // Runner 1 stands on the floor, wholly under the edge; runner 0 on the ledge, inside.
+    expect(w.runners[1].body.y).toBeGreaterThan(bottom);
+    // Nobody is out before GO, and from GO only once the grace has run.
+    run(w, RUN_COUNTDOWN + screen.grace - 1);
+    expect(w.runners[1].alive, 'still in its grace').toBe(true);
+    run(w, RUN_COUNTDOWN + screen.grace + 1);
+    expect(w.runners[1].alive).toBe(false);
+    expect(w.runners[1].cause).toBe('screen');
+    run(w, RUN_COUNTDOWN + 5 * FPS);
+    expect(w.runners[0].alive).toBe(true);
+    // Back over the edge before the grace runs out, it's forgiven and the count starts over.
+    const v = race();
+    run(v, RUN_COUNTDOWN + screen.grace - 5);
+    v.runners[1].body.y = bottom - 2 * TILE;
+    v.step([NO_INPUT, NO_INPUT]);
+    expect(v.screen!.under[1]).toBe(0);
+    expect(v.runners[1].alive).toBe(true);
   });
 
-  it('the proof climbs through it as open air only while it opens long enough to', () => {
-    // Open more than MIN_OPENING frames a cycle: no barrier, and the lap is still proven bare.
-    for (const pp of gates) expect(barrierOf(lv, pp)).toEqual({ ground: [], noGo: [] });
-    expect(planHolds(lv, [], [])).toBe(true);
-    // Shut, it seals the shaft: written in as rock, no lap is proven.
-    const sealed = lv.tiles.slice();
-    for (const pp of gates) for (const [x, y] of footprintCells(pp)) sealed[y * lv.w + x] = T_SOLID;
-    expect(analyzeReach({ ...lv, tiles: sealed }).goalReached).toBe(false);
-    // A gate that opened for less than MIN_OPENING frames would be a barrier, and the proof wouldn't climb through it.
-    const brief: PlacedProp = {
-      ...gates[0],
-      def: { ...gates[0].def, modules: gates[0].def.modules.map((m) => ({ ...(m as ModuleOf<'phase'>), off: MIN_OPENING - 5 })) },
-    };
-    expect(barrierOf(lv, brief).noGo.length).toBeGreaterThan(0);
-    expect(planHolds({ ...lv, setPieces: lv.setPieces.map((p) => (p === gates[0] ? brief : p)) }, [], [])).toBe(false);
+  it('follows the leader up no faster than it rises, and its top holds them', () => {
+    const w = race(false);
+    run(w, RUN_COUNTDOWN);
+    const y0 = w.screen!.y;
+    // The leader flung up faster than any climb: the window rises at most `rise` rows a second after them.
+    run(w, RUN_COUNTDOWN + FPS, (x) => {
+      x.runners[0].body.vy = -300;
+    });
+    expect(y0 - w.screen!.y).toBeLessThanOrEqual(screen.rise * TILE + 1e-6);
+    expect(y0 - w.screen!.y).toBeGreaterThan(screen.rise * TILE * 0.9);
+    // The top is solid: it holds them under it.
+    const { top } = screenEdges(screen, w.screen!);
+    for (const r of w.runners) expect(feetUp(w.level, r) - r.body.h).toBeGreaterThanOrEqual(top - 1e-6);
+    expect(w.solids.some((s) => s.propUid === -1 && Math.abs(s.y + s.h - top) < 1e-6)).toBe(true);
   });
 
-  it('bots wait under a shut gate and climb through it once it opens', { timeout: 60_000 }, () => {
-    const m = new Match(2, 'mine', SLAG);
+  it("a guest's predicted copy steps a screen of its own, never the confirmed one", () => {
+    const m = new Match(3, 'mine', SLAG);
     const bots = new BotSeats();
-    for (let i = 0; i < 4; i++) m.join(bots.add(m));
+    for (let i = 0; i < 2; i++) m.join(bots.add(m));
     m.startMatch();
     m.startRun();
-    const run = m.run!;
-    const L = m.level.loop!;
-    const gs = m.level.tide!.gates!;
-    // Rows a runner's feet stand under a gate's cells, folded by the lap.
-    const under = (r: (typeof run.runners)[number], row: number) => (((feetUp(m.level, r) / TILE - (row + 1)) % L) + L) % L;
-    let waited = 0;
-    let through = 0;
-    const was = new Map<number, number[]>();
-    while (run.endFrame < 0 && run.frame < RUN_COUNTDOWN + 25 * FPS) {
-      for (const r of run.runners.filter((x) => x.alive)) {
-        const now = gs.map((g) => under(r, g.row));
-        gs.forEach((g, i) => {
-          if (gateShut(g, run.frame) && now[i] <= GATE_HOLD && r.body.onGround) waited++;
-          // Up through the gate's row: it was open.
-          const before = was.get(r.slot)?.[i];
-          if (before !== undefined && before <= GATE_HOLD && now[i] > L - 4) {
-            expect(gateShut(g, run.frame), `slot ${r.slot} frame ${run.frame}`).toBe(false);
-            through++;
-          }
-        });
-        was.set(r.slot, now);
+    while (m.run!.frame < RUN_COUNTDOWN + 2 * FPS) m.step(bots.frames(m));
+    const was = { y: m.run!.screen!.y, under: [...m.run!.screen!.under] };
+    const shown = new Predictor().copy(m);
+    for (let f = 0; f < FPS; f++) shown.step(bots.frames(shown));
+    expect(shown.run!.screen!.y).not.toBe(was.y);
+    expect(m.run!.screen).toEqual(was);
+  });
+
+  it('plays the same twice: bots on a seed die on the same frames, the screen in the same place', { timeout: 60_000 }, () => {
+    const play = () => {
+      const m = new Match(3, 'mine', SLAG);
+      const bots = new BotSeats();
+      for (let i = 0; i < 4; i++) m.join(bots.add(m));
+      m.startMatch();
+      m.startRun();
+      const run = m.run!;
+      const ys: number[] = [];
+      while (run.endFrame < 0 && run.frame < RUN_COUNTDOWN + 40 * FPS) {
+        m.step(bots.frames(m));
+        if (run.frame % 30 === 0) ys.push(run.screen!.y);
       }
-      m.step(bots.frames(m));
-    }
-    expect(waited).toBeGreaterThan(FPS);
-    expect(through).toBeGreaterThanOrEqual(4);
+      return { ys, deaths: run.runners.map((r) => [r.deathFrame, r.cause]), hash: hashMatch(m) };
+    };
+    const a = play();
+    expect(play()).toEqual(a);
+    expect(a.ys.length).toBeGreaterThan(10);
   });
 });
 
@@ -510,6 +528,36 @@ describe('knockout scoring', () => {
   });
 });
 
+describe("a brawl's bouts", () => {
+  const BRAWL = { ...DEFAULT_RULES, mode: 'brawl' as const };
+  /** What each seat holds at GO in a brawl match's first `bouts` bouts on seed 4. */
+  function armed(bouts: number): string[] {
+    const m = new Match(4, 'farm', BRAWL);
+    for (const k of ['kb1', 'kb2', 'kb3']) m.join(k);
+    m.startMatch();
+    const out: string[] = [];
+    for (let b = 0; b < bouts; b++) {
+      // As the match's next bout does (`startBout`): a round of its own, so a race seed of its own.
+      if (b) m.round++;
+      m.startRun();
+      out.push(m.run!.runners.map((r) => `${r.items.held?.kind}:${r.items.held?.uses}`).join());
+    }
+    return out;
+  }
+
+  it('start everyone holding a starter from the stands deal, the same in two matches, drawn again each bout', () => {
+    const a = armed(4);
+    expect(armed(4)).toEqual(a);
+    for (const bout of a)
+      for (const held of bout.split(',')) {
+        const [kind, uses] = held.split(':');
+        expect(MODES.brawl.run.armed!.deal).toContain(kind);
+        expect(Number(uses)).toBe(MODES.brawl.run.armed!.uses);
+      }
+    expect(new Set(a).size).toBeGreaterThan(1);
+  });
+});
+
 describe("a brawl's weather", () => {
   it('never mists the arena: a mist roll comes out clear', () => {
     const seeds = Array.from({ length: 60 }, (_, i) => i + 1)
@@ -521,11 +569,28 @@ describe("a brawl's weather", () => {
 });
 
 describe("a brawl's arena", () => {
+  it("its contract catches a stand with no partner across the middle, and one in a set piece's reach", () => {
+    const lv = generateLevel(3, 'castle', MODES.brawl.profile);
+    const each = BUILDERS.arena.contract!.each!;
+    expect(builderFaults(each, lv, 0).filter((f) => f.startsWith('boxes'))).toEqual([]);
+    const stands = lv.setPieces.filter((p) => p.def.key === 'loop-box');
+    const off = stands.find((p) => Math.abs(2 * p.def.footprint[0][0] - (lv.w - 1)) > 1)!;
+    // Its partner gone: the one left is unpaired.
+    const lopsided = { ...lv, setPieces: lv.setPieces.filter((p) => p.def.key !== 'loop-box' || p === off) };
+    expect(builderFaults(each, lopsided, 0).some((f) => f.startsWith('boxesMirrored'))).toBe(true);
+    // Moved onto a set piece's own cell: in its reach.
+    const piece = lv.setPieces.find((p) => p.def.key !== 'loop-box')!;
+    const [px, py] = footprintCells(piece)[0];
+    const moved = { ...off, def: { ...off.def, footprint: [[px, py]] as [number, number][] } };
+    const crowded = { ...lv, setPieces: lv.setPieces.map((p) => (p === off ? moved : p)) };
+    expect(builderFaults(each, crowded, 0).some((f) => f.startsWith('boxesClear'))).toBe(true);
+  });
+
   // A seed per theme in turn: the arena builder's contract over every set is tests/conformance/builders.test.ts, its sweep tests/stats/builder-contracts.test.ts.
   const cases = [1, 2, 3].map((seed) => ({ seed, theme: THEME_IDS[(seed * 4) % THEME_IDS.length] }));
 
   for (const { seed, theme } of cases)
-    it(`seed ${seed} ${theme}: two mirrored ends that reach each other bare, boxes the field gets to, a ledge over the middle`, () => {
+    it(`seed ${seed} ${theme}: two mirrored ends that reach each other bare, stands the field gets to, a ledge over the middle`, () => {
       const lv = generateLevel(seed, theme, MODES.brawl.profile);
       const { w, h } = lv;
       expect(lv.style).toContain(':arena-');
@@ -543,14 +608,13 @@ describe("a brawl's arena", () => {
       expect([...there.reachable].some((k) => Math.floor(k / w) < h / 2)).toBe(true);
       const open = (x: number) => Array.from({ length: h }, (_, y) => lv.tiles[y * w + x]).filter((t) => t === 0).length;
       expect(Math.min(open(0), open(w - 1))).toBeGreaterThan(h / 2);
-      // At least three boxes, a mirrored pair among them, each over a floor the field reaches, with room on top.
-      const boxes = lv.setPieces.filter((p) => p.def.key === 'loop-box').map((p) => p.def.footprint[0]);
-      expect(boxes.length).toBeGreaterThanOrEqual(3);
-      expect(boxes.some(([x, y]) => boxes.some(([mx, my]) => mx !== x && mx === w - 1 - x && my === y))).toBe(true);
-      for (const [x, y] of boxes) {
-        expect(there.reachable.has((y + 2) * w + x), `box ${x},${y}`).toBe(true);
-        expect([lv.tiles[(y - 1) * w + x], lv.tiles[(y - 2) * w + x]]).toEqual([0, 0]);
-      }
+      // At least three item stands, a mirrored pair among them, each on a floor the field reaches.
+      const boxes = lv.setPieces.filter((p) => p.def.key === 'loop-box');
+      expect(boxes.every((p) => p.def.modules[0].type === 'stand')).toBe(true);
+      const cells = boxes.map((p) => p.def.footprint[0]);
+      expect(cells.length).toBeGreaterThanOrEqual(3);
+      expect(cells.some(([x, y]) => cells.some(([mx, my]) => mx !== x && mx === w - 1 - x && my === y))).toBe(true);
+      for (const [x, y] of cells) expect(there.reachable.has(y * w + x), `stand ${x},${y}`).toBe(true);
       // Nothing in the top rows but what the set's look hangs as a whole (a canopy): no board up there nobody reaches,
       // and every board has two rows of air over it.
       for (let x = 0; x < w; x++) expect([lv.tiles[x], lv.tiles[w + x]]).not.toContain(T_ONEWAY);

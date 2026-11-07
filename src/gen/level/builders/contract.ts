@@ -1,6 +1,8 @@
 import type { Level } from '../../../sim/level';
 import type { Role } from '../../../sim/props';
 import type { ReachCache } from '../../../sim/reach';
+import { harmed, harmReach } from '../harm';
+import { unmirrored } from '../loop-boxes';
 import { isBox, type Measures, measureLevel } from '../measure';
 import type { BuilderContract } from '../sets/types';
 
@@ -34,7 +36,8 @@ const SHAPED: readonly (keyof NonNullable<BuilderContract['each']>)[] = ['tiers'
 
 /**
  * Where `level` breaks `each`, one line per promise (none: it keeps them). `asked` is the set pieces the pipeline
- * asked the placer for. `clearSpawns` is a simulation, so it's conformance's alone.
+ * asked the placer for. `clearSpawns` is a simulation, so it's conformance's alone; `boxesClear` plays the set pieces too, but
+ * for tens of ms, so the pipeline holds every level to it.
  */
 export function builderFaults(each: NonNullable<BuilderContract['each']>, level: Level, asked: number, cache?: ReachCache, measured?: Measures): string[] {
   const out: string[] = [];
@@ -47,6 +50,13 @@ export function builderFaults(each: NonNullable<BuilderContract['each']>, level:
       if (n > each.repeat) out.push(`repeat: ${r} ${n} times, over ${each.repeat}`);
     }
   if (each.boxes !== undefined && level.profile?.boxes && boxesOf(level) < each.boxes) out.push(`boxes: ${boxesOf(level)}, under ${each.boxes}`);
+  const boxes = level.setPieces.filter((p) => isBox(p.def.key));
+  const cells = boxes.map((p) => p.def.footprint[0]);
+  if (each.boxesMirrored) for (const f of unmirrored(level.w, cells)) out.push(`boxesMirrored: ${f}`);
+  if (each.boxesClear && boxes.length) {
+    const harm = harmReach(level, level.setPieces);
+    for (const [x, y] of cells) if (harmed(harm, level.w, x, y)) out.push(`boxesClear: ${x},${y} is within a tile of where a set piece reaches`);
+  }
   if (SHAPED.some((k) => each[k] !== undefined)) {
     const m = measured ?? measureLevel(level, cache);
     if (each.tiers !== undefined && m.tiers < each.tiers) out.push(`tiers: the field stands on ${m.tiers} rows, under ${each.tiers}`);

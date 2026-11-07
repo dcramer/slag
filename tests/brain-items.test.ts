@@ -43,6 +43,7 @@ const SELF: SelfSense = {
   away: 30,
   up: 0,
   slag: null,
+  screen: null,
   rank: 0,
   held: null,
   armed: true,
@@ -194,7 +195,7 @@ describe('knocking someone into something (a brawl)', () => {
 
   it('sees a hit that throws a rival into a part that hurts, but not into a mystery box', () => {
     const props = [{ owner: 1, ground: [], noGo: [13 * W + 2] }];
-    const box = { tx: 2, ty: 13, ready: true, hands: false };
+    const box = { tx: 2, ty: 13, ready: true, hands: false, stand: false, kind: null };
     expect(knockedInto(view({ tiles: LEDGE_END, props }), SELF, rival(3, 0), -1, 'sword')).toBe(true);
     expect(knockedInto(view({ tiles: LEDGE_END, props, boxes: [box] }), SELF, rival(3, 0), -1, 'sword')).toBe(false);
   });
@@ -289,7 +290,8 @@ describe('going for boxes', () => {
   const traits = { ...rollPersonality(1, 'hard'), knack: 1 };
   /** A box at (9, 10) under a rock roof, so what it pops drops out of its bottom. */
   const room = tiles((set) => set(9, 9, T_SOLID));
-  const boxed = (me: Partial<SelfSense>) => view({ tiles: room, boxes: [{ tx: 9, ty: 10, ready: true, hands: false }], self: { ...SELF, rank: 1, ...me } });
+  const boxed = (me: Partial<SelfSense>) =>
+    view({ tiles: room, boxes: [{ tx: 9, ty: 10, ready: true, hands: false, stand: false, kind: null }], self: { ...SELF, rank: 1, ...me } });
 
   it('walks under a full box near its way and hops into it; with no knack it carries on', () => {
     const play = new ItemPlay(new Rng(1), traits);
@@ -302,17 +304,36 @@ describe('going for boxes', () => {
   });
 
   it('leaves a box it could never reach the pop of (unless it hands it over), and any box once the slag is close', () => {
-    const open = view({ boxes: [{ tx: 9, ty: 10, ready: true, hands: false }], detour: (_, ty) => (ty === 9 ? Infinity : 0) });
+    const open = view({ boxes: [{ tx: 9, ty: 10, ready: true, hands: false, stand: false, kind: null }], detour: (_, ty) => (ty === 9 ? Infinity : 0) });
     const play = new ItemPlay(new Rng(1), traits);
     for (let f = 0; f < 20; f++) expect(play.think(open, { ...SELF, rank: 1 }, false)).toBeNull();
     // A loop's box hands it over, so where its pop would land doesn't matter.
-    const handing = view({ boxes: [{ tx: 9, ty: 10, ready: true, hands: true }], detour: (_, ty) => (ty === 9 ? Infinity : 0) });
+    const handing = view({ boxes: [{ tx: 9, ty: 10, ready: true, hands: true, stand: false, kind: null }], detour: (_, ty) => (ty === 9 ? Infinity : 0) });
     const keen = new ItemPlay(new Rng(1), traits);
     let intent = null;
     for (let f = 0; f < 20 && !intent; f++) intent = keen.think(handing, { ...SELF, rank: 1 }, false);
     expect(intent).toEqual({ do: 'goTo', tx: 9, ty: 13 });
     const close = new ItemPlay(new Rng(1), traits);
     for (let f = 0; f < 20; f++) expect(close.think(boxed({ slag: 4 }), { ...SELF, rank: 1, slag: 4 }, false)).toBeNull();
+  });
+
+  it('walks into a stand rather than hopping, and goes for the one with something that knocks on it over a nearer one', () => {
+    const stand = (tx: number, kind: 'sword' | 'tremor') => ({ tx, ty: 13, ready: true, hands: true, stand: true, kind });
+    // Not leading a climb (the leader is dealt nothing): rank 1.
+    const me = { ...SELF, rank: 1 };
+    const pick = (boxes: ReturnType<typeof stand>[]) => {
+      const play = new ItemPlay(new Rng(1), traits);
+      let intent = null;
+      for (let f = 0; f < 20 && !intent; f++) intent = play.think(view({ boxes, self: me }), me, false);
+      return { play, intent };
+    };
+    // Two tiles off with a brick on it, five off with a noodle: the noodle.
+    expect(pick([stand(7, 'tremor'), stand(10, 'sword')]).intent).toEqual({ do: 'goTo', tx: 10, ty: 13 });
+    // Standing in it, it keeps walking in (nothing to hop for) until it's taken.
+    const { play } = pick([stand(7, 'sword')]);
+    const there = { ...me, tx: 7, x: 7.5 };
+    expect(play.think(view({ boxes: [stand(7, 'sword')], self: there }), there, false)).toEqual({ do: 'goTo', tx: 7, ty: 13 });
+    expect(play.think(view({ boxes: [{ ...stand(7, 'sword'), ready: false, kind: null }], self: there }), there, false)).toBeNull();
   });
 
   it('hops at once on arriving at a walk, rather than turning back and forth under the box', () => {

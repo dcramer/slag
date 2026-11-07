@@ -187,6 +187,10 @@ export interface BuilderContract {
     repeat?: number;
     /** Loot boxes it hangs when its profile deals them, at least. */
     boxes?: number;
+    /** Its boxes (or stands) in mirrored pairs across the middle, an odd one on the middle. */
+    boxesMirrored?: true;
+    /** No box or stand in or beside a set piece, its hazards' reach or its shots' line over its cycle (gen/level/harm.ts: a simulation). */
+    boxesClear?: true;
     /** Rows the field stands on, at least. */
     tiers?: number;
     /** Rows of terrain either side column runs, fewer than this: a knock carries you off the map. */

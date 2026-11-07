@@ -101,6 +101,16 @@ Every game design decision, preference and direction the owner has given, groupe
   2026-11-06 · `done` (pauses of 30+ frames 1.9 → 0.3 a bot-minute; a body check in `BRAWL_SHOVE` and bots that charge it; stand cells with no way to die near 52 → 14%) · MODES.md → Brawl
 - **A brawl round aims for 15–30 s (from 20–40), and item use counts per minute of fighting, not per round.** "Yes, 15–30 s"
   2026-11-06 · `done` (bare 16.5 s, placed 18.2 s; uses 24.1 / 20.5 a minute) · MODES.md → Brawl, `BRAWL_ROUNDS` (src/game/expectations.ts)
+- **Each mode may change mechanics to play well: Brawl leans on items with hazards built into its arenas (still placed procedurally), and Rising Slag may get mechanics of its own.** "Its ok if each gamestyle slightly changes mechanics. Like brawl is more item focus, maybe hazards are more baked in (but still prcoedurally placed). Rising Slag could also have its own variants to mechanics to ensure gameplay is fun and competitive"
+  2026-11-07 · `in progress` · DESIGN.md → Modes
+- **Brawl: weapons on mirrored stands that respawn, everyone starts a bout armed, arenas built around one or two centrepiece hazards, and the slag only ends a stalemate.** "Yeah lets work through that"
+  2026-11-07 · `in progress` · MODES.md → Brawl
+- **Rising Slag: fall off the bottom of the leader's screen and you're out, in place of the regroup gates; climb items made for a shaft; boosts on the hard lines.** "Yeah lets work through that"
+  2026-11-07 · `in progress` · MODES.md → Rising Slag
+- **Rising Slag's leader runs free: no solid top on the screen holding them; catch-up comes from items and the rank-based deal instead.** "Let leader run free"
+  2026-11-07 · `in progress` · MODES.md → Rising Slag, `src/sim/screen.ts`
+- **A leader never gets more than a tile or two past the top of the screen, and bots see only what's on screen: they never know more of the level than a player can see.** "the AI leaders shouldnt go far beyond the top tho.. like 1-2 blocks might be ok (sort of luck) but they shouldn't be able to see things players cant"
+  2026-11-07 · `in progress` · MODES.md → Rising Slag, src/brain/AGENTS.md
 - **Brawl is won by knocking people out, not by hiding: knockouts pay, each hit you take throws you farther (fresh each bout), and a couple of weapons reach from range.** "you shouldn't be able to win by just standing around" / "maybe just make it easier to get knocked out" / "or we need more weapons or something?" / "Yes, all three"
   2026-11-06 · `in progress`: knockouts pay 5 and the last one standing 5 (`scoreKnockouts`; a still seat wins 0 of 6 matches, from 2) `done`; hits build up a quarter each, up to six (`RunRules.buildup`) `done`; two ranged weapons `done` (Rude Awakening, a lobbed alarm clock that blasts rivals outward; Catch of the Day, a rod that reels one in; brawl boxes only). An earlier slag waits on these · MODES.md → Brawl
 - **Brawl's hazards are amped up: its set pieces are things that kill or knock, more of them, near the ledges.** "we may need to amp up the hazards in brawl"
@@ -615,6 +625,8 @@ Every game design decision, preference and direction the owner has given, groupe
   2026-11-02 · `done` · DESIGN.md → Discovery, `src/codex/maps.ts`, TODO.md → 28
 - **The codex shows every character: the whole cast, by its sound-alike names, between the parts and the maps.** "make sure our codex shows all the characters"
   2026-11-04 · `done` · DESIGN.md → Discovery, `src/codex/cast.ts`
+- **Every codex card is linkable, so one character or item can be shared: opening a card puts it in the URL, and back and forward open and close cards.**
+  2026-11-07 · `done` · DESIGN.md → Discovery, `src/codex/links.ts`
 - **The main menu ends with About, after Settings: who made it, its inspiration, credits, the license and a link to the source on GitHub.** "Need an About thing after settings, which includes license, inspiration, github link etc"
   2026-11-02 · `done` · `src/ui/screens/about.ts`, `/about`
 - **About credits Ultimate Chicken Horse by name for the core concept, the one place a real game is named; every credit says what it is (display font, name filter), not just its name. No flavor prose on the page.** "those credits are weak, credit ultimate chicken horse for core concept" / "idk what lilita one etc even are..." / "i dont want ai slop for the description there either"

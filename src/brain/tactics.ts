@@ -112,8 +112,8 @@ function lift(v: BrainView, me: SelfSense): -1 | 0 | 1 | null {
   return null;
 }
 
-/** Under pressure to get up or on: the slag is close, or it's stuck. */
-const pressed = ({ me, stalled }: Moment) => stalled || (me.slag !== null && me.slag < SLAG_NEAR);
+/** Under pressure to get up or on: the slag or the bottom of the screen is close, or it's stuck. */
+const pressed = ({ me, stalled }: Moment) => stalled || doomRows(me) < SLAG_NEAR;
 
 /** A swing at whoever is close enough to hit, facing them. */
 const swing = (grounded: boolean): ItemTactic => ({
@@ -339,8 +339,11 @@ export function hurtsAt(v: BrainView, tx: number, ty: number): boolean {
   return (ty >= 0 && ty < h && harms(v, mask, tx, ty)) || (ty >= 1 && ty <= h && harms(v, mask, tx, ty - 1));
 }
 
-/** The slag's row as `me` sees it (rows down from its feet), or Infinity with none. */
-export const slagRow = (me: SelfSense): number => (me.slag === null ? Infinity : me.y + me.slag);
+/** Rows down from its feet to whatever ends a climb under it: the slag or the screen's bottom edge, whichever is nearer; Infinity with neither. */
+export const doomRows = (me: SelfSense): number => Math.min(me.slag ?? Infinity, me.screen ?? Infinity);
+
+/** The row a fall ends in as `me` sees it: the slag's, or the screen's bottom edge (`doomRows`); Infinity with neither. */
+export const slagRow = (me: SelfSense): number => me.y + doomRows(me);
 
 /** How a knocked body's flight ends: into something that kills, down on a floor, or neither within `FLIGHT` frames. */
 type Landing = 'dies' | 'safe' | 'open';

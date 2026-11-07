@@ -35,6 +35,12 @@ Each row gives what the item or part mocks, its silhouette (what must read at ga
 |---|---|---|---|---|
 | loot box | Loot Box, Surprise Mechanic, Lucky Block | The floating question block, as a loot box | A chunky bevelled cube with our own question glyph, punched from below | It pops and squashes when hit; a coin slot on top; dark and dented once spent. |
 
+## Weapon stand
+
+| Look | Names | Mocks | Silhouette | Gag |
+|---|---|---|---|---|
+| prize podium | Weapon Stand | The party brawler's weapon spawner | A squat podium on the floor, the prize bobbing over its lid | It's a game show's prize plinth: maroon plush, a gold lid, marquee bulbs across its front. Taken, the bulbs light again one by one while the next prize's dark silhouette fills with gold from the bottom; full, they chase. |
+
 ## Parts
 
 | Archetype | Names (nouns) | Mocks | Silhouette | Gag |
