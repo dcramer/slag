@@ -1,4 +1,4 @@
-import { footprintCells, type PlacedProp } from '../../sim/props';
+import { barrierOf, footprintCells, hurtsOf, type PlacedProp } from '../../sim/props';
 import { BRIDGE_W } from './validate';
 import { deriveSeed, Rng } from '../../core/rng';
 import { type Level, type LevelProfile, LOOP_BAND } from '../../sim/level';
@@ -31,7 +31,7 @@ import { DIFFICULTY, setLevelDifficulty } from './difficulty';
 import { levelPrecision } from './precision';
 import { analyzeRoutes, MAX_SHARED } from './routes';
 import { builderFor } from './builders';
-import { builderFaults, clearWayFaults } from './builders/contract';
+import { builderFaults, clearWayFaults, CROSSING } from './builders/contract';
 import { FALLBACK_SCULPTOR, SCULPTORS } from './sculptors';
 import { LAST_RESORT } from './sculptors/common';
 import type { Shape } from './types';
@@ -337,7 +337,7 @@ export function generateLevel(seed: number, themeOverride?: ThemeId, profileOver
         ...(shape.centre ? { centre: shape.centre } : {}),
         cache,
         keep: wayRound
-          ? (ps) => keep([...fixed, ...ps]) && !clearWayFaults({ ...level, setPieces: [...fixed, ...ps] }, cache).length
+          ? (ps) => keep([...fixed, ...ps]) && (!walls(level, ps[ps.length - 1]) || !clearWayFaults({ ...level, setPieces: [...fixed, ...ps] }, cache).length)
           : fixed.length
             ? (ps) => keep([...fixed, ...ps])
             : keep,
@@ -363,7 +363,9 @@ export function generateLevel(seed: number, themeOverride?: ThemeId, profileOver
       // What its builder promises of every level (builders/contract.ts): a level that breaks one is drawn again, until
       // the last resort keeps generation total (and records what it kept broken).
       const promised = builderFor(profile).contract?.each;
-      const unkept = promised ? builderFaults(promised, level, asked, cache) : [];
+      // The way round the hazards was held piece by piece as they went in, and nothing after adds a hazard, so it isn't
+      // proven twice (tests/conformance does).
+      const unkept = promised ? builderFaults(wayRound ? { ...promised, clearWay: undefined } : promised, level, asked, cache) : [];
       if (unkept.length && attempt < LAST_RESORT) {
         rejects.contract++;
         continue;
@@ -447,6 +449,17 @@ function toLevel(seed: number, s: Shape, theme: Theme, profile: LevelProfile): L
     ...(s.spawns ? { spawns: s.spawns } : profile.ends ? { spawns: [{ ...s.goal }] } : {}),
     ...(profile.loop && profile.size === 'tall' ? { loop: profile.h - LOOP_BAND } : {}),
   };
+}
+
+/**
+ * Whether `pp` walls anything a way round the hazards would mind (`clearWayFaults`): cells its hazards hold past
+ * `CROSSING`, or its own blocks and no-go cells. One that walls nothing can't close the way the pieces before it left,
+ * so it needs no reach.
+ */
+function walls(level: Level, pp: PlacedProp | undefined): boolean {
+  if (!pp) return false;
+  const b = barrierOf(level, pp);
+  return b.noGo.length > 0 || b.ground.length > 0 || hurtsOf(level, pp, CROSSING).length > 0;
 }
 
 /** Flat floor, always solvable. Only used if every candidate fails. */
