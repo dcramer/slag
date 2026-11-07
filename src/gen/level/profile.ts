@@ -177,8 +177,9 @@ export function rollProfile(seed: number, themeId: ThemeId, o: ProfileOverride =
     }
   }
   const rolledRoute = rng.weighted(ROUTE_WEIGHTS[size]);
-  const routes = o.tide ? ROUTE_WEIGHTS[size].filter(([r]) => CLIMBS.has(r)) : ROUTE_WEIGHTS[size];
-  const route = o.route && routes.some(([r]) => r === o.route) ? o.route : o.tide ? climbRoute(routes, rolledRoute) : rolledRoute;
+  // A loop climbs: the slag rises up it. A brawl's slag pours into one screen with no route up it, so a route it asks for stands.
+  const routes = o.loop ? ROUTE_WEIGHTS[size].filter(([r]) => CLIMBS.has(r)) : ROUTE_WEIGHTS[size];
+  const route = o.route && routes.some(([r]) => r === o.route) ? o.route : o.loop ? climbRoute(routes, rolledRoute) : rolledRoute;
   // Density: three moods (sparse / normal / dense) with jitter, so extremes are common enough to notice.
   const mood = rng.weighted<number>([
     [0.15, 3],
@@ -233,7 +234,7 @@ export function rollProfile(seed: number, themeId: ThemeId, o: ProfileOverride =
   };
 }
 
-/** Routes that go up: a level the slag rises through has to climb (game/modes.ts, Rising Slag). */
+/** Routes that go up: a loop the slag rises through has to climb (game/modes.ts, Rising Slag). */
 const CLIMBS: ReadonlySet<RouteShape> = new Set(['climb', 'zigzag']);
 
 /** The rolled route if it climbs; otherwise the climbing route it maps to, so the rest of the roll stays the seed's. */

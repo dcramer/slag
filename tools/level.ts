@@ -108,6 +108,7 @@ if (flag('stats')) {
     let safe = 0;
     let nearHazard = 0;
     let contractFaults = 0;
+    let contractRejects = 0;
     const boxes: number[] = [];
     for (let i = 0; i < n; i++) {
       const t0 = performance.now();
@@ -145,6 +146,7 @@ if (flag('stats')) {
       safe += r.measures.safe;
       nearHazard += r.measures.hazard;
       if (lastGenInfo.contractFaults) contractFaults++;
+      contractRejects += lastGenInfo.rejects.contract;
       if (r.boxes !== undefined) boxes.push(r.boxes);
       for (const t of lastGenInfo.placement?.tries ?? []) {
         const key = `${th}:${t.recipe}`;
@@ -173,6 +175,7 @@ if (flag('stats')) {
       safe: `${((safe / n) * 100).toFixed(0)}%`,
       nearHazard: `${((nearHazard / n) * 100).toFixed(0)}%`,
       contractFaults,
+      contractRejects,
       needParts: `${(((n - parts[0]) / n) * 100).toFixed(0)}%`,
       ...partShares(parts, n),
       fallbacks,

@@ -49,9 +49,10 @@ export interface GenInfo {
   /**
    * Candidates rejected on the way here, by reason (`closed` = still too narrow after lanes, `landmark` = the
    * concept's landmark wasn't raised, a required piece of it didn't go in, or a carrier's ride wasn't proven,
-   * `precision` = a whole draw whose precision didn't fit the level's difficulty).
+   * `precision` = a whole draw whose precision didn't fit the level's difficulty, `contract` = a level that broke a
+   * promise of its builder's, `BuilderContract.each`).
    */
-  rejects: { unsolvable: number; tooEasy: number; closed: number; landmark: number; precision: number };
+  rejects: { unsolvable: number; tooEasy: number; closed: number; landmark: number; precision: number; contract: number };
   /** The stage concept the level was built as (gen/stage); absent for a plain level. */
   concept?: string;
   /** A concept was rolled but the level fell back to plain after MAX_LANDMARK_REJECTS. */
@@ -60,7 +61,7 @@ export interface GenInfo {
   landmark?: Landmark;
   /** Why landmark attempts broke the concept's contract (../stage/contract.ts), one line per rejected attempt. */
   landmarkFaults?: string[];
-  /** Promises of its builder's the level breaks (`BuilderContract.each`, ./builders/contract.ts): conformance fails on them. */
+  /** Promises of its builder's the level still breaks (`BuilderContract.each`, ./builders/contract.ts): only past the last resort, and conformance fails on them. */
   contractFaults?: string[];
   /** Tight jumps on the level's more forgiving route (./precision.ts), and the sculpts drawn to fit its difficulty (the tier's `draws` + 1 when none fit and the nearest was redrawn). */
   precision: number;
@@ -75,7 +76,7 @@ export let lastGenInfo: GenInfo = {
   fallback: false,
   shared: 1,
   sculpted: 1,
-  rejects: { unsolvable: 0, tooEasy: 0, closed: 0, landmark: 0, precision: 0 },
+  rejects: { unsolvable: 0, tooEasy: 0, closed: 0, landmark: 0, precision: 0, contract: 0 },
   conceptFallback: false,
   precision: 0,
   draws: 0,
@@ -164,7 +165,7 @@ export function generateLevel(seed: number, themeOverride?: ThemeId, profileOver
   function sculptDraw(n: number, drawn: { profile: LevelProfile; concept: Concept | null }, keepIf: ((score: number) => boolean) | null): Level | number {
     const { concept } = drawn;
     const profile: LevelProfile = { ...drawn.profile, draw: n };
-    const rejects = { unsolvable: 0, tooEasy: 0, closed: 0, landmark: 0, precision: turned };
+    const rejects = { unsolvable: 0, tooEasy: 0, closed: 0, landmark: 0, precision: turned, contract: 0 };
     const faults: string[] = [];
     const lab = (s: string) => (n ? `draw${n}:${s}` : s);
     for (let attempt = 0; attempt < MAX_ATTEMPTS + LEGACY_ATTEMPTS; attempt++) {
@@ -315,10 +316,14 @@ export function generateLevel(seed: number, themeOverride?: ThemeId, profileOver
       for (let shots = profile.ends ? shotsIntoSpawns(level) : null; shots?.size; shots = shotsIntoSpawns(level))
         level.setPieces = level.setPieces.filter((p) => !shots!.has(p.uid)).map((p, i) => ({ ...p, uid: SET_PIECE_UID + i }));
       while (level.setPieces.length && !planHolds(level, [], bridges, cache)) level.setPieces.pop();
-      // What its builder promises of every level (builders/contract.ts), recorded rather than enforced: rejecting the
-      // attempt would change levels that already shipped (a mine arena from seed 0 hangs 2 boxes of its 3).
+      // What its builder promises of every level (builders/contract.ts): a level that breaks one is drawn again, until
+      // the last resort keeps generation total (and records what it kept broken).
       const promised = builderFor(profile).contract?.each;
       const unkept = promised ? builderFaults(promised, level, asked, cache) : [];
+      if (unkept.length && attempt < LAST_RESORT) {
+        rejects.contract++;
+        continue;
+      }
       if (unkept.length) lastGenInfo.contractFaults = unkept;
       if (level.rides) {
         // A ride is only as good as its carrier.
