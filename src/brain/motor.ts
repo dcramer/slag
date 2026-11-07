@@ -4,7 +4,7 @@ import { type Level, T_ONEWAY, T_SOLID } from '../sim/level';
 import type { Body, Controls } from '../sim/physics';
 import type { Rect } from '../core/geom';
 import { AMMO, AMMO_SIM, type Hazard, touchesHazard } from '../sim/props';
-import { brakeFrom, isStandable, type Move, movesFrom, type Played, playFrom, type WindColumns } from '../sim/reach';
+import { brakeFrom, isStandable, type Move, movesFrom, type Played, playFrom, T_NOGO, type WindColumns } from '../sim/reach';
 import { gustAir } from '../sim/weather';
 import type { RunWorld } from '../sim/run';
 import { type InputFrame, NO_INPUT } from '../sim/types';
@@ -73,6 +73,8 @@ const MAX_SLIP = 0.5;
 const FAMILIAR = 0.3;
 /** Chance a pause runs twice as long: now and then it really has to think. */
 const LONG_THINK = 0.1;
+/** What a pause to think is scaled by in a fight (Intent `haste`), and it never runs long: about half a second at most for a Normal bot. */
+const FIGHT_MUSE = 0.35;
 /** Route units a worse line may cost over the best one: a plausible mistake, not a walk the wrong way. */
 const STRAY_COST = 40;
 const FUMBLES: readonly Slip[] = ['short', 'late', 'early', 'long'];
@@ -178,6 +180,9 @@ export class Motor {
   private haste = false;
   private aim = -1;
   private chose = -1;
+  /** Where the body was a frame ago, and whether pressing across left it there: held in place (a wind-up roots it). */
+  private was = { x: NaN, y: NaN };
+  private pinned = false;
 
   constructor(
     /** Its hands: how quick, clean and careful it is. Set again when the room's Bots rule changes. */
@@ -364,6 +369,8 @@ export class Motor {
       this.last = -1;
     }
     const b = r.body;
+    this.pinned = this.haste && (this.prev.left || this.prev.right) && b.x === this.was.x && b.y === this.was.y;
+    this.was = { x: b.x, y: b.y };
     if (this.haste) this.chase(run, b, tx, ty);
     if (this.rushed) return this.follow(b) ?? this.coast(b);
     const map = raceMap(run);
@@ -427,9 +434,9 @@ export class Motor {
         if (i >= m.controls.length || off) {
           // A landing, or the world not doing what it expected: it takes a moment to see what's next. In a fight
           // (`haste`) not when what moved it was a rival it's up against (its recordings know nothing of bodies, and
-          // shoving is the fight), and a landing costs only what's left of that moment once it's down: it read the
-          // fight in the air.
-          if (off) this.hesitate = this.haste && this.run && againstRival(this.run, b) ? 0 : this.traits.reaction;
+          // shoving is the fight) or nothing moved it at all (held in place: its own swing winding up), and a landing
+          // costs only what's left of that moment once it's down: it read the fight in the air.
+          if (off) this.hesitate = this.haste && this.run && (this.pinned || againstRival(this.run, b)) ? 0 : this.traits.reaction;
           else if (m.air) this.hesitate = Math.max(0, this.traits.reaction - (this.haste ? airborne(m) : 0));
           return (this.act = null);
         }
@@ -441,7 +448,8 @@ export class Motor {
         const mid = (act.at % (this.run?.level.w ?? 1)) * TILE + (TILE - b.w) / 2;
         const off = mid - b.x;
         // In a gust there's no lining up: it stands against it (wait) or goes. Nor with something coming for it here.
-        if (this.gust() !== 0 || !b.onGround || act.t++ > SETTLE_FRAMES || (Math.abs(b.vx) < 0.5 && Math.abs(off) <= 1)) return (this.act = null);
+        if (this.gust() !== 0 || !b.onGround || (this.pinned ? act.t : act.t++) > SETTLE_FRAMES || (Math.abs(b.vx) < 0.5 && Math.abs(off) <= 1))
+          return (this.act = null);
         if (this.run && hurtsStill(raceMap(this.run), this.fore, this.run.frame, b, NO_SHOTS, this.traits.margin)) return (this.act = null);
         // Against the skid past a walk, as the landing's own stop was proven (reach.ts brakeFrom).
         const hard = Math.abs(b.vx) > PHYS.walkSpeed + 1;
@@ -530,6 +538,12 @@ export class Motor {
     const air = gustAir(run.level, f);
     const moves = movesFrom(map.field, b, run.solids, air, columns(map, f));
     const shots = shotsAhead(run, map);
+    // Shoved or knocked into cells the field keeps a route out of (a part's sweep), it has no move from here at all:
+    // it steps out first, rather than stand there until something comes for it.
+    if (!moves.length && b.onGround && inNoGo(map.field, b)) {
+      const out = this.stepOut(map, run, b, target, shots, air);
+      if (out) return out;
+    }
     // Standing here is about to hurt: no waiting for a better moment.
     const margin = this.traits.margin;
     const exposed = hurtsStill(map, this.fore, f, b, shots, margin);
@@ -625,7 +639,34 @@ export class Motor {
         break;
       }
     }
-    return exposed || cornered || !b.onGround ? this.escape(map, run, b, shots, moves, target) : null;
+    if (exposed || cornered || !b.onGround) return this.escape(map, run, b, shots, moves, target);
+    // No move goes anywhere but where it stands. On a ledge's lip with its middle over the drop, the moves it has are
+    // the lip's own: it steps in over the cell, where the route's moves start, and looks again.
+    if (Math.floor((b.x + b.w / 2) / TILE) !== here % map.field.w && air === 0) return { kind: 'settle', at: here, t: 0 };
+    return null;
+  }
+
+  /**
+   * A walk out of the no-go cells it stands in or on, toward `target` first and else away, played out before it's
+   * taken: it lets go once it stands clear of them, and takes one that comes down on its feet and meets nothing that
+   * hurts, with no room to spare (it's in a part's way already). Null when neither way does.
+   */
+  private stepOut(map: RaceMap, run: RunWorld, b: Body, target: number, shots: readonly Shot[], air: number): Act | null {
+    const to = ((target % map.field.w) + 0.5) * TILE - (b.x + b.w / 2);
+    const first = to < 0 ? -1 : to > 0 ? 1 : b.facing;
+    for (const dir of [first, -first]) {
+      let out = -1;
+      const walk = (f: number, at: Body, c: Controls) => {
+        if (out < 0 && f > 0 && at.onGround && !inNoGo(map.field, at)) out = f;
+        Object.assign(c, { left: out < 0 && dir < 0, right: out < 0 && dir > 0, jump: false, jumpPressed: false, run: false, down: false });
+      };
+      const mv = playFrom(map.field, b, walk, STEP_OUT, run.solids, air, columns(map, run.frame));
+      // A drop off the part's edge ends the play as it lands, before it's asked for another frame.
+      if (out < 0 && mv.fate === 'land' && !inNoGo(map.field, mv.end)) out = mv.controls.length;
+      if (out < 0 || !this.clear(map, run, b, mv, shots, 0)) continue;
+      return { kind: 'move', m: { ...mv, controls: mv.controls.slice(0, out), path: mv.path.slice(0, 2 * out) }, i: 0 };
+    }
+    return null;
   }
 
   /**
@@ -666,7 +707,9 @@ export class Motor {
       this.strays = false;
       if (!hard || !this.rng.chance(this.traits.think * (this.seen.has(here) ? FAMILIAR : 1))) return null;
       this.seen.add(here);
-      this.musing = Math.round(this.traits.muse * this.rng.range(0.5, 1.5) * (this.rng.chance(LONG_THINK) ? 2 : 1));
+      // In a fight (`haste`) it's a glance: the fight it's reading moves on without it.
+      const muse = this.traits.muse * (this.haste ? FIGHT_MUSE : 1) * this.rng.range(0.5, 1.5);
+      this.musing = Math.round(muse * (this.rng.chance(LONG_THINK) && !this.haste ? 2 : 1));
       this.strays = this.rng.chance(this.traits.stray);
     }
     if (this.musing <= 0) return null;
@@ -816,6 +859,20 @@ function standCell(field: Level, b: Body): number {
     for (const tx of [Math.floor(b.x / TILE), Math.floor((b.x + b.w - 1) / TILE)]) if (isStandable(field, tx, ty)) return ty * field.w + tx;
   return ty * field.w + mid;
 }
+
+/**
+ * Does `b`'s box, or the floor under its feet, meet a cell the field keeps a route out of (a part's sweep, or a part
+ * that's a floor and hurts or moves too)? The controller has no move from there (reach.ts).
+ */
+function inNoGo(field: Level, b: Body): boolean {
+  for (let ty = Math.floor(b.y / TILE); ty <= Math.floor((b.y + b.h) / TILE); ty++)
+    for (let tx = Math.floor(b.x / TILE); tx <= Math.floor((b.x + b.w - 1) / TILE); tx++)
+      if (tx >= 0 && tx < field.w && ty >= 0 && ty < field.h && field.tiles[ty * field.w + tx] === T_NOGO) return true;
+  return false;
+}
+
+/** Frames a walk out of no-go cells may take, a drop off the part's edge included, before it counts as no way out. */
+const STEP_OUT = 45;
 
 /** Frames ahead a body standing still checks for something coming its way, and that shots in flight are followed. */
 const STILL_AHEAD = 20;

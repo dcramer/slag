@@ -189,7 +189,17 @@ export interface Fight {
   shoved: number;
   /** Race frame each slot last touched a rival. */
   touched: number[];
+  /**
+   * Still frames in a row: each slot's current run of them, the longest any slot stood, and how many runs reached
+   * `PAUSE` frames. A person sees a pause as a stretch of standing, not as a share.
+   */
+  streak: number[];
+  longest: number;
+  pauses: number;
 }
+
+/** Still frames in a row that read as a pause (`Fight.pauses`): half a second. */
+export const PAUSE = 30;
 
 /** Frames after touching a rival a death counts as `Fight.shoved`. */
 const SHOVED = 30;
@@ -207,7 +217,10 @@ function watchFight(run: Run, f: Fight, credit: number[], apart: Set<number>): v
       if (f.contact < 0) f.contact = t;
       if (f.hit < 0) f.hit = t;
     }
-    if (r.items.daze > 0 || live.length < 2) continue;
+    if (r.items.daze > 0 || live.length < 2) {
+      f.streak[r.slot] = 0;
+      continue;
+    }
     let near: (typeof live)[number] | null = null;
     let d = Infinity;
     let touching = false;
@@ -230,7 +243,12 @@ function watchFight(run: Run, f: Fight, credit: number[], apart: Set<number>): v
     }
     f.frames++;
     f.gap += d;
-    if (b.onGround && Math.abs(b.vx) < 1 && !touching) f.still++;
+    if (b.onGround && Math.abs(b.vx) < 1 && !touching) {
+      f.still++;
+      const n = (f.streak[r.slot] = (f.streak[r.slot] ?? 0) + 1);
+      f.longest = Math.max(f.longest, n);
+      if (n === PAUSE) f.pauses++;
+    } else f.streak[r.slot] = 0;
     if (near && Math.abs(b.vx) > RETREAT_VX && Math.sign(b.vx) !== Math.sign(near.body.x - b.x) && Math.abs(near.body.x - b.x) > TILE) f.retreat++;
   }
   for (const r of run.runners) credit[r.slot] = r.items.bonkCredit;
@@ -304,7 +322,7 @@ function playRound(seed: number, m: Match, bots: BotSeats, { at = 15 * 60, limit
   let next = -1;
   let since = 0;
   const causes: Record<string, number> = {};
-  const fight: Fight = { contact: -1, hit: -1, bonks: 0, frames: 0, still: 0, retreat: 0, gap: 0, shoved: 0, touched: [] };
+  const fight: Fight = { contact: -1, hit: -1, bonks: 0, frames: 0, still: 0, retreat: 0, gap: 0, shoved: 0, touched: [], streak: [], longest: 0, pauses: 0 };
   const credit: number[] = [];
   const apart = new Set<number>();
   while (run.endFrame < 0 && run.frame < limit) {

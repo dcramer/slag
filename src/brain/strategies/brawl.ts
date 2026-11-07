@@ -33,6 +33,8 @@ const STRIKE_EVERY = 4;
  * them into something: from the meekest bot to the pushiest (`press` 0 to 1).
  */
 const PATIENCE = [2.5 * 60, 0.6 * 60] as const;
+/** Frames it aims a hit that throws its rival into nothing whichever way it lands, by `press`. */
+const BEAT = [0.6 * 60, 0.15 * 60] as const;
 /** Tiles off its nearest rival (across plus rows) inside which, empty-handed, it shoves one it could shove into something rather than fetch a box, by `press`. */
 const NEAR = [2, 4] as const;
 /** Tiles off its rival it stands to hit with each item: in reach, and no nearer. */
@@ -42,6 +44,10 @@ const THREAT_ACROSS = 0.75;
 const THREAT_ROWS = 1.25;
 /** Frames it shoves at the same rival up close, getting nowhere, before it tries another way in, by `press`. */
 const STALEMATE = [3 * 60, 1.25 * 60] as const;
+/** Tiles across a rival's reach counts as melee: its swing winding back up, it shoves instead of standing off. */
+const MELEE = 2;
+/** Tiles across a rival in the air over it may be for it to jump at them rather than wait where it stands. */
+const OVERHEAD = 2.5;
 /** Frames it spends getting over a rival it couldn't shove: hopping onto their head and down their other side. */
 const FLANK_FRAMES = 50;
 
@@ -164,6 +170,7 @@ export const brawlStrategy: StrategyDef = {
   make(rng, traits) {
     const items = new ItemPlay(rng, traits, BRAWL_ERRANDS);
     const patience = lerp(PATIENCE, traits.press);
+    const beat = lerp(BEAT, traits.press);
     const near = lerp(NEAR, traits.press);
     const stalemate = lerp(STALEMATE, traits.press);
     let frame = 0;
@@ -195,7 +202,9 @@ export const brawlStrategy: StrategyDef = {
       let victim: RunnerSense | null = null;
       for (const r of rivals(v)) if (sideOf(me.x, r.x) === dir && (!victim || Math.abs(r.x - me.x) < Math.abs(victim.x - me.x))) victim = r;
       const lined = victim !== null && knockedInto(v, me, victim, dir, held.kind);
-      return (lined || cornered || frame - inReach >= patience) && rng.chance(traits.knack) ? use : null;
+      // Neither way throws them into anything: waiting won't bring a better hit, only a moment's aim.
+      const wait = lined || (victim !== null && knockedInto(v, me, victim, -dir as -1 | 1, held.kind)) ? patience : beat;
+      return (lined || cornered || frame - inReach >= wait) && rng.chance(traits.knack) ? use : null;
     }
 
     /**
@@ -260,7 +269,7 @@ export const brawlStrategy: StrategyDef = {
         }
         if (!r) return { do: 'goTo', ...aimOf(v.objective) };
         // Shoving at the same rival up close, getting nowhere: over their head and down the other side.
-        close = !me.held && Math.abs(r.x - me.x) < 2 && Math.abs(r.y - me.y) < 1.5 ? close + 1 : 0;
+        close = !(me.held && KNOCKS[me.held.kind]) && Math.abs(r.x - me.x) < 2 && Math.abs(r.y - me.y) < 1.5 ? close + 1 : 0;
         if (close > stalemate) {
           close = 0;
           flank = frame + FLANK_FRAMES;
@@ -268,16 +277,30 @@ export const brawlStrategy: StrategyDef = {
         if (frame < flank) return { do: 'hop', tx: Math.floor(r.x) };
         at = r.grounded ? standOf(r) : (at ?? standNear(v, r.x, Math.round(r.y) - 1));
         if (!at) return { do: 'goTo', ...aimOf(v.objective) };
-        const kind = me.held?.kind ?? null;
+        // What it hits them with: an item that knocks, but a swing winding back up is as good as bare hands up close,
+        // and what doesn't knock (a shield, a jetpack) is no help in a fight at all.
+        const knock = me.held && KNOCKS[me.held.kind] ? me.held.kind : null;
+        const kind = knock && (me.armed || (GAP[knock] ?? 1) > MELEE) ? knock : null;
         const d = lineOf(v, me, r, kind) ?? sideOf(me.x, r.x);
         // Bare-handed it walks into them from the far side of the danger; armed, it stands off in reach.
         const gap = kind ? (GAP[kind] ?? 1) : 0;
         const wrong = sideOf(me.x, r.x) !== d;
-        if (!kind && !wrong && Math.abs(r.x - me.x) >= 0.75) return { do: 'goTo', ...at };
+        const mine = (c: Cell) => c.tx === me.tx && c.ty === me.ty;
+        // Where it stands already, with them in the air over it: up at them.
+        const aim = (c: Cell): Intent =>
+          mine(c) && !r.grounded && r.y < me.y - 1 && Math.abs(r.x - me.x) < OVERHEAD ? { do: 'hop', tx: Math.floor(r.x) } : { do: 'goTo', ...c };
+        if (!kind && !wrong) {
+          // Up against them, or in their cell: on toward the cell past them, so it keeps walking into them rather than
+          // stop beside them (a goTo its own cell is one the motor is at already).
+          const past = { tx: at.tx + d, ty: at.ty };
+          const upon = mine(at) || Math.abs(r.x - me.x) < 0.75;
+          if (upon && tile(v, past.tx, past.ty) === 0 && floorAt(v, past.tx, past.ty + 1) && !hurtsAt(v, past.tx, past.ty)) return aim(past);
+          if (!mine(at)) return aim(at);
+        }
         const c = standNear(v, r.x - d * Math.max(gap, 1.5), at.ty) ?? at;
         // Where it means to stand off, and they're still out of reach: in after them.
-        if (kind && inReach < 0 && c.tx === me.tx && c.ty === me.ty) return { do: 'goTo', ...at };
-        return { do: 'goTo', ...c };
+        if (kind && inReach < 0 && mine(c)) return aim(at);
+        return aim(c);
       },
     };
   },

@@ -15,7 +15,7 @@ import type { PlacedProp } from '../src/sim/props';
 import { brakeFrom, movesFrom } from '../src/sim/reach';
 import { RUN_COUNTDOWN, TILE } from '../src/sim/constants';
 import { NO_INPUT } from '../src/sim/types';
-import { botRace } from './lib/bot-race';
+import { botRace, botRound } from './lib/bot-race';
 
 /** A hard level with a tight jump on a Hard bot's way (THINK), and one where a fumble there is a fall (CHOKE). */
 const THINK_SEED = 3;
@@ -26,6 +26,13 @@ describe('bots', () => {
   it.each([1, 3, 12])('runs seed %i to the flag with the plan built', (seed) => {
     const r = botRace(seed, { steady: true });
     expect(r, `seed ${seed}: died of ${r.cause} at race frame ${r.frames}`).toMatchObject({ finished: true });
+  });
+
+  // Seeds where four Normal bots used to stand still 432 and 111 frames on end (in a part's way with no move out, and
+  // beside a rival in its own cell). How often over many rounds is tests/stats/brawl.test.ts (`pauses`).
+  it.each([17, 28])('never stands a second in a brawl, seed %i: it is always at something', (seed) => {
+    const r = botRound(seed, { mode: 'brawl', limit: RUN_COUNTDOWN + 25 * 60 });
+    expect(r.fight.longest).toBeLessThan(60);
   });
 
   it('plays a whole round on its own: ready, pick, place, race', () => {

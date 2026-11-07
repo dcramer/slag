@@ -1,11 +1,11 @@
 import { describe, expect, it } from 'vitest';
 import { BRAWL_ROUNDS, type BrawlMeasure } from '../../src/game/expectations';
-import { type BotRound, botRound, botRounds } from '../lib/bot-race';
+import { type BotRound, botRound, botRounds, PAUSE } from '../lib/bot-race';
 
 /**
  * Brawl with bots (src/game/expectations.ts `BRAWL_ROUNDS`, docs/MODES.md → Brawl): four Normal bots, how often a
  * round is a draw, how long rounds run, the share of deaths a rival's knock put there, and how hard it's fought:
- * how soon they meet and hit, how often they swing, and how much they stand still, back off or keep their distance. On the bare arena (round 1
+ * how soon they meet and hit, how often they swing, and how much they stand still (and how often for half a second or more), back off or keep their distance. On the bare arena (round 1
  * before anyone has placed a part, `botRound`) and through the first rounds of a match, picking and placing, as the
  * parts pile up (`botRounds`).
  */
@@ -31,6 +31,8 @@ interface Measure extends Record<BrawlMeasure, number> {
   still: number;
   retreat: number;
   gap: number;
+  /** Times someone stood still `PAUSE` frames running, per minute of a bot in it: what a person sees as a pause. */
+  pauses: number;
 }
 
 function measure(name: Arena, rounds: BotRound[]): Measure {
@@ -56,6 +58,7 @@ function measure(name: Arena, rounds: BotRound[]): Measure {
     still: sum((r) => r.fight.still) / frames,
     retreat: sum((r) => r.fight.retreat) / frames,
     gap: sum((r) => r.fight.gap) / frames,
+    pauses: sum((r) => r.fight.pauses) / (frames / 3600),
   };
   const within = secs.filter((s) => s >= BRAWL_ROUNDS.targets.seconds[0] && s <= BRAWL_ROUNDS.targets.seconds[1]).length;
   const quick = rounds.filter((r) => r.frames < 10 * 60);
@@ -67,6 +70,7 @@ function measure(name: Arena, rounds: BotRound[]): Measure {
   console.log(
     `${name}: first contact ${m.contact.toFixed(1)} s, first bonk ${m.hit.toFixed(1)} s, ${(sum((r) => r.fight.bonks) / rounds.length).toFixed(1)} bonks and ${m.uses.toFixed(1)} uses a round, ${Math.round(m.still * 100)}% still, ${Math.round(m.retreat * 100)}% retreating, ${m.gap.toFixed(1)} tiles to the nearest rival, ${sum((r) => r.fight.shoved)} deaths shoved`,
   );
+  console.log(`${name}: ${m.pauses.toFixed(2)} pauses of ${PAUSE}+ frames a bot-minute, the longest ${Math.max(...rounds.map((r) => r.fight.longest))} frames`);
   return m;
 }
 

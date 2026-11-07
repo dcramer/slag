@@ -114,6 +114,7 @@ export const BRAWL_ROUNDS = {
       still: [0, 0.14],
       retreat: [0, 0.21],
       gap: [0, 5.2],
+      pauses: [0, 99],
     },
     placed: {
       draws: [0, 0.2],
@@ -125,6 +126,7 @@ export const BRAWL_ROUNDS = {
       still: [0, 0.18],
       retreat: [0, 0.2],
       gap: [0, 4.8],
+      pauses: [0, 99],
     },
   },
 } as const satisfies {
@@ -133,7 +135,7 @@ export const BRAWL_ROUNDS = {
 };
 
 /** What `BRAWL_ROUNDS` bands. */
-export type BrawlMeasure = 'draws' | 'seconds' | 'knocked' | 'contact' | 'hit' | 'uses' | 'still' | 'retreat' | 'gap';
+export type BrawlMeasure = 'draws' | 'seconds' | 'knocked' | 'contact' | 'hit' | 'uses' | 'still' | 'retreat' | 'gap' | 'pauses';
 
 /**
  * How long a Rising Slag round lasts, the same four bots and loop's boxes (tests/stats/slag-catch-up.test.ts): at most

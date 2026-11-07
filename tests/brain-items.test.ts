@@ -199,9 +199,19 @@ describe('pressing a brawl (strategies/brawl.ts)', () => {
     return Infinity;
   }
 
-  it('swings at a rival in reach within a couple of seconds, though the hit throws them into nothing; a pushier bot sooner', () => {
-    expect(swingsAfter('normal')).toBeLessThanOrEqual(2 * 60);
+  it('swings at a rival in reach within half a second when neither way throws them into anything; a pushier bot sooner', () => {
+    // Waiting only pays when a better hit can come: here none can, and standing there in reach is a pause.
+    expect(swingsAfter('normal')).toBeLessThanOrEqual(30);
     expect(swingsAfter('hard')).toBeLessThan(swingsAfter('easy'));
+  });
+
+  it('bare-handed and up against a rival, walks on into them rather than stand beside them', () => {
+    const s = brawler('normal');
+    // Both in cell 5: a goTo their cell is one it's in already, and the motor would stop there.
+    const me: SelfSense = { ...SELF, x: 5.2 };
+    const r = rival(5.95, 0);
+    const v = view({ tiles: ARENA, objective: fight, runners: [r], self: me });
+    for (let f = 0; f < 30; f++) expect(s.think(v, me)).toMatchObject({ do: 'goTo', tx: 6, ty: 13 });
   });
 
   it('stays in the fight while the slag only boils, and climbs once it pours in under it', () => {
