@@ -1,5 +1,6 @@
 import type { Phase } from '../game/match';
 import type { ModeId } from '../game/modes';
+import type { ShoveRules } from '../sim/collide';
 import type { ItemKind } from '../sim/items/types';
 import type { Role } from '../sim/props';
 import type { Personality } from './personality';
@@ -14,7 +15,7 @@ import type { Temperament } from './temperament';
  */
 
 /** Bumped when BrainView changes shape. A player's script will declare the version it was written against. */
-export const BRAIN_VIEW_VERSION = 10;
+export const BRAIN_VIEW_VERSION = 11;
 
 /** How fast across the ground, as a player would say it. */
 export type Pace = 'still' | 'walking' | 'running' | 'flying';
@@ -53,6 +54,8 @@ export interface SelfSense {
   armed: boolean;
   /** How many times as hard a hit throws it now (`RunnerSense.hurt`). */
   hurt: number;
+  /** In a spawn's safe zone while the spawn shield lasts (it shows): nothing that hurts touches it, and no body does. */
+  shielded: boolean;
 }
 
 export interface RunnerSense {
@@ -68,6 +71,8 @@ export interface RunnerSense {
   held: ItemKind | null;
   /** How many times as hard a hit throws it now, as its smoke shows (a brawl's build-up), to a tenth: 1 before any, or unset. */
   hurt?: number;
+  /** In a spawn's safe zone while the spawn shield lasts, as `SelfSense.shielded`. */
+  shielded: boolean;
 }
 
 /** A mystery box standing in the level: hit it from below and it pops an item. */
@@ -150,6 +155,8 @@ export interface BrainView {
   phase: Phase;
   /** The match's playstyle mode: which strategy plays its race (strategies/). */
   mode: ModeId;
+  /** How hard bodies shove each other in this mode (sim/collide.ts), as anyone learns by playing it: what a shove or a run-up throws a rival. */
+  shove: ShoveRules;
   /** Frames into this phase. */
   phaseFrame: number;
   slot: number;
@@ -231,6 +238,12 @@ export type Intent =
   | { do: 'goTo'; tx: number; ty: number; haste?: boolean }
   /** Race: no proven way on, so run and jump for (tx, ty) anyway, off whatever edge is in the way. */
   | { do: 'leap'; tx: number; ty: number }
+  /**
+   * Race: run along the ground toward `dir` through column `tx`, at whoever stands at (tx, ty), and brake past it: a
+   * body check (sim/collide.ts `ShoveRules.check`). Played out first; one that wouldn't stay on its feet, or with
+   * nothing between it and the column to run, goes to (tx, ty) by the route instead.
+   */
+  | { do: 'charge'; dir: -1 | 1; tx: number; ty: number }
   /** Race: jump straight up in column `tx`, again whenever it lands, keeping over it: to knock a box overhead. */
   | { do: 'hop'; tx: number }
   /** Race: press use with the held item, facing `dir` if given, holding up if `up` (a throw aimed high). */

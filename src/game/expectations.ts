@@ -70,10 +70,22 @@ export const LEAD_HOLDS = {
  * `draws`: the share of rounds nobody wins (the last ones out on one frame, or the time out). `seconds`: a round's
  * mean length from GO. `knocked`: the share of deaths with a rival's knock still credited (sim/items/common.ts
  * `BONK_CREDIT`), thrown or bumped into the level. How hard it's fought (tests/lib/bot-race.ts `Fight`): `contact`
- * and `hit`, seconds from GO to the first touch or bonk and to the first bonk; `uses`, items used a round; `still`
+ * and `hit`, seconds from GO to the first touch or bonk and to the first bonk; `uses`, items used a minute of fighting
+ * (from GO to a round's end: a short round isn't fewer swings; owner decision), where earlier numbers below are per
+ * round; `still`
  * and `retreat`, the shares of frames in it standing still and moving away from the nearest rival; `gap`, the tiles
- * to that rival. Measured bare 4%, 21.5 s, 75%, 1.6 s, 3.3 s, 8.9 uses, 10%, 17%, 5.3 tiles; placed 0%, 19.1 s, 66%,
- * 1.5 s, 4.5 s, 6.6 uses, 11%, 18%, 6.2 tiles (23 of 48 and 27 of 64 rounds in 20–40 s, 3 and 11 under 10 s; 30 and 45
+ * to that rival; `pauses`, times a bot stood still half a second on end (`PAUSE` frames), per bot-minute: a person
+ * sees a pause as a stretch, not a share. Measured bare 0%, 16.5 s, 70%, 1.4 s, 3.6 s, 24.1 uses a minute (6.6 a
+ * round), 5%, 19%, 5.1 tiles,
+ * 0.28 pauses (the longest still 52 frames); placed 2%, 18.2 s, 63%, 1.2 s, 3.1 s, 20.5 uses a minute (6.2 a round),
+ * 7%, 19%, 5.3 tiles, 0.40 (1327) (24 of 48 and 25 of 64 rounds in the 15–30 s target, 10 and 13 under 10 s; 31 and 46 deaths to hazards, 28 and 32 off
+ * the sides), since a fighting bot is always at something (src/brain/strategies/brawl.ts, motor.ts): an unlined hit
+ * after a moment's aim, never a goTo the cell it's in, a shove with a swing winding back up, a jump at a rival
+ * overhead, a charge at a rival a body check would throw into something, a glance to think, a hazard waited on only a
+ * moment, and out of a part's no-go cells or off a lip's spot rather than stand there. Rounds end sooner when nobody
+ * stands still (on seeds 49–144 the same bots average 18.6 s against 19.4 s before, so most of the 5 s here is these
+ * 48 seeds' draw), and items go at the same rate a minute of fighting as before (24.8 and 20.7). From bare 4%, 21.5 s,
+ * 75%, 1.6 s, 3.3 s, 8.9 uses, 10%, 17%, 5.3 tiles; placed 0%, 19.1 s, 66%, 1.5 s, 4.5 s, 6.6 uses, 11%, 18%, 6.2 tiles (23 of 48 and 27 of 64 rounds in 20–40 s, 3 and 11 under 10 s; 30 and 45
  * deaths to hazards, 28 and 25 off the sides) since the arena is cut into bands of ledges over shafts to the pit with a
  * hall either side for the set's pieces, which are only what kills or knocks (gen/level/builders/arena.ts): its 6 come
  * in 5.25 to 6 of every set's arenas (from 2.6 to 6), a hazard is within 3 tiles of 42% of the places to stand (from
@@ -115,36 +127,36 @@ export const LEAD_HOLDS = {
  * before bots put their hazards where a knock throws someone, and 63%, 39.6 s, 11% and 59%, 38.1 s, 9% before bots
  * lined rivals up and fetched boxes. The slag still takes more deaths than anything else. Earlier or faster pours
  * shortened rounds and added draws. The targets are the owner's, from the party brawler: draws rare, rounds of
- * 20–40 s. The bands only catch a regression; the bots before `press` fail the first bonk, uses, retreat and gap
- * bands, and the motor before `haste` the still bands, so a return to turtling does too. Since hits build up
- * (`RunRules.buildup`), a hit flies farther and the field ends up further apart: bare 20.0 s (19.3 in a second run), 8.0
- * uses (7.6) and 6.1 tiles (5.9), from 21.5 s, 8.9 and 5.3; with parts placed 18.1 s, 6.2 uses (6.6), 6.4 tiles and 65%
- * knocked (70%), from 19.1 s, 6.6, 6.2 and 66%.
+ * 15–30 s (from 20–40 s; the counts in 20–40 s above were against that one). The bands only catch a regression; the bots before `press` fail the first bonk, uses, retreat and gap
+ * bands, the motor before `haste` the still bands and the bots before they kept at something the pauses bands, so a
+ * return to turtling does too.
  */
 export const BRAWL_ROUNDS = {
-  targets: { draws: 0.2, seconds: [20, 40] },
+  targets: { draws: 0.2, seconds: [15, 30] },
   bands: {
     bare: {
       draws: [0, 0.2],
-      seconds: [19, 29],
+      seconds: [15, 22],
       knocked: [0.55, 0.8],
       contact: [0, 2],
       hit: [0, 4.2],
-      uses: [7.5, 15],
-      still: [0, 0.14],
+      uses: [22, 30],
+      still: [0, 0.09],
       retreat: [0, 0.21],
-      gap: [0, 6.5],
+      gap: [0, 5.5],
+      pauses: [0, 1],
     },
     placed: {
       draws: [0, 0.2],
-      seconds: [17.5, 25],
-      knocked: [0.5, 0.75],
+      seconds: [15, 22],
+      knocked: [0.5, 0.8],
       contact: [0, 1.9],
       hit: [0, 5],
-      uses: [5.8, 12],
-      still: [0, 0.18],
+      uses: [19, 26],
+      still: [0, 0.09],
       retreat: [0, 0.21],
-      gap: [0, 7],
+      gap: [0, 6.5],
+      pauses: [0, 1],
     },
   },
 } as const satisfies {
@@ -153,7 +165,7 @@ export const BRAWL_ROUNDS = {
 };
 
 /** What `BRAWL_ROUNDS` bands. */
-export type BrawlMeasure = 'draws' | 'seconds' | 'knocked' | 'contact' | 'hit' | 'uses' | 'still' | 'retreat' | 'gap';
+export type BrawlMeasure = 'draws' | 'seconds' | 'knocked' | 'contact' | 'hit' | 'uses' | 'still' | 'retreat' | 'gap' | 'pauses';
 
 /**
  * How long a Rising Slag round lasts, the same four bots and loop's boxes (tests/stats/slag-catch-up.test.ts): at most

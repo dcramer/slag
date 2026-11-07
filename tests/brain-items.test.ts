@@ -4,9 +4,11 @@ import { rollPersonality } from '../src/brain/personality';
 import { brawlStrategy } from '../src/brain/strategies/brawl';
 import { ItemPlay } from '../src/brain/strategies/items';
 import { ITEM_TACTICS, knockedInto, type Moment } from '../src/brain/tactics';
+import { RACE_SHOVE } from '../src/sim/collide';
 import { BRAIN_VIEW_VERSION, type BrainView, type RunnerSense, type SelfSense } from '../src/brain/types';
 import { Motor } from '../src/brain/motor';
 import { Match } from '../src/game/match';
+import { MODES } from '../src/game/modes';
 import { PHYS, RUN_COUNTDOWN, TILE } from '../src/sim/constants';
 import { T_ONEWAY, T_SOLID } from '../src/sim/level';
 import { botRound } from './lib/bot-race';
@@ -45,6 +47,7 @@ const SELF: SelfSense = {
   held: null,
   armed: true,
   hurt: 1,
+  shielded: false,
 };
 
 const rival = (x: number, up: number, over: Partial<RunnerSense> = {}): RunnerSense => ({
@@ -56,12 +59,14 @@ const rival = (x: number, up: number, over: Partial<RunnerSense> = {}): RunnerSe
   alive: true,
   finished: false,
   held: null,
+  shielded: false,
   ...over,
 });
 
 function view(over: Partial<BrainView> & { tiles?: Uint8Array }): BrainView {
   return {
     version: BRAIN_VIEW_VERSION,
+    shove: RACE_SHOVE,
     phase: 'run',
     mode: 'slag',
     phaseFrame: 0,
@@ -200,9 +205,36 @@ describe('pressing a brawl (strategies/brawl.ts)', () => {
     return Infinity;
   }
 
-  it('swings at a rival in reach within a couple of seconds, though the hit throws them into nothing; a pushier bot sooner', () => {
-    expect(swingsAfter('normal')).toBeLessThanOrEqual(2 * 60);
+  it('swings at a rival in reach within half a second when neither way throws them into anything; a pushier bot sooner', () => {
+    // Waiting only pays when a better hit can come: here none can, and standing there in reach is a pause.
+    expect(swingsAfter('normal')).toBeLessThanOrEqual(30);
     expect(swingsAfter('hard')).toBeLessThan(swingsAfter('easy'));
+  });
+
+  it('bare-handed and up against a rival in its own cell, never sends itself to the cell it stands in', () => {
+    const s = brawler('normal');
+    // Both in cell 5: a goTo their cell is one it's in already, and the motor would stand it still beside them.
+    const me: SelfSense = { ...SELF, x: 5.2 };
+    const r = rival(5.95, 0);
+    const v = view({ tiles: ARENA, objective: fight, runners: [r], self: me });
+    for (let f = 0; f < 30; f++) expect(s.think(v, me)).not.toMatchObject({ do: 'goTo', tx: 5, ty: 13 });
+  });
+
+  it('lines up a run-up into a rival a few tiles off a ledge where the mode body-checks, and not where it only jostles', () => {
+    // The floor ends at column 10; a check from three tiles throws the rival off it, a walk's shove wouldn't.
+    const ledge = tiles((set) => {
+      for (let x = 10; x < W; x++) set(x, 14, 0);
+      for (let y = 8; y < 14; y++) set(0, y, T_SOLID);
+    });
+    const me: SelfSense = { ...SELF, x: 3.5, tx: 3 };
+    const r = rival(6.5, 0);
+    const go = (shove: BrainView['shove']) => {
+      const s = brawler('normal');
+      const v = { ...view({ tiles: ledge, objective: fight, runners: [r], self: me }), shove };
+      return s.think(v, me);
+    };
+    expect(go(MODES.brawl.run.shove!)).toEqual({ do: 'charge', dir: 1, tx: 6, ty: 13 });
+    expect(go(RACE_SHOVE).do).not.toBe('charge');
   });
 
   it('stays in the fight while the slag only boils, and climbs once it pours in under it', () => {
