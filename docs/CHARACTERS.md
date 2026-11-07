@@ -173,7 +173,7 @@ The strongest reads first. **Keyed** marks the non-humanoids, the riskiest to dr
 | 49 | skeleton | Humerus | humanoid, stocky | drawn flat; passes the clean colour read ("Sans (Undertale)", medium and low); the hanging loop on the crown cut, every form of it read the skull as a ghost, an onion, an egg or an antenna |
 | 50 | android | B-Minus | humanoid, slim + sword | drawn flat (2026-11-06); the clean colour read fails seven rounds running: the white bob over the blindfold reads as "a white round helmet with a visor" (once "Bomberman is possible"), as "a white hood", and still as a helmet with her face cut out from under the bob; the design read small passed ("2B, medium" twice). Owner to decide; accepted as she is (2026-11-07) |
 | 51 | climber | Maddie Summit | humanoid, small | drawn flat; round 3 (the lunchbox a tan tin: grey, it read as nothing and her parka as "a green shirt") named the homage at medium for both clean colour readers, paired with nobody |
-| 52 | hitman | Agent 46½ | humanoid, tall | to draw flat (2026-11-07) |
+| 52 | hitman | Agent 46½ | humanoid, chunky | drawn flat; passes the clean colour read on all three sheets ("Agent 47 (Hitman)" medium twice, high on roll 2, medium on roll 3), unpaired; drawn as a chunky toy (lean, he was a stick at the cast's height; an orange suit read as a prisoner's jumpsuit) |
 
 **What to check.** No two kinds may rhyme. Watch these pairs:
 
