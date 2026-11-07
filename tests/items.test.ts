@@ -8,7 +8,7 @@ import { KILL_Y, LEVEL_H, LEVEL_W, POP_HOLD, RUN_COUNTDOWN, TILE } from '../src/
 import { BAT, blockCells, DROP_LIFE, giveItem, ITEM_KINDS, ITEMS, type ItemKind, POCKET, SWORD, spawnItem, TAX, TREMOR } from '../src/sim/items';
 import type { Level } from '../src/sim/level';
 import { bodyAtCell } from '../src/sim/physics';
-import { canPlace, type Module, mysteryState, type PlacedProp, type PropDef, rollItem, THROW_GRACE } from '../src/sim/props';
+import { canPlace, type Module, mysteryState, type PlacedProp, type PropDef, rollItem, standHolds, THROW_GRACE } from '../src/sim/props';
 import { type Runner, RunWorld } from '../src/sim/run';
 import { leaderOf as leaderIndex, routeDistance } from '../src/sim/standing';
 import { type InputFrame, NO_INPUT } from '../src/sim/types';
@@ -609,6 +609,79 @@ describe('mystery crate', () => {
       expect(m.pool.every((k) => ITEM_KINDS.includes(k))).toBe(true);
       expect(def.footprint).toEqual([[0, 0]]);
     }
+  });
+});
+
+describe('item stand', () => {
+  /** A stand on the floor at column `tx`, refilling in `refill` frames, as a brawl's arena hangs them. */
+  const standAt = (tx: number, refill: number, pool: ItemKind[] = ['sword', 'bat', 'puck']): PlacedProp => ({
+    uid: 9,
+    owner: -1,
+    tx: 0,
+    ty: 0,
+    rot: 0,
+    def: {
+      key: 'loop-box',
+      name: 'Weapon Stand',
+      maker: 'the level',
+      archetype: 'mystery',
+      role: 'utility',
+      style: { metal: 'steel', trim: 'none', hue: 0, glowHue: 0, woodHue: 30 },
+      motion: { type: 'none' },
+      modules: [{ type: 'stand', cells: [[tx, FLOOR - 1]], pool, refill, seed: 1 }],
+      footprint: [[tx, FLOOR - 1]],
+    },
+  });
+  const holds = (run: RunWorld) => {
+    const m = run.resolved[0].mods[0] as Extract<Module, { type: 'stand' }>;
+    return standHolds(m, run.propState.get(9), 0, run.frame, run.itemSeed, 9);
+  };
+
+  it('walking into it with empty hands takes what it shows; it shows the next one after its timer, not before', () => {
+    const run = race([8], [standAt(10, 100)]);
+    const shown = holds(run);
+    expect(shown).not.toBeNull();
+    steps(run, 40, () => press({ right: true }));
+    expect(run.runners[0].items.held?.kind).toBe(shown);
+    expect(holds(run)).toBeNull();
+    // Empty-handed again and standing in it: nothing until the timer runs out, then the fresh one is theirs.
+    run.runners[0].items.held = null;
+    run.runners[0].body = bodyAtCell(10, FLOOR - 1);
+    const taken = mysteryState(run.propState.get(9), 0).popAt;
+    while (run.frame < taken + 99) steps(run, 1);
+    expect(run.runners[0].items.held).toBeNull();
+    steps(run, 2);
+    expect(run.runners[0].items.held).not.toBeNull();
+    expect(mysteryState(run.propState.get(9), 0).pops).toBe(2);
+  });
+
+  it('full hands leave it where it is, and it is no solid: you walk through it', () => {
+    const run = race([8], [standAt(10, 100)]);
+    giveItem(run.runners[0], 'shield');
+    const shown = holds(run);
+    steps(run, 60, () => press({ right: true }));
+    expect(run.runners[0].items.held?.kind).toBe('shield');
+    expect(holds(run)).toBe(shown);
+    expect(run.runners[0].body.x).toBeGreaterThan(11 * TILE);
+  });
+});
+
+describe('armed from GO', () => {
+  const ARMED = { flag: false, lastStanding: true, ahead: 'none', armed: { deal: ['sword', 'bat', 'glove', 'clock'], uses: 1 } } as const;
+  const start = (itemSeed: number) => new RunWorld(testLevel(), [], [0, 1, 2, 3], 0, itemSeed, [], true, ARMED);
+
+  it('every runner starts holding one of the deal, good for its uses, the same in two runs and different between bouts', () => {
+    const a = start(5);
+    expect(a.runners.every((r) => r.items.held !== null && ARMED.armed.deal.includes(r.items.held.kind as never) && r.items.held.uses === 1)).toBe(true);
+    const kinds = (run: RunWorld) => run.runners.map((r) => r.items.held?.kind);
+    expect(kinds(start(5))).toEqual(kinds(a));
+    // Each bout is a race of its own with its own item seed: across a few, not every seat gets the same thing every time.
+    const bouts = Array.from({ length: 6 }, (_, i) => kinds(start(100 + i)).join());
+    expect(new Set(bouts).size).toBeGreaterThan(1);
+  });
+
+  it('a race arms nobody', () => {
+    expect(new RunWorld(testLevel(), [], [0, 1]).runners.every((r) => r.items.held === null)).toBe(true);
   });
 });
 

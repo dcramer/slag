@@ -75,11 +75,13 @@ export const LEAD_HOLDS = {
  * and `hit`, seconds from GO to the first touch or bonk and to the first bonk; `uses`, items used a minute of fighting
  * (from GO to a round's end: a short round isn't fewer swings; owner decision); `still` and `retreat`, the shares of frames in it standing still and moving away from the nearest rival; `gap`, the tiles
  * to that rival; `pauses`, times a bot stood still half a second on end (`PAUSE` frames), per bot-minute: a person
- * sees a pause as a stretch, not a share. Measured bare 0%, 20.0 s, 67%, 1.6 s, 4.0 s, 26.7 uses a minute (8.9 a
- * round), 5%, 21%, 5.7 tiles, 0.37 pauses (the longest 39 frames); placed 2%, 17.0 s, 64%, 1.3 s, 3.9 s, 25.1 uses a
- * minute (7.1 a round), 6%, 18%, 5.2 tiles, 0.47 (738) (20 of 48 and 26 of 64 rounds in the 15–30 s target, 6 and 12
- * under 10 s; 27 and 60 deaths to hazards, 16 and 25 off the sides, 101 and 106 to the slag). Seeds 1–48 draw long bare
- * rounds: on 49–144 the same bots average 16.7 s, 67% knocked, no draws. The targets are the owner's, from the party
+ * sees a pause as a stretch, not a share. Measured with everyone armed from GO and stands for boxes bare 0%, 19.6 s,
+ * 77%, 0.9 s, 2.2 s, 41.8 uses a minute, 7%, 20%, 5.6 tiles, 0.72 pauses (the longest 66 frames); placed 0%, 18.9 s,
+ * 79%, 0.9 s, 2.2 s, 38.3 uses a minute, 7%, 20%, 5.7 tiles, 0.63 (120) (21 of 48 and 28 of 64 rounds in the 15–30 s
+ * target, 6 and 9 under 10 s; 30 and 58 deaths to hazards, 30 and 43 off the sides, 76 and 80 into the drop, 8 and 10
+ * to the slag). Before (boxes, bare hands at GO, the slag pooled in the drop from GO): bare 0%, 20.0 s, 67%, 1.6 s,
+ * 4.0 s, 26.7 uses a minute, 0.37 pauses; placed 2%, 17.0 s, 64%, 1.3 s, 3.9 s, 25.1; 101 and 106 deaths to the slag,
+ * nearly all of them falls into its pool. The targets are the owner's, from the party
  * brawler: draws rare, rounds of 15–30 s. Earlier or faster pours shortened rounds and added draws. The bands only catch
  * a regression: the bots before `press` fail the first bonk, uses, retreat and gap bands, the motor before `haste` the
  * still bands and the bots before they kept at something the pauses bands, so a return to turtling does too.
@@ -90,10 +92,10 @@ export const BRAWL_ROUNDS = {
     bare: {
       draws: [0, 0.2],
       seconds: [15, 22],
-      knocked: [0.55, 0.8],
-      contact: [0, 2],
-      hit: [0, 4.2],
-      uses: [22, 30],
+      knocked: [0.65, 0.88],
+      contact: [0, 1.5],
+      hit: [0, 3.2],
+      uses: [35, 48],
       still: [0, 0.09],
       retreat: [0, 0.21],
       gap: [0, 6],
@@ -102,10 +104,10 @@ export const BRAWL_ROUNDS = {
     placed: {
       draws: [0, 0.2],
       seconds: [15, 22],
-      knocked: [0.5, 0.8],
-      contact: [0, 1.9],
-      hit: [0, 5],
-      uses: [17, 26],
+      knocked: [0.65, 0.88],
+      contact: [0, 1.5],
+      hit: [0, 3.2],
+      uses: [32, 45],
       still: [0, 0.09],
       retreat: [0, 0.21],
       gap: [0, 6.5],

@@ -8,7 +8,7 @@ import { analyzeRoutes } from '../gen/level/routes';
 import { type Level, spawnsOf } from '../sim/level';
 import { RUN_COUNTDOWN, TILE } from '../sim/constants';
 import { knockScale } from '../sim/items';
-import { barrierOf, footprint, hangRow, motionOffset, mysterySpent, mysteryState, type PlacedProp, spotAt } from '../sim/props';
+import { barrierOf, footprint, hangRow, motionOffset, mysterySpent, mysteryState, type PlacedProp, spotAt, standHolds } from '../sim/props';
 import type { Body } from '../sim/physics';
 import { feetUp, type Runner, type RunWorld } from '../sim/run';
 import { raceMap } from './route';
@@ -68,16 +68,23 @@ const OBJECTIVES: Record<ModeId, (m: Match) => Objective> = {
 /** Rows `r`'s feet stand above the spawn's floor, laps and all. */
 const upOf = (run: RunWorld, r: Runner) => round4(((run.level.spawn.ty + 1) * TILE - feetUp(run.level, r)) / TILE);
 
-/** The mystery boxes standing in the race, where they stand now. */
+/** The mystery boxes and item stands standing in the race, where they stand now. */
 function boxesOf(run: RunWorld): BoxSense[] {
   const out: BoxSense[] = [];
   for (const rp of run.resolved)
     rp.mods.forEach((mod, mi) => {
-      if (mod.type !== 'mystery') return;
-      const st = mysteryState(run.propState.get(rp.pp.uid), mi);
-      const ready = !mysterySpent(mod, st.pops) && run.frame >= st.ready;
+      if (mod.type !== 'mystery' && mod.type !== 'stand') return;
+      const st = run.propState.get(rp.pp.uid);
       const [ox, oy] = motionOffset(rp, run.frame);
-      for (const [cx, cy] of mod.cells) out.push({ tx: Math.round(cx + ox / TILE), ty: Math.round(cy + oy / TILE), ready, hands: !!mod.deal });
+      const at = (cx: number, cy: number) => ({ tx: Math.round(cx + ox / TILE), ty: Math.round(cy + oy / TILE) });
+      if (mod.type === 'stand') {
+        const kind = standHolds(mod, st, mi, run.frame, run.itemSeed, rp.pp.uid);
+        for (const [cx, cy] of mod.cells) out.push({ ...at(cx, cy), ready: kind !== null, hands: true, stand: true, kind });
+        return;
+      }
+      const pops = mysteryState(st, mi);
+      const ready = !mysterySpent(mod, pops.pops) && run.frame >= pops.ready;
+      for (const [cx, cy] of mod.cells) out.push({ ...at(cx, cy), ready, hands: !!mod.deal, stand: false, kind: null });
     });
   return out;
 }

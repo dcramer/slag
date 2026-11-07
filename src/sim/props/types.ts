@@ -470,6 +470,12 @@ export type Module =
       deal?: ItemDeal;
     }
   /**
+   * Item stand (a brawl's, gen/level/loop-boxes.ts with the profile's `stands`): a pedestal on the floor, no solid,
+   * showing the item it holds (`standHolds`, rolled from `pool` by how many it has given). Touch it with empty hands
+   * and it's yours; a fresh one stands there `refill` frames later.
+   */
+  | { type: 'stand'; cells: Cell[]; pool: ItemKind[]; refill: number; seed: number }
+  /**
    * A swing that hangs `length` tiles from a ceiling (`mount: 'hang'`); `at` is
    * the hook. It holds one runner for `strain` frames, then snaps and takes
    * `regrow` frames to come back.

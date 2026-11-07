@@ -31,6 +31,8 @@ export interface PropDrawOpts {
    * thin part bolder and add the motion lines a still can't otherwise show; nothing here is a hitbox.
    */
   card?: boolean;
+  /** The race's item seed (`RunWorld.itemSeed`), from which a stand's item is rolled; absent outside a race, where it holds nothing yet. */
+  itemSeed?: number;
 }
 
 /** Everything a module's art function gets. */

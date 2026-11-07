@@ -21,6 +21,7 @@ import {
   stepItems,
 } from './items';
 import { goalRect, killY, lapShift, type Level, offMap, spawnsOf, spawnZones, tileAt } from './level';
+import type { ItemKind } from './items/types';
 import { leaderOf } from './standing';
 import { newScreen, type Screen, type ScreenRules } from './screen';
 import { tideStart } from './tide';
@@ -145,6 +146,22 @@ export interface RunRules {
   buildup?: BuildUp;
   /** The leader's screen (sim/screen.ts): fall off its bottom and you're out. Unset: no such window. */
   screen?: ScreenRules;
+  /** Everyone starts armed (`Armed`): a brawl's fight starts at GO, not at the first stand. */
+  armed?: Armed;
+}
+
+/**
+ * What everyone starts a race holding: one of `deal`, drawn per runner from the race's item seed (`armedWith`), so each
+ * bout hands each seat its own and every peer the same one, good for `uses` goes (a starter: fewer than a stand's).
+ */
+export interface Armed {
+  deal: readonly ItemKind[];
+  uses: number;
+}
+
+/** What `slot` starts a race holding, under rules that arm everyone (`RunRules.armed`): one draw of the race's item seed. */
+export function armedWith(armed: Armed, itemSeed: number, slot: number): ItemKind {
+  return new Rng(deriveSeed(itemSeed, `armed:${slot}`)).pick(armed.deal);
 }
 
 /**
@@ -250,6 +267,8 @@ export class RunWorld {
         lap: 0,
       };
     });
+    const armed = rules.armed;
+    if (armed?.deal.length) for (const r of this.runners) giveItem(r, armedWith(armed, itemSeed, r.slot), armed.uses);
     this.resolved = [...level.setPieces, ...placed].map(resolveProp);
     for (const r of this.resolved) {
       const st = newPropState();

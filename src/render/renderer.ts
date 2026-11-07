@@ -443,6 +443,7 @@ export class Renderer {
           beams,
           solids,
           runners: pushers,
+          itemSeed: run?.itemSeed,
         });
       }
     });
