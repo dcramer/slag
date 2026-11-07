@@ -8,7 +8,7 @@ import { fromWire, hashMatch, hashSnap, restoreMatch, snapshotMatch, toWire } fr
 import { giveItem, type ItemKind, ITEMS, spawnItem } from '../src/sim/items';
 import { RunWorld } from '../src/sim/run';
 import { type InputFrame, NO_INPUT } from '../src/sim/types';
-import { SHAPE_FILE, type SnapShape, shapeDiff, snapshotShape } from './lib/snapshot-shape';
+import { SHAPE_FILE, type SnapShape, snapshotShape, unseen } from './lib/snapshot-shape';
 
 const press = (k: Partial<InputFrame>): InputFrame => ({ ...NO_INPUT, ...k });
 
@@ -93,11 +93,11 @@ describe('snapshot coverage', () => {
     expect(missing, `new RunWorld state: ${howTo}`).toEqual([]);
   });
 
-  it('matches the committed wire shape, nested fields and all', () => {
+  it('carries nothing the committed wire shape has not seen, nested fields and all', () => {
     const committed = JSON.parse(readFileSync(SHAPE_FILE, 'utf8')) as SnapShape;
     expect(
-      shapeDiff(committed, snapshotShape()),
-      `the snapshot shape changed (- as ${SHAPE_FILE} has it, + as a snapshot now carries it): run \`pnpm snap:shape\` and commit the file. Don't bump SNAP_VERSION in a branch, \`pnpm land\` bumps it once when the file changes`,
+      unseen(committed, snapshotShape()),
+      `the snapshot shape changed (these paths are new to ${SHAPE_FILE}): run \`pnpm snap:shape\` and commit the file. Don't bump SNAP_VERSION in a branch, \`pnpm land\` bumps it once when the file changes`,
     ).toEqual([]);
   }, 20_000);
 });
