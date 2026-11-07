@@ -1,7 +1,7 @@
-import { inset, overlaps, type Rect, type Vec } from '../core/geom';
+import { inset, overlaps, pointInRect, type Rect, type Vec } from '../core/geom';
 import { deriveSeed, Rng } from '../core/rng';
 import { type BloodCell, buildBlood, groundOf, spillBlood } from './blood';
-import { FPS, PLAYER_W, POP_HOLD, RUN_COUNTDOWN, TILE } from './constants';
+import { FPS, PLAYER_W, POP_HOLD, RUN_COUNTDOWN, SHIELD_FRAMES, TILE } from './constants';
 import { BUMP, type Bump, CHECK, collideRunners, contactStart, type ShoveRules, footing as stackFooting } from './collide';
 import {
   absorbHit,
@@ -169,9 +169,9 @@ export class RunWorld {
   /** Loose held items and smoke clouds (src/sim/items). */
   items: ItemWorld = newItemWorld();
   /**
-   * Spawn safe zone (world px), or null. A runner whose body overlaps it can't
-   * be killed by props: hazards, projectiles (they pop harmlessly) and crushing.
-   * Falling into the pit, giving up and the race timer still apply.
+   * Spawn safe zone (world px), or null. Until the shield runs out (`shieldLeft`), a runner whose body overlaps it
+   * can't be killed by props: hazards, projectiles (they pop harmlessly) and crushing. Falling into the pit, giving up
+   * and the race timer still apply. Ask `isSafe` or `safeAt`, which know the time, rather than the rect.
    */
   readonly safeZone: Rect | null;
   /** Every spawn cell's safe zone (Level.spawns), the first being `safeZone`. */
@@ -260,9 +260,19 @@ export class RunWorld {
     return this.out.beams!;
   }
 
-  /** Is this runner inside the spawn safe zone (immune to props) right now? */
+  /** Frames left of the spawn shield (SHIELD_FRAMES from GO), 0 once it's gone: then the zones are just ground. */
+  get shieldLeft(): number {
+    return Math.max(0, RUN_COUNTDOWN + SHIELD_FRAMES - this.frame);
+  }
+
+  /** Is this runner inside a spawn safe zone while the shield lasts (immune to props) right now? The one place that decides. */
   isSafe(r: Runner): boolean {
-    return this.safeZones.some((s) => overlaps(r.body, s.zone));
+    return this.shieldLeft > 0 && this.safeZones.some((s) => overlaps(r.body, s.zone));
+  }
+
+  /** Is this point in a spawn safe zone while the shield lasts (a dive landing there just pops)? */
+  safeAt(x: number, y: number): boolean {
+    return this.shieldLeft > 0 && this.safeZones.some((s) => pointInRect(x, y, s.zone));
   }
 
   get active(): Runner[] {

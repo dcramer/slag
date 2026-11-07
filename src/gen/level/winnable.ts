@@ -69,8 +69,9 @@ export function cacheFor(field: Level): ReachCache {
 
 /**
  * The level as the proof sees it: plain blocks (placed and set pieces) are
- * terrain, every other barrier is T_NOGO. The spawn pocket can't hurt anyone
- * (RunWorld's safe zone), so nothing there is a barrier. Its set pieces are
+ * terrain, every other barrier is T_NOGO. A route leaves the spawn pocket at its
+ * start, while the pocket still shields (RunWorld.isSafe, SHIELD_FRAMES from GO),
+ * so nothing there is a barrier. Its set pieces are
  * every part standing, so a bridge can't take a cell one of them holds.
  */
 export function fieldOf(level: Level, placed: readonly PlacedProp[]): Level {

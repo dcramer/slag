@@ -137,6 +137,11 @@ export const MAX_PLAYERS = 8;
 /** @alias */
 export const RUN_COUNTDOWN = FPS; // frozen frames before GO
 /**
+ * Frames from GO the spawn zones shield whoever touches them (5 s), the same in every mode, and then for nobody: long
+ * enough to get clear of the start, too short to camp in. Each race (each bout too) counts from its own GO.
+ */
+export const SHIELD_FRAMES = 5 * FPS;
+/**
  * Frames alt must stay held in a race, from a fresh press and with no other action, before the runner self-destructs
  * (3 s, counted down on screen). Long enough that nobody does it by accident, short enough to still be an escape hatch.
  */
