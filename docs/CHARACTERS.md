@@ -237,4 +237,4 @@ Every kind also has a hand-drawn body (`KINDS` in `src/render/cast/kinds.ts`), d
 
 ## Adding a kind
 
-AGENTS.md → Extension points → Character kind has the steps. Also update the kinds and paints `tests/gen.test.ts` pins per seed (and the `LOOK_CAST` its comment names), write its entry in `docs/characters/<kind>.md`, add its rows to The cast and Production order, and take it through Rendered kinds.
+AGENTS.md → Extension points → Character kind has the steps. Seat a kind with a stand-in shaped like it (its outline roughly inked, not a shared blob): stand-ins that are all one blob paired with each other in every blind read. Also update the kinds and paints `tests/gen.test.ts` pins per seed (and the `LOOK_CAST` its comment names), write its entry in `docs/characters/<kind>.md`, add its rows to The cast and Production order, and take it through Rendered kinds.

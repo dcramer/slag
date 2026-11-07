@@ -264,12 +264,14 @@ function holesOf(role: Int16Array, m: RoleMap): number[][] {
 /**
  * The drawing's face specks (eyes, nose, mouth) painted over in the role map from the colours round them,
  * before the figure is traced again: dropped from the traced parts, a speck on a part's edge left a notch
- * that showed the silhouette's ink under the kit's eyes and its thin cheer arcs.
+ * that showed the silhouette's ink under the kit's eyes and its thin cheer arcs. Each speck is grown only
+ * through pixels of its own roles (`own`, the map roles it was traced from): grown through whatever most of
+ * its pixels were, a tiny eye was mostly skin, and the whole face went with it (the fighter's).
  */
-function paintOver(role: Int16Array, m: RoleMap, rings: number[][]) {
+function paintOver(role: Int16Array, m: RoleMap, specks: { ring: number[]; own: Set<number> }[]) {
   const toPx = (v: number, o: number) => (v - o) * m.R - 0.5;
   const marked = new Uint8Array(role.length);
-  for (const r of rings) {
+  for (const { ring: r, own: owns } of specks) {
     const mine: number[] = [];
     const xs = r.filter((_, i) => i % 2 === 0);
     const ys = r.filter((_, i) => i % 2 === 1);
@@ -288,8 +290,8 @@ function paintOver(role: Int16Array, m: RoleMap, rings: number[][]) {
     // Then the whole speck: the traced ring is smoothed inside its pixels, and the rim it misses floods back.
     // Every pixel of the speck's own colour joined to it, kept near the ring (a speck may touch the ink).
     const count = new Map<number, number>();
-    for (const i of mine) count.set(role[i], (count.get(role[i]) ?? 0) + 1);
-    const own = [...count].sort((a, b) => b[1] - a[1])[0]?.[0];
+    for (const i of mine) if (owns.has(role[i])) count.set(role[i], (count.get(role[i]) ?? 0) + 1);
+    const own = [...count].sort((a, b) => b[1] - a[1])[0]?.[0] ?? -2;
     const near = 1.5 * m.R;
     for (let h = 0; h < mine.length; h++) {
       const i = mine[h];
@@ -438,7 +440,7 @@ function frameOf(name: string, clip: FlatClip): Frame {
     paintOver(
       role,
       m,
-      gone.map((p) => p.ring),
+      gone.map((p) => ({ ring: p.ring, own: new Set(m.roles.flatMap((n, i) => (roleOf(n) === p.role ? [i] : []))) })),
     );
     t = trace(role, new Float32Array(m.W * m.H), m.W, m.H, m.R, settings as Settings, m.roles);
     parts = t.parts.map((p) => ({ role: roleOf(m.roles[p.role]), ring: p.ring }));

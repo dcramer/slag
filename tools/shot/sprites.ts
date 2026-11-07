@@ -10,6 +10,8 @@ import { browser, castSheet, open, opt, out, page, pet, seed, type Scenarios, st
 
 const KIND = opt('kind', 'plumber')!;
 const THEME = opt('theme', 'farm')!;
+/** Shots staged on a level carry its theme when it isn't the default, so a `--theme mine` run doesn't overwrite the farm one. */
+const ON_THEME = THEME === 'farm' ? '' : `-${THEME}`;
 
 const press = (n: number, inputs: object) =>
   page.evaluate(
@@ -110,7 +112,7 @@ async function lineup(name: string, kinds: string[]): Promise<Record<string, str
     for (const on of [true, false]) {
       if (on) await settle();
       else await render(false);
-      const path = `${out}/sprites-${name}-${on ? '3d' : 'drawn'}-x${zoom}.png`;
+      const path = `${out}/sprites-${name}${ON_THEME}-${on ? '3d' : 'drawn'}-x${zoom}.png`;
       await page.screenshot({ path, clip });
       console.log(path);
       shots[`${on ? '3d' : 'drawn'}${zoom}`] = path;
@@ -242,10 +244,14 @@ async function bench(): Promise<string> {
   return text;
 }
 
-/** The blind read: every kind's play-scale silhouette, shuffled and numbered (`castBlind`), and the same cells in colour. */
+/**
+ * The blind read: every kind's play-scale silhouette, shuffled and numbered (`castBlind`), and the same cells
+ * in colour three times over, each roll giving every kind another player's colour (`sprites-blind-colour.png`,
+ * `-2`, `-3`), so a kind known by one colour is read in colours that aren't its own.
+ */
 async function blind(): Promise<string> {
   await open(`seed=${seed}`);
-  await castSheet('sprites-blind-colour', 'blind', 0.4, true);
+  for (const roll of [0, 1, 2]) await castSheet(roll ? `sprites-blind-colour-${roll + 1}` : 'sprites-blind-colour', 'blind', 0.4, true, roll);
   const path = await castSheet('sprites-blind', 'blind');
   const order: string[] = await page.evaluate(() => (window as any).slagDebug.cast.blindOrder());
   writeFileSync(`${out}/sprites-blind-answers.txt`, order.map((k, i) => `${i + 1}. ${k}`).join('\n') + '\n');
@@ -255,6 +261,8 @@ async function blind(): Promise<string> {
 /**
  * The curated variety of each rendered kind (`castVariety`): twelve looks in twelve colours with the idle,
  * cheer and gait each plays, its palette and wear, at 4.4× and at play scale, into `sprites-<kind>-variety.png`.
+ * It draws its own light and dark ground, so `--theme` doesn't change it; the eight-runner lineup is where a
+ * theme shows.
  */
 async function varietySheet(kind: string): Promise<string> {
   await open(`seed=${seed}`);
