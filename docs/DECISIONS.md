@@ -90,7 +90,7 @@ Every game design decision, preference and direction the owner has given, groupe
 - **A mode can need more than one player to start, and Brawl needs two; bots count.** "also some play styles require more than one player before you can start (brawl is one)"
   2026-11-06 · `done` (`ModeDef.minPlayers`; the lobby's count reads `1/2 Players` while short) · DESIGN.md → Modes, MODES.md → Brawl
 - **Brawl bots are semi-aggressive: they press the fight rather than run away or turtle.** "in brawl the AI needs to be semi aggressive too idk it feels a little slow and it likes to run away or turtle"
-  2026-11-06 · `planned` · MODES.md → Brawl, `src/brain/strategies/brawl.ts`
+  2026-11-06 · `done` (a `press` trait by level and temperament; bots fight on until the slag is near, swing within about a second, dodge only a hit that's coming; first bonk 4.5 → 3.5 s, item uses 6.6 → 11.5 a round, knocked share 36 → 49%) · MODES.md → Brawl, `src/brain/strategies/brawl.ts`
 - **A brawl's arena is deadly by default.** "also the arena could be a little deadly by default, thats a thing we can tweak"
   2026-11-06 · `done` (up to six set pieces from the nastiest mix) · DESIGN.md → Modes, MODES.md · Replaced: four of the usual mix.
 - **In a brawl, if everyone left goes out at once, nobody wins the round.** "Highest one wins" / "actually if you all die no winners maybe?"
