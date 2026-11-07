@@ -451,3 +451,37 @@ describe("a brawl's weather", () => {
     for (const s of seeds) expect(generateLevel(s, 'jungle', MODES.brawl.profile).weather?.kind ?? 'clear').toBe('clear');
   });
 });
+
+describe("a brawl's arena", () => {
+  // A seed per theme in turn: the sweep over every theme is tests/stats/brawl-arenas.test.ts.
+  const cases = [1, 2, 3].map((seed) => ({ seed, theme: THEME_IDS[(seed * 4) % THEME_IDS.length] }));
+
+  for (const { seed, theme } of cases)
+    it(`seed ${seed} ${theme}: two mirrored ends that reach each other bare, boxes the field gets to, a ledge over the middle`, () => {
+      const lv = generateLevel(seed, theme, MODES.brawl.profile);
+      const { w, h } = lv;
+      expect(lv.style).toContain(':arena-');
+      expect(lv.landmark).toBeUndefined();
+      // The two ends: the same row, mirrored columns, each in its own safe zone.
+      expect(lv.spawns).toEqual([lv.goal]);
+      expect(lv.goal.ty).toBe(lv.spawn.ty);
+      expect(lv.spawn.tx + lv.goal.tx).toBe(w - 1);
+      for (const c of [lv.spawn, lv.goal]) expect(isProtected(lv, c.tx, c.ty)).toBe(true);
+      // Each end reaches the other with no part.
+      const there = analyzeReach(lv, false);
+      expect(there.goalReached).toBe(true);
+      expect(analyzeReach({ ...lv, spawn: lv.goal, goal: lv.spawn }).goalReached).toBe(true);
+      // A ledge to stand on above the middle of the screen, and somewhere to be knocked off the side.
+      expect([...there.reachable].some((k) => Math.floor(k / w) < h / 2)).toBe(true);
+      const open = (x: number) => Array.from({ length: h }, (_, y) => lv.tiles[y * w + x]).filter((t) => t === 0).length;
+      expect(Math.min(open(0), open(w - 1))).toBeGreaterThan(h / 2);
+      // Boxes in mirrored pairs (and maybe one in the middle), each over a floor the field reaches, with room on top.
+      const boxes = lv.setPieces.filter((p) => p.def.key === 'loop-box').map((p) => p.def.footprint[0]);
+      expect(boxes.length).toBeGreaterThanOrEqual(2);
+      for (const [x, y] of boxes) {
+        expect(there.reachable.has((y + 2) * w + x), `box ${x},${y}`).toBe(true);
+        expect([lv.tiles[(y - 1) * w + x], lv.tiles[(y - 2) * w + x]]).toEqual([0, 0]);
+        if (Math.abs(2 * x - (w - 1)) > 2) expect(boxes.some(([mx, my]) => mx === w - 1 - x && my === y)).toBe(true);
+      }
+    });
+});

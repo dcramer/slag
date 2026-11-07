@@ -166,6 +166,8 @@ export interface BuilderDef {
   takes(p: LevelProfile): boolean;
   /** The kit pieces it asks for (KIT_KINDS ids). */
   asks: readonly string[];
+  /** False when it raises no landmark (a mode's arena is the stage itself): its levels roll no stage concept. */
+  landmark?: false;
   build(ctx: SculptCtx, set: SetKit): Shape;
 }
 

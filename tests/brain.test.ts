@@ -231,14 +231,17 @@ describe('the motor’s own moves', () => {
   }
 
   it('won’t leap off a side of the map: it goes by the route instead, and stops at the end of it', () => {
-    // A brawl arena's right end opens onto the side of the map, where a leap toward it runs off and out.
+    // A brawl arena's ledges run off the sides of the map, where a leap toward the edge runs off and out.
     const m = new Match(1, undefined, { ...DEFAULT_RULES, mode: 'brawl' });
-    const { goal, w } = m.level;
-    const { p, run, r } = standing(m, goal.tx, goal.ty);
+    const { tiles, w, h } = m.level;
+    const stands = (x: number, y: number) => tiles[(y + 1) * w + x] !== 0 && tiles[y * w + x] === 0 && tiles[(y - 1) * w + x] === 0;
+    const ty = Array.from({ length: h - 3 }, (_, i) => i + 2).find((y) => [w - 4, w - 3, w - 2, w - 1].every((x) => stands(x, y)));
+    expect(ty, 'a ledge running off the right side').toBeDefined();
+    const { p, run, r } = standing(m, w - 3, ty!);
     const motor = new Motor(rollPersonality(1, 'normal'), 1);
     let stood = false;
     for (let f = 0; f < 90 && r.alive; f++) {
-      m.step({ kb: motor.drive(m, p, { do: 'leap', tx: w - 1, ty: goal.ty }) });
+      m.step({ kb: motor.drive(m, p, { do: 'leap', tx: w - 1, ty: ty! }) });
       stood ||= r.body.onGround && r.body.vx === 0 && Math.floor((r.body.x + r.body.w / 2) / TILE) === w - 1;
     }
     expect(r.alive, `${r.cause} at race frame ${run.frame}`).toBe(true);
@@ -247,8 +250,9 @@ describe('the motor’s own moves', () => {
 
   it('in a fight it reads its landings in the air: slow hands cost a run across the arena no stops, where a race still pays them', () => {
     // Across a brawl arena, end to end, with hands that take 18 frames to see what's next and no other lapses.
+    // Seed 2's arena: a run across it lands a few times on the way.
     const across = (reaction: number, haste: boolean) => {
-      const m = new Match(1, undefined, { ...DEFAULT_RULES, mode: 'brawl' });
+      const m = new Match(2, undefined, { ...DEFAULT_RULES, mode: 'brawl' });
       const { spawn, goal } = m.level;
       const { p, r } = standing(m, spawn.tx, spawn.ty);
       const motor = new Motor({ ...rollPersonality(1, 'normal'), reaction, slip: 0, think: 0, stray: 0 }, 1);

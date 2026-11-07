@@ -40,10 +40,12 @@ function boxAt(tx: number, ty: number, seed: number, deal: ItemDeal): PropDef {
  * one-way) under them. Three rows up is head height for a hop from the floor, and a full jump lands on its top,
  * where what it pops comes to rest: any higher and nobody could reach the item.
  */
-function hangs(level: Level, x: number, y: number, taken: ReadonlySet<number>): boolean {
+function hangs(level: Level, x: number, y: number, taken: ReadonlySet<number>, stands?: ReadonlySet<number>): boolean {
   const { w } = level;
   const at = (cx: number, cy: number) => level.tiles[cy * w + cx];
   if (taken.has(y * w + x) || isProtected(level, x, y) || isProtected(level, x, y + 2)) return false;
+  // In an arena, room on top of the box too: what it pops rests there, and someone has to get up to it.
+  if (stands && (!stands.has((y + 2) * w + x) || y < 2 || at(x, y - 1) !== T_EMPTY || at(x, y - 2) !== T_EMPTY)) return false;
   for (let dy = 0; dy <= 2; dy++) if (at(x, y + dy) !== T_EMPTY) return false;
   if (at(x - 1, y) !== T_EMPTY || at(x + 1, y) !== T_EMPTY) return false;
   const floor = at(x, y + 3);
@@ -61,22 +63,51 @@ export function loopBoxes(
   keep: (pieces: readonly PlacedProp[]) => boolean,
   rng: Rng,
   deal: ItemDeal,
+  /**
+   * An arena's: the stand cells the field reaches (y * w + x). Its boxes hang only over those, with room on top for
+   * what they pop, nearest the spawns' tier first, in mirrored pairs. Absent (a loop): over any floor.
+   */
+  stands?: ReadonlySet<number>,
 ): PlacedProp[] {
   const loop = level.loop;
   const taken = new Set(pieces.flatMap((p) => footprintCells(p).map(([x, y]) => y * level.w + x)));
   const spots: [number, number][] = [];
   const [y0, y1] = loop ? [LOOP_BAND, loop + LOOP_BAND] : [2, level.h];
-  for (let y = y0; y + 3 < y1; y++) for (let x = 3; x < level.w - 3; x++) if (hangs(level, x, y, taken)) spots.push([x, y]);
+  for (let y = y0; y + 3 < y1; y++) for (let x = 3; x < level.w - 3; x++) if (hangs(level, x, y, taken, stands)) spots.push([x, y]);
   rng.shuffle(spots);
+  // An arena's boxes hang nearest the tier the field starts on first, so the first items are a short way off.
+  if (stands) {
+    const tier = (y: number) => Math.round(Math.abs(y + 2 - level.spawn.ty) / 4);
+    spots.sort((a, b) => tier(a[1]) - tier(b[1]));
+  }
   const want = loop ? Math.max(2, Math.round(loop / ROWS_PER_BOX)) : Math.max(2, Math.round(level.w / COLS_PER_BOX));
   // Round a loop apart in rows, so they spread up it; in an arena apart in columns, so they spread across it.
   const apart = (b: PlacedProp, x: number, y: number) =>
     loop ? Math.abs(b.def.footprint[0][1] - y) >= MIN_APART : Math.abs(b.def.footprint[0][0] - x) >= MIN_APART;
   const out: PlacedProp[] = [];
+  const at = (x: number, y: number): PlacedProp => ({ uid: 0, def: boxAt(x, y, rng.int(0, 1 << 20), deal), owner: -1, tx: 0, ty: 0, rot: 0 });
+  if (stands) {
+    // An arena's ends are mirrored, and so are its boxes: a pair, one each side, then one in the middle, so neither
+    // end is nearer its first item. With no spot in the middle, another pair.
+    const { w } = level;
+    const mirrorOf = (x: number) => w - 1 - x;
+    const isMiddle = (x: number) => Math.abs(x - mirrorOf(x)) <= 2;
+    const add = (x: number, y: number, middle: boolean) => {
+      const xs = middle ? [x] : [x, mirrorOf(x)];
+      if (!xs.every((bx) => out.every((o) => Math.abs(o.def.footprint[0][0] - bx) >= MIN_APART))) return;
+      if (!middle && (x * 2 >= w - MIN_APART || !hangs(level, mirrorOf(x), y, taken, stands))) return;
+      const boxes = xs.map((bx) => at(bx, y));
+      if (keep([...pieces, ...out, ...boxes])) out.push(...boxes);
+    };
+    for (const [x, y] of spots) if (out.length < want - 1 && !isMiddle(x)) add(x, y, false);
+    for (const [x, y] of spots) if (out.length < want && isMiddle(x)) add(x, y, true);
+    for (const [x, y] of spots) if (out.length < want && !isMiddle(x)) add(x, y, false);
+    return out;
+  }
   for (const [x, y] of spots) {
     if (out.length >= want) break;
     if (!out.every((b) => apart(b, x, y))) continue;
-    const box: PlacedProp = { uid: 0, def: boxAt(x, y, rng.int(0, 1 << 20), deal), owner: -1, tx: 0, ty: 0, rot: 0 };
+    const box = at(x, y);
     if (keep([...pieces, ...out, box])) out.push(box);
   }
   return out;

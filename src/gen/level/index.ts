@@ -17,6 +17,7 @@ import { type ProfileOverride, rollProfile } from './profile';
 import { DIFFICULTY, setLevelDifficulty } from './difficulty';
 import { levelPrecision } from './precision';
 import { analyzeRoutes, MAX_SHARED } from './routes';
+import { builderFor } from './builders';
 import { FALLBACK_SCULPTOR, SCULPTORS } from './sculptors';
 import { LAST_RESORT } from './sculptors/common';
 import type { Shape } from './types';
@@ -109,7 +110,8 @@ export function generateLevel(seed: number, themeOverride?: ThemeId, profileOver
     const salt = n ? `:draw${n}` : '';
     const o: ProfileOverride = { ...profileOverride, ...(keep ? { gravity: keep.gravity, difficulty: keep.difficulty, curve: !!keep.curve } : {}) };
     let profile = rollProfile(seed, themeId, o, salt);
-    const concept = rollConcept(seed, themeId, profile, profileOverride?.concept, salt);
+    // A builder that is the stage itself (a brawl's arena) raises no landmark: its levels are plain.
+    const concept = builderFor(profile).landmark === false ? null : rollConcept(seed, themeId, profile, profileOverride?.concept, salt);
     // A forced concept gets a size and route it fits, unless those were forced too.
     if (concept && !fits(concept, profile) && !profileOverride?.size && !profileOverride?.route && !profileOverride?.builder) {
       const size = concept.sizes.includes(profile.size) ? profile.size : concept.sizes[0];
@@ -197,6 +199,11 @@ export function generateLevel(seed: number, themeOverride?: ThemeId, profileOver
       const v = judge(level, shape.bridgeHints, shape.crossings, cache);
       // A level that owes no part can't take one either: a loop would stop every lap there.
       if (!v.ok || (profile.bare && v.bridges.length)) {
+        rejects.unsolvable++;
+        continue;
+      }
+      // Spawns at both ends: each must reach the other, bare, or one end is a trap the other end can't get to.
+      if (profile.ends && profile.bare && !cache.analyze({ ...level, spawn: level.goal, goal: level.spawn }).goalReached) {
         rejects.unsolvable++;
         continue;
       }
@@ -290,7 +297,9 @@ export function generateLevel(seed: number, themeOverride?: ThemeId, profileOver
       const gated = profile.gates ? loopGates(level, kept, keep) : null;
       if (gated?.gates.length && level.tide) level.tide = { ...level.tide, gates: gated.gates, hold: GATE_HOLD };
       const fitted = [...kept, ...(gated?.pieces ?? [])];
-      const boxes = profile.boxes ? loopBoxes(level, fitted, keep, new Rng(deriveSeed(seed, lab(`loop-boxes:${attempt}`))), profile.boxes) : [];
+      // An arena's boxes hang only over floors the field can get to; a loop's every floor is on the climb.
+      const stands = profile.loop ? undefined : new Set(cache.analyze(level, false).cells);
+      const boxes = profile.boxes ? loopBoxes(level, fitted, keep, new Rng(deriveSeed(seed, lab(`loop-boxes:${attempt}`))), profile.boxes, stands) : [];
       level.setPieces = [...fitted, ...boxes].map((p, i) => ({ ...p, uid: SET_PIECE_UID + i }));
       while (level.setPieces.length && !planHolds(level, [], bridges, cache)) level.setPieces.pop();
       if (level.rides) {

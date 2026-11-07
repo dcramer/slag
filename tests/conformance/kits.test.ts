@@ -38,6 +38,7 @@ const FORCE: Record<BuilderId, ProfileOverride[]> = {
   descent: [{ size: 'wide', route: 'descent' }],
   tower: [{ size: 'tall', route: 'zigzag' }],
   shaft: [MODES.slag.profile],
+  arena: [MODES.brawl.profile],
 };
 
 function ctxFor(seed: number, theme: ThemeId, p: LevelProfile, attempt = 0): SculptCtx {

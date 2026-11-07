@@ -72,9 +72,14 @@ export const LEAD_HOLDS = {
  * `BONK_CREDIT`), thrown or bumped into the level. How hard it's fought (tests/lib/bot-race.ts `Fight`): `contact`
  * and `hit`, seconds from GO to the first touch or bonk and to the first bonk; `uses`, items used a round; `still`
  * and `retreat`, the shares of frames in it standing still and moving away from the nearest rival; `gap`, the tiles
- * to that rival. Measured bare 8%, 26.6 s, 53%, 0.8 s, 3.8 s, 12.2 uses, 11%, 17%, 3.9 tiles; placed 14%, 24.2 s,
- * 39%, 0.8 s, 3.8 s, 8.9 uses, 15%, 15%, 4.0 tiles (4 and 10 rounds under 10 s, 3 placed ones without a knock or a
- * shove), since the motor fights with haste (`StrategyDef.haste`, src/brain/motor.ts): it picks again as soon as its
+ * to that rival. Measured bare 0%, 23.7 s, 66%, 1.6 s, 3.8 s, 10.2 uses, 9%, 19%, 4.2 tiles; placed 8%, 21.4 s, 54%,
+ * 1.5 s, 4.1 s, 7.5 uses, 11%, 18%, 5.6 tiles (26 of 48 and 29 of 64 rounds in 20–40 s, 7 and 9 under 10 s; 41 and 30
+ * deaths off the sides of the map), on arenas of their own (gen/level/builders/arena.ts): tiers of ledges to the top
+ * of the screen, open sides. A knock kills more often, so rounds are shorter, and the field, spread over the tiers,
+ * meets a little later and goes round more to get at a rival. From bare 8%, 26.6 s, 53%, 0.8 s, 3.8 s, 12.2 uses, 11%,
+ * 17%, 3.9 tiles; placed 14%, 24.2 s, 39%, 0.8 s, 3.8 s, 8.9 uses, 15%, 15%, 4.0 tiles (28 of 48 and 28 of 64 in
+ * 20–40 s, 4 and 10 under 10 s, 3 placed ones without a knock or a shove; 13 and 16 off the sides) on the race course
+ * with walled ends, since the motor fights with haste (`StrategyDef.haste`, src/brain/motor.ts): it picks again as soon as its
  * target moves instead of playing out a move for where the target was, takes no pause for a rival's shove and only
  * what's left of one after a landing it read in the air, and lines up in a cell only where that wins the time back,
  * walking there rather than tapping. Before, the still frames were mostly its own care: on the bare arena 7.7% of
@@ -99,25 +104,25 @@ export const BRAWL_ROUNDS = {
   bands: {
     bare: {
       draws: [0, 0.2],
-      seconds: [23, 32],
-      knocked: [0.4, 0.58],
-      contact: [0, 1.2],
+      seconds: [20, 29],
+      knocked: [0.55, 0.75],
+      contact: [0, 2],
       hit: [0, 4.2],
       uses: [9, 15],
       still: [0, 0.14],
-      retreat: [0, 0.18],
+      retreat: [0, 0.21],
       gap: [0, 4.6],
     },
     placed: {
       draws: [0, 0.2],
-      seconds: [21, 28],
-      knocked: [0.35, 0.5],
-      contact: [0, 1.3],
+      seconds: [18, 25],
+      knocked: [0.45, 0.62],
+      contact: [0, 1.9],
       hit: [0, 5],
       uses: [7, 11],
       still: [0, 0.18],
-      retreat: [0, 0.16],
-      gap: [0, 4.6],
+      retreat: [0, 0.2],
+      gap: [0, 6.2],
     },
   },
 } as const satisfies {

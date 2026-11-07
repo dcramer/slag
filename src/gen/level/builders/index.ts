@@ -2,6 +2,7 @@ import type { LevelProfile } from '../../../sim/level';
 import { sculptTall } from '../sculptors/tall';
 import type { BuilderDef, SetKit } from '../sets/types';
 import type { SculptCtx, Shape } from '../types';
+import { sculptArena } from './arena';
 import { sculptCarved } from './carved';
 import { sculptChain } from './chain';
 import { sculptCourse } from './course';
@@ -12,7 +13,7 @@ import { sculptShaft } from './shaft';
  * the pieces the set's. A new mode's level is a new builder here asking for kit kinds every set provides (KIT_KINDS),
  * so every set builds it from the start. src/gen/AGENTS.md → Set kits and level builders.
  */
-export type BuilderId = 'course' | 'climb' | 'descent' | 'tower' | 'shaft';
+export type BuilderId = 'course' | 'climb' | 'descent' | 'tower' | 'shaft' | 'arena';
 
 const COURSE_KINDS = ['ground', 'gap', 'stamps'] as const;
 
@@ -50,6 +51,14 @@ export const BUILDERS: Record<BuilderId, BuilderDef> = {
     takes: (p) => p.builder === 'shaft',
     asks: ['floor', 'shell'],
     build: (ctx, set) => (set.tower ? (set.towerPost ?? keep)(sculptShaft(ctx, set.tower), ctx) : onCourse(ctx, set)),
+  },
+  arena: {
+    about: 'Brawl: one screen of ledges in tiers from islands over the pit to the top, open at the sides, its two ends mirrored',
+    takes: (p) => p.builder === 'arena',
+    asks: ['floor'],
+    // The arena is the stage: a landmark would take the middle of the one screen, so its levels are plain.
+    landmark: false,
+    build: (ctx, set) => (set.tower ? (set.towerPost ?? keep)(sculptArena(ctx, set.tower), ctx) : onCourse(ctx, set)),
   },
 };
 

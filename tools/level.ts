@@ -9,6 +9,7 @@
  *                                  --concept <id>|plain (a stage concept of the theme's, gen/stage)
  *                                  --difficulty gentle|medium|hard
  *                                  --tide (a Rising Slag tower: game/modes.ts)
+ *                                  --mode brawl (the level a mode asks for: game/modes.ts MODES)
  *
  * Legend: # solid  = one-way  S spawn  G goal  · reachable stand cell  P set-piece footprint
  *         B a bridge from the validator's solution (levels that need props)
@@ -40,6 +41,11 @@ if (opt('concept')) force.concept = opt('concept');
 const difficulty = DIFFICULTIES.find((d) => d === opt('difficulty'));
 if (difficulty) force.difficulty = difficulty;
 if (flag('tide')) Object.assign(force, MODES.slag.profile);
+const modeOpt = opt('mode');
+if (modeOpt) {
+  if (!(modeOpt in MODES)) throw new Error(`--mode ${modeOpt}: one of ${Object.keys(MODES).join(', ')}`);
+  Object.assign(force, MODES[modeOpt as keyof typeof MODES].profile);
+}
 
 /** Share of levels whose solution takes 0, 1, 2 and 3 parts. */
 function partShares(parts: number[], n: number): Record<string, string> {
