@@ -37,6 +37,10 @@ import { art as genie } from './art/genie';
 import { art as mushroom } from './art/mushroom';
 import { art as boxer } from './art/boxer';
 import { art as junior } from './art/junior';
+import { art as bomber } from './art/bomber';
+import { art as skeleton } from './art/skeleton';
+import { art as android } from './art/android';
+import { art as climber } from './art/climber';
 import { band, type D, type KindArt, line, mark, ORANGE, ORANGE_SH, oval, poly, spot, STEEL, STEEL_SH, toned, tonedOval, Y } from './kit';
 
 /**
@@ -973,4 +977,8 @@ export const KINDS: Record<Kind, KindArt> = {
   mushroom,
   boxer,
   junior,
+  bomber,
+  skeleton,
+  android,
+  climber,
 };

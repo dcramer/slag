@@ -1,6 +1,6 @@
 # Characters
 
-The runners are a cast of forty-six homages and one easter egg (Junior, Sentry's own robot) to famous game characters, in our own designs. In the lore (DESIGN.md) they're the knock-off heroes who almost got their own game. Each kind is a character design of its own, the way the barnyard party game's animals are: its own outline, its signature props, and a way of moving.
+The runners are a cast of fifty homages and one easter egg (Junior, Sentry's own robot) to famous game characters, in our own designs. In the lore (DESIGN.md) they're the knock-off heroes who almost got their own game. Each kind is a character design of its own, the way the barnyard party game's animals are: its own outline, its signature props, and a way of moving.
 
 `pnpm shot cast` shoots the sheet: the 8-player lineup at play scale on farm and mine, the race start, deaths, a 3× close-up, the lobby cards, the "is it the homage?" sheet (`cast-recognise.png`: each kind close up beside "This is ___"), the silhouette test (`cast-silhouettes.png`) and the catalog of every kind (`--only catalog` for the last three). Every sheet waits for the rendered kinds' frames (`slagDebug.sprites.ready()`), so it shows what ships. In the console, `slagDebug.cast` has `catalog()`, `silhouettes()`, `recognise()` and `bench()`.
 
@@ -82,6 +82,10 @@ Each kind's entry is its own file in [characters/](characters/): what a stranger
 | [mushroom](characters/mushroom.md) | the little mushroom retainer in the spotted cap | small and stubby under a huge round spotted lampshade cap wider than him, a dome with a rolled lip, a vest with a crooked race plate, puffy trousers, a chequered flag on a taped broom handle held out ahead | costume: the spots and the vest; the vest's trim a dark of it |
 | [boxer](characters/boxer.md) | the tiny boxer with the huge green gloves | small and wiry, two huge round gloves each bigger than his head held far apart ahead of him, one at his face and one at his belly, with background round each, a tank top, baggy shorts, a tea towel round his neck; jumps in a rising uppercut | costume: the gloves; the scorch a dark of it |
 | [junior](characters/junior.md) | Junior, the one-eyed robot in the backwards cap (Sentry's own robot, an easter egg, no homage) | a yellow box head with one huge eye and a grin, a backwards cap, zigzag antennae, a pink hoodie, a claw hand, a phone, roller skates | costume: the hoodie; the cap and shoes a dark of it |
+| [bomber](characters/bomber.md) | the round white bomber with the antenna ball | small and round, a big round white helmet with an antenna ball and a dark face slot, big mitts and boots, a round bomb with a lit fuse | costume: the suit; the belt a dark of it |
+| [skeleton](characters/skeleton.md) | the punny skeleton in the hoodie | short and stocky, a big round grinning skull, one eye lit, a baggy hoodie with a fur hood, hands in pockets, shorts and slippers | costume: the hoodie |
+| [android](characters/android.md) | the blindfolded android with the white bob and the big sword | slim, a white bob, a black blindfold, a short flared dress, thigh-high boots, a huge sword, a floating drone | costume: the dress and boots |
+| [climber](characters/climber.md) | the red-haired mountain climber | a small girl, big red hair floating up, a puffy parka, a small backpack, leaning into a climb | costume: the parka; the bands a light of it |
 
 **Reserves**, if a kind won't read: the spinning bandicoot (its tuft and grin rhyme with the speedster), the shovel-wielding knight, the red-haired mountain climber, the falling-block party bean (rhymes with the crewmate). The space marine in green armour reads as a generic soldier at 20 px; the plumber's tall brother, the ape's red-capped nephew and the king's turtle foot soldiers rhyme with kinds already in.
 
@@ -164,6 +168,10 @@ The strongest reads first. **Keyed** marks the non-humanoids, the riskiest to dr
 | 45 | mushroom | Toadmund | humanoid, small, capped | drawn flat; the blind read passes (named by both readers, at medium and medium-high, unpaired: the huge dome cap over a small body) |
 | 46 | boxer | Little Smack | humanoid, small | drawn flat; passes the clean colour read ("Little Mac (Punch-Out!!), high" twice); black fails |
 | 47 | junior | Junior | humanoid, robot; an egg (about 1 look in 100) | drawn flat from the reference, its props bigger than the reference's (a pincer as big as the head, a big phone, steel wheels) and one antenna; in colour the eye, claw and skates read, the phone mostly, the grin, backwards bill and zigzag partly; in black one reader of two pairs it with the elf (the antenna as a pointed cap); owner to decide |
+| 48 | bomber | Kaboomerman | humanoid, small, round helmet | to draw flat (2026-11-07) |
+| 49 | skeleton | Humerus | humanoid, stocky | to draw flat (2026-11-07) |
+| 50 | android | B-Minus | humanoid, slim + sword | to draw flat (2026-11-07) |
+| 51 | climber | Maddie Summit | humanoid, small | to draw flat (2026-11-07) |
 
 **What to check.** No two kinds may rhyme. Watch these pairs:
 

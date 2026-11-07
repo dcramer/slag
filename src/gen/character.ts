@@ -58,6 +58,10 @@ export const CAST = [
   'mushroom',
   'boxer',
   'junior',
+  'bomber',
+  'skeleton',
+  'android',
+  'climber',
 ] as const;
 export type Kind = (typeof CAST)[number];
 
@@ -156,6 +160,10 @@ export const KIND_NAMES: Record<Kind, string> = {
   mushroom: 'Toadmund',
   boxer: 'Little Smack',
   junior: 'Junior',
+  bomber: 'Kaboomerman',
+  skeleton: 'Humerus',
+  android: 'B-Minus',
+  climber: 'Maddie Summit',
 };
 
 /**
@@ -210,6 +218,10 @@ const PAINTS: Record<Kind, readonly HSL[]> = {
   mushroom: [hsl3(5, 72, 52)],
   boxer: [hsl3(125, 55, 42)],
   junior: [hsl3(330, 70, 58)],
+  bomber: [hsl3(220, 60, 55)],
+  skeleton: [hsl3(212, 55, 50)],
+  android: [hsl3(250, 20, 30)],
+  climber: [hsl3(190, 55, 45)],
 };
 
 /** How many `vary` rolls a character has, and how many of them come from the look's main stream. */

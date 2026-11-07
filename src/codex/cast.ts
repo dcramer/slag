@@ -59,6 +59,10 @@ export const CAST_NOTES: Record<Kind, string> = {
   mushroom: 'Sure the princess is in the next one.',
   boxer: 'Punches up. Always up.',
   junior: 'Found the bug. Assigned it to you.',
+  bomber: 'Lit. Literally.',
+  skeleton: 'Took a shortcut. It was a long one.',
+  android: 'Says nothing. Means it.',
+  climber: 'Fell a thousand times. Counted.',
 };
 
 export interface CastEntry {

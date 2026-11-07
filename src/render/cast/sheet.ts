@@ -272,6 +272,10 @@ const READS_AS: Record<Kind, string> = {
   mushroom: 'the little mushroom retainer in the spotted cap',
   boxer: 'the tiny boxer with the huge green gloves',
   junior: 'Junior, the one-eyed robot in the backwards cap',
+  bomber: 'the round white bomber with the antenna ball',
+  skeleton: 'the punny skeleton in the hoodie',
+  android: 'the blindfolded android with the white bob and the big sword',
+  climber: 'the red-haired mountain climber',
 };
 
 /**
