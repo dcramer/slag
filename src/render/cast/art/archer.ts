@@ -1,24 +1,55 @@
-import { type D, type KindArt, Y, oval, poly, tonedOval } from '../kit';
+import { type D, type KindArt, Y, inked, oval, poly, tonedOval } from '../kit';
 import { sideEye } from '../faces';
 import type { P } from '../../ink';
 
 /**
  * The red-braided robot hunter (docs/characters/archer.md): side on in a low hunter's crouch, the bow held out level
  * ahead of her with background all round it, a huge bushy mane of red hair puffing out behind her head with two thick
- * braids flying off it, and a fur wrap over her shoulders. The leathers are the player's colour, the fur a light of
- * it; the hair, the curtain-rod bow and its knobs are neutrals. A rendered kind draws from its frames
+ * braids flying off it, a fur wrap over her shoulders and a spear slung across her back, its blade above and behind her
+ * head. The leathers are the player's colour, the fur a light of it; the hair, the curtain-rod bow and its knobs, and
+ * the spear are neutrals. A rendered kind draws from its frames
  * (src/render/cast/sprites/archer/); this is what shows before they load, and on the hand-drawn sheets.
  */
 
 const HAIR: [string, string] = ['#8d311b', '#601e15'];
 const ROD: [string, string] = ['#a36b41', '#7b4a2c'];
 const SKIN = '#da9e69';
+const BLADE = '#a8aaa4';
 
 /** The head's middle: the hair and the face hang off it. */
 const head = (d: D) => ({ x: d.bx(0.82) + d.f * d.W * 0.1, y: Y(d, 0.82) });
 
+/** The spear slung across her back, leaning back: its grey stone blade clear above and behind her head, a knob on its butt. */
+function spear(d: D) {
+  const h = head(d);
+  const s = d.s;
+  const butt = { x: h.x + d.f * 1.2, y: h.y + d.H * 0.62 };
+  const tip = { x: h.x - d.f * 4.6, y: h.y - d.H * 0.42 };
+  const len = Math.hypot(tip.x - butt.x, tip.y - butt.y);
+  const ux = (tip.x - butt.x) / len;
+  const uy = (tip.y - butt.y) / len;
+  const base = { x: tip.x - ux * 3, y: tip.y - uy * 3 };
+  s.lineCap = 'round';
+  for (const [w, c] of [
+    [1.3, d.lk.ink],
+    [0.6, ROD[0]],
+  ] as const) {
+    s.strokeStyle = c;
+    s.lineWidth = w;
+    s.beginPath();
+    s.moveTo(butt.x, butt.y);
+    s.lineTo(base.x, base.y);
+    s.stroke();
+  }
+  const mid = { x: tip.x - ux * 1.7, y: tip.y - uy * 1.7 };
+  const blade: P[] = [tip, { x: mid.x - uy * 0.85, y: mid.y + ux * 0.85 }, base, { x: mid.x + uy * 0.85, y: mid.y - ux * 0.85 }];
+  inked(s, blade, BLADE, d.lk.ink, 0.3, 0.45);
+  tonedOval(s, butt.x, butt.y, 0.6, 0.6, 8, ROD[0], ROD[1], d.lk.ink, 0.3, 0.4 * d.k, 0.2);
+}
+
 /** The mane behind her head and the two braids flying off it, each a chain of plaits ending in a tuft. */
 function mane(d: D) {
+  spear(d);
   const h = head(d);
   const sw = d.wob * 0.3;
   for (const [dy, n] of [

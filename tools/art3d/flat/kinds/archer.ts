@@ -1,13 +1,16 @@
 import type { FlatKind } from '../kinds';
 
 // Side on, a young huntress with the curtain-rod bow held out ahead of her at arm's length, upright and as tall as
-// she is, background all round it; the huge bushy red hair and its braids puffing out behind her head, the fur wrap
-// over her shoulders. The bow is the read: nobody else in the cast holds one, and held out clear of her it stays a
-// thin curve of its own (the raider's pistols and the hunter's cannon are blocks). She idles in the design's kneel,
-// drawing the bow. Drawn three to a 16:9 image with the design as the reference and cut apart
-// (art/sprites/archer/design.prompt.txt).
+// she is, background all round it; the huge bushy red hair and its beaded braids puffing out behind her head, the
+// cream fur wrap over her shoulders, and the spear slung across her back, its stone blade standing clear above and
+// behind her head and its knobbed butt out low behind her. The bow is the read: nobody else in the cast holds one,
+// and held out clear of her it stays a thin curve of its own (the raider's pistols and the hunter's cannon are
+// blocks); the spear, the fur and the beads take her from "an archer" to the huntress. Her second idle draws the
+// bow standing. Drawn three to a 16:9 image with the design as the reference and cut apart
+// (art/sprites/archer/design.prompt.txt). Tripo refuses a prompt that names the spear beside the bow and the hair,
+// so the sheets ask for "everything on her back as in the reference".
 const KEEP =
-  "her big curtain-rod bow always held out ahead of her at arm's length in her front hand, upright and as tall as she is, with white background all round it, her huge bushy red hair and thick braids puffing out behind her head, the cream fur wrap";
+  "her big curtain-rod bow always held out ahead of her at arm's length in her front hand, upright and as tall as she is, with white background all round it, her huge bushy red hair and thick braids puffing out behind her head, the cream fur wrap, everything on her back as in the reference";
 
 export const kind: FlatKind = {
   body: 221,
@@ -46,6 +49,8 @@ export const kind: FlatKind = {
       ['grey', [154, 156, 152]],
       ['grey', [120, 122, 120]],
       ['grey', [190, 190, 186]],
+      // The spear's stone blade and the bottle cap at her temple, in shade.
+      ['grey', [120, 120, 102]],
       // The ink and the bungee string.
       ['dark', [5, 4, 2]],
       ['dark', [19, 7, 3]],
@@ -65,9 +70,10 @@ export const kind: FlatKind = {
     holes: 0.8,
   },
   roles: [
-    // The costume: the tunic and the wraps, in the player's colour; the fur a light of it.
+    // The costume: the tunic and the wraps, in the player's colour; the fur a light of it, pale enough to stay its own
+    // shape on any colour (a cream neutral read the same, two readers each). The beads on her braids are drawn in it.
     { name: 'leather', color: '#5f7d33', slot: 'player' },
-    { name: 'fur', color: '#808080', on: 0, tone: 30 },
+    { name: 'fur', color: '#808080', on: 0, tone: 40 },
     { name: 'skin', color: '#da9e69' },
     { name: 'hair', color: '#8d311b' },
     { name: 'wood', color: '#a36b41' },
@@ -84,7 +90,16 @@ export const kind: FlatKind = {
     { name: 'plaster', vary: 1, options: 2 },
     { name: 'wear', vary: 11, options: 3 },
   ],
-  eyes: { role: 'dark', from: 'map', count: 1, pair: [-1, 0], area: [0.1, 2], gap: [0.8, 3.5], specks: { dark: 2.4 }, band: [0.1, 0.45] },
+  eyes: {
+    role: 'dark',
+    from: 'map',
+    count: 1,
+    pair: [-1, 0],
+    area: [0.05, 2],
+    gap: [0.8, 3.5],
+    specks: { dark: 2.4 },
+    band: [0.1, 0.5],
+  },
   wear: {
     on: ['leather'],
     chin: 5,
@@ -100,7 +115,8 @@ export const kind: FlatKind = {
     idle2: { frames: ['idle2', 'idle'], loop: true, holds: [1.8, 2.4] },
     walk: { frames: ['walk-1', 'walk-2'], loop: true, stride: 28 },
     run: { frames: ['run-1', 'run-2'], loop: true, stride: 42 },
-    air: { frames: ['air-1', 'air-2'], loop: false, vy: [-200, 200], centre: 'box' },
+    // A little smaller: the spear's blade over her head would stand above the cast's box.
+    air: { frames: ['air-1', 'air-2'], loop: false, vy: [-200, 200], centre: 'box', scale: 0.9 },
     wall: { frames: ['wall'], loop: true, fps: 1, centre: 'box', scale: 0.9 },
     // Her eyes are squeezed shut in the cheer.
     cheer: { frames: ['cheer'], loop: true, fps: 1, eyes: false },
@@ -110,7 +126,7 @@ export const kind: FlatKind = {
   // Drawn three to a 16:9 image and cut apart (README → 3. Poses); the sheets' prompts are in
   // art/sprites/archer/design.prompt.txt. These are each pose alone, for a redraw.
   poses: {
-    idle2: { pose: `standing up straight, calm, the bow held out ahead, a dart nocked, not drawn, her eyes open; ${KEEP}.` },
+    idle2: { pose: `standing up straight, the bow held out level ahead, a suction-cup dart on the string pulled back to her cheek, her eyes open; ${KEEP}.` },
     'walk-1': { pose: `walking upright to the right, mid-step, the near boot forward and the far boot back, her eyes open; ${KEEP}.` },
     'walk-2': { pose: `standing up straight mid-step, the legs passing under her, her eyes open; ${KEEP}.` },
     'run-1': {

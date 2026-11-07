@@ -1008,13 +1008,16 @@ export const BRIEFS: Record<string, Brief> = {
     // arm's length ahead of her, as tall as she is, with background all round it (the read: nobody else in the cast
     // holds one; a thin curve with a string, never a block like the hunter's cannon or the raider's pistols); the
     // huge bushy red hair puffing out behind her head with thick braids flying off it (her, not the raider's one
-    // tight rope); the fur wrap over her shoulders and back (the tribal hunter's bulk); a low hunter's crouch.
+    // tight rope); the fur wrap over her shoulders and back (the tribal hunter's bulk); a low hunter's crouch; the
+    // spear slung across her back, its stone blade clear above and behind her head (what takes the clean colour read
+    // from "an archer" to the huntress, round 2), the bone beads on her braids and the cap at her temple.
     // Ours, and the joke: her quarry is household robots. The bow is a bent wooden curtain rod with a round knob on
-    // each end, strung with a bungee cord, and the arrows are suction-cup darts.
+    // each end, strung with a bungee cord, the arrows are suction-cup darts, the spear's butt a rod's knob, and the
+    // focus at her temple a bottle cap.
     // The palette is neutral (Decisions 4): the leathers and leg wraps in the player's colour, the fur a light of it;
     // the hair red-brown (a neutral the read needs), the skin, the rod's wood, the boots and the darts neutrals.
-    // Side on: her read is a profile. The design read (black, among seven cast silhouettes) named her twice, at medium
-    // and medium-high (art/sprites/archer/design.prompt.txt).
+    // Side on: her read is a profile. The spear, beads and cap went on as an edit of the round-1 design
+    // (art/sprites/archer/design.prompt.txt, step 4); a prompt naming the spear with the bow and the hair is refused.
     design:
       "The character: a young huntress seen side on in profile facing right, in a low crouch, drawing a big bow held out level at arm's length ahead of her with white background all round it: the bow is a thick bent wooden curtain rod (#a0703f) with a round knob on each end, as tall as she is, strung with a black bungee cord, a suction-cup dart on the string. " +
       'Huge bushy red-brown hair (#b0482a) puffing out far behind her head in thick braids. Green leather tunic and leg wraps (#4f8a5e), a big cream fur wrap on one shoulder (#e8dcc0), a quiver of darts on her back, brown boots, tan skin, dot eyes.',
