@@ -72,9 +72,13 @@ export const LEAD_HOLDS = {
  * `BONK_CREDIT`), thrown or bumped into the level. How hard it's fought (tests/lib/bot-race.ts `Fight`): `contact`
  * and `hit`, seconds from GO to the first touch or bonk and to the first bonk; `uses`, items used a round; `still`
  * and `retreat`, the shares of frames in it standing still and moving away from the nearest rival; `gap`, the tiles
- * to that rival. Measured bare 2%, 23.4 s, 77%, 1.6 s, 3.6 s, 11.0 uses, 10%, 20%, 5.2 tiles; placed 5%, 22.9 s, 63%,
- * 1.3 s, 3.0 s, 10.2 uses, 11%, 19%, 4.2 tiles (22 of 48 and 27 of 64 rounds in 20–40 s, 6 and 5 under 10 s; 37 and 32
- * deaths off the sides) since the spawn shield ends 5 s after GO (sim/constants.ts `SHIELD_FRAMES`): a rival back at its
+ * to that rival. Measured bare 2%, 24.5 s, 75%, 1.6 s, 3.3 s, 11.1 uses, 9%, 20%, 5.0 tiles; placed 2%, 24.2 s, 62%,
+ * 1.3 s, 3.3 s, 10.5 uses, 10%, 20.1%, 4.9 tiles (22 of 48 and 24 of 64 rounds in 20–40 s, 2 and 4 under 10 s; 29 and 30
+ * deaths off the sides) since a brawl's bodies shove harder and a run-up body-checks (game/modes.ts `BRAWL_SHOVE`): a
+ * check throws a rival several tiles off, so the field ends up further apart and more of it is sliding away. Bots don't
+ * line a check up yet, so the rest is within the noise. From bare 2%, 23.4 s, 77%, 1.6 s, 3.6 s, 11.0 uses, 10%, 20%,
+ * 5.2 tiles; placed 5%, 22.9 s, 63%, 1.3 s, 3.0 s, 10.2 uses, 11%, 19%, 4.2 tiles (22 of 48 and 27 of 64 rounds in
+ * 20–40 s, 6 and 5 under 10 s; 37 and 32 deaths off the sides) since the spawn shield ends 5 s after GO (sim/constants.ts `SHIELD_FRAMES`): a rival back at its
  * spawn can be knocked, so more deaths are knocks and rounds are a little shorter. From bare 6%, 25.6 s, 68%, 1.6 s,
  * 3.8 s, 12.9 uses, 10%, 20%, 4.8 tiles; placed 2%, 23.7 s, 58%, 1.3 s, 3.4 s, 10.8 uses, 10%, 19%, 4.3 tiles (25 of 48
  * and 31 of 64 rounds in 20–40 s, 4 and 5 under 10 s; 32 and 22 deaths off the sides of the map) with a shield that
@@ -127,8 +131,8 @@ export const BRAWL_ROUNDS = {
       hit: [0, 5],
       uses: [7, 12],
       still: [0, 0.18],
-      retreat: [0, 0.2],
-      gap: [0, 4.8],
+      retreat: [0, 0.21],
+      gap: [0, 5],
     },
   },
 } as const satisfies {
