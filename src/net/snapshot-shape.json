@@ -311,6 +311,8 @@
   "run.items.lines": "array",
   "run.items.lines[]": "object",
   "run.items.lines[].back": "boolean",
+  "run.items.lines[].held": "number",
+  "run.items.lines[].hooked": "number",
   "run.items.lines[].id": "number",
   "run.items.lines[].out": "number",
   "run.items.lines[].owner": "number",
