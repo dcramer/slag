@@ -9,8 +9,15 @@ export const POINTS = {
    * party game pays its comeback four fifths of a finish (docs/MODES.md → Race).
    */
   underdog: 8,
-  /** The same for a trailing scorer in a mode scored by outlasting (Rising Slag, Brawl). */
+  /** The same for a trailing scorer in a mode scored by outlasting or by knockouts (Rising Slag, Brawl). */
   survivor: 3,
+  /** Brawl: each rival knocked out (`scoreKnockouts`). */
+  knockout: 5,
+  /**
+   * Brawl: the last one standing, one knockout's worth, so two knockouts beat hiding to the end. At 5 a match of four
+   * bots runs the 8.5 bouts it did on the old 10 a win and 2 a kill; at 4 or 3 it ran 9.3 and 10 (docs/MODES.md → Brawl).
+   */
+  lastStanding: 5,
 } as const;
 
 /** Scoreless rounds in a row before a trailing finisher counts as an underdog. */
@@ -28,7 +35,7 @@ export type Verdict = 'normal' | 'too-easy' | 'too-hard';
 export interface Award {
   slot: number;
   points: number;
-  reason: 'finish' | 'first' | 'trap' | 'underdog' | 'survive';
+  reason: 'finish' | 'first' | 'trap' | 'underdog' | 'survive' | 'knockout';
 }
 
 export interface RoundResult {
@@ -114,9 +121,8 @@ export function scoreSurvival(
   kills: readonly { victim: number; killer: number }[],
   standings: Readonly<Record<number, Standing>> = {},
   progress: (slot: number) => number = () => 0,
-  /** What each place pays, the last one standing first (a brawl pays only its winner). */
-  places: readonly number[] = SURVIVE_PLACES,
 ): RoundResult {
+  const places = SURVIVE_PLACES;
   const slots = fates.map((f) => f.slot);
   if (fates.length === 1) {
     const f = fates[0];
@@ -148,4 +154,32 @@ export function scoreSurvival(
     ),
   );
   return { verdict: 'normal', awards, finishers: winners };
+}
+
+/**
+ * Brawl scoring (game/modes.ts): a fight pays for what you did to the field, not for waiting it out (owner decision:
+ * "you shouldn't be able to win by just standing around").
+ * - Every rival you knocked out pays `POINTS.knockout`, standing or not, and in a draw too: the knockout happened.
+ *   A kill is yours when the run credits it (sim/items/world.ts `creditKill`): your item hit, body check or part, or
+ *   the level soon after your knock. A fall of your own, or one nobody knocked, pays nobody.
+ * - The last one standing gets `POINTS.lastStanding`, one knockout's worth, so whoever knocked out two and then fell
+ *   beats whoever hid to the end. Nobody standing, or the last ones caught on the same frame, is a draw: no win.
+ * - A trailing scorer who hadn't scored in a while gets the underdog bonus, as in the other modes.
+ */
+export function scoreKnockouts(
+  fates: readonly Fate[],
+  kills: readonly { victim: number; killer: number }[],
+  standings: Readonly<Record<number, Standing>> = {},
+): RoundResult {
+  const slots = fates.map((f) => f.slot);
+  const awards: Award[] = [];
+  // The last one out, even if the slag caught them in the beat after the round ended.
+  const when = (f: Fate) => (f.alive ? Infinity : f.deathFrame);
+  const last = Math.max(...fates.map(when));
+  const top = fates.filter((f) => when(f) === last);
+  const winners = fates.length > 1 && top.length === 1 ? [top[0].slot] : [];
+  for (const slot of winners) awards.push({ slot, points: POINTS.lastStanding, reason: 'survive' });
+  for (const k of kills) if (k.killer !== k.victim && slots.includes(k.killer)) awards.push({ slot: k.killer, points: POINTS.knockout, reason: 'knockout' });
+  awards.push(...underdogs(slots, [...new Set(awards.map((a) => a.slot))], standings));
+  return { verdict: awards.length ? 'normal' : 'too-hard', awards, finishers: winners };
 }

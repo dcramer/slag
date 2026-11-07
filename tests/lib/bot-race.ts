@@ -11,6 +11,8 @@ import { RUN_COUNTDOWN, TILE } from '../../src/sim/constants';
 import { feetUp, type RunWorld as Run } from '../../src/sim/run';
 import { leaderOf } from '../../src/sim/standing';
 import type { ModeId } from '../../src/game/modes';
+import type { Award } from '../../src/game/scoring';
+import { NO_INPUT } from '../../src/sim/types';
 import { MODES } from '../../src/game/modes';
 import { DEFAULT_RULES, withMode } from '../../src/game/rules';
 import type { ThemeId } from '../../src/themes';
@@ -371,7 +373,7 @@ function playRound(seed: number, m: Match, bots: BotSeats, { at = 15 * 60, limit
   };
 }
 
-/** Where a whole bot match's time went (`botMatchTime`). */
+/** Where a whole bot match's time went, and who scored what (`botMatchTime`). */
 export interface BotMatchTime {
   /** Frames spent in each phase, lobby aside. */
   frames: Partial<Record<Phase, number>>;
@@ -380,26 +382,50 @@ export interface BotMatchTime {
   placements: number;
   /** It reached victory within the cap. */
   ended: boolean;
+  /** The match's winners, by seat (join order). */
+  winners: number[];
+  /** Per seat: rivals it was credited with knocking out over the match, and its points by award reason. */
+  knockouts: number[];
+  points: Partial<Record<Award['reason'], number>>[];
 }
 
 /**
  * `players` bots of `level` playing one whole `mode` match on `seed`'s level with the lobby's rules for it (`withMode`,
- * then `bouts` if given), from the first pick to victory: the frames each phase took. What bouts per placement buy.
+ * then `bouts` if given), from the first pick to victory: the frames each phase took, and who scored what. `idle` is a
+ * seat that picks and places like the rest but stands still through every race: someone who only waits it out.
  */
 export function botMatchTime(
   seed: number,
-  { players = 4, level = 'normal', mode = 'brawl', bouts }: { players?: number; level?: BotLevel; mode?: ModeId; bouts?: number } = {},
+  {
+    players = 4,
+    level = 'normal',
+    mode = 'brawl',
+    bouts,
+    idle = -1,
+  }: { players?: number; level?: BotLevel; mode?: ModeId; bouts?: number; idle?: number } = {},
 ): BotMatchTime {
   const { m, bots } = botMatch(seed, undefined, undefined, players, level, undefined, undefined, mode);
   m.rules = { ...withMode(m.rules, mode), ...(bouts ? { bouts } : {}) };
   m.startMatch();
+  const seats = m.players.map((p) => p.slot);
   const frames: Partial<Record<Phase, number>> = {};
+  const knockouts = seats.map(() => 0);
+  const points: Partial<Record<Award['reason'], number>>[] = seats.map(() => ({}));
   let placements = 0;
   for (let f = 0; f < 4 * 60 * 60 * 60 && m.phase !== 'victory'; f++) {
     if (m.phase === 'pick' && m.phaseFrame === 1) placements++; // a frame in: startMatch's pick starts on frame 0, the rest a step before we look
     frames[m.phase] = (frames[m.phase] ?? 0) + 1;
-    m.step(bots.frames(m));
+    const inputs = bots.frames(m);
+    if (idle >= 0 && m.phase === 'run') inputs[m.players[idle].device] = NO_INPUT;
+    const was = m.phase;
+    m.step(inputs);
     m.drainEvents();
+    if (was !== 'run' || m.phase !== 'score') continue;
+    for (const k of m.run!.kills) if (k.killer !== k.victim) knockouts[seats.indexOf(k.killer)]++;
+    for (const a of m.result!.awards) {
+      const at = points[seats.indexOf(a.slot)];
+      at[a.reason] = (at[a.reason] ?? 0) + a.points;
+    }
   }
-  return { frames, rounds: m.round, placements, ended: m.phase === 'victory' };
+  return { frames, rounds: m.round, placements, ended: m.phase === 'victory', winners: m.winners.map((s) => seats.indexOf(s)), knockouts, points };
 }

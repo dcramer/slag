@@ -71,11 +71,15 @@ export function absorbHit(w: RunWorld, r: Runner, cause: DeathCause): boolean {
   return true;
 }
 
-/** Deaths the level dealt soon after a rival's bonk credit that rival (trap points), like any prop kill. */
+/**
+ * A death soon after a rival's bonk credits that rival (trap points, a brawl's knockout), like any prop kill: the
+ * last hitter, whatever the knock threw them into, even a part someone else placed or one of their own. Otherwise
+ * whoever owns what killed them.
+ */
 export function creditKill(r: Runner, killer: number, cause: DeathCause): number {
-  if (killer >= 0 || cause === 'pop' || cause === 'timeout') return killer;
+  if (cause === 'pop' || cause === 'timeout') return killer;
   const it = r.items;
-  return it.bonkCredit > 0 && it.bonkedBy !== r.slot ? it.bonkedBy : killer;
+  return it.bonkCredit > 0 && it.bonkedBy >= 0 && it.bonkedBy !== r.slot ? it.bonkedBy : killer;
 }
 
 /** A shot came back to the hand that threw it. */
