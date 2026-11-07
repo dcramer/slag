@@ -143,7 +143,14 @@ export const MODES: Record<ModeId, ModeDef> = {
       builder: 'shaft',
       loop: true,
       bare: true,
-      boxes: { chase: ['hook', 'hook', 'upper', 'grapple', 'grapple', 'grapple', 'jolt'], lead: ['shield', 'slick', 'block'] },
+      boxes: {
+        chase: ['hook', 'upper', 'grapple', 'grapple', 'jolt', 'block'],
+        lead: ['shield', 'slick', 'block'],
+        behind: [
+          { rows: 6, deal: ['hook', 'hook', 'upper', 'grapple', 'grapple', 'grapple', 'jolt'] },
+          { rows: 12, deal: ['hook', 'hook', 'hook', 'grapple', 'grapple'] },
+        ],
+      },
       surges: true,
       tide: true,
     },

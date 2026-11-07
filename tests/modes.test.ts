@@ -6,7 +6,7 @@ import { generateCrate } from '../src/gen/props';
 import { throughFaults } from '../src/gen/setpieces';
 import { leaderOf as leaderIndex } from '../src/sim/standing';
 import { POINTS, scoreKnockouts, scoreSurvival, SURVIVE_PLACES, UNDERDOG_ROUNDS } from '../src/game/scoring';
-import { creditKill } from '../src/sim/items';
+import { creditKill, dealFor } from '../src/sim/items';
 import { generateLevel } from '../src/gen/level';
 import { LOOP_ROWS, LOOP_W, rollProfile } from '../src/gen/level/profile';
 import { LOOP_HEAD_START } from '../src/gen/level/tide';
@@ -278,7 +278,7 @@ describe('Rising Slag parts and items', () => {
 });
 
 describe("a loop's mystery boxes", () => {
-  it('deal catch-up to whoever is behind and defence to the leader', () => {
+  it('deal catch-up to whoever is behind, stronger the further behind, and defence to the leader', () => {
     const box = {
       type: 'mystery' as const,
       cells: [[10, 10]] as [number, number][],
@@ -308,16 +308,28 @@ describe("a loop's mystery boxes", () => {
         ],
         // Higher up leads (sim/standing.ts): the lower feet.
         leader: () => (up < other ? 0 : 1),
+        behind: (i: number) => Math.max(0, ((i === 0 ? up : other) - Math.min(up, other)) / TILE),
         spawnItem: (s: { kind: string }) => got.push(s.kind),
         emit: () => {},
       };
       moduleSim('mystery').tick!(box, ctx as never);
       return got[0];
     };
+    // The further behind, the stronger the table (`ItemDeal.behind`): a few rows back the mild one, a screen's half
+    // back the next, further still the strongest.
+    const tiers = box.deal.behind!;
+    expect(tiers.length).toBeGreaterThan(0);
     for (let uid = 1; uid <= 8; uid++) {
-      expect(box.deal.chase).toContain(knock(uid, 500, 100));
+      expect(box.deal.chase).toContain(knock(uid, 100 + 2 * TILE, 100));
+      for (const [i, t] of tiers.entries()) {
+        const rows = i + 1 < tiers.length ? (t.rows + tiers[i + 1].rows) / 2 : t.rows + 4;
+        expect(t.deal).toContain(knock(uid, 100 + rows * TILE, 100));
+      }
       expect(box.deal.lead).toContain(knock(uid, 100, 500));
     }
+    expect(dealFor(box.deal, false, 0)).toBe(box.deal.chase);
+    expect(dealFor(box.deal, true, 30)).toBe(box.deal.lead);
+    expect(dealFor(box.deal, false, tiers[tiers.length - 1].rows)).toBe(tiers[tiers.length - 1].deal);
   });
 });
 

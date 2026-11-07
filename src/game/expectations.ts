@@ -56,9 +56,10 @@ export const PASS_BANDS: Partial<Record<ModeId, Record<BotLevel, Record<Difficul
  * screen (512: 2.4), 3.1 with the gates, 1.4 with neither. With the climb's own items in the deal and Leg Days on its
  * lips (docs/MODES.md → Rising Slag, 8): 45, 39 and 41, and 2.7 lead changes (3.0 with the deal in every hand).
  * Since the leader runs free (owner decision: the screen's solid top went) and bots see only the screen (9): 57, 45
- * and 54, with 2.4 lead changes (2.6 with the deal in every hand); 512 seeds: 52, 43, 52 and 2.3, 2.7, 2.4. `boxes`
- * is over its band: the bands measured the solid top, and catch-up is the climb's items' to bring back, not this
- * band's to move. The target, from the lead-camera racer, is the early leader winning about half the time
+ * and 54, with 2.4 lead changes (2.6 with the deal in every hand); 512 seeds: 52, 43, 52 and 2.3, 2.7, 2.4. With the
+ * deal graded by how far behind (`ItemDeal.behind`, game/modes.ts): 53, 45 and 54 and 2.4, 2.8, 2.3 lead changes;
+ * 512 seeds: 47, 40, 52 and 2.4, 2.6, 2.4. `boxes` sits at its band's top on these seeds: the bands measured the
+ * screen's solid top, and they stay where they are. The target, from the lead-camera racer, is the early leader winning about half the time
  * (docs/MODES.md); these bands only catch a regression.
  */
 export const LEAD_HOLDS = {

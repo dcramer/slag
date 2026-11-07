@@ -1,7 +1,7 @@
 import { deriveSeed, Rng } from '../../../core/rng';
 import { TILE } from '../../constants';
 import { T_SOLID, tileAt } from '../../level';
-import type { ItemKind } from '../../items/types';
+import { dealFor, type ItemKind } from '../../items/types';
 import { defineModule, type RunnerView, solidId } from '../registry';
 import type { ModuleOf, PropState } from '../types';
 import { SURFACES } from './body';
@@ -73,7 +73,8 @@ defineModule<'mystery'>({
       const hi = ctx.runners.findIndex((r) => r.active && touches(r, x, y));
       if (hi < 0) continue;
       // By rank: the leader as the race ranks it (sim/standing.ts), or everyone where nobody ranks the race.
-      const pool = m.deal ? ((ctx.leader?.() ?? hi) === hi ? m.deal.lead : m.deal.chase) : m.pool;
+      // A chaser further behind draws from a stronger table (`ItemDeal.behind`).
+      const pool = m.deal ? dealFor(m.deal, (ctx.leader?.() ?? hi) === hi, ctx.behind?.(hi) ?? 0) : m.pool;
       const kind = rollItem(pool, ctx.itemSeed ?? ctx.level.seed, ctx.r.pp.uid, ctx.mi, st.pops);
       // A loop's box hands it over, as a racer's item box does: a climb has no time to hop about after a pop, and its
       // boxes hang in open air. Any other box (or full hands) pops it out of the top, so whoever hit it has to hop up

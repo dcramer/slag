@@ -174,7 +174,7 @@ describe('where the climb items come from', () => {
     const CATCH_UP = MODES.slag.profile.boxes!;
     for (const k of ['hook', 'upper'] as const) {
       expect(CRATE_ITEMS).not.toContain(k);
-      expect(CATCH_UP.chase).toContain(k);
+      expect([...CATCH_UP.chase, ...(CATCH_UP.behind ?? []).flatMap((t) => t.deal)]).toContain(k);
       expect(CATCH_UP.lead).not.toContain(k);
     }
   });

@@ -23,7 +23,7 @@ import {
 } from './items';
 import { goalRect, killY, lapShift, type Level, offMap, spawnsOf, spawnZones, tileAt } from './level';
 import type { ItemKind } from './items/types';
-import { leaderOf } from './standing';
+import { behindOf, leaderOf } from './standing';
 import { newScreen, type Screen, type ScreenRules } from './screen';
 import { tideStart } from './tide';
 import { type RunFeature, RUN_FEATURES } from './features';
@@ -380,6 +380,7 @@ export class RunWorld {
       },
       itemSeed: this.itemSeed,
       leader: () => (leader ??= leaderOf(this)),
+      behind: (i) => behindOf(this, this.runners[i]),
       solids: this.solids,
       hazards: this.out.hazards,
       struck: this.struck,
