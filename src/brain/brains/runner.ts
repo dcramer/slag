@@ -266,8 +266,10 @@ export function runnerBrain(seed: number, traits: Personality, mood: Temperament
       }
     }
     if (!v.live || !me || !me.alive || me.finished) return { do: 'wait' };
-    strategy ??= STRATEGIES[v.mode].make(raceRng, traits);
-    return strategy.think(v, me);
+    const def = STRATEGIES[v.mode];
+    strategy ??= def.make(raceRng, traits);
+    const intent = strategy.think(v, me);
+    return def.haste && intent.do === 'goTo' ? { ...intent, haste: true } : intent;
   };
 
   return {

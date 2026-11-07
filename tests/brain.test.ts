@@ -245,6 +245,29 @@ describe('the motor’s own moves', () => {
     expect(stood).toBe(true);
   });
 
+  it('in a fight it reads its landings in the air: slow hands cost a run across the arena no stops, where a race still pays them', () => {
+    // Across a brawl arena, end to end, with hands that take 18 frames to see what's next and no other lapses.
+    const across = (reaction: number, haste: boolean) => {
+      const m = new Match(1, undefined, { ...DEFAULT_RULES, mode: 'brawl' });
+      const { spawn, goal } = m.level;
+      const { p, r } = standing(m, spawn.tx, spawn.ty);
+      const motor = new Motor({ ...rollPersonality(1, 'normal'), reaction, slip: 0, think: 0, stray: 0 }, 1);
+      let still = 0;
+      for (let f = 0; f < 20 * 60 && r.alive; f++) {
+        if (Math.floor((r.body.x + r.body.w / 2) / TILE) === goal.tx && Math.floor((r.body.y + r.body.h - 1) / TILE) === goal.ty) return { f, still };
+        m.step({ kb: motor.drive(m, p, { do: 'goTo', tx: goal.tx, ty: goal.ty, haste }) });
+        if (r.body.onGround && Math.abs(r.body.vx) < 1) still++;
+      }
+      return { f: -1, still };
+    };
+    const quick = across(0, true);
+    const slow = across(18, true);
+    expect(quick.f).toBeGreaterThan(0);
+    expect(slow.still).toBeLessThan(10);
+    expect(slow.f).toBeLessThanOrEqual(quick.f + 10);
+    expect(across(18, false).still).toBeGreaterThan(30);
+  });
+
   it('won’t hop into a flail swinging overhead: it waits for the swing to pass', () => {
     const m = new Match(4);
     // Open ground well clear of the spawn, open above, with a flail's pivot three rows up.

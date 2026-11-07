@@ -72,19 +72,27 @@ export const LEAD_HOLDS = {
  * `BONK_CREDIT`), thrown or bumped into the level. How hard it's fought (tests/lib/bot-race.ts `Fight`): `contact`
  * and `hit`, seconds from GO to the first touch or bonk and to the first bonk; `uses`, items used a round; `still`
  * and `retreat`, the shares of frames in it standing still and moving away from the nearest rival; `gap`, the tiles
- * to that rival. Measured bare 13%, 27.6 s, 49%, 0.9 s, 3.5 s, 11.5 uses, 22%, 16%, 4.2 tiles; placed 13%, 24.5 s,
- * 43%, 1.0 s, 4.0 s, 8.4 uses, 26%, 14%, 4.8 tiles (5 and 7 rounds under 10 s, none without a knock or a shove), since
- * bots press the fight (`press`): they no longer read the view's rounding as the slag pouring and climb from GO, take
+ * to that rival. Measured bare 8%, 26.6 s, 53%, 0.8 s, 3.8 s, 12.2 uses, 11%, 17%, 3.9 tiles; placed 14%, 24.2 s,
+ * 39%, 0.8 s, 3.8 s, 8.9 uses, 15%, 15%, 4.0 tiles (4 and 10 rounds under 10 s, 3 placed ones without a knock or a
+ * shove), since the motor fights with haste (`StrategyDef.haste`, src/brain/motor.ts): it picks again as soon as its
+ * target moves instead of playing out a move for where the target was, takes no pause for a rival's shove and only
+ * what's left of one after a landing it read in the air, and lines up in a cell only where that wins the time back,
+ * walking there rather than tapping. Before, the still frames were mostly its own care: on the bare arena 7.7% of
+ * frames lining up, 5.5% the beat after a landing, 1.2% after a bump, 2.3% thinking and 3.7% standing where its
+ * strategy sent it. Now bare 5.0% standing where the strategy sent it, 1.8% after a short hop, 1.5% thinking, 1.1%
+ * after a part bumped it; placed 4.7%, 1.5%, 1.7% and 0.7%, and 4.2% standing clear of a hazard every move would pass
+ * within its margin of. From bare 13%, 27.6 s, 49%, 0.9 s, 3.5 s, 11.5 uses, 22%, 16%, 4.2 tiles; placed 13%, 24.5 s, 43%, 1.0 s,
+ * 4.0 s, 8.4 uses, 26%, 14%, 4.8 tiles (5 and 7 rounds under 10 s, none without a knock or a shove), since bots
+ * press the fight (`press`): they no longer read the view's rounding as the slag pouring and climb from GO, take
  * an unlined hit after about a second in reach rather than four, fetch from boxes within 14 tiles unless a rival they
  * could shove into something is right there, dodge only a hit that's coming, and get over a shove that stalls. From
  * bare 13%, 30.1 s, 36%, 1.0 s, 4.5 s, 6.6 uses, 22%, 19%, 5.6 tiles; placed 16%, 28.1 s, 32%, 1.1 s, 5.5 s, 6.1
  * uses, 26%, 17%, 5.6 tiles (2 and 7 under 10 s). Before that bare 6%, 29.6 s and 31%, placed 17%, 27.4 s and 24%
  * before bots put their hazards where a knock throws someone, and 63%, 39.6 s, 11% and 59%, 38.1 s, 9% before bots
- * lined rivals up and fetched boxes. Most still frames are the motor's own care (a beat to see what's next after a
- * landing or a bump, lining up in a cell, waiting a hazard out), not a choice to hang back. The slag still takes
- * more deaths than anything else. Earlier or faster pours shortened rounds and added draws. The targets are the
- * owner's, from the party brawler: draws rare, rounds of 20–40 s. The bands only catch a regression; the bots before
- * `press` fail the first bonk, uses, retreat and gap bands, so a return to turtling does too.
+ * lined rivals up and fetched boxes. The slag still takes more deaths than anything else. Earlier or faster pours
+ * shortened rounds and added draws. The targets are the owner's, from the party brawler: draws rare, rounds of
+ * 20–40 s. The bands only catch a regression; the bots before `press` fail the first bonk, uses, retreat and gap
+ * bands, and the motor before `haste` the still bands, so a return to turtling does too.
  */
 export const BRAWL_ROUNDS = {
   targets: { draws: 0.2, seconds: [20, 40] },
@@ -96,9 +104,9 @@ export const BRAWL_ROUNDS = {
       contact: [0, 1.2],
       hit: [0, 4.2],
       uses: [9, 15],
-      still: [0, 0.25],
+      still: [0, 0.14],
       retreat: [0, 0.18],
-      gap: [0, 5],
+      gap: [0, 4.6],
     },
     placed: {
       draws: [0, 0.2],
@@ -107,9 +115,9 @@ export const BRAWL_ROUNDS = {
       contact: [0, 1.3],
       hit: [0, 5],
       uses: [7, 11],
-      still: [0, 0.29],
+      still: [0, 0.18],
       retreat: [0, 0.16],
-      gap: [0, 5.3],
+      gap: [0, 4.6],
     },
   },
 } as const satisfies {

@@ -26,4 +26,10 @@ export interface Lay {
 export interface StrategyDef {
   make(rng: Rng, traits: Personality): Strategy;
   lay?(v: BrainView): Lay;
+  /**
+   * A fight rather than a run over a level: the targets of its `goTo`s are rivals and the cells round them, which
+   * move, so every one goes to the motor with `haste` (Intent). A run to a flag or up a tower leaves it off: its
+   * jumps want a clean start from a cell's middle, and a moment to see the level ahead after each landing.
+   */
+  haste?: boolean;
 }

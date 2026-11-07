@@ -219,8 +219,12 @@ export type Intent =
   | { do: 'aim'; x: number; y: number }
   /** Place: put the held part with its origin at (tx, ty), turned `rot`. */
   | { do: 'place'; tx: number; ty: number; rot: number }
-  /** Race: get to the cell (tx, ty) by the route the motor finds. */
-  | { do: 'goTo'; tx: number; ty: number }
+  /**
+   * Race: get to the cell (tx, ty) by the route the motor finds. `haste`: a fight, chasing a target that moves (a
+   * strategy's own say, `StrategyDef.haste`): the motor picks again as soon as the target does, reads its landing in
+   * the air, and lines up in a cell only where that wins time back.
+   */
+  | { do: 'goTo'; tx: number; ty: number; haste?: boolean }
   /** Race: no proven way on, so run and jump for (tx, ty) anyway, off whatever edge is in the way. */
   | { do: 'leap'; tx: number; ty: number }
   /** Race: jump straight up in column `tx`, again whenever it lands, keeping over it: to knock a box overhead. */
