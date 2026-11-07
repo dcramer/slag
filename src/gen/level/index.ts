@@ -9,7 +9,6 @@ import { generateTheme, type Theme } from '../theme';
 import { ReachCache } from '../../sim/reach';
 import { harmReach } from './harm';
 import { loopBoxes } from './loop-boxes';
-import { GATE_HOLD, loopGates } from './loop-gates';
 import { slagTide } from './tide';
 import { footing } from '../../sim/weather';
 import { openUp } from './lanes';
@@ -304,11 +303,7 @@ export function generateLevel(seed: number, themeOverride?: ThemeId, profileOver
       });
       // (The placer already avoids these cells; this is a safety net. Keep uids contiguous, the landmark's first.)
       // A level that asks for boxes gets mystery boxes (or item stands) of its own, after the builder and its set pieces (./loop-boxes.ts).
-      const kept = [...fixed, ...pieces.filter(clearOfBridges)];
-      // A loop that asks for gates gets them across its shaft before the boxes, which keep off their rows (./loop-gates.ts).
-      const gated = profile.gates ? loopGates(level, kept, keep) : null;
-      if (gated?.gates.length && level.tide) level.tide = { ...level.tide, gates: gated.gates, hold: GATE_HOLD };
-      const fitted = [...kept, ...(gated?.pieces ?? [])];
+      const fitted = [...fixed, ...pieces.filter(clearOfBridges)];
       // An arena's boxes hang only over floors the field can get to; a loop's every floor is on the climb.
       const stands = profile.loop ? undefined : new Set(cache.analyze(level, false).cells);
       // An arena's stands keep out of whatever its pieces reach (./harm.ts).

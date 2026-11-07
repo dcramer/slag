@@ -46,6 +46,11 @@ export interface SelfSense {
   up: number;
   /** Rising Slag: rows from its feet down to the slag, rounded; null with no slag. */
   slag: number | null;
+  /**
+   * Rising Slag: rows from its feet down to the bottom edge of the leader's screen, rounded; null with no screen. Under
+   * it a moment and it's out, as it is in the slag. The screen's top holds whoever reaches it; that it plays into.
+   */
+  screen: number | null;
   /** Its place in the race, 0 leading: nearest the flag by route, or round a climb, highest. */
   rank: number;
   /** The item in its hands and the uses left on it, or null. */

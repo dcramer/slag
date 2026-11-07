@@ -69,8 +69,6 @@ export interface LevelProfile {
    * with empty hands and filled again a few seconds later, where a box is knocked from below and pops it.
    */
   stands?: boolean;
-  /** Gates across a loop's shaft that shut on a cycle, so a leader waits and the pack closes in (gen/level/loop-gates.ts). */
-  gates?: boolean;
   /**
    * Slag rising under it (Level.tide, sim/tide.ts): `true` for a climb's, on a leash to the leader and squeezing late;
    * or a pour of the mode's own pace with no leash (a brawl's arena closing in from below), from the lowest open row, or

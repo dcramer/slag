@@ -91,7 +91,7 @@ export function wordFor(e: GameEvent): Pick | null {
       if (e.cause === 'fall') return { text: 'SPLOOSH!', fill: CYAN, burst: WHITE, size: 20 };
       if (e.cause === 'crush') return { text: 'SQUISH!', fill: RED, burst: YELLOW, size: 20 };
       if (e.cause === 'pop') return { text: 'POP!', fill: YELLOW, burst: RED, size: 20 };
-      if (e.cause === 'timeout' || e.cause === 'out') return null;
+      if (e.cause === 'timeout' || e.cause === 'out' || e.cause === 'screen') return null;
       return { text: oneOf(['SPLAT!', 'KRAK!', 'POW!', 'THWACK!']), fill: YELLOW, burst: RED, size: 21 };
     case 'explosion':
       return { text: 'KA-BOOM!', fill: YELLOW, burst: ORANGE, size: 30 };

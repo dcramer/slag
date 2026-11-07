@@ -43,6 +43,7 @@ const SELF: SelfSense = {
   away: 30,
   up: 0,
   slag: null,
+  screen: null,
   rank: 0,
   held: null,
   armed: true,

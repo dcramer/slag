@@ -8,6 +8,7 @@ import type { BloodCell } from '../sim/blood';
 import { isProtected, type Level, T_EMPTY } from '../sim/level';
 import type { PlacedProp } from '../sim/props';
 import { RunWorld } from '../sim/run';
+import type { Screen } from '../sim/screen';
 import type { Weather } from '../sim/weather';
 import type { ThemeId } from '../themes';
 import { cleanCharacter } from './actions';
@@ -33,7 +34,7 @@ import { cleanCharacter } from './actions';
  * for a batch that changed this file's code, that test's field lists, or the wire shape in
  * snapshot-shape.json (`pnpm snap:shape` rewrites it; `--snap` for a change in what a field means).
  */
-export const SNAP_VERSION = 63;
+export const SNAP_VERSION = 64;
 
 export interface RunSnap {
   slots: number[];
@@ -49,6 +50,8 @@ export interface RunSnap {
   items: unknown;
   itemSeed: number;
   slag: number | null;
+  /** The leader's screen (sim/screen.ts), or null in a race without one. */
+  screen?: Screen | null;
 }
 
 export interface MatchSnap {
@@ -254,6 +257,7 @@ export function snapshotMatch(m: Match): MatchSnap {
           items: toWire(run.items),
           itemSeed: run.itemSeed,
           slag: run.slag,
+          screen: run.screen && { y: run.screen.y, under: [...run.screen.under] },
         }
       : null,
   };
@@ -345,6 +349,7 @@ function restoreRun(run: RunWorld, s: RunSnap): RunWorld {
   run.projectiles = fromWire(s.projectiles) as RunWorld['projectiles'];
   run.finishOrder = [...s.finishOrder];
   run.slag = s.slag ?? null;
+  run.screen = s.screen ? { y: s.screen.y, under: [...s.screen.under] } : null;
   run.kills = s.kills.map((k) => ({ ...k }));
   run.endFrame = s.endFrame;
   run.propState = fromWire(s.propState) as RunWorld['propState'];

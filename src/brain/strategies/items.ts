@@ -1,7 +1,7 @@
 import type { Rng } from '../../core/rng';
 import type { Personality } from '../personality';
 import { T_SOLID } from '../../sim/level';
-import { floorAt, ITEM_TACTICS, KNOCKS, tile } from '../tactics';
+import { doomRows, floorAt, ITEM_TACTICS, KNOCKS, tile } from '../tactics';
 import type { BrainView, Intent, SelfSense } from '../types';
 
 /**
@@ -160,9 +160,10 @@ export class ItemPlay {
     return null;
   }
 
-  /** Tiles of route it will go out of its way: its detour, less as the slag closes in. */
+  /** Tiles of route it will go out of its way: its detour, less as the slag or the screen's bottom edge closes in. */
   private budget(me: SelfSense): number {
-    return me.slag === null || !this.reach.slag ? this.reach.detour : Math.min(this.reach.detour, me.slag - ERRAND_SLAG);
+    const doom = doomRows(me);
+    return !Number.isFinite(doom) || !this.reach.slag ? this.reach.detour : Math.min(this.reach.detour, doom - ERRAND_SLAG);
   }
 
   /** A spot a short way off its route, and for a box, one where what it pops can be got at. */

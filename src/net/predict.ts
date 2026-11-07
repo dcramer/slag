@@ -73,6 +73,7 @@ export class Predictor {
     d.kills = src.kills.map((k) => ({ ...k }));
     d.propState = structuredClone(src.propState);
     d.items = structuredClone(src.items);
+    d.screen = src.screen && { y: src.screen.y, under: [...src.screen.under] };
     return d;
   }
 }

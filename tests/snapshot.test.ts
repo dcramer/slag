@@ -39,7 +39,7 @@ const MATCH_FIELDS = {
   derived: 'events', // render/audio only, drained every frame
 };
 const RUN_FIELDS = {
-  saved: 'frame runners projectiles finishOrder kills endFrame propState seq timeLimit items itemSeed slag',
+  saved: 'frame runners projectiles finishOrder kills endFrame propState seq timeLimit items itemSeed slag screen',
   // Rebuilt by the constructor from level, placed props and slots, or rebuilt every frame.
   derived: 'bleeds rules level placed resolved events features safeZone safeZones solids out world goal grabs struck killY blood', // `blood` is the Match's list and `bleeds` its blood rule, both handed back on restore, `rules` its mode's (game/modes.ts)
 };

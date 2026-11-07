@@ -116,7 +116,6 @@ export type ProfileOverride = Partial<
     | 'bare'
     | 'boxes'
     | 'stands'
-    | 'gates'
     | 'tide'
     | 'ends'
     | 'noWeather'
@@ -226,7 +225,6 @@ export function rollProfile(seed: number, themeId: ThemeId, o: ProfileOverride =
     ...(o.bare ? { bare: true } : {}),
     ...(o.boxes ? { boxes: o.boxes } : {}),
     ...(o.boxes && o.stands ? { stands: true } : {}),
-    ...(o.gates ? { gates: true } : {}),
     ...(o.tide ? { tide: o.tide } : {}),
     ...(o.ends ? { ends: true } : {}),
     ...(o.noWeather?.length ? { noWeather: [...o.noWeather] } : {}),

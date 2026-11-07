@@ -12,6 +12,7 @@ import { barrierOf, footprint, hangRow, motionOffset, mysterySpent, mysteryState
 import type { Body } from '../sim/physics';
 import { feetUp, type Runner, type RunWorld } from '../sim/run';
 import { raceMap } from './route';
+import { screenEdges } from '../sim/screen';
 import { rankOf } from '../sim/standing';
 import { BRAIN_VIEW_VERSION, type BoxSense, type BrainView, type Lift, type Objective, type Pace, type PropSense, type SelfSense } from './types';
 
@@ -187,6 +188,7 @@ function selfOf(m: Match, p: Player): SelfSense | null {
     away: Number.isFinite(rough) ? Math.round(rough / 10) : Infinity,
     up: upOf(run, r),
     slag: run.slag === null ? null : round4((run.slag - feetUp(run.level, r)) / TILE),
+    screen: run.screen === null ? null : round4((screenEdges(run.rules.screen!, run.screen).bottom - feetUp(run.level, r)) / TILE),
     rank: rankOf(run, r),
     held: it.held ? { ...it.held } : null,
     shielded: run.isSafe(r),
