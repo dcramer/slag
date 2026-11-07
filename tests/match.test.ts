@@ -376,15 +376,15 @@ describe('bouts', () => {
   }, 60_000);
 
   it('scores every bout, and a target reached mid-way ends the match there', () => {
-    const { m, until } = brawl({ targetScore: 20 });
+    const { m, until } = brawl({ targetScore: 2 * POINTS.lastStanding });
     const after: number[][] = [];
     for (let bout = 1; bout <= 2; bout++) {
       until(() => m.phase === 'score' && m.bout === bout);
       after.push(m.players.map((p) => p.score));
     }
     expect(after).toEqual([
-      [POINTS.survive, 0],
-      [2 * POINTS.survive, 0],
+      [POINTS.lastStanding, 0],
+      [2 * POINTS.lastStanding, 0],
     ]);
     until(() => m.phase !== 'score');
     expect(m.phase).toBe('victory');
