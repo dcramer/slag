@@ -411,9 +411,10 @@ export interface PlacerOpts {
   roles?: readonly Role[];
   /**
    * The room the builder laid the level round (`Shape.centre`, a brawl arena's): before anything else one of the set's
-   * hazards stands in these cells as its centrepiece, centred on the middle or a pair mirrored across it (`placeCentre`).
+   * hazards stands in these cells as its centrepiece, centred on the middle or a pair mirrored across it (`placeCentre`);
+   * `alone`, the rest keep out of them after.
    */
-  centre?: readonly TileRect[];
+  centre?: { rooms: readonly TileRect[]; alone?: boolean };
   /** Gets one entry per recipe tried, in order (diagnostics: `GenInfo.placement`, `pnpm level`); never changes a placement. */
   log?: RecipeTry[];
 }
@@ -557,9 +558,9 @@ export function makePlacer(themeKey: string, recipes: readonly Recipe[], uidBase
     /** The proofs (keep, ride), for `pp` going in after `more` (a centrepiece's twin after its first). */
     const holds = (pp: PlacedProp, more: readonly PlacedProp[] = []): Refusal | null =>
       opts.keep && !opts.keep([...out, ...more, pp]) ? 'keep' : !noFreeRide(level, pp, [...standing, ...out, ...more], s.cache) ? 'ride' : null;
-    if (opts.centre?.length) {
+    if (opts.centre?.rooms.length) {
       const hazards = pool.filter((r) => (r.role ?? 'hazard') === 'hazard');
-      for (const pp of placeCentre(rng, s, opts.centre, hazards, {
+      for (const pp of placeCentre(rng, s, opts.centre.rooms, hazards, {
         cap: tryCap,
         uid: uidBase + first,
         key: (r) => key(r) + CENTRE_KEY,
@@ -569,11 +570,12 @@ export function makePlacer(themeKey: string, recipes: readonly Recipe[], uidBase
         out.push(pp);
         commit(s, pp);
       }
-      // The room is the centrepiece's: the rest stand round it, so it reads as the feature, and the fight round it
-      // isn't a crowd of hazards (bots used items a fifth less a minute with the rest let in).
-      for (const a of opts.centre)
-        for (let y = Math.max(0, a.y); y < Math.min(s.h, a.y + a.h); y++)
-          for (let x = Math.max(0, a.x); x < Math.min(s.w, a.x + a.w); x++) s.taken.add(y * s.w + x);
+      // A room that's the centrepiece's alone: the rest stand round it, so it reads as the feature, and the fight round
+      // it isn't a crowd of hazards.
+      if (opts.centre.alone)
+        for (const a of opts.centre.rooms)
+          for (let y = Math.max(0, a.y); y < Math.min(s.h, a.y + a.h); y++)
+            for (let x = Math.max(0, a.x); x < Math.min(s.w, a.x + a.w); x++) s.taken.add(y * s.w + x);
     }
     // The rest of the ask from the whole pool, a recipe once and one that repeats twice, the centrepiece's copies counted.
     const used = (r: Recipe) => out.filter((pp) => pp.def.key === key(r) + CENTRE_KEY).length;

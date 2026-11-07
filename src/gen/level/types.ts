@@ -50,10 +50,14 @@ export interface Shape {
   centre?: Centre;
 }
 
-/** A room a builder lays for its level's centrepiece: its kind (`SculptCtx.noCentre` names it), and the cells a centrepiece stands in. */
+/**
+ * A room a builder lays for its level's centrepiece: its kind (`SculptCtx.noCentre` names it), the cells a centrepiece
+ * stands in, and whether they're its alone (the other set pieces keep out) or shared once it stands (an arena's halls).
+ */
 export interface Centre {
   kind: string;
   rooms: TileRect[];
+  alone?: boolean;
 }
 
 /** Width of a bridge prop in tiles. */

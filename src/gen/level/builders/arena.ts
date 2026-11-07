@@ -83,12 +83,12 @@ const PIER = 4;
  *   over its middle `ARCH` rows up with nothing else between, for what swings or drops across the way over: a log, an
  *   axe, a hook. Tiers go on over the beam; the halls stand only where they keep most of their width.
  * A kind none of the set's hazards stood in (`SculptCtx.noCentre`) isn't laid again in that draw. Weighted by how
- * hard bots fight round it (tests/stats/brawl.test.ts, bare arenas, each kind alone): a pit splits the field (17 item
- * uses a minute of fighting, from 27), the halls' pair slows the first bonk most (4.5 s, from 4.0), and the arch keeps
- * the most of both, so it comes up most.
+ * hard bots fight round it (tests/stats/brawl.test.ts, each kind alone, before the stands): a pit split the field (17
+ * item uses a minute of fighting, from 27) and the halls' pair put the first bonk off most, so the arch comes up most;
+ * more than three times as often moves the shapes and stand cells off their contract (`BUILDERS.arena.contract`).
  */
 const CENTRES = ['pit', 'halls', 'arch'] as const;
-const CENTRE_WEIGHTS: Record<(typeof CENTRES)[number], number> = { pit: 1, halls: 1, arch: 4 };
+const CENTRE_WEIGHTS: Record<(typeof CENTRES)[number], number> = { pit: 1, halls: 1, arch: 3 };
 /** Half a pit's width: as wide as a walking jump at normal gravity, and as a serpent's leap needs. */
 const PIT_HALF = 2;
 /** Half the crossing under an arch: as wide as a slung log's swing (`jungle.ts` logTraps) and then some. */
@@ -356,7 +356,9 @@ export function sculptArena(ctx: SculptCtx, kit: TallKit): Shape {
       { x: W - POCKET, y: row - 3, w: POCKET, h: 5 },
     ],
     style: `${kit.style}:arena-${shape}`,
-    ...(centre ? { centre: { kind: centre, rooms: centreRooms(centre, bands, lip, rows[0], centre === 'arch' ? beamRow : roofRow, W, H) } } : {}),
+    ...(centre
+      ? { centre: { kind: centre, rooms: centreRooms(centre, bands, lip, rows[0], centre === 'arch' ? beamRow : roofRow, W, H), alone: centre !== 'halls' } }
+      : {}),
     bridgeHints: [],
     open: bands
       .filter((b) => b.hall)

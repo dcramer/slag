@@ -329,7 +329,7 @@ export function generateLevel(seed: number, themeOverride?: ThemeId, profileOver
         log: tries,
         danger: profile.danger,
         ...(profile.setPieceRoles ? { roles: profile.setPieceRoles } : {}),
-        ...(shape.centre ? { centre: shape.centre.rooms } : {}),
+        ...(shape.centre ? { centre: shape.centre } : {}),
         cache,
         keep: fixed.length ? (ps) => keep([...fixed, ...ps]) : keep,
         ...(live && landmark ? { standing: fixed, avoid: landmark.air, family: live.family } : {}),
