@@ -1,24 +1,30 @@
 /** Whole pages and contact sheets: levels, prop crates, the main menu, rules, settings, the lobby list, About and the codex. */
 import { devices } from 'playwright';
 import { hoverMenu, menuControl, menuControls, menuOpen, menuOverflow, menuSelected, pressMenu, waitMenu } from '../lib/menu';
-import { base, browser, errors, H, mode, open, opt, out, page, pet, seed, sheet, snap, step, theme, W, type Scenarios } from './ctx';
+import { writeFileSync } from 'node:fs';
+import { THEME_IDS, type ThemeId } from '../../src/themes';
+import { base, browser, errors, game, H, mode, open, opt, out, page, pet, seed, sheet, snap, step, theme, W, type Scenarios } from './ctx';
+import { levelCard, loadLevel, markLevel } from './level-card';
 
 export const shots: Scenarios = {
   async levels() {
-    const themes =
-      opt('themes') === 'all'
-        ? ['farm', 'factory', 'castle', 'jungle', 'volcano', 'harbor', 'mine', 'rooftops', 'glacier', 'space']
-        : opt('themes')?.split(',');
-    const seeds = opt('seeds')?.split(',') ?? Array.from({ length: themes ? themes.length : Number(opt('count', '9')) }, (_, i) => `lv${i}`);
+    // Seeds as typed, read as the game and `pnpm level` read them (tools/lib/level-request.ts): `17` is one level in both.
+    const themes = opt('themes') === 'all' ? [...THEME_IDS] : (opt('themes')?.split(',') as ThemeId[] | undefined);
+    const seeds = opt('seeds')?.split(',') ?? Array.from({ length: themes ? themes.length : Number(opt('count', '9')) }, (_, i) => String(i + 1));
     const files: string[] = [];
-    // The lobby's cards cover most of the view: a contact sheet is for reading level shapes.
+    // The lobby's cards cover most of the view (`ui=0`). No one joins, and the camera is pinned on the whole level:
+    // the lobby's drift, or the runner it follows, zooms in and crops the edges.
     await open(`seed=${seeds[0]}&ui=0`);
     for (let i = 0; i < seeds.length; i++) {
-      const th = themes?.[i % themes.length] ?? theme;
-      await page.evaluate(([x, t]) => (window as any).slagDebug.loadLevel(x, t || undefined), [seeds[i], th ?? ''] as const);
-      await page.evaluate(() => (window as any).slagDebug.match.join('kb1'));
+      const th = themes?.[i % themes.length] ?? (theme as ThemeId | undefined);
+      const typed = seeds[i];
+      const shown = await loadLevel(typed, th);
       await step(90);
-      files.push(await snap(`level-${th ? `${th}-` : ''}${seeds[i]}`));
+      const name = `level-${[game, th, `seed-${typed}`].filter(Boolean).join('-')}`;
+      const png = await snap(name, await markLevel(shown));
+      files.push(png);
+      writeFileSync(`${out}/${name}.json`, `${JSON.stringify(levelCard(shown, png), null, 2)}\n`);
+      console.log(`${out}/${name}.json`);
     }
     await sheet('levels', files);
   },

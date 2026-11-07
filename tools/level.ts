@@ -1,7 +1,7 @@
 /**
  * Level inspector (no browser).
  *
- *   pnpm level <seed> [--theme farm]     ASCII map, then what the level holds: its builder, set pieces asked and
+ *   pnpm level <seed> [--theme farm]     ASCII map (the seed reads as in the game), then what the level holds: its builder, set pieces asked and
  *                                        stood (recipe and role), recipes that found no spot or were turned down,
  *                                        boxes, the safe and near-a-hazard shares of its stand cells, its spawns and
  *                                        whether each reaches the others bare, and any promise of its builder's broken
@@ -20,6 +20,7 @@
  *         B a bridge from the validator's solution (levels that need props)
  */
 import { deriveSeed, parseSeed, Rng } from '../src/core/rng';
+import { levelProfile } from './lib/level-request';
 import { argReader } from './lib/server';
 import { MODES } from '../src/game/modes';
 import { SCULPTORS } from '../src/gen/level/sculptors';
@@ -48,11 +49,8 @@ if (opt('concept')) force.concept = opt('concept');
 const difficulty = DIFFICULTIES.find((d) => d === opt('difficulty'));
 if (difficulty) force.difficulty = difficulty;
 if (flag('tide')) Object.assign(force, MODES.slag.profile);
-const modeOpt = opt('mode');
-if (modeOpt) {
-  if (!(modeOpt in MODES)) throw new Error(`--mode ${modeOpt}: one of ${Object.keys(MODES).join(', ')}`);
-  Object.assign(force, MODES[modeOpt as keyof typeof MODES].profile);
-}
+// The forced knobs with the mode's over them, as a match asks (tools/lib/level-request.ts).
+const profile = levelProfile(force, opt('mode'));
 
 /** Share of levels whose solution takes 0, 1, 2 and 3 parts. */
 function partShares(parts: number[], n: number): Record<string, string> {
@@ -113,7 +111,7 @@ if (flag('stats')) {
     const boxes: number[] = [];
     for (let i = 0; i < n; i++) {
       const t0 = performance.now();
-      const l = generateLevel((i * 2654435761) >>> 0, th, force);
+      const l = generateLevel((i * 2654435761) >>> 0, th, profile);
       const dt = performance.now() - t0;
       const p = l.profile!;
       const sky = l.weather?.kind ?? 'clear';
@@ -240,8 +238,9 @@ if (flag('stats')) {
 } else {
   const seedArg = args.find((a, i) => !a.startsWith('--') && !args[i - 1]?.startsWith('--')) ?? 'demo';
   const t0 = performance.now();
-  const seedNum = /^\d+$/.test(seedArg) ? Number(seedArg) >>> 0 : parseSeed(seedArg);
-  let l = generateLevel(seedNum, themeOpt, force);
+  // As the game reads it: base 36, so `17` here is the shot's and the Level card's seed 17.
+  const seedNum = parseSeed(seedArg);
+  let l = generateLevel(seedNum, themeOpt, profile);
   const rawAttempt = opt('raw');
   if (rawAttempt !== undefined) {
     // Debug a sculptor: show attempt N's raw shape (before validation) instead of the accepted level.

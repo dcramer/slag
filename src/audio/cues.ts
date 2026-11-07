@@ -197,6 +197,8 @@ const ITEM_USE_CUE: Record<string, SfxName> = {
   hook: 'fire-crossbow',
   upper: 'fire-cannon',
   glove: 'spring',
+  clock: 'swoosh',
+  rod: 'reel',
 };
 /** Moments that sound different from their `what`, keyed `what:kind`. */
 const ITEM_KIND_CUE: Record<string, SfxName> = {
@@ -207,6 +209,9 @@ const ITEM_KIND_CUE: Record<string, SfxName> = {
   'hit:bump': 'spring',
   'hit:upper': 'piston-slam',
   'hit:glove': 'piston-slam',
+  'warn:clock': 'alarm-bell',
+  'hit:clock': 'explosion',
+  'hit:rod': 'whoosh',
   'fizzle:block': 'crumble-break',
 };
 const itemName = (what: ItemEventKind, kind: string): SfxName | undefined =>

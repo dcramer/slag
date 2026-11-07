@@ -407,6 +407,16 @@ export const SFX = {
     tone(v, 'square', 1320 * o.pitch, 1320 * o.pitch, t, 0.002, 0.06, 0.8, lp);
     tone(v, 'square', 1760 * o.pitch, 1760 * o.pitch, t + 0.09, 0.002, 0.08, 0.8, lp);
   }),
+  // A wind-up alarm clock going off: the hammer trilling between two bells, the whole time it rings before the blast.
+  'alarm-bell': P(2, 0.15, 0.15, 3, 0.3, (v, t, o) => {
+    for (let i = 0; i < 18; i++) metal(v, t + i * 0.036, (i % 2 ? 2380 : 2030) * o.pitch, 0.05, 0.75, [1, 2.4, 3.9]);
+  }),
+  // A fishing reel's ratchet paying out line, and the line's whistle through the air.
+  reel: P(1, 0.5, 0.05, 4, 0.1, (v, t, o) => {
+    const hp = v.filter(v.out, 'highpass', 1400);
+    for (let i = 0; i < 12; i++) tone(v, 'square', 2600 * o.pitch, 2200 * o.pitch, t + i * 0.022, 0.001, 0.008, 0.6 * (1 - i / 14), hp);
+    burst(v, 'pink', t, 0.04, 0.22, 0.5, 'bandpass', 2400 * o.pitch, 900 * o.pitch, 3);
+  }),
   'ui-hover': P(0, 0.226, 0, 4, 0.06, (v, t, o) => {
     tone(v, 'sine', 1250 * o.pitch, 1250 * o.pitch, t, 0.002, 0.03, 1);
   }),

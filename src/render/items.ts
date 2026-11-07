@@ -1,11 +1,12 @@
 import { css, type HSL } from '../core/color';
 import { hash2 } from '../core/rng';
-import { DROP_BLINK, DROP_LIFE, type ItemKind, ROCKET, SHIELD, SWORD } from '../sim/items';
+import { CLOCK, DROP_BLINK, DROP_LIFE, type ItemKind, ROCKET, SHIELD, SWORD } from '../sim/items';
 import type { Projectile, Runner, RunWorld } from '../sim/run';
 import type { GameEvent } from '../sim/types';
 import type { Fx } from './fx';
 import { BRAWL_ICONS, drawPunch } from './items-brawl';
 import { CLIMB_ICONS } from './items-climb';
+import { drawRod, REACH_ICONS } from './items-reach';
 import { drawBat, drawRaisedBrick, EXTRA_ICONS } from './items-extra';
 import { blob, inkFor, line, type P, stroke } from './ink';
 import { ball, boxPts, glint, part, path, pen, poly, sprite, stamp, tick } from './ink-props';
@@ -32,6 +33,8 @@ export const ITEM_HUE: Record<ItemKind, HSL> = {
   hook: { h: 44, s: 78, l: 56 },
   upper: { h: 4, s: 72, l: 54 },
   glove: { h: 200, s: 55, l: 56 },
+  clock: { h: 4, s: 80, l: 56 },
+  rod: { h: 190, s: 45, l: 60 },
 };
 
 const NOODLE: HSL = { h: 96, s: 72, l: 56 };
@@ -256,6 +259,7 @@ const ICONS: Record<ItemKind, Icon> = {
   ...EXTRA_ICONS,
   ...CLIMB_ICONS,
   ...BRAWL_ICONS,
+  ...REACH_ICONS,
 };
 
 /** Draw an item icon centered at (x, y), scaled by k, mirrored when facing left. */
@@ -583,6 +587,7 @@ export function drawRunnerItems(rc: RC, r: Runner): void {
   else if (h?.kind === 'sword' || it.swing > 0) drawSword(rc, r, x);
   else if (it.slam > 0) drawRaisedBrick(rc, r, x);
   else if (h?.kind === 'shield') bubbleWrap(rc, x, b.y + b.h / 2, r.slot, 0);
+  else if (h?.kind === 'rod' || it.cast > 0) drawRod(rc, r, x);
   else if (h?.kind === 'rocket' || it.thrust > 0) drawItemIcon(s, 'rocket', x - fc * 6, b.y + 8, 0.9, rc.t, fc);
   else if (h) drawItemIcon(s, h.kind, x + fc * 8, b.y + 8, 0.95, rc.t, fc);
   if (it.thrust > 0) trialFlame(rc, x - fc * 6, b.y + 15.5, 0.6 + (it.thrust / ROCKET.thrust) * 0.4, fc);
@@ -774,6 +779,28 @@ const KIND_FX: Record<string, (fx: Fx, e: ItemEvent, shake: (k: number) => void)
   },
   'fizzle:upper'(fx, e) {
     fx.burst('spark', e.x, e.y, 14, 160, [GOLD, { h: 200, s: 90, l: 65 }, ITEM_HUE.upper], 1, 0.6);
+  },
+  // The clock goes off: a ring as wide as its blast, a flash, and its works flying out.
+  'hit:clock'(fx, e, shake) {
+    fx.add('flash', e.x, e.y, 0, 0, ITEM_HUE.clock, 30, 0.25);
+    fx.add('flash', e.x, e.y, 0, 0, WHITE, 14, 0.15);
+    fx.add('ring', e.x, e.y, 0, 0, WHITE, CLOCK.radius, 0.35);
+    fx.burst('debris', e.x, e.y, 10, 220, [{ h: 44, s: 78, l: 56 }, ITEM_HUE.clock, { h: 42, s: 35, l: 92 }], 1, 0.7, 140);
+    fx.burst('spark', e.x, e.y, 14, 240, [GOLD, WHITE], 1.1, 0.4);
+    shake(8);
+  },
+  // It comes down and starts to ring.
+  'warn:clock'(fx, e) {
+    fx.burst('dust', e.x, e.y + 3, 4, 40, [{ h: 30, s: 12, l: 78 }], 1, 0.3);
+  },
+  // The float snags someone: a splash of spray where it struck, as off water.
+  'hit:rod'(fx, e, shake) {
+    fx.add('ring', e.x, e.y, 0, 0, ITEM_HUE.rod, 16, 0.25);
+    fx.burst('spark', e.x, e.y, 10, 150, [{ h: 195, s: 70, l: 80 }, WHITE], 0.9, 0.35);
+    shake(3);
+  },
+  'fizzle:rod'(fx, e) {
+    fx.burst('dust', e.x, e.y, 4, 40, [{ h: 30, s: 12, l: 78 }], 0.9, 0.3);
   },
   'use:tremor'(fx, e) {
     fx.burst('dust', e.x, e.y + 14, 4, 40, [{ h: 0, s: 0, l: 85 }], 1, 0.3);
