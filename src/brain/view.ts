@@ -180,7 +180,7 @@ function selfOf(m: Match, p: Player): SelfSense | null {
     slag: run.slag === null ? null : round4((run.slag - feetUp(run.level, r)) / TILE),
     rank: rankOf(run, r),
     held: it.held ? { ...it.held } : null,
-    armed: !!it.held && it.cooldown === 0 && it.swing === 0 && it.windup === 0 && it.daze === 0 && it.thrust === 0,
+    armed: !!it.held && it.cooldown === 0 && it.swing === 0 && it.windup === 0 && it.cast === 0 && it.daze === 0 && it.thrust === 0,
   };
 }
 

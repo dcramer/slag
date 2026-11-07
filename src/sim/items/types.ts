@@ -8,7 +8,22 @@
  * "attached to a prop" state can be added next to both without touching them.
  */
 
-export type ItemKind = 'sword' | 'puck' | 'boomerang' | 'shield' | 'rocket' | 'smoke' | 'bat' | 'tremor' | 'tax' | 'block' | 'hook' | 'upper' | 'glove';
+export type ItemKind =
+  | 'sword'
+  | 'puck'
+  | 'boomerang'
+  | 'shield'
+  | 'rocket'
+  | 'smoke'
+  | 'bat'
+  | 'tremor'
+  | 'tax'
+  | 'block'
+  | 'hook'
+  | 'upper'
+  | 'glove'
+  | 'clock'
+  | 'rod';
 
 export const ITEM_KINDS: readonly ItemKind[] = [
   'sword',
@@ -24,6 +39,8 @@ export const ITEM_KINDS: readonly ItemKind[] = [
   'hook',
   'upper',
   'glove',
+  'clock',
+  'rod',
 ];
 
 /** What a box deals by rank (a mode's `boxes`, game/modes.ts): one table for whoever leads, one for the rest. */
@@ -66,6 +83,8 @@ export interface RunnerItems {
   bonkCredit: number;
   /** Can't pick anything up (just tossed an item). */
   noPickup: number;
+  /** Frames a Catch of the Day's line has been going out (0: none). The caster is rooted until it snags or turns back. */
+  cast: number;
 }
 
 /** A loose item lying in, or flying through, the level. */
@@ -142,6 +161,39 @@ export interface UpperFist {
   born: number;
 }
 
+/** A Rude Awakening: an alarm clock lobbed in an arc that rings once it comes down, then goes off. */
+export interface AlarmClock {
+  id: number;
+  /** Slot credited for its bonks. */
+  owner: number;
+  /** Center (px) and velocity (px/s). */
+  x: number;
+  y: number;
+  vx: number;
+  vy: number;
+  born: number;
+  /** Frames it rings once down before it goes off (0: still in the air), and frames it has rung. */
+  fuse: number;
+  ring: number;
+  onGround: boolean;
+}
+
+/** A Catch of the Day's line: the lure flying out straight from the caster's rod, then reeling back in. */
+export interface CastLine {
+  id: number;
+  /** Runner index of the caster. */
+  owner: number;
+  /** The lure (px) and its velocity (px/s). */
+  x: number;
+  y: number;
+  vx: number;
+  vy: number;
+  /** How far the lure has flown (px). */
+  out: number;
+  /** Reeling back in (it snagged someone or ran out of line): it only comes home now. */
+  back: boolean;
+}
+
 /** Item state for one race (lives on RunWorld). */
 export interface ItemWorld {
   drops: ItemDrop[];
@@ -150,6 +202,8 @@ export interface ItemWorld {
   blocks: PocketBlock[];
   hooks: HookLine[];
   fists: UpperFist[];
+  clocks: AlarmClock[];
+  lines: CastLine[];
   nextId: number;
 }
 
@@ -180,11 +234,12 @@ export function newRunnerItems(): RunnerItems {
     bonkedBy: -1,
     bonkCredit: 0,
     noPickup: 0,
+    cast: 0,
   };
 }
 
 export function newItemWorld(): ItemWorld {
-  return { drops: [], clouds: [], shells: [], blocks: [], hooks: [], fists: [], nextId: 1 };
+  return { drops: [], clouds: [], shells: [], blocks: [], hooks: [], fists: [], clocks: [], lines: [], nextId: 1 };
 }
 
 /** Loose items vanish this long after they appear, blinking for the last DROP_BLINK frames. */

@@ -49,7 +49,7 @@ export interface SelfSense {
   rank: number;
   /** The item in its hands and the uses left on it, or null. */
   held: { kind: ItemKind; uses: number } | null;
-  /** It can use its item now: not cooling down, swinging, winding up or seeing stars. */
+  /** It can use its item now: not cooling down, swinging, winding up, casting or seeing stars. */
   armed: boolean;
 }
 

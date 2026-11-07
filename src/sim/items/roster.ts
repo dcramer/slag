@@ -1,8 +1,10 @@
 import type { ProjectileSpawn } from '../props/registry';
 import type { Runner, RunWorld } from '../run';
 import type { InputFrame } from '../types';
+import { lobClock } from './clock';
 import { cx, cy, itemEvent, spawnDrop } from './common';
 import { placeBlock } from './pocket';
+import { castRod } from './rod';
 import { launchTax } from './tax';
 import type { ItemKind } from './types';
 import { fireUpper, throwHook } from './upward';
@@ -251,10 +253,31 @@ export const ITEMS: Record<ItemKind, ItemSpec> = {
       return true;
     },
   },
+  clock: {
+    kind: 'clock',
+    name: 'Rude Awakening',
+    verb: 'Lob',
+    uses: 2,
+    use(w, r, inp) {
+      lobClock(w, r, inp.up);
+      return true;
+    },
+  },
+  rod: {
+    kind: 'rod',
+    name: 'Catch of the Day',
+    verb: 'Cast',
+    uses: 2,
+    use(w, r, inp) {
+      castRod(w, r, inp.up);
+      return true;
+    },
+  },
 };
 
 /**
  * What a crate deals unless its mode says otherwise (`CrateMix.items`, gen/props.ts): every item but the two made for a
- * climb (the hook and the punch upward), which only a climb's own boxes deal (game/modes.ts).
+ * climb (the hook and the punch upward), which only a climb's own boxes deal, and the brawl's own (the punch in a box,
+ * the clock and the rod), which only a brawl's boxes deal (game/modes.ts).
  */
 export const CRATE_ITEMS: readonly ItemKind[] = ['sword', 'puck', 'boomerang', 'shield', 'rocket', 'smoke', 'bat', 'tremor', 'tax', 'block'];

@@ -48,10 +48,27 @@ export interface ModeDef {
 
 /**
  * What a brawl's boxes deal, to anyone: only things that knock someone into something, the swings most (the noodle,
- * the bat, the punch in a box), then the throws and the slams. Nothing that only moves you, and no shield, which would
- * soak the very hit the mode kills with.
+ * the bat, the punch in a box), then what reaches someone a swing can't (the clock lobbed onto a ledge, the rod that
+ * reels them off it), then the throws and the slams. Nothing that only moves you, and no shield, which would soak the
+ * very hit the mode kills with.
  */
-const BRAWL_ITEMS = ['sword', 'sword', 'bat', 'bat', 'glove', 'glove', 'glove', 'puck', 'boomerang', 'tremor', 'upper'] as const;
+const BRAWL_ITEMS = [
+  'sword',
+  'sword',
+  'bat',
+  'bat',
+  'glove',
+  'glove',
+  'glove',
+  'clock',
+  'clock',
+  'rod',
+  'rod',
+  'puck',
+  'boomerang',
+  'tremor',
+  'upper',
+] as const;
 
 /**
  * A brawl's bodies (`RunRules.shove`): for putting each other off ledges, where a race's only jostle. Twice the race's

@@ -1,4 +1,5 @@
 import { DT, PHYS, PLAYER_H, TILE } from '../sim/constants';
+import { blastThrow, CLOCK, ROD, yankVx } from '../sim/items';
 import { BAT, GLOVE, PUCK, SWORD } from '../sim/items/roster';
 import type { ItemKind } from '../sim/items/types';
 import { T_ONEWAY, T_SOLID } from '../sim/level';
@@ -41,6 +42,18 @@ const PUNCH_REACH = 3.5;
 /** Where an Upper Hand reaches: rows up (it rises about 20) and tiles across (it leans about two on the way). */
 const PUNCH_RISE = [1.5, 16] as const;
 const PUNCH_ACROSS = 2.5;
+
+/** A rod's reach in tiles: its line, less a little, past which the lure comes back empty. */
+const CAST_RANGE = ROD.range / TILE - 0.5;
+/** Tiles the lure flies along before the sketch gives up, and the step it samples at. */
+const LINE_STEP = 0.25;
+/** A runner's middle, tiles over its feet, and its half-width and height in tiles. */
+const MID = PLAYER_H / 2 / TILE;
+const HALF_W = 5 / TILE;
+const BODY_H = PLAYER_H / TILE;
+/** Tiles a clock lands within of a rival for its blast to reach them after it rings, and at least this far off, or it's only dropped at its feet. */
+const LOB_NEAR = 2;
+const LOB_CLEAR = 1.5;
 
 /** The tile at (x, y): off the sides is rock, above and below (a loop's next lap) is air. */
 export function tile(v: BrainView, x: number, y: number): number {
@@ -110,6 +123,56 @@ const swing = (grounded: boolean): ItemTactic => ({
   },
 });
 
+/**
+ * Whether a rod cast toward `dir` (slanting up with `up`) snags `r` before it meets rock: the lure's line from the rod's
+ * tip, sampled every quarter tile out to the rod's reach, against the rival's box. One-way boards don't stop it.
+ */
+function lineReaches(v: BrainView, me: SelfSense, r: RunnerSense, dir: -1 | 1, up: boolean): boolean {
+  let x = me.x + dir * (6 / TILE);
+  let y = me.y - BODY_H + 5 / TILE;
+  const sx = dir * (up ? ROD.slantX : 1) * LINE_STEP;
+  const sy = -(up ? ROD.slantY : 0) * LINE_STEP;
+  for (let d = 0; d <= CAST_RANGE; d += LINE_STEP) {
+    if (tile(v, Math.floor(x), Math.floor(y)) === T_SOLID) return false;
+    if (Math.abs(x - r.x) <= HALF_W + 0.125 && y >= r.y - BODY_H - 0.125 && y <= r.y + 0.125) return true;
+    x += sx;
+    y += sy;
+  }
+  return false;
+}
+
+/** No rock on the straight line between two points (tiles): what shields a body from a blast. */
+function clearBetween(v: BrainView, ax: number, ay: number, bx: number, by: number): boolean {
+  const n = Math.max(1, Math.ceil(Math.hypot(bx - ax, by - ay) * 4));
+  for (let i = 1; i < n; i++) if (tile(v, Math.floor(ax + ((bx - ax) * i) / n), Math.floor(ay + ((by - ay) * i) / n)) === T_SOLID) return false;
+  return true;
+}
+
+/**
+ * Where a clock lobbed toward `dir` (the high lob with `up`) comes down, in tiles: its arc from the hand under the
+ * clock's gravity, followed until it meets rock or comes down on a floor, a second at most. A sketch, as `fly` is:
+ * it bounces off nothing, and the thrower's own run adds nothing.
+ */
+function lobLands(v: BrainView, me: SelfSense, dir: -1 | 1, up: boolean): { x: number; y: number } | null {
+  let x = me.x;
+  let y = me.y - 10 / TILE;
+  const vx = (dir * (up ? CLOCK.highVx : CLOCK.vx)) / TILE;
+  let vy = -(up ? CLOCK.highVy : CLOCK.vy) / TILE;
+  for (let f = 0; f < 60; f++) {
+    vy = Math.min(CLOCK.maxFall / TILE, vy + (CLOCK.gravity / TILE) * DT);
+    const nx = x + vx * DT;
+    const ny = y + vy * DT;
+    if (tile(v, Math.floor(nx), Math.floor(ny)) === T_SOLID && tile(v, Math.floor(nx), Math.floor(y)) === T_SOLID) return { x, y };
+    // Coming down onto a floor's top (rock or a board): it lands there.
+    const row = Math.floor(ny + CLOCK.half / TILE);
+    if (vy > 0 && Math.floor(y + CLOCK.half / TILE) < row && floorAt(v, Math.floor(nx), row)) return { x: nx, y: row - CLOCK.half / TILE };
+    if (ny >= v.level.h) return null;
+    x = nx;
+    y = ny;
+  }
+  return { x, y };
+}
+
 export const ITEM_TACTICS: Record<ItemKind, ItemTactic> = {
   // The noodle: swing at anyone within reach.
   sword: swing(false),
@@ -174,6 +237,45 @@ export const ITEM_TACTICS: Record<ItemKind, ItemTactic> = {
       return r && { do: 'use' };
     },
   },
+  // Catch of the Day: cast at a rival the line reaches, straight across or slanting up to one a row up a tile across,
+  // the one a yank would pull off into something first.
+  rod: {
+    when({ v, me }) {
+      let best: { r: RunnerSense; up: boolean; kills: boolean } | null = null;
+      for (const r of rivals(v)) {
+        const dir = toward(me, r);
+        if (Math.abs(r.x - me.x) > CAST_RANGE) continue;
+        for (const up of [false, true]) {
+          if (!lineReaches(v, me, r, dir, up)) continue;
+          const kills = knockKills(v, r.x, r.y, yankVx((r.x - me.x) * TILE), ROD.lift, slagRow(me));
+          if (!best || (kills && !best.kills) || (kills === best.kills && Math.abs(r.x - me.x) < Math.abs(best.r.x - me.x))) best = { r, up, kills };
+          break;
+        }
+      }
+      return best && { do: 'use', dir: toward(me, best.r), ...(best.up && { up: true }) };
+    },
+  },
+  // Rude Awakening: lobbed (high, for a ledge overhead) to come down beside a rival standing on something, no rock
+  // between where it lands and them, the one its blast would throw into something first.
+  clock: {
+    when({ v, me }) {
+      let best: { dir: -1 | 1; up: boolean; kills: boolean; d: number } | null = null;
+      for (const dir of [-1, 1] as const)
+        for (const up of [false, true]) {
+          const at = lobLands(v, me, dir, up);
+          if (!at || Math.hypot(at.x - me.x, at.y - (me.y - MID)) <= LOB_CLEAR) continue;
+          for (const r of rivals(v)) {
+            if (!r.grounded) continue;
+            const d = Math.hypot(r.x - at.x, r.y - MID - at.y);
+            if (d > LOB_NEAR || !clearBetween(v, at.x, at.y, r.x, r.y - MID)) continue;
+            const t = blastThrow(at.x * TILE, at.y * TILE, r.x * TILE, (r.y - MID) * TILE);
+            const kills = t !== null && knockKills(v, r.x, r.y, t.vx, t.vy, slagRow(me));
+            if (!best || (kills && !best.kills) || (kills === best.kills && d < best.d)) best = { dir, up, kills, d };
+          }
+        }
+      return best && { do: 'use', dir: best.dir, ...(best.up && { up: true }) };
+    },
+  },
   // The Tremor Brick bonks every rival standing on something when it comes down.
   tremor: { when: ({ v }) => (rivals(v).some((r) => r.grounded) ? { do: 'use' } : null) },
 };
@@ -191,6 +293,10 @@ export const KNOCKS: Partial<Record<ItemKind, { vx: number; vy: number }>> = {
   glove: { vx: SWORD.knockVx * GLOVE.power, vy: SWORD.knockVy * GLOVE.lift },
   puck: { vx: PUCK.speed * 0.9, vy: 220 },
   boomerang: { vx: 300, vy: 220 },
+  // The blast from a tile off, out from the clock: a bot lobs it short of its rival, so it throws them on away.
+  clock: { vx: CLOCK.vxOut * (1 - (1 - CLOCK.edge) / 3), vy: CLOCK.vyOut * (1 - (1 - CLOCK.edge) / 3) },
+  // The yank from six tiles off: back toward whoever cast it, so a hit "toward" someone flies them the other way.
+  rod: { vx: yankVx(6 * TILE), vy: ROD.lift },
 };
 
 /** A shove: a walk's worth off whatever edge it ends at. */

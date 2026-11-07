@@ -8,7 +8,9 @@ import { AMMO_SIM, statusInput } from '../props';
 import type { DeathCause, Runner, RunWorld } from '../run';
 import { type InputFrame, NO_INPUT } from '../types';
 import { bonk, cx, cy, giveOrDrop, isActive, itemEvent, launch, moveBox, spawnDrop } from './common';
+import { stepClocks } from './clock';
 import { stepBlocks } from './pocket';
+import { stepLines } from './rod';
 import { BAT, GLOVE, ITEMS, ROCKET, SHIELD, SMOKE, SWORD, swingBat, TREMOR, tossHeld } from './roster';
 import { stepShells } from './tax';
 import { stepFists, stepHooks } from './upward';
@@ -38,18 +40,21 @@ export function giveItem(r: Runner, kind: ItemKind, uses = ITEMS[kind].uses): vo
   r.items.held = { kind, uses };
 }
 
-/** The controls a runner actually gets. Like freezing, a daze leaves only giving up (alt); winding up a bat leaves that and letting go. */
+/**
+ * The controls a runner actually gets. Like freezing, a daze leaves only giving up (alt), and so does a rod's line
+ * going out; winding up a bat leaves that and letting go.
+ */
 export function itemInput(it: RunnerItems, inp: InputFrame): InputFrame {
-  if (it.daze > 0) return inp.altPressed ? { ...NO_INPUT, altPressed: true } : NO_INPUT;
+  if (it.daze > 0 || it.cast > 0) return inp.altPressed ? { ...NO_INPUT, altPressed: true } : NO_INPUT;
   if (it.windup > 0) return inp.altPressed || inp.usePressed ? { ...NO_INPUT, altPressed: inp.altPressed, usePressed: inp.usePressed } : NO_INPUT;
   return inp;
 }
 
-/** After `stepBody`: heavy items cap jumps, a bat wind-up roots you, swings cap speed, the rocket keeps pushing and then dazes you. */
+/** After `stepBody`: heavy items cap jumps, a bat wind-up and a rod's cast root you, swings cap speed, the rocket keeps pushing and then dazes you. */
 export function itemPostStep(it: RunnerItems, b: Body): void {
   const cap = it.held ? ITEMS[it.held.kind].jumpCap : undefined;
   if (cap !== undefined && b.jumping && b.vy < -cap) b.vy = -cap;
-  if (it.windup > 0) b.vx = 0;
+  if (it.windup > 0 || it.cast > 0) b.vx = 0;
   if (it.swing > 0 && Math.abs(b.vx) > SWORD.crawl) b.vx = b.vx > 0 ? SWORD.crawl : -SWORD.crawl;
   if (it.thrust > 0) {
     if (b.vy > -ROCKET.vy) b.vy = -ROCKET.vy;
@@ -303,6 +308,8 @@ export function stepItems(w: RunWorld, inputs: readonly InputFrame[], live: bool
   stepShells(w);
   stepHooks(w);
   stepFists(w);
+  stepClocks(w);
+  stepLines(w);
   stepBlocks(w);
   pickUp(w);
   stepDrops(w);

@@ -36,7 +36,7 @@ const PATIENCE = [2.5 * 60, 0.6 * 60] as const;
 /** Tiles off its nearest rival (across plus rows) inside which, empty-handed, it shoves one it could shove into something rather than fetch a box, by `press`. */
 const NEAR = [2, 4] as const;
 /** Tiles off its rival it stands to hit with each item: in reach, and no nearer. */
-const GAP: Partial<Record<ItemKind, number>> = { sword: 1, bat: 1, glove: 2, puck: 4, boomerang: 4 };
+const GAP: Partial<Record<ItemKind, number>> = { sword: 1, bat: 1, glove: 2, puck: 4, boomerang: 4, clock: 5, rod: 5 };
 /** Tiles past a rival's reach and rows it is close enough that its hit is coming. */
 const THREAT_ACROSS = 0.75;
 const THREAT_ROWS = 1.25;

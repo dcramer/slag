@@ -131,6 +131,25 @@ describe('item tactics', () => {
     expect(ITEM_TACTICS.boomerang.when(moment({}, { tiles: wall, runners: [rival(10.5, 0)] }))).toBeNull();
   });
 
+  it('casts the rod at a rival its line reaches, slanting up at one on a board overhead, never through rock', () => {
+    expect(ITEM_TACTICS.rod.when(moment({}, { runners: [rival(12.5, 0)] }))).toEqual({ do: 'use', dir: 1 });
+    expect(ITEM_TACTICS.rod.when(moment({}, { runners: [rival(15.5, 0)] }))).toBeNull();
+    const wall = tiles((set) => set(8, 13, T_SOLID));
+    expect(ITEM_TACTICS.rod.when(moment({}, { tiles: wall, runners: [rival(12.5, 0)] }))).toBeNull();
+    // A board four rows up from column 8: the line goes up through it.
+    const board = tiles((set) => {
+      for (let x = 8; x < W; x++) set(x, 10, T_ONEWAY);
+    });
+    expect(ITEM_TACTICS.rod.when(moment({}, { tiles: board, runners: [rival(9.5, 4)] }))).toEqual({ do: 'use', dir: 1, up: true });
+  });
+
+  it('lobs the clock to come down beside a rival standing a few tiles off, not at one at its feet or in the air', () => {
+    const lob = ITEM_TACTICS.clock.when(moment({ x: 2.5, tx: 2 }, { runners: [rival(7.5, 0)] }));
+    expect(lob).toMatchObject({ do: 'use', dir: 1 });
+    expect(ITEM_TACTICS.clock.when(moment({ x: 2.5, tx: 2 }, { runners: [rival(3.5, 0)] }))).toBeNull();
+    expect(ITEM_TACTICS.clock.when(moment({ x: 2.5, tx: 2 }, { runners: [rival(7.5, 0, { grounded: false })] }))).toBeNull();
+  });
+
   it('swings at a rival beside it, the bat only from the ground; never lets go of Bubble Wrap', () => {
     expect(ITEM_TACTICS.sword.when(moment({}, { runners: [rival(4.5, 0)] }))).toEqual({ do: 'use', dir: -1 });
     expect(ITEM_TACTICS.sword.when(moment({}, { runners: [rival(9.5, 0)] }))).toBeNull();
@@ -155,6 +174,16 @@ describe('knocking someone into something (a brawl)', () => {
     // Bare-handed, only a shove at the very edge counts.
     expect(knockedInto(v, SELF, rival(9.5, 0), 1, null)).toBe(true);
     expect(knockedInto(v, SELF, rival(4.5, 0), 1, null)).toBe(false);
+  });
+
+  it('sees a rod yank pull a rival off a ledge across a gap, toward the caster', () => {
+    // A ledge at columns 0..5, the pit at 6..9, the bot's floor from 10.
+    const gap = tiles((set) => {
+      for (let x = 6; x <= 9; x++) set(x, 14, 0);
+    });
+    const me = { ...SELF, x: 12.5, tx: 12 };
+    expect(knockedInto(view({ tiles: gap }), me, rival(4.5, 0), -1, 'rod')).toBe(true);
+    expect(knockedInto(view({ tiles: gap }), me, rival(4.5, 0), 1, 'rod')).toBe(false);
   });
 
   it('sees a hit that throws a rival into a part that hurts, but not into a mystery box', () => {

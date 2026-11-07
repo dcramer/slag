@@ -27,6 +27,7 @@ import { frameReach, VIEW_FRAME, type ViewFrame, viewFrame } from './frame';
 import { Hud } from './hud';
 import { drawClouds, drawDrops, drawRunnerItems, itemFx } from './items';
 import { drawFists, drawHooks } from './items-climb';
+import { drawClocks, drawLines } from './items-reach';
 import { drawPocketBlocks, drawShells, drawShellShadows } from './items-extra';
 import { circle, flutter, type Light, light, type RC } from './kit';
 import { drawTideBody, drawTideSurface, slagEmbers } from './tide';
@@ -504,6 +505,8 @@ export class Renderer {
         drawClouds(rc, run);
         drawShells(rc, run);
         drawFists(rc, run);
+        drawClocks(rc, run);
+        drawLines(rc, run);
       });
     }
     this.ageFallen(dt);
