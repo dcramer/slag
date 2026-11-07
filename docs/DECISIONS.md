@@ -746,7 +746,7 @@ Every game design decision, preference and direction the owner has given, groupe
 ## Tooling and process
 
 - **After a stretch of work, look at what was inefficient (playbooks, tools, code) and improve the systems.** "its worth looking at whats been inefficient in building these levels. playbooks, tools, code. and then improving the systems"
-  2026-11-06 · `in progress` (level inspection and builder contracts, whole-level shots with one seed meaning one level, a snapshot shape fingerprint, stats baselines; test, theme and scratchpad rules in AGENTS.md) · AGENTS.md
+  2026-11-06 · `done` (level inspection and builder contracts, whole-level shots with one seed meaning one level, a snapshot shape fingerprint, stats baselines; test, theme and scratchpad rules in AGENTS.md) · AGENTS.md
 - **One coordinator hands tasks to subagents.** "you're the coordinator, use subagents for tasks"
   2026-11-02 02:48Z · `done` · AGENTS.md → Git workflow
 - **Worktrees install their own dependencies through a SessionStart hook.** "also make sure our worktree scripts are good here" / "Yes, add the hook"
