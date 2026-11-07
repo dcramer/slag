@@ -310,6 +310,33 @@ describe('the motor’s own moves', () => {
     expect(r.alive, `${r.cause} at race frame ${run.frame}`).toBe(true);
     expect(hops).toBeGreaterThan(0);
   });
+
+  it('waits a step short of a crusher across the only way, rather than walk up to it and back off, and crosses', () => {
+    // Flat ground with a press three rows over it, slamming on a long beat: what's under it is the only way on.
+    const m = new Match(4);
+    const { w, h } = m.level;
+    const floor = 20;
+    const tiles = new Uint8Array(w * h);
+    for (let y = floor + 1; y < h; y++) tiles.fill(T_SOLID, y * w, (y + 1) * w);
+    m.level = { ...m.level, tiles, setPieces: [], spawn: { tx: 4, ty: floor }, goal: { tx: 40, ty: floor } };
+    const press = generateProp(new Rng(10), 'crusher', 'x');
+    const { p, run, r } = standing(m, 8, floor, [{ uid: 1, def: press, owner: 1, tx: 22, ty: floor - 3, rot: 0 }]);
+    const motor = new Motor({ ...rollPersonality(1, 'normal'), reaction: 0, slip: 0, think: 0, stray: 0 }, 1);
+    let furthest = 0;
+    let back = 0;
+    let across = -1;
+    for (let f = 0; f < 6 * 60 && r.alive && across < 0; f++) {
+      m.step({ kb: motor.drive(m, p, { do: 'goTo', tx: 36, ty: floor, haste: true }) });
+      const x = r.body.x / TILE;
+      furthest = Math.max(furthest, x);
+      back = Math.max(back, furthest - x);
+      if (x >= 36) across = f;
+    }
+    expect(r.alive, `${r.cause} at race frame ${run.frame}`).toBe(true);
+    expect(across, 'it got across').toBeGreaterThan(0);
+    // Walking up to the press's edge and backing off when it comes down is two tiles and more of retreat.
+    expect(back, 'tiles it backed off').toBeLessThan(1.5);
+  });
 });
 
 describe('movesFrom', () => {

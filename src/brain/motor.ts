@@ -630,6 +630,9 @@ export class Motor {
     const margin = this.haste && this.hemmed > HEMMED ? 0 : this.traits.margin;
     const exposed = hurtsStill(map, this.fore, f, b, shots, margin);
     const blocked = (mv: Move) => hurts(map, this.fore, mv, f, b, shots, margin) || (mv.air && gusty(run.level, mv, f, air));
+    // Whether it could wait where it is, asked once and only by a landing whose way on is shut.
+    let still: boolean | undefined;
+    const waitable = () => (still ??= b.onGround && !exposed && this.canStop(map, run, b, shots, air, f));
     // Nothing clear, and nowhere to stop and wait for it: on a short ledge at a run, coasting is a fall.
     let cornered = false;
     for (const dist of [map.dist(target), map.rough(target)]) {
@@ -653,7 +656,7 @@ export class Motor {
           held.push({ mv, p, trap: false });
           continue;
         }
-        if ((exposed || looks < TRAP_LOOKS) && this.trap(map, run, mv, f, dist)) {
+        if ((exposed || looks < TRAP_LOOKS) && this.trap(map, run, mv, f, dist, waitable)) {
           looks++;
           held.push({ mv, p, trap: true });
           continue;
@@ -689,7 +692,7 @@ export class Motor {
             if (x.p > cost + this.traits.care) break;
             if (x.mv.to === here || blocked(x.mv)) continue;
             const risk = x.mv.air ? fatalSlips(map.field, b, x.mv.controls) : NO_SLIPS;
-            if (risk.length || this.trap(map, run, x.mv, f, dist)) continue;
+            if (risk.length || this.trap(map, run, x.mv, f, dist, waitable)) continue;
             best = x.mv;
             cost = x.p;
             fatal = risk;
@@ -870,20 +873,43 @@ export class Motor {
   /**
    * Does `mv` land somewhere a hazard is about to reach, with no clear move
    * on from there? One move further ahead, as a player sees that the beach
-   * they could jump down to is about to flood.
+   * they could jump down to is about to flood. Where there's a way on toward
+   * the target that's shut for now but opens (a patrol's run, a blast's
+   * beat), and it could wait where it is (`waitable`), the landing has to
+   * hold until it opens: walking up to the edge of something that will reach
+   * the edge before the way past it opens only means backing off again, so
+   * that landing is a trap too, and it waits a step short. A way that stays
+   * shut is no reason to wait: it goes up and takes its chances.
    */
-  private trap(map: RaceMap, run: RunWorld, mv: Move, f: number, dist: Float64Array): boolean {
+  private trap(map: RaceMap, run: RunWorld, mv: Move, f: number, dist: Float64Array, waitable: () => boolean): boolean {
     const margin = this.traits.margin;
     const t = f + mv.controls.length;
     const e = mv.end;
     const air = gustAir(run.level, t);
-    if (this.canStop(map, run, e, NO_SHOTS, air, t, TRAP_AHEAD)) return false;
-    for (const next of movesFrom(map.field, e, run.solids, air, columns(map, t))) {
-      if (next.to === mv.to || !Number.isFinite(dist[next.to])) continue;
-      if (!hurts(map, this.fore, next, t, e, NO_SHOTS, margin) && !hurtsStill(map, this.fore, t + next.controls.length, next.end, NO_SHOTS, margin, TRAP_AHEAD))
-        return false;
+    const on = movesFrom(map.field, e, run.solids, air, columns(map, t)).filter((n) => n.to !== mv.to && Number.isFinite(dist[n.to]));
+    const clearAt = (n: Move, k: number) =>
+      !hurts(map, this.fore, n, t + k, e, NO_SHOTS, margin) && !hurtsStill(map, this.fore, t + k + n.controls.length, n.end, NO_SHOTS, margin, TRAP_AHEAD);
+    const ahead = on.filter((n) => dist[n.to] < dist[mv.to]);
+    if (ahead.length && !ahead.some((n) => clearAt(n, 0)) && waitable()) {
+      // The way on is shut: the landing holds only if standing there, braked to a stop, lasts until it opens.
+      const stop = Math.abs(e.vx) < 0.5 ? null : brakeFrom(map.field, e, run.solids, air, columns(map, t));
+      const stops = Math.abs(e.vx) < 0.5 || (!!stop && !hurts(map, this.fore, stop, t, e, NO_SHOTS, margin));
+      const s = stop ? stop.end : e;
+      const st = t + (stop?.controls.length ?? 0);
+      const lasts = stops ? standsFor(map, this.fore, st, s, margin, LAND_HOLD) : 0;
+      if (lasts >= LAND_HOLD) return false;
+      if (stops) {
+        const from = stop ? movesFrom(map.field, s, run.solids, air, columns(map, st)).filter((n) => dist[n.to] < dist[mv.to]) : ahead;
+        const clear = (n: Move, k: number) =>
+          !hurts(map, this.fore, n, st + k, s, NO_SHOTS, margin) &&
+          !hurtsStill(map, this.fore, st + k + n.controls.length, n.end, NO_SHOTS, margin, TRAP_AHEAD);
+        let opens = Infinity;
+        for (let k = WAIT_STEP; k <= WAIT_AHEAD && opens === Infinity; k += WAIT_STEP) if (from.some((n) => clear(n, k))) opens = k;
+        if (opens < Infinity) return opens >= lasts;
+      }
     }
-    return true;
+    if (this.canStop(map, run, e, NO_SHOTS, air, t, TRAP_AHEAD)) return false;
+    return !on.some((n) => clearAt(n, 0));
   }
 
   /** Nothing is clear, and standing is about to hurt or it is in the air: the move it is hit latest on (if later than standing), nearest the target among those. */
@@ -952,6 +978,11 @@ function inNoGo(field: Level, b: Body): boolean {
 /** Frames a walk out of no-go cells may take, a drop off the part's edge included, before it counts as no way out. */
 const STEP_OUT = 45;
 
+/**
+ * Frames a landing with its way on shut has to hold for someone to wait there: past that it can stand and wait as long
+ * as it likes, and the way on opening later is the wait's business (`waitFor`), not the landing's.
+ */
+const LAND_HOLD = 90;
 /** Frames ahead a body standing still checks for something coming its way, and that shots in flight are followed. */
 const STILL_AHEAD = 20;
 const SHOTS_AHEAD = 120;
@@ -1036,6 +1067,17 @@ function hurtsStill(map: RaceMap, fore: Foresight, f: number, b: Body, shots: re
     if (struck(map, shots, f, i, box, seen.hazards) || bumpedBy(seen.moved, b.x, b.y, b)) return true;
   }
   return false;
+}
+
+/** Frames a body standing at `b` on race frame `f` stands before something reaches it, with `margin` to spare (`max` if nothing does by then). */
+function standsFor(map: RaceMap, fore: Foresight, f: number, b: Body, margin: number, max: number): number {
+  const box = { x: b.x - margin, y: b.y - margin, w: b.w + 2 * margin, h: b.h + 2 * margin };
+  const w = fore.watch();
+  for (let i = 0; i < max; i++) {
+    const seen = w.at(f + i, box);
+    if (struck(map, NO_SHOTS, f, i, box, seen.hazards) || bumpedBy(seen.moved, b.x, b.y, b)) return i;
+  }
+  return max;
 }
 
 /** Frames until something reaches a body standing where it is (Infinity if nothing does within STILL_AHEAD), with no room to spare. */
