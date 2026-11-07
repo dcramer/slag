@@ -22,7 +22,7 @@ For a production agent taking one kind's entry (`docs/characters/<kind>.md`) to 
 - [ ] It reads drawn, not rendered: flat colours, the cast's pen, the cast's face, no speckled outline, no flecks, nothing dark under the face that reads as a mouth.
 - [ ] On the lobby cards, the twist and the accessory are visible, and six rolls look like six characters of one kind.
 - [ ] The variety sheet: twelve looks that read as one character by one hand. Each colourway looks designed beside the others and keeps the colour block; the second idle and cheer are that character's own; the wear reads as wear at 3× and as nothing louder than a mark at play scale.
-- [ ] Blind read, in colour: both fresh readers name the homage, at least one at medium confidence or better, and neither pairs it with another kind. Say the readers' exact words in your report. Only the owner can accept a kind that fails it as a colour read (the warrior, the slayer and the assistant dog).
+- [ ] Blind read, in colour: both fresh readers name the homage, at least one at medium confidence or better, and neither pairs it with another kind. Say the readers' exact words in your report. Only the owner can accept a kind that fails it as a colour read (the warrior, the slayer, the assistant dog and the android).
 - [ ] Every clip: idle, walk, run, air, wall, cheer, death, both facings.
 - [ ] `tests/sprite-cast.test.ts` passes.
 - [ ] Draw cost from `shots/sprites-<kind>-bench.txt`: cached under 0.02 ms per runner.
