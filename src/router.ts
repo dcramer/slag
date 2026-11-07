@@ -84,6 +84,8 @@ export interface GoOptions {
 export class Router {
   route: Route;
   private unlisten: (() => void) | null = null;
+  /** The showing screen's taker of back/forward within itself (`followWithin`), if it has one. */
+  private within: ((r: Route) => void) | null = null;
 
   /** `show` mounts a route's screen; the router calls it once per change of route. */
   constructor(
@@ -114,7 +116,32 @@ export class Router {
     else if (!sameRoute(to, this.route)) this.hist.push(url);
     if (sameRoute(to, this.route)) return;
     this.route = to;
+    this.within = null;
     this.show(to);
+  }
+
+  /**
+   * Point the URL at another state of the screen already showing (the codex opening a card) without remounting it:
+   * a history entry of its own unless `replace`. Another screen's route is an ordinary `go`.
+   */
+  goWithin(to: Route, opts: GoOptions = {}): void {
+    if (to.screen !== this.route.screen) return this.go(to, opts);
+    const url = routePath(to) + this.hist.search;
+    if (opts.replace) this.hist.replace(url);
+    else if (!sameRoute(to, this.route)) this.hist.push(url);
+    this.route = to;
+  }
+
+  /**
+   * While the screen showing listens here, back/forward to another route of that same screen comes to `cb` instead
+   * of remounting it, so the entries `goWithin` made open and close in place. Returns the unsubscribe; moving to
+   * another screen drops it anyway.
+   */
+  followWithin(cb: (r: Route) => void): () => void {
+    this.within = cb;
+    return () => {
+      if (this.within === cb) this.within = null;
+    };
   }
 
   /** The URL of a route here, query included: for invite links and anything else that leaves the app. */
@@ -131,8 +158,11 @@ export class Router {
   private sync() {
     const next = parseRoute(this.hist.path);
     if (sameRoute(next, this.route)) return;
+    const within = next.screen === this.route.screen ? this.within : null;
     this.route = next;
     this.canonicalize();
+    if (within) return within(next);
+    this.within = null;
     this.show(next);
   }
 
@@ -142,8 +172,8 @@ export class Router {
   }
 }
 
-/** What a screen may do with the router: move to another screen. */
-export type Nav = Pick<Router, 'go' | 'href' | 'hardLoad'>;
+/** What a screen may do with the router: move to another screen, or keep its own state in the URL. */
+export type Nav = Pick<Router, 'go' | 'goWithin' | 'followWithin' | 'href' | 'hardLoad'>;
 
 /** A mounted screen's teardown. */
 export type Unmount = () => void;

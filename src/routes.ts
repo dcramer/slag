@@ -15,7 +15,7 @@ export type Route =
   | { screen: 'home' }
   | { screen: 'lobbies' }
   | { screen: 'lobby'; room: string; watch?: boolean }
-  | { screen: 'codex' }
+  | { screen: 'codex'; card?: string }
   | { screen: 'about' }
   | { screen: 'missing'; path: string };
 export type ScreenName = Route['screen'];
@@ -24,12 +24,21 @@ export const HOME: Route = { screen: 'home' };
 export const CODEX: Route = { screen: 'codex' };
 export const LOBBIES: Route = { screen: 'lobbies' };
 export const ABOUT: Route = { screen: 'about' };
+/**
+ * The codex with one card open: `card` is the link the codex gives it (src/codex/links.ts), built from registry keys
+ * so it outlives a renamed parody. The codex decides what a card link names; one it doesn't know is the plain codex.
+ */
+export const codexCard = (card: string): Route => ({ screen: 'codex', card });
 export const lobby = (room: string, opts: { watch?: boolean } = {}): Route => (opts.watch ? { screen: 'lobby', room, watch: true } : { screen: 'lobby', room });
 
-/** The screen a path shows. Lobby codes are case-insensitive; anything unknown is the 404 screen. */
+/** The screen a path shows. Lobby codes and codex cards are case-insensitive; anything unknown is the 404 screen. */
 export function parseRoute(path: string): Route {
   if (path === '/' || path === '') return HOME;
   if (path === '/codex' || path === '/codex/') return CODEX;
+  if (path.startsWith('/codex/')) {
+    const card = path.slice(7).split('/').filter(Boolean).join('/').toLowerCase();
+    return card ? codexCard(card) : CODEX;
+  }
   if (path === '/lobbies' || path === '/lobbies/') return LOBBIES;
   if (path === '/about' || path === '/about/') return ABOUT;
   const room = roomFromPath(path);
@@ -42,7 +51,7 @@ export function routePath(r: Route): string {
     case 'home':
       return '/';
     case 'codex':
-      return '/codex';
+      return r.card ? `/codex/${r.card}` : '/codex';
     case 'lobbies':
       return '/lobbies';
     case 'about':

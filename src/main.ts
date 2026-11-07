@@ -49,8 +49,8 @@ const SCREENS: Record<ScreenName, () => Mount | Promise<Mount>> = {
   codex: () =>
     import('./codex/main').then(
       ({ mountCodex }) =>
-        (root, _r, nav) =>
-          mountCodex(root, nav),
+        (root, r, nav) =>
+          mountCodex(root, nav, r.screen === 'codex' ? r.card : undefined),
     ),
   about: () =>
     import('./ui/screens/about').then(

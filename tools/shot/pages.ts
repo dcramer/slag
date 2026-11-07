@@ -325,7 +325,17 @@ export const shots: Scenarios = {
     await page.keyboard.press('Enter');
     await page.waitForTimeout(600);
     await snap('codex-open');
+    // The card is in the URL; closing it restores the plain codex, and back and forward open and close it again.
+    const path = () => new URL(page.url()).pathname;
+    const opened = path();
+    if (!/^\/codex\/[a-z0-9-]+\/[a-z0-9-]+$/.test(opened)) throw new Error(`codex: an open card's URL is ${opened}`);
     await page.keyboard.press('Escape');
+    await page.waitForSelector('.cx-modal[hidden]', { state: 'attached', timeout: 5000 });
+    if (path() !== '/codex') throw new Error(`codex: closing a card left ${path()}`);
+    await page.goBack();
+    await page.waitForSelector('.cx-modal:not([hidden])', { timeout: 5000 });
+    if (path() !== opened) throw new Error(`codex: back went to ${path()}, not ${opened}`);
+    await page.goForward();
     await page.waitForSelector('.cx-modal[hidden]', { state: 'attached', timeout: 5000 });
     // The cast from the index, and a runner up close mid-move.
     await page.click('.cx-index [data-sec=cast]');
@@ -364,6 +374,19 @@ export const shots: Scenarios = {
     await page.waitForSelector('.cx-modal[hidden]', { state: 'attached', timeout: 5000 });
     await page.keyboard.press('Escape');
     await page.waitForSelector('[data-screen=home]', { timeout: 5000 });
+    // Permalinks loaded fresh: a runner, a map (which waits for the maps to load), and one the codex doesn't know.
+    await page.goto(`${base}codex/cast/plumber`);
+    await page.waitForSelector('.cx-modal:not([hidden])', { timeout: 10_000 });
+    await page.waitForTimeout(1200);
+    await snap('codex-permalink');
+    await page.goto(`${base}codex/map-${mapTheme}/look`);
+    await page.waitForSelector('.cx-modal:not([hidden])', { timeout: 60_000 });
+    await drawn(page, 60_000);
+    await page.waitForTimeout(1500);
+    await snap('codex-permalink-map');
+    await page.goto(`${base}codex/cast/nobody`);
+    await page.waitForURL((u) => u.pathname === '/codex', { timeout: 60_000 });
+    if (!(await page.locator('.cx-modal').isHidden())) throw new Error('codex: an unknown card opened something');
     // A phone: the top of the catalog, a section, a part opened by tap; then a theme's maps and a landmark up close.
     const mctx = await browser.newContext({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 2, isMobile: true, hasTouch: true });
     const mp = await mctx.newPage();
@@ -411,6 +434,11 @@ export const shots: Scenarios = {
     await mp.tap(`#map-${mapTheme} .cx-card[data-map=landmark]`);
     await mp.waitForTimeout(1500);
     await mshot('codex-mobile-landmark');
+    await taps();
+    await mp.goto(`${base}codex/heads/saw`);
+    await mp.waitForSelector('.cx-modal:not([hidden])', { timeout: 10_000 });
+    await mp.waitForTimeout(800);
+    await mshot('codex-mobile-permalink');
     await taps();
     await mctx.close();
   },
