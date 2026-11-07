@@ -1,3 +1,18 @@
+The redraw for the clean colour read (2026-11-06): 9 images, 18 credits. What ships is this; the first round, further down, is history (the redraw overwrote its sheets in sheets/, and they're in git).
+
+1. Mock, no images: the shipped design, run-1, run-2 and air-1 edited in place (the hat 1.15x wide and 1.6x tall from its brim, the bow tie 1.7x, the coin slot 0.6x, the jaw hung open across the lower muzzle with a row of teeth, the hose cut to a stub under the fist): drafts/mock-1.png is the idle. Both of two fresh readers read it at medium, and neither paired it.
+
+2. The mock redrawn clean (--ref drafts/mock-1.png, --aspect 1:1 --count 2; redraw-1 kept as design.png: the jaw hangs on a metal hinge and the shower head stands clear of the face; redraw-2 drew a white band through the hat):
+The same character exactly as in the reference image: the same pose, design, proportions, colours, wear and tear, line and flat white background, redrawn cleanly as one finished drawing. Keep each of these big and bold: the tall black top hat standing upright on top of his head with clear white gaps between it and both round ears; the big black bow tie under his chin; his lower jaw hanging open like a broken animatronic puppet's, a dark open mouth with a row of pointed teeth along the top, in his big tan muzzle; the glowing pale yellow eyes. Change only this: his near arm holds the steel shower head up in front of his mouth like a microphone, out clear of his face with white space between them, its hose only a short stub under his fist. The belly's coin slot stays small. Nothing else changes, no dirt, no texture.
+
+3. Poses, the same templates as in the first round below, with the new KEEP (tools/art3d/flat/kinds/bear.ts), design.png as the reference, each sheet drawn twice:
+   - sheetA (walk-1, walk-2, idle2): A-1 -> all three.
+   - sheetB (run-1, run-2, air-1): B-1 -> all three.
+   - sheetC (air-2, cheer, cheer2): C-2 -> air-2 (C-1's fall dropped the shower head); C-1 -> cheer, cheer2 (C-2's dance dropped it).
+   - sheetD, the far template (the wall slide and the knockout, each adding "the big black bow tie, his jaw hanging open"): D-1 -> wall, its drawn wall line whitened from x 498 to 560 (wallline.py, sheets/sheetD-1w.png); D-2 -> death (no lit eyes showing; D-2's wall drew a white band through the hat).
+
+----- The first round -----
+
 How design.png and the pose drawings were made (2026-11-06). Every image was 2 credits (no free images left): 24 credits, 12 images. The drafts are in drafts/, the sheets in sheets/, the cut poses in flat/. One prompt was refused (403), the first sheetB, whose poses said "stiff jerky strides" and "legs locked straight"; reworded "stiff strides" and "legs straight together", it passed.
 
 1. Design (`node tools/art3d/style.ts design bear`, 2 drawn, drafts/design-1..2). Both a brown bear in a small black top hat between round ears, glowing eyes, a black bow tie, a tan belly and a steel shower head on its hose held up to the mouth. design-1 kept: the ears further out with a clearer gap each side of the hat, the jointed limbs. Close to the original, so the wear edit carries the twist.

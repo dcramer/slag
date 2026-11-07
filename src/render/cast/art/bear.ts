@@ -4,7 +4,7 @@ import { line } from '../../ink';
 
 /**
  * The animatronic bear (docs/characters/bear.md): a stocky upright bear, a big round head with two round ears far out
- * on its sides and a tiny top hat standing between them with background on each side, a big muzzle, a bow tie, a big
+ * on its sides and a top hat standing between them with background on each side, a big muzzle with the jaw hung open, a big bow tie, a big
  * round belly with a coin slot, and a shower head on its hose held up to his mouth like a microphone. The fur is the
  * player's colour, the belly and muzzle a light of it; the hat, bow tie and shower head are neutrals. A rendered kind
  * draws from its frames (src/render/cast/sprites/bear/); this is what shows before they load, and on the hand-drawn
@@ -15,7 +15,7 @@ const HAT = '#4a4652';
 const METAL = '#a4a6a8';
 const METAL_SH = '#7c828a';
 
-/** The tiny top hat's crown and brim, the bow tie under the chin, and the coin slot, over the fur. */
+/** The top hat's crown and brim, the big bow tie under the chin, and the small coin slot, over the fur. */
 function costume(d: D) {
   const x = (u: number) => d.f * d.W * u;
   const crown = [
@@ -35,8 +35,8 @@ function costume(d: D) {
       d.s,
       [
         { x: x(0.12), y: by },
-        { x: x(0.12 + sd * 0.12), y: by - 0.7 },
-        { x: x(0.12 + sd * 0.12), y: by + 0.7 },
+        { x: x(0.12 + sd * 0.16), y: by - 1 },
+        { x: x(0.12 + sd * 0.16), y: by + 1 },
       ],
       HAT,
     );
@@ -71,15 +71,17 @@ export const art: KindArt = {
     // The belly, the muzzle and the ears' insides: a light of the fur.
     tonedOval(d.s, d.f * d.W * 0.06, Y(d, 0.3), d.W * 0.24, d.H * 0.17, 14, d.lk.playerHi, d.lk.playerHi, d.lk.ink, 0, 0, 0);
     tonedOval(d.s, d.f * d.W * 0.3, Y(d, 0.6), d.W * 0.14, d.H * 0.065, 12, d.lk.playerHi, d.lk.playerHi, d.lk.ink, 0, 0, 0);
+    // The jaw hung open under the muzzle, the animatronic's dark mouth.
+    tonedOval(d.s, d.f * d.W * 0.3, Y(d, 0.57), d.W * 0.09, d.H * 0.03, 10, d.lk.ink, d.lk.ink, d.lk.ink, 0, 0, 0);
     for (const u of [-0.32, 0.36]) tonedOval(d.s, d.f * d.W * u, Y(d, 0.84), d.W * 0.05, d.H * 0.04, 8, d.lk.playerHi, d.lk.playerHi, d.lk.ink, 0, 0, 0);
   },
   front: (d) => costume(d),
   tool: (d, hx, hy) => {
-    // The shower head held up in his fist like a microphone, its hose hanging from the handle.
+    // The shower head held up in his fist like a microphone, a short stub of hose under the fist.
     const tx = hx + d.f * 0.5;
     const ty = hy - 2.6;
     d.s.fillStyle = d.lk.ink;
-    line(d.s, hx, hy + 0.6, hx + d.f * 0.3 + d.wob * 0.3, hy + 4.5, { w: 1.1, seed: 5, taper: [0, 0.3], press: 0 });
+    line(d.s, hx, hy + 0.6, hx + d.f * 0.2 + d.wob * 0.2, hy + 2, { w: 1.1, seed: 5, taper: [0, 0.3], press: 0 });
     line(d.s, hx, hy + 0.8, tx, ty, { w: 1.6, seed: 3, taper: [0, 0], press: 0 });
     d.s.fillStyle = METAL;
     line(d.s, hx, hy + 0.8, tx, ty, { w: 0.8, seed: 3, taper: [0, 0], press: 0 });
