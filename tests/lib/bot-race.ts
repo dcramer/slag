@@ -330,7 +330,22 @@ function playRound(seed: number, m: Match, bots: BotSeats, { at = 15 * 60, limit
   let next = -1;
   let since = 0;
   const causes: Record<string, number> = {};
-  const fight: Fight = { contact: -1, hit: -1, bonks: 0, frames: 0, still: 0, retreat: 0, gap: 0, shoved: 0, grounded: 0, safe: 0, touched: [], streak: [], longest: 0, pauses: 0 };
+  const fight: Fight = {
+    contact: -1,
+    hit: -1,
+    bonks: 0,
+    frames: 0,
+    still: 0,
+    retreat: 0,
+    gap: 0,
+    shoved: 0,
+    grounded: 0,
+    safe: 0,
+    touched: [],
+    streak: [],
+    longest: 0,
+    pauses: 0,
+  };
   // Where a brawl's field stands safe, with the parts placed so far: what hurts and the drops into the pit.
   const deadly = m.rules.mode === 'brawl' ? deadlyCells({ ...m.level, setPieces: [...m.level.setPieces, ...m.placed] }).deadly : null;
   const credit: number[] = [];

@@ -73,7 +73,15 @@ export const LEAD_HOLDS = {
  * and `hit`, seconds from GO to the first touch or bonk and to the first bonk; `uses`, items used a round; `still`
  * and `retreat`, the shares of frames in it standing still and moving away from the nearest rival; `gap`, the tiles
  * to that rival; `pauses`, times a bot stood still half a second on end (`PAUSE` frames), per bot-minute: a person
- * sees a pause as a stretch, not a share. MEASURE_HERE Measured bare 4%, 21.5 s, 75%, 1.6 s, 3.3 s, 8.9 uses, 10%, 17%, 5.3 tiles; placed 0%, 19.1 s, 66%,
+ * sees a pause as a stretch, not a share. Measured bare 0%, 16.5 s, 70%, 1.4 s, 3.6 s, 6.6 uses, 5%, 19%, 5.1 tiles,
+ * 0.28 pauses (the longest still 52 frames); placed 2%, 18.2 s, 63%, 1.2 s, 3.1 s, 6.2 uses, 7%, 19%, 5.3 tiles, 0.40
+ * (1327) (15 of 48 and 22 of 64 rounds in 20–40 s, 10 and 13 under 10 s; 31 and 46 deaths to hazards, 28 and 32 off
+ * the sides), since a fighting bot is always at something (src/brain/strategies/brawl.ts, motor.ts): an unlined hit
+ * after a moment's aim, never a goTo the cell it's in, a shove with a swing winding back up, a jump at a rival
+ * overhead, a charge at a rival a body check would throw into something, a glance to think, a hazard waited on only a
+ * moment, and out of a part's no-go cells or off a lip's spot rather than stand there. The bare `seconds` and both
+ * `uses` bands fail on these seeds: rounds end sooner when nobody stands still, and uses are per round. On seeds 49–144
+ * the same bots average 18.6 s against 19.4 s before, so most of the 5 s here is these 48 seeds' draw. From bare 4%, 21.5 s, 75%, 1.6 s, 3.3 s, 8.9 uses, 10%, 17%, 5.3 tiles; placed 0%, 19.1 s, 66%,
  * 1.5 s, 4.5 s, 6.6 uses, 11%, 18%, 6.2 tiles (23 of 48 and 27 of 64 rounds in 20–40 s, 3 and 11 under 10 s; 30 and 45
  * deaths to hazards, 28 and 25 off the sides) since the arena is cut into bands of ledges over shafts to the pit with a
  * hall either side for the set's pieces, which are only what kills or knocks (gen/level/builders/arena.ts): its 6 come
@@ -130,10 +138,10 @@ export const BRAWL_ROUNDS = {
       contact: [0, 2],
       hit: [0, 4.2],
       uses: [8.5, 15],
-      still: [0, 0.14],
+      still: [0, 0.09],
       retreat: [0, 0.21],
       gap: [0, 5.5],
-      pauses: [0, 99],
+      pauses: [0, 1],
     },
     placed: {
       draws: [0, 0.2],
@@ -142,10 +150,10 @@ export const BRAWL_ROUNDS = {
       contact: [0, 1.9],
       hit: [0, 5],
       uses: [6.3, 12],
-      still: [0, 0.18],
+      still: [0, 0.09],
       retreat: [0, 0.21],
       gap: [0, 6.5],
-      pauses: [0, 99],
+      pauses: [0, 1],
     },
   },
 } as const satisfies {

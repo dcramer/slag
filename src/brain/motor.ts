@@ -503,9 +503,9 @@ export class Motor {
           // A landing, or the world not doing what it expected: it takes a moment to see what's next. In a fight
           // (`haste`) not when what moved it was a rival it's up against (its recordings know nothing of bodies, and
           // shoving is the fight) or nothing moved it at all (held in place: its own swing winding up), and a landing
-          // costs only what's left of that moment once it's down: it read the fight in the air.
+          // costs only what's left of that moment once it's down: it read the fight while the move played.
           if (off) this.hesitate = this.haste && this.run && (this.pinned || againstRival(this.run, b)) ? 0 : this.traits.reaction;
-          else if (m.air) this.hesitate = Math.max(0, this.traits.reaction - (this.haste ? airborne(m) : 0));
+          else if (m.air) this.hesitate = Math.max(0, this.traits.reaction - (this.haste ? m.controls.length : 0));
           return (this.act = null);
         }
         act.i++;
@@ -823,9 +823,11 @@ export class Motor {
         }
         continue;
       }
-      for (let k = WAIT_STEP; k <= (this.haste ? FIGHT_WAIT : WAIT_AHEAD) && p + k * FRAME_COST < value; k += WAIT_STEP) {
+      // A fight weighs its waits as dearer: its target moves on meanwhile.
+      const per = this.haste ? FIGHT_WAIT_COST : FRAME_COST;
+      for (let k = WAIT_STEP; k <= (this.haste ? FIGHT_WAIT : WAIT_AHEAD) && p + k * per < value; k += WAIT_STEP) {
         if (!hurts(map, this.fore, mv, f + k, b, NO_SHOTS, margin) && !(mv.air && gusty(run.level, mv, f + k, gustAir(run.level, f + k)))) {
-          value = p + k * FRAME_COST;
+          value = p + k * per;
           until = f + k;
           break;
         }
@@ -896,13 +898,6 @@ function columns(map: RaceMap, f: number): WindColumns {
   return (i) => map.winds(f + i);
 }
 
-/** Frames of `mv` after it leaves the height it started at: its flight, the time it had to look past its landing. */
-function airborne(mv: Move): number {
-  const y = mv.path[1];
-  for (let i = 1; i < mv.controls.length; i++) if (mv.path[2 * i + 1] !== y) return mv.controls.length - i;
-  return 0;
-}
-
 /** Px apart a rival's body may be and still be up against this one: runners are solid to each other (sim/collide.ts). */
 const AGAINST = 1;
 
@@ -962,6 +957,8 @@ const WAIT_AHEAD = 150;
 const HEMMED = 20;
 /** How far ahead it waits for a hazard in a fight (Intent `haste`): its target moves on long before a slow one passes. */
 const FIGHT_WAIT = 45;
+/** Route units a frame of waiting for a hazard costs in a fight: twice a walk's. */
+const FIGHT_WAIT_COST = 2 * FRAME_COST;
 const WAIT_STEP = 3;
 const WAIT_LOOKS = 3;
 /** Frames a trap is reckoned to take to pass, when weighing it against a clear move. */

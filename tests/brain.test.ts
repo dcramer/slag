@@ -255,11 +255,11 @@ describe('the motor’s own moves', () => {
     expect(stood).toBe(true);
   });
 
-  it('in a fight it reads its landings in the air: slow hands cost a run across the arena no stops, where a race still pays them', () => {
-    // Across a brawl arena, end to end, with hands that take 18 frames to see what's next and no other lapses.
-    // Seed 4's arena: a run across it lands a few times on the way.
+  // Across a brawl arena, end to end, with hands that take 18 frames to see what's next and no other lapses: a run
+  // across each of these lands a few times on the way, over shafts and up and down the bands.
+  it.each([2, 3, 4])('in a fight it reads its landings in the air: slow hands cost a run across arena %i no stops, where a race still pays them', (seed) => {
     const across = (reaction: number, haste: boolean) => {
-      const m = new Match(4, undefined, { ...DEFAULT_RULES, mode: 'brawl' });
+      const m = new Match(seed, undefined, { ...DEFAULT_RULES, mode: 'brawl' });
       const { spawn, goal } = m.level;
       const { p, r } = standing(m, spawn.tx, spawn.ty);
       const motor = new Motor({ ...rollPersonality(1, 'normal'), reaction, slip: 0, think: 0, stray: 0 }, 1);
@@ -274,7 +274,8 @@ describe('the motor’s own moves', () => {
     const quick = across(0, true);
     const slow = across(18, true);
     expect(quick.f).toBeGreaterThan(0);
-    expect(slow.still).toBeLessThan(10);
+    // What slow hands add: a wait for a hazard to pass on the way is the arena's, and quick hands wait it out too.
+    expect(slow.still - quick.still, `still: slow ${slow.still}, quick ${quick.still}`).toBeLessThan(10);
     expect(slow.f).toBeLessThanOrEqual(quick.f + 10);
     expect(across(18, false).still).toBeGreaterThan(30);
   });
