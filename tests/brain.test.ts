@@ -259,12 +259,12 @@ describe('the motor’s own moves', () => {
 
   // Across a brawl arena, end to end, with hands that take 18 frames to see what's next and no other lapses: a run
   // across each of these lands a few times on the way, over shafts and up and down the bands.
-  // Seed 2's way across waits for a hazard to pass, and quick hands wait it out too: there only what slow hands add
+  // Seed 9's way across waits for a hazard to pass, and quick hands wait it out too: there only what slow hands add
   // counts. The others have nothing to wait for, so every still frame counts.
   it.each([
-    [2, false],
-    [3, true],
-    [4, true],
+    [9, false],
+    [2, true],
+    [5, true],
   ])('in a fight it reads its landings in the air: slow hands cost a run across arena %i no stops, where a race still pays them', (seed, clear) => {
     const across = (reaction: number, haste: boolean) => {
       const m = new Match(seed, undefined, { ...DEFAULT_RULES, mode: 'brawl' });

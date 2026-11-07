@@ -15,7 +15,7 @@ import { SPACE } from './space';
 import { VOLCANO } from './volcano';
 
 export type { Piece, Recipe } from './place';
-export { commit, finalize, type PlacerOpts, type RecipeTry, SAFE_TILES, Site } from './place';
+export { centreFits, commit, finalize, type PlacerOpts, type RecipeTry, SAFE_TILES, Site } from './place';
 export { hazardSignature, MIN_TELL, shotsIntoSpawns, TELLS, tellFaults, throughFaults, windowFaults } from './contract';
 
 /**

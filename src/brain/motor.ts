@@ -79,6 +79,8 @@ const FIGHT_MUSE = 0.35;
 const STRAY_COST = 40;
 const FUMBLES: readonly Slip[] = ['short', 'late', 'early', 'long'];
 const NO_SLIPS: readonly Slip[] = [];
+/** Moves in a row that go nowhere from where it stands before it hops to get out of the spot (`balked`). */
+const BALKS = 12;
 /** Moves past a tight best one it looks at for a safe one. */
 const SAFE_LOOKS = 4;
 /** Px/s under which braking lets go, so it stops rather than turns round. */
@@ -205,6 +207,8 @@ export class Motor {
   private pinned = false;
   /** Looks in a row that ended in standing a beat for something that hurts to pass. */
   private hemmed = 0;
+  /** Moves in a row that went off their recording on their first frame with the body standing where it was. */
+  private balked = 0;
 
   constructor(
     /** Its hands: how quick, clean and careful it is. Set again when the room's Bots rule changes. */
@@ -457,6 +461,12 @@ export class Motor {
     if (act?.kind === 'wait' && hurtsStill(map, this.fore, run.frame, b, shotsAhead(run, map), this.traits.margin)) this.act = null;
     const go = this.follow(b);
     if (go) return go;
+    // Every move it picks here goes off its recording on the first frame and leaves it where it stood (a part's solid
+    // the trace resolves one way and the world another): it would pick the same one forever, so it hops out of it.
+    if (this.balked >= BALKS && b.onGround) {
+      this.balked = 0;
+      return this.press({ left: false, right: false, jump: true, jumpPressed: true });
+    }
     // On landing, a moment to see what's next, unless something is coming for it where it stands: anyone flinches.
     // It brakes meanwhile, as a player who doesn't know what's next stops rather than coasts off the ledge.
     // In the air there's no time to stand and look: it steers at once.
@@ -506,6 +516,8 @@ export class Motor {
           // costs only what's left of that moment once it's down: it read the fight while the move played.
           if (off) this.hesitate = this.haste && this.run && (this.pinned || againstRival(this.run, b)) ? 0 : this.traits.reaction;
           else if (m.air) this.hesitate = Math.max(0, this.traits.reaction - (this.haste ? m.controls.length : 0));
+          // Off its recording on the move's first frame, standing where it was: the trace and the world disagree here.
+          this.balked = off && i === 1 && b.onGround && Math.abs(b.vx) < 1 ? this.balked + 1 : 0;
           return (this.act = null);
         }
         act.i++;

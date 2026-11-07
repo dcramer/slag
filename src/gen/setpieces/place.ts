@@ -1,6 +1,6 @@
 import { dcos, dhypot, dpow, dsin } from '../../core/dmath';
 import { type Cell, overlaps, type Rect, rectCircle, type Vec } from '../../core/geom';
-import type { Rng } from '../../core/rng';
+import { Rng } from '../../core/rng';
 import { PLAYER_H, PLAYER_W, RUN_COUNTDOWN, TILE } from '../../sim/constants';
 import { isProtected, type Level, T_EMPTY, T_SOLID, tileAt, type TileRect } from '../../sim/level';
 import {
@@ -32,6 +32,7 @@ import {
 import '../../sim/props/modules';
 import { ReachCache } from '../../sim/reach';
 import { gustPeak } from '../../sim/weather';
+import { CENTRE_KEY } from '../level/measure';
 import { noFreeRide } from '../level/winnable';
 import { hazardBox, tellFaults, throughFaults, windowFaults } from './contract';
 
@@ -247,9 +248,10 @@ function hazardHits(h: Hazard, z: Rect): boolean {
 
 /**
  * Validate a candidate and turn it into a PlacedProp (footprint = every
- * cell its solids sweep, plus clearance). Returns null if it breaks a rule.
+ * cell its solids sweep, plus clearance). Returns null if it breaks a rule. `path` false skips the one rule
+ * that asks reach (its static solids cut no path), for a probe that proves nothing.
  */
-export function finalize(s: Site, piece: Piece, uid: number, key: string): PlacedProp | null {
+export function finalize(s: Site, piece: Piece, uid: number, key: string, path = true): PlacedProp | null {
   const level = s.level;
   const raw: PropDef = {
     key,
@@ -361,7 +363,7 @@ export function finalize(s: Site, piece: Piece, uid: number, key: string): Place
 
   // Static solids must not cut the path to the goal.
   const statics = [...first.entries()].filter(([id]) => !moved.has(id)).map(([, rc]) => rc);
-  if (statics.length && !piece.pathSafe) {
+  if (path && statics.length && !piece.pathSafe) {
     const tiles = new Uint8Array(level.tiles);
     for (const rc of statics) for (const [x, y] of rectCells(rc)) tiles[y * s.w + x] = T_SOLID;
     const before = s.reach;
@@ -407,12 +409,18 @@ export interface PlacerOpts {
   family?: readonly string[];
   /** Draw only recipes of these roles (the level profile's `setPieceRoles`). */
   roles?: readonly Role[];
+  /**
+   * The room the builder laid the level round (`Shape.centre`, a brawl arena's): before anything else one of the set's
+   * hazards stands in these cells as its centrepiece, centred on the middle or a pair mirrored across it (`placeCentre`);
+   * `alone`, the rest keep out of them after.
+   */
+  centre?: { rooms: readonly TileRect[]; alone?: boolean };
   /** Gets one entry per recipe tried, in order (diagnostics: `GenInfo.placement`, `pnpm level`); never changes a placement. */
   log?: RecipeTry[];
 }
 
-/** Why a candidate was turned down: the placer's checks, in the order it runs them. */
-type Refusal = 'tell' | 'fit' | 'window' | 'through' | 'keep' | 'ride';
+/** Why a candidate was turned down: the placer's checks, in the order it runs them (`reach`: a centrepiece that reaches too few places to stand). */
+type Refusal = 'tell' | 'fit' | 'window' | 'through' | 'reach' | 'keep' | 'ride';
 
 /** One recipe the placer tried on a level: how many candidate spots it offered (none: it found no spot), and whether one went in. */
 export interface RecipeTry {
@@ -422,7 +430,88 @@ export interface RecipeTry {
   placed: boolean;
   /** Candidates turned down, by the first check each failed. */
   refused: Partial<Record<Refusal, number>>;
+  /** Tried as the level's centrepiece (`PlacerOpts.centre`). */
+  centre?: true;
 }
+
+/** Columns off the middle a centrepiece's footprint centres on and still counts as centred, and a mirrored pair's as each other's mirror. */
+const CENTRED = 1.5;
+/** Off-centre candidates of a recipe whose mirror the centrepiece pass looks for. */
+const MIRROR_TRIES = 2;
+/** Tiles round the mirror of a centrepiece's footprint its twin may take: a recipe's spot is its own, not a reflection. */
+const TWIN_SLACK = 2;
+/** Tiles from a centrepiece within which a place to stand counts as in its reach: as far as a knock carries you (level/measure.ts). */
+const REACH = 3;
+/**
+ * Places to stand (`Site.reachable`: a floor with air over it) a centrepiece reaches at least: the feature of the
+ * arena, not a glass pane on a lip.
+ */
+const CENTRE_REACH = 12;
+
+/** Places to stand within `REACH` tiles of any of `pps`' footprints. */
+function reachOf(s: Site, pps: readonly PlacedProp[]): number {
+  const near = new Set<number>();
+  for (const pp of pps)
+    for (const [fx, fy] of pp.def.footprint)
+      for (let y = fy + pp.ty - REACH; y <= fy + pp.ty + REACH; y++)
+        for (let x = fx + pp.tx - REACH; x <= fx + pp.tx + REACH; x++) if (s.reachable(x, y)) near.add(y * s.w + x);
+  return near.size;
+}
+
+/** The mean of a piece's footprint cells, in tiles. */
+function centroid(pp: PlacedProp): Vec {
+  const n = pp.def.footprint.length;
+  let x = 0;
+  let y = 0;
+  for (const [cx, cy] of pp.def.footprint) {
+    x += cx + pp.tx + 0.5;
+    y += cy + pp.ty + 0.5;
+  }
+  return [x / n, y / n];
+}
+
+/** A piece whose footprint centres on the level's middle column. */
+const centredIn = (s: Site, pp: PlacedProp) => Math.abs(centroid(pp)[0] - s.w / 2) <= CENTRED;
+
+/** A copy of `s` (the same level and cache, what it's taken) with every cell outside `inside` taken too. */
+function fenced(s: Site, inside: (x: number, y: number) => boolean): Site {
+  const f = new Site(s.level, s.cache);
+  for (const k of s.taken) f.taken.add(k);
+  for (let y = 0; y < f.h; y++) for (let x = 0; x < f.w; x++) if (!inside(x, y)) f.taken.add(y * f.w + x);
+  return f;
+}
+
+const inRects = (rects: readonly TileRect[]) => (x: number, y: number) => rects.some((r) => x >= r.x && x < r.x + r.w && y >= r.y && y < r.y + r.h);
+
+/** The checks a candidate passes on its own (tell, fit, window, through), before the proofs (keep, ride). */
+function fits(s: Site, cand: Piece, uid: number, key: string, path = true): { pp: PlacedProp | null; why: Refusal | null } {
+  if (tellFaults(cand.modules).length) return { pp: null, why: 'tell' };
+  const pp = finalize(s, cand, uid, key, path);
+  if (!pp) return { pp, why: 'fit' };
+  return { pp, why: windowFaults(s.level, pp).length ? 'window' : throughFaults(s.level, pp).length ? 'through' : null };
+}
+
+/**
+ * Whether one of `recipes` (of `roles`, hazards only) would stand in `rooms` as a centrepiece (`placeCentre`), short of
+ * the proofs (keep, ride): the pipeline asks before it proves a level built round a centre (`Shape.centre`), so a
+ * room none of the set's hazards can stand in is laid again as another kind rather than proven and then turned down.
+ */
+export function centreFits(
+  rng: Rng,
+  level: Level,
+  rooms: readonly TileRect[],
+  recipes: readonly Recipe[],
+  roles?: readonly Role[],
+  cache?: ReachCache,
+): boolean {
+  if (roles && !roles.includes('hazard')) return false;
+  const hazards = recipes.filter((r) => (r.role ?? 'hazard') === 'hazard');
+  return (
+    placeCentre(rng, new Site(level, cache), rooms, hazards, { cap: tryCapOf(level), uid: 0, key: () => 'probe', holds: () => null, path: false }).length > 0
+  );
+}
+
+const tryCapOf = (level: Level) => Math.round(16 * Math.max(1, Math.sqrt((level.w * level.h) / (48 * 27))));
 
 /** Recipe weight scaled by the level's danger: hazards up to ×2.4 on nasty levels, ×0.4 on tame ones (and the reverse for helpers). */
 function dangerWeight(r: Recipe, danger: number): number {
@@ -456,40 +545,51 @@ export function makePlacer(themeKey: string, recipes: readonly Recipe[], uidBase
     const want = opts.count ?? rolled;
     if (want <= 0) return [];
     const danger = opts.danger ?? 0.5;
-    const tryCap = Math.round(16 * Math.max(1, Math.sqrt((level.w * level.h) / (48 * 27))));
+    const tryCap = tryCapOf(level);
     const family = opts.family;
     const roles = opts.roles;
     const pool = recipes
       .filter((r) => (!family || family.includes(r.name)) && (!roles || roles.includes(r.role ?? 'hazard')))
       .map((r) => ({ r, k: dpow(rng.next() + 1e-9, 1 / (opts.danger === undefined ? r.weight : dangerWeight(r, danger))) }))
-      .sort((a, b) => b.k - a.k);
-    const order = [...pool.map((p) => p.r), ...pool.filter((p) => p.r.repeat).map((p) => p.r)];
+      .sort((a, b) => b.k - a.k)
+      .map((p) => p.r);
     const out: PlacedProp[] = [];
+    const key = (r: Recipe) => `setpiece:${themeKey}:${r.name}`;
+    /** The proofs (keep, ride), for `pp` going in after `more` (a centrepiece's twin after its first). */
+    const holds = (pp: PlacedProp, more: readonly PlacedProp[] = []): Refusal | null =>
+      opts.keep && !opts.keep([...out, ...more, pp]) ? 'keep' : !noFreeRide(level, pp, [...standing, ...out, ...more], s.cache) ? 'ride' : null;
+    if (opts.centre?.rooms.length) {
+      const hazards = pool.filter((r) => (r.role ?? 'hazard') === 'hazard');
+      for (const pp of placeCentre(rng, s, opts.centre.rooms, hazards, {
+        cap: tryCap,
+        uid: uidBase + first,
+        key: (r) => key(r) + CENTRE_KEY,
+        holds,
+        log: opts.log,
+      })) {
+        out.push(pp);
+        commit(s, pp);
+      }
+      // A room that's the centrepiece's alone: the rest stand round it, so it reads as the feature, and the fight round
+      // it isn't a crowd of hazards.
+      if (opts.centre.alone)
+        for (const a of opts.centre.rooms)
+          for (let y = Math.max(0, a.y); y < Math.min(s.h, a.y + a.h); y++)
+            for (let x = Math.max(0, a.x); x < Math.min(s.w, a.x + a.w); x++) s.taken.add(y * s.w + x);
+    }
+    // The rest of the ask from the whole pool, a recipe once and one that repeats twice, the centrepiece's copies counted.
+    const used = (r: Recipe) => out.filter((pp) => pp.def.key === key(r) + CENTRE_KEY).length;
+    const order = [...pool.filter((r) => !used(r) || (r.repeat && used(r) < 2)), ...pool.filter((r) => r.repeat && !used(r))];
     for (const recipe of order) {
       if (out.length >= want) break;
       let tries = 0;
-      const log: RecipeTry = { recipe: recipe.name, role: recipe.role ?? 'hazard', offered: 0, placed: false, refused: {} };
-      const refuse = (why: Refusal) => (log.refused[why] = (log.refused[why] ?? 0) + 1);
+      const log = tryLog(recipe);
       for (const cand of recipe.candidates(rng, s)) {
         if (++tries > tryCap) break;
         log.offered++;
-        if (tellFaults(cand.modules).length) {
-          refuse('tell');
-          continue;
-        }
-        const pp = finalize(s, cand, uidBase + first + out.length, `setpiece:${themeKey}:${recipe.name}`);
-        const why: Refusal | null = !pp
-          ? 'fit'
-          : windowFaults(level, pp).length
-            ? 'window'
-            : throughFaults(level, pp).length
-              ? 'through'
-              : opts.keep && !opts.keep([...out, pp])
-                ? 'keep'
-                : !noFreeRide(level, pp, [...standing, ...out], s.cache)
-                  ? 'ride'
-                  : null;
-        if (why) refuse(why);
+        const { pp, why } = fits(s, cand, uidBase + first + out.length, key(recipe));
+        const no = why ?? (pp ? holds(pp) : 'fit');
+        if (no) refuse(log, no);
         else if (pp) {
           out.push(pp);
           commit(s, pp);
@@ -501,4 +601,91 @@ export function makePlacer(themeKey: string, recipes: readonly Recipe[], uidBase
     }
     return out;
   };
+}
+
+const tryLog = (r: Recipe): RecipeTry => ({ recipe: r.name, role: r.role ?? 'hazard', offered: 0, placed: false, refused: {} });
+const refuse = (log: RecipeTry, why: Refusal) => (log.refused[why] = (log.refused[why] ?? 0) + 1);
+
+/** What the centrepiece pass takes from its placer. */
+interface CentreCtx {
+  cap: number;
+  /** The first centrepiece's uid; a twin takes the next. */
+  uid: number;
+  key: (r: Recipe) => string;
+  holds: (pp: PlacedProp, more?: readonly PlacedProp[]) => Refusal | null;
+  log?: RecipeTry[];
+  /** False for a probe: `finalize` skips its reach check of what a piece's static solids cut, a proof the probe leaves to the placer. */
+  path?: false;
+}
+
+/**
+ * The level's centrepiece (docs/MODES.md → Brawl): the first of the set's hazards, in the placer's own order, that
+ * stands in `rooms` centred on the middle, or as a pair mirrored across it, and reaches `CENTRE_REACH` places to stand.
+ * A twin is the recipe's own spot round the mirror of where the first went, fenced off for it, from the same stream,
+ * so it rolls the same size. Failing every recipe, the first off-centre one that reaches as far alone. Each recipe
+ * finds its own spots, as it does anywhere: the room only fences off the rest of the level.
+ */
+function placeCentre(rng: Rng, s: Site, rooms: readonly TileRect[], hazards: readonly Recipe[], c: CentreCtx): PlacedProp[] {
+  const room = fenced(s, inRects(rooms));
+  const centred = (pp: PlacedProp) => centredIn(s, pp);
+  let fallback: { pp: PlacedProp; log: RecipeTry } | null = null;
+  for (const r of hazards) {
+    const stream = rng.int(0, 0x7fffffff);
+    const log: RecipeTry = { ...tryLog(r), centre: true };
+    c.log?.push(log);
+    const off: PlacedProp[] = [];
+    let got: PlacedProp[] = [];
+    let tries = 0;
+    for (const cand of r.candidates(new Rng(stream), room)) {
+      if (++tries > c.cap) break;
+      log.offered++;
+      const { pp, why } = fits(room, cand, c.uid, c.key(r), c.path);
+      const reach = pp && !why ? reachOf(room, [pp]) : 0;
+      const no = why ?? (!pp ? 'fit' : reach < CENTRE_REACH / (centred(pp) ? 1 : 2) ? 'reach' : centred(pp) ? c.holds(pp) : null);
+      if (no) refuse(log, no);
+      else if (pp && !centred(pp)) off.push(pp);
+      else if (pp) {
+        got = [pp];
+        break;
+      }
+    }
+    // A pair: the recipe's own spot where the mirror of an off-centre one falls.
+    for (const one of got.length ? [] : off.slice(0, MIRROR_TRIES)) {
+      const [x0, y0] = centroid(one);
+      const cells = one.def.footprint.map(([fx, fy]) => [s.w - 1 - (fx + one.tx), fy + one.ty] as const);
+      const twin = fenced(s, (x, y) => cells.some(([cx, cy]) => Math.abs(cx - x) <= TWIN_SLACK && Math.abs(cy - y) <= TWIN_SLACK));
+      commit(twin, one);
+      let n = 0;
+      for (const cand of r.candidates(new Rng(stream), twin)) {
+        if (++n > c.cap) break;
+        log.offered++;
+        const { pp, why } = fits(twin, cand, c.uid + 1, c.key(r), c.path);
+        if (why || !pp) {
+          refuse(log, why ?? 'fit');
+          continue;
+        }
+        const [x1, y1] = centroid(pp);
+        if (Math.abs(x1 - (s.w - x0)) > CENTRED || Math.abs(y1 - y0) > CENTRED) continue;
+        const no = reachOf(room, [one, pp]) < CENTRE_REACH ? 'reach' : (c.holds(one) ?? c.holds(pp, [one]));
+        if (no) refuse(log, no);
+        else {
+          got = [one, pp];
+          break;
+        }
+      }
+      if (got.length) break;
+    }
+    if (got.length) {
+      log.placed = true;
+      return got;
+    }
+    if (!fallback)
+      for (const pp of off)
+        if (reachOf(room, [pp]) >= CENTRE_REACH && !c.holds(pp)) {
+          fallback = { pp, log };
+          break;
+        }
+  }
+  if (fallback) fallback.log.placed = true;
+  return fallback ? [fallback.pp] : [];
 }

@@ -18,20 +18,28 @@ const BESIDE = 3;
 /** A set piece that is the level's own loot box, not a hazard or a helper. */
 export const isBox = (key: string) => key === 'loop-box';
 
+/** The suffix on a centrepiece's key (`setpiece:<set>:<recipe>:centre`): the hazard that stood first, that the level was laid round (setpieces/place.ts). */
+export const CENTRE_KEY = ':centre';
+
 /**
  * Where a level lets you stand safe (docs/MODES.md → Brawl): a stand cell the field reaches with no way to die
  * within `DEADLY_NEAR` tiles: no drop on its row (with no wall between) that falls into the pit or off the side of the
  * map, and no set piece that hurts within that many tiles. A drop onto the ledge below doesn't count: a knock off it
  * only moves the fight down a tier. `hazard` is the stand cells with a set piece that hurts that near.
  */
-export function standSafety(lv: Level, cache?: ReachCache): { stands: number[]; safe: Set<number>; hazard: Set<number> } {
-  const { deadly, hazard } = deadlyCells(lv);
+export function standSafety(lv: Level, cache?: ReachCache): { stands: number[]; safe: Set<number>; hazard: Set<number>; centre: Set<number> } {
+  const { deadly, hazard, centre } = deadlyCells(lv);
   const stands = cache ? cache.analyze(lv, false).cells : [...analyzeReach(lv, false).reachable];
-  return { stands, safe: new Set(stands.filter((k) => !deadly.has(k))), hazard: new Set(stands.filter((k) => hazard.has(k))) };
+  return {
+    stands,
+    safe: new Set(stands.filter((k) => !deadly.has(k))),
+    hazard: new Set(stands.filter((k) => hazard.has(k))),
+    centre: new Set(stands.filter((k) => centre.has(k))),
+  };
 }
 
-/** Every cell, stand or air, with a way to die within `DEADLY_NEAR` tiles (`standSafety`), and of them those near a hazard. */
-export function deadlyCells(lv: Level): { deadly: Set<number>; hazard: Set<number> } {
+/** Every cell, stand or air, with a way to die within `DEADLY_NEAR` tiles (`standSafety`), of them those near a hazard, and of those the ones near the centrepiece. */
+export function deadlyCells(lv: Level): { deadly: Set<number>; hazard: Set<number>; centre: Set<number> } {
   const { w, h, tiles } = lv;
   const at = (x: number, y: number) => (x < 0 || x >= w || y < 0 || y >= h ? T_EMPTY : tiles[y * w + x]);
   // Columns with nothing to land on from row y down: the pit (or off the map at the sides).
@@ -39,15 +47,25 @@ export function deadlyCells(lv: Level): { deadly: Set<number>; hazard: Set<numbe
   for (let x = 0; x < w; x++) for (let y = h - 1; y >= 0 && at(x, y) === T_EMPTY; y--) pitFrom[x] = y;
   const fallsOut = (x: number, y: number) => x < 0 || x >= w || (at(x, y) === T_EMPTY && pitFrom[x] <= y);
   const hurt = new Set<number>();
-  for (const p of lv.setPieces) if (p.def.role === 'hazard' && !isBox(p.def.key)) for (const [x, y] of footprintCells(p)) hurt.add(y * w + x);
+  const core = new Set<number>();
+  for (const p of lv.setPieces)
+    if (p.def.role === 'hazard' && !isBox(p.def.key)) for (const [x, y] of footprintCells(p)) (p.def.key.endsWith(CENTRE_KEY) ? core : hurt).add(y * w + x);
+  for (const k of core) hurt.add(k);
   const deadly = new Set<number>();
   const hazard = new Set<number>();
+  const centre = new Set<number>();
   for (let y = 0; y < h; y++)
     for (let x = 0; x < w; x++) {
       let near = false;
       for (let dy = -DEADLY_NEAR; !near && dy <= DEADLY_NEAR; dy++)
         for (let dx = -DEADLY_NEAR; !near && dx <= DEADLY_NEAR; dx++) if (x + dx >= 0 && x + dx < w && hurt.has((y + dy) * w + x + dx)) near = true;
       if (near) hazard.add(y * w + x);
+      if (near && core.size) {
+        let by = false;
+        for (let dy = -DEADLY_NEAR; !by && dy <= DEADLY_NEAR; dy++)
+          for (let dx = -DEADLY_NEAR; !by && dx <= DEADLY_NEAR; dx++) if (x + dx >= 0 && x + dx < w && core.has((y + dy) * w + x + dx)) by = true;
+        if (by) centre.add(y * w + x);
+      }
       for (const d of [-1, 1])
         for (let i = 0; !near && i <= DEADLY_NEAR; i++) {
           const cx = x + d * i;
@@ -56,7 +74,7 @@ export function deadlyCells(lv: Level): { deadly: Set<number>; hazard: Set<numbe
         }
       if (near) deadly.add(y * w + x);
     }
-  return { deadly, hazard };
+  return { deadly, hazard, centre };
 }
 
 /** A level's shape and danger, measured over the stand cells the field reaches with its solution's parts in place (bare, for a level that owes none). */
@@ -77,6 +95,9 @@ export interface Measures {
   safe: number;
   /** Share of them with a set piece that hurts near them. */
   hazard: number;
+  /** Centrepieces standing (`CENTRE_KEY`: one, or a mirrored pair), and the share of stand cells near one. */
+  centres: number;
+  centre: number;
 }
 
 export function measureLevel(level: Level, cache?: ReachCache): Measures {
@@ -124,5 +145,7 @@ export function measureLevel(level: Level, cache?: ReachCache): Measures {
     mirrored: solid ? both / solid : 1,
     safe: s.safe.size / n,
     hazard: s.hazard.size / n,
+    centres: level.setPieces.filter((p) => p.def.key.endsWith(CENTRE_KEY)).length,
+    centre: s.centre.size / n,
   };
 }

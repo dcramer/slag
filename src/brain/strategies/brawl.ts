@@ -9,7 +9,7 @@ import type { Lay, StrategyDef } from './types';
 /** Frames it sticks with a rival before looking round for a nearer one. */
 const MARK_FRAMES = 90;
 /** Tiles nearer than its mark another rival has to be for it to turn on them at once. */
-const SWITCH = 3;
+const SWITCH = 1.5;
 /**
  * Rows the slag has to rise past the lowest it has seen before it counts as pouring: the view rounds its feet and the
  * slag apart, so a jump reads as the slag moving a quarter row or so.
@@ -38,6 +38,8 @@ const PATIENCE = [2.5 * 60, 0.6 * 60] as const;
 const BEAT = [0.6 * 60, 0.15 * 60] as const;
 /** Tiles off its nearest rival (across plus rows) inside which, empty-handed, it shoves one it could shove into something rather than fetch a box, by `press`. */
 const NEAR = [2, 4] as const;
+/** Tiles off a rival (across plus rows) inside which it won't turn its back on them to fetch something. */
+const TURN_BACK = 6;
 /** Tiles off its rival it stands to hit with each item: in reach, and no nearer. */
 const GAP: Partial<Record<ItemKind, number>> = { sword: 1, bat: 1, glove: 2, puck: 4, boomerang: 4, clock: 5, rod: 5 };
 /** Tiles past a rival's reach and rows it is close enough that its hit is coming. */
@@ -195,7 +197,7 @@ function dodge(v: BrainView, me: SelfSense, t: Threat): Intent | null {
  * hand would rather hit from the side that throws them into whatever kills them (an edge, a drop, a hazard, the slag;
  * tactics.ts `knockedInto`), but takes the hit it has once they've been in reach a moment (`press`; a moment's aim
  * when neither way would throw them anywhere), cornered or with the slag close at once. Empty-handed it fetches a box,
- * unless a rival a shove would throw into something is right there. Level with a rival a few tiles off
+ * unless a rival a shove would throw into something is right there, or the box is the other way from a rival close by. Level with a rival a few tiles off
  * on open floor, one a check throws into something who isn't coming at it, it charges (`checkedInto`); otherwise it
  * walks into them from that side, which shoves on the mode's physics, and a shove that goes nowhere it gets over,
  * onto their head and down the far side. A swing winding back up is bare hands up close, and an item that doesn't
@@ -325,7 +327,16 @@ export const brawlStrategy: StrategyDef = {
         // Empty-handed: get something to hit them with, unless a rival it could shove into something is right there.
         if (!me.held && (!r || apart(me, r) > near || r.held !== null || lineOf(v, me, r, null) === null)) {
           const side = items.think(v, me, false);
-          if (side) return side;
+          // Not with its back to a rival right there: an errand the other way is a run from the fight, and they follow. Two
+          // in a spawn's shield at GO aren't a fight yet.
+          const turns =
+            side?.do === 'goTo' &&
+            r &&
+            !(r.shielded && me.shielded) &&
+            apart(me, r) <= TURN_BACK &&
+            (side.tx + 0.5 - me.x) * (r.x - me.x) < 0 &&
+            Math.abs(side.tx + 0.5 - me.x) > 2;
+          if (side && !turns) return side;
         }
         if (!r) return { do: 'goTo', ...aimOf(v.objective) };
         // Shoving at the same rival up close, getting nowhere: over their head and down the other side.
@@ -367,9 +378,18 @@ export const brawlStrategy: StrategyDef = {
         // backs off a step and comes again, where a goTo its own cell would stand it still beside them.
         if (!kind && !wrong && !mine(at) && Math.abs(r.x - me.x) >= 0.75) return aim(at);
         const c = standNear(v, r.x - d * Math.max(gap, 1.5), at.ty) ?? at;
-        // Where it means to stand off, and they're still out of reach: in after them.
-        if (kind && inReach < 0 && mine(c)) return aim(at);
-        return aim(c);
+        // In reach already, on the side that throws them into something, its hit a look or two off: it holds its ground
+        // rather than back off to the full stand-off as they come, which is only running from the fight. Where it means
+        // to stand off, and they're still out of reach: in after them.
+        const holds = me.grounded && kind && line !== null && !wrong && inReach >= 0 && Math.abs(c.tx + 0.5 - r.x) > Math.abs(me.x - r.x);
+        const go: Intent = holds ? { do: 'goTo', tx: me.tx, ty: me.ty } : kind && inReach < 0 && mine(c) ? aim(at) : aim(c);
+        // Sent to the cell it stands in with no hit coming of its own (a hit it's lining up is a moment's aim): the motor
+        // would stand it there, beside a rival doing the same. It backs off a step and comes again, or past them where
+        // there's no step back (a wall, the open side), so the next look finds it a way in.
+        if (!me.grounded || go.do !== 'goTo' || !mine(go) || (kind && inReach >= 0)) return go;
+        const back = r.x === me.x ? -me.facing : -sideOf(me.x, r.x);
+        const step = [standNear(v, me.x + back * 2, me.ty), standNear(v, r.x - back * 2, me.ty)].find((s) => s && !mine(s) && s.ty >= 0 && s.ty < v.level.h);
+        return step ? { do: 'goTo', ...step } : go;
       },
     };
   },
