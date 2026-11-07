@@ -23,7 +23,7 @@ import { BotSeats } from '../src/brain/bots';
 import { firstOut, gateShut, leashRows, stepTide, type Tide } from '../src/sim/tide';
 import { analyzeReach } from '../src/sim/reach';
 import { type InputFrame, NO_INPUT } from '../src/sim/types';
-import { arenaSafety } from './lib/arena-safety';
+import { standSafety } from '../src/gen/level/measure';
 import { THEME_IDS } from '../src/themes';
 
 const FLOOR = 20; // first solid row
@@ -521,7 +521,7 @@ describe("a brawl's weather", () => {
 });
 
 describe("a brawl's arena", () => {
-  // A seed per theme in turn: the sweep over every theme is tests/stats/brawl-arenas.test.ts.
+  // A seed per theme in turn: the arena builder's contract over every set is tests/conformance/builders.test.ts, its sweep tests/stats/builder-contracts.test.ts.
   const cases = [1, 2, 3].map((seed) => ({ seed, theme: THEME_IDS[(seed * 4) % THEME_IDS.length] }));
 
   for (const { seed, theme } of cases)
@@ -560,11 +560,11 @@ describe("a brawl's arena", () => {
       // No set piece reaches through the arena's ledges or boards.
       expect(lv.setPieces.flatMap((p) => throughFaults(lv, p))).toEqual([]);
       // Room for nearly all the set pieces it asks for, every one something that kills or knocks, and next to no
-      // place to stand without a way to die near it (the sweep: tests/stats/brawl-arenas.test.ts).
+      // place to stand without a way to die near it (the sweep: tests/stats/builder-contracts.test.ts).
       const pieces = lv.setPieces.filter((p) => p.def.key !== 'loop-box');
       expect(pieces.length).toBeGreaterThanOrEqual(MODES.brawl.profile.hazards! - 2);
       for (const p of pieces) expect(MODES.brawl.profile.setPieceRoles).toContain(p.def.role);
-      const { stands, safe } = arenaSafety(lv);
+      const { stands, safe } = standSafety(lv);
       expect(safe.size / stands.length).toBeLessThan(0.3);
     });
 });

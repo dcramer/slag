@@ -190,24 +190,29 @@ if (flag('stats')) {
     });
   }
   const byGroup = [...groups.entries()]
-      .sort((a, b) => a[0].localeCompare(b[0]))
-      .map(([k, a]) => ({
-        group: k,
-        levels: a.n,
-        msPerLevel: +(a.ms / a.n).toFixed(1),
-        maxMs: +a.maxMs.toFixed(0),
-        needBridges: `${((a.bridged / a.n) * 100).toFixed(0)}%`,
-        fallbacks: a.fallbacks,
-        attempts: +(a.attempts / a.n).toFixed(2),
-        setPieces: +(a.pieces / a.n).toFixed(2),
-        solidShare: +(a.solid / a.n).toFixed(2),
-      }));
+    .sort((a, b) => a[0].localeCompare(b[0]))
+    .map(([k, a]) => ({
+      group: k,
+      levels: a.n,
+      msPerLevel: +(a.ms / a.n).toFixed(1),
+      maxMs: +a.maxMs.toFixed(0),
+      needBridges: `${((a.bridged / a.n) * 100).toFixed(0)}%`,
+      fallbacks: a.fallbacks,
+      attempts: +(a.attempts / a.n).toFixed(2),
+      setPieces: +(a.pieces / a.n).toFixed(2),
+      solidShare: +(a.solid / a.n).toFixed(2),
+    }));
   const cpu = process.cpuUsage(cpu0);
   // Recipes that missed somewhere, worst first: no spot found, or spots found and nothing stood.
   const missed = Object.values(recipes)
     .filter((r) => r.placed < r.tried)
     .sort((a, b) => a.placed / a.tried - b.placed / b.tried || b.tried - a.tried)
-    .map((r) => ({ ...r, refused: Object.entries(r.refused).map(([k, v]) => `${k}:${v}`).join(' ') }));
+    .map((r) => ({
+      ...r,
+      refused: Object.entries(r.refused)
+        .map(([k, v]) => `${k}:${v}`)
+        .join(' '),
+    }));
   const summary = {
     levels: total.n,
     msPerLevel: +(total.ms / total.n).toFixed(1),
@@ -329,7 +334,10 @@ function holds(r: LevelReport): string {
     ...(r.boxes !== undefined ? [`boxes: ${r.boxes}`] : []),
     `stand cells: ${m.stands} on ${m.tiers} rows, ${pct(m.safe)} safe, ${pct(m.hazard)} near a hazard, ${pct(m.edgy)} by a drop`,
     `spawns, bare: ${(r.spawns ?? [])
-      .map((c, _, all) => `(${c.tx},${c.ty}) ${all.length > 1 ? (c.others ? 'reaches the others' : 'cut off from the others') + ', ' : ''}${c.goal ? 'reaches' : 'not'} the goal`)
+      .map(
+        (c, _, all) =>
+          `(${c.tx},${c.ty}) ${all.length > 1 ? (c.others ? 'reaches the others' : 'cut off from the others') + ', ' : ''}${c.goal ? 'reaches' : 'not'} the goal`,
+      )
       .join('; ')}`,
     ...(r.faults.length ? [`breaks its builder's contract: ${r.faults.join('; ')}`] : []),
   ];

@@ -412,7 +412,7 @@ export interface PlacerOpts {
 }
 
 /** Why a candidate was turned down: the placer's checks, in the order it runs them. */
-export type Refusal = 'tell' | 'fit' | 'window' | 'through' | 'keep' | 'ride';
+type Refusal = 'tell' | 'fit' | 'window' | 'through' | 'keep' | 'ride';
 
 /** One recipe the placer tried on a level: how many candidate spots it offered (none: it found no spot), and whether one went in. */
 export interface RecipeTry {
