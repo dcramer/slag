@@ -8,7 +8,8 @@ import { type DrawCtx, defineArt } from '../common';
  * A lob (sim/props/modules/lob.ts): the volcano's magma serpent and its volcanic bombs, drawn from the sim's
  * own cycle and arc, so each segment is drawn on the very circle that kills. Both warn in the world before
  * anything flies: the serpent's lava boils and swells where it will leap and rings where it will dive;
- * a bomb's shadow grows on the spot it will land and a spark streaks high above it. Molten things glow;
+ * a bomb's shadow grows on the spot it will land and a spark streaks high above it. Between leaps the serpent's back
+ * lies in its lava, humps drifting and glowing, so the pit never reads as empty. Molten things glow;
  * the crust between the cracks doesn't. No face on the serpent: a blunt molten head, crust plates and a
  * tapering tail.
  */
@@ -93,6 +94,75 @@ function segment(rc: RC, x: number, y: number, r: number, i: number, heading: nu
   glowDot(rc.g, x, y, r * 2.6, LAVA, head ? 0.75 : 0.5);
 }
 
+/** Frames the serpent's back takes to surface after its dive, and to sink again before the boil. */
+const SURFACING = 40;
+
+/**
+ * At rest, between its leaps, the serpent's back breaks the lava between its ends: three humps of dark crust, cracked
+ * with lava, rippling the surface, drifting to and fro and bobbing; the lava round it glows. So a pit with a serpent
+ * in it never reads as plain lava. `vis` 0..1 is how far it has surfaced: it sinks before the boil, which still
+ * rises out of still lava.
+ */
+function lurk(rc: RC, a: readonly number[], b: readonly number[], r: number, vis: number) {
+  const s = rc.s;
+  const y = (a[1] + b[1]) / 2;
+  const lo = Math.min(a[0], b[0]);
+  const span = Math.abs(b[0] - a[0]);
+  const ph = rc.frame * 0.011 + lo * 0.07;
+  // The middle hump drifts as far as keeps the whole back over the pit.
+  const gap = r * 1.6;
+  const mid = lo + span / 2 + Math.max(0, span / 2 - gap - r) * Math.sin(ph);
+  const dir = Math.cos(ph) >= 0 ? 1 : -1;
+  const humps: [number, number, number][] = [];
+  for (let i = 0; i < 3; i++) {
+    const hr = r * (1.2 - i * 0.22);
+    const x = mid + dir * (1 - i) * gap;
+    const bob = Math.sin(rc.frame * 0.06 + i * 1.7) * r * 0.1;
+    humps.push([x, y + hr * (1.05 - 1.1 * vis) + bob, hr]);
+  }
+  // Only what's above the surface shows.
+  s.save();
+  s.beginPath();
+  s.rect(lo - span, y - r * 3, span * 3, r * 3 + 0.5);
+  s.clip();
+  for (const [i, [x, hy, hr]] of humps.entries()) {
+    // A lumpy rock back with a heavy edge: the cel pass eats a thin one and leaves a glossy dome.
+    s.fillStyle = inkFor(CRUST);
+    blob(s, x, hy, hr + 1.4, 23 + i, 1, 0.22);
+    s.fill();
+    s.fillStyle = css(CRUST, -3);
+    blob(s, x, hy, hr, 23 + i, 1, 0.22);
+    s.fill();
+    // Crust plates across the top, each its own shade.
+    for (let k = -1; k <= 1; k++) {
+      s.fillStyle = css(CRUST, k * 3 - 1);
+      blob(s, x + k * hr * 0.48, hy - hr * (0.5 - Math.abs(k) * 0.12), hr * 0.42, 61 + i * 3 + k, 1, 0.3);
+      s.fill();
+    }
+    // A crack up between the plates from the waterline, jagged and forking, and a short one beside it: lava showing
+    // through the crust, never a slit across it.
+    s.fillStyle = css(HOT, 0, vis);
+    const side = i % 2 ? 1 : -1;
+    const cx = x + side * hr * 0.2;
+    const o = { w: 0.9, taper: [0.15, 0.35] as [number, number], press: 0 };
+    const p1: [number, number] = [cx + side * hr * 0.18, hy - hr * 0.35];
+    const p2: [number, number] = [cx - side * hr * 0.05, hy - hr * 0.62];
+    line(s, cx, y - 1.5, p1[0], p1[1], { ...o, seed: 71 + i * 4 });
+    line(s, p1[0], p1[1], p2[0], p2[1], { ...o, w: 0.8, seed: 72 + i * 4 });
+    line(s, p2[0], p2[1], cx - side * hr * 0.22, hy - hr * 0.86, { ...o, w: 0.6, seed: 73 + i * 4 });
+    line(s, p2[0], p2[1], cx + side * hr * 0.42, hy - hr * 0.74, { ...o, w: 0.6, seed: 74 + i * 4 });
+    line(s, x - side * hr * 0.55, y - 1.5, x - side * hr * 0.46, hy - hr * 0.42, { ...o, w: 0.7, seed: 75 + i * 4 });
+  }
+  s.restore();
+  for (const [i, [x, , hr]] of humps.entries()) {
+    // The lava it pushes aside: a bright lip either side where the back breaks the surface. No glow: the crust stays
+    // dark, and only its cracks and the lava are hot.
+    s.fillStyle = css(HOT, 0, 0.8 * vis);
+    for (const side of [-1, 1])
+      line(s, x + side * hr * 0.9, y - 0.4, x + side * hr * 1.5, y - 0.2, { w: 0.9, seed: 51 + i * 2 + side, taper: [0.2, 0.4], press: 0 });
+  }
+}
+
 function serpent(rc: RC, m: Lob, d: DrawCtx) {
   const c = lobCycle(m, rc.frame, d.r.phase);
   const { a, b } = ends(m, d);
@@ -104,8 +174,10 @@ function serpent(rc: RC, m: Lob, d: DrawCtx) {
     return;
   }
   if (c.seg === LOB_OFF) {
-    // The splash where the tail went in settles.
+    // The splash where the tail went in settles, and its back surfaces to wait.
     if (c.t < 20) ring(rc, b[0], b[1], 1 - c.t / 20, r * 1.6);
+    const vis = Math.min(1, (c.t - 20) / SURFACING, (c.len - c.t) / SURFACING);
+    if (vis > 0) lurk(rc, a, b, r, vis);
     return;
   }
   const segs = lobSegs(m, rc.frame, d.r.phase);

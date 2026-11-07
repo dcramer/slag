@@ -45,7 +45,7 @@ export const BARRIER_SPAN = 720;
 /** A cell clear for this many frames in a row can be slipped through. Anything that hurts in bursts (a sentry) holds fire at least this long between them. */
 export const MIN_OPENING = 30;
 
-const cache = new WeakMap<PlacedProp, { tiles: Uint8Array; w: number; barrier: Barrier; hurts: Map<number, number> }>();
+const cache = new WeakMap<PlacedProp, { tiles: Uint8Array; w: number; barrier: Barrier; hurts: Map<number, number>; driven: number[] }>();
 
 /**
  * The part's barrier in `level`, cached per part and terrain (rays stop at
@@ -68,7 +68,16 @@ export function hurtsOf(level: Level, pp: PlacedProp, opening = Infinity): numbe
   return out.sort((a, b) => a - b);
 }
 
-function sampled(level: Level, pp: PlacedProp): { barrier: Barrier; hurts: Map<number, number> } {
+/**
+ * The cells a part's driving body (a cart, a tractor, a boulder on its run) passes through over the span, ascending.
+ * A way along its track needs the whole stretch clear at once, which it never is: it has to go round or over the
+ * track instead.
+ */
+export function drivenOf(level: Level, pp: PlacedProp): number[] {
+  return sampled(level, pp).driven;
+}
+
+function sampled(level: Level, pp: PlacedProp): { barrier: Barrier; hurts: Map<number, number>; driven: number[] } {
   const hit = cache.get(pp);
   if (hit && hit.w === level.w && sameTiles(hit.tiles, level.tiles)) return hit;
   const got = sample(level, resolveProp(pp));
@@ -94,7 +103,7 @@ function groundModules(r: Resolved): Set<number> {
   return out;
 }
 
-function sample(level: Level, r: Resolved): { barrier: Barrier; hurts: Map<number, number> } {
+function sample(level: Level, r: Resolved): { barrier: Barrier; hurts: Map<number, number>; driven: number[] } {
   const { w, h } = level;
   const grounded = groundModules(r);
   const ground = new Set<number>();
@@ -108,6 +117,8 @@ function sample(level: Level, r: Resolved): { barrier: Barrier; hurts: Map<numbe
   const out: Contrib = { solids: [], hazards: [], springs: [], winds: [], triggers: [] };
   const here = new Set<number>();
   const hurts = new Set<number>();
+  const driven = new Set<number>();
+  const drives = r.mods.map((m) => !!moduleSim(m.type).carrier?.drives);
   /** Per cell a hazard touches: [last frame it was, longest opening so far (frames)], as `held`. */
   const hurtHeld = new Map<number, [number, number]>();
   const cells = (rc: Rect, into: Set<number>) => {
@@ -131,7 +142,10 @@ function sample(level: Level, r: Resolved): { barrier: Barrier; hurts: Map<numbe
     const ctx = (rr: Resolved, mi: number) => ({ level, frame: f, r: rr, off: motionOffset(rr, f), prev: motionOffset(rr, f - 1), state, mi, live: true });
     buildSolids([r], ctx, out);
     traceRays([r], ctx, out);
-    for (const s of out.solids) if (!(s.propUid === r.pp.uid && grounded.has(s.mi)) && !s.oneWay && !s.film) mark(s);
+    for (const s of out.solids) {
+      if (!(s.propUid === r.pp.uid && grounded.has(s.mi)) && !s.oneWay && !s.film) mark(s);
+      if (s.propUid === r.pp.uid && s.mi !== undefined && drives[s.mi]) cells(s, driven);
+    }
     for (const hz of out.hazards) {
       markHazard(hz, mark);
       markHazard(hz, (rc) => cells(rc, hurts));
@@ -159,7 +173,11 @@ function sample(level: Level, r: Resolved): { barrier: Barrier; hurts: Map<numbe
     for (const [x, y] of moduleSim(m.type).holds?.(m) ?? []) if (x >= 0 && y >= 0 && x < w && y < h && !ground.has(y * w + x)) noGo.add(y * w + x);
   const open = new Map<number, number>();
   for (const [k, [last, gap]] of hurtHeld) open.set(k, Math.max(gap, n - last - 1));
-  return { barrier: { ground: [...ground].sort((a, b) => a - b), noGo: [...noGo].sort((a, b) => a - b) }, hurts: open };
+  return {
+    barrier: { ground: [...ground].sort((a, b) => a - b), noGo: [...noGo].sort((a, b) => a - b) },
+    hurts: open,
+    driven: [...driven].sort((a, b) => a - b),
+  };
 }
 
 /** Cells a hazard covers: boxes for rects and circles, a chain of boxes along a beam. Generous edges only make the proof stricter. */

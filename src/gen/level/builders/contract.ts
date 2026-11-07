@@ -1,5 +1,5 @@
 import { type Level, T_EMPTY } from '../../../sim/level';
-import { hurtsOf, type Role } from '../../../sim/props';
+import { drivenOf, hurtsOf, type Role } from '../../../sim/props';
 import { ReachCache, T_NOGO } from '../../../sim/reach';
 import { lipDrop, isSurge } from '../loop-surges';
 import { harmed, harmReach } from '../harm';
@@ -92,8 +92,9 @@ const NEAR_CENTRE = 3;
 
 /**
  * Where `level` has no way round its hazards (`BuilderContract.each.clearWay`): every cell a set piece that hurts and
- * never leaves clear for `CROSSING` frames (a long-on blast, a crowd of patrols) made a wall no move enters or stands on,
- * and from each end a bare reach to the other end and to within `NEAR_CENTRE` tiles of the centrepiece. One reach each
+ * never leaves clear for `CROSSING` frames (a long-on blast, a crowd of patrols), and every cell a cart, a tractor or a
+ * boulder drives through (`drivenOf`: a way along its run needs the whole run clear at once, and it never is), made a wall
+ * no move enters or stands on, and from each end a bare reach to the other end and to within `NEAR_CENTRE` tiles of the centrepiece. One reach each
  * way over the walled grid: a hazard with too short a gap across the only way out of a spawn holds the field at home,
  * and nobody can wait it out.
  */
@@ -105,7 +106,7 @@ export function clearWayFaults(level: Level, cache?: ReachCache): string[] {
   const centre = new Set<number>();
   for (const p of level.setPieces) {
     if (p.def.role !== 'hazard' || isBox(p.def.key) || isSurge(p.def.key)) continue;
-    for (const k of hurtsOf(level, p, CROSSING)) if (tiles[k] === T_EMPTY) tiles[k] = T_NOGO;
+    for (const k of [...hurtsOf(level, p, CROSSING), ...drivenOf(level, p)]) if (tiles[k] === T_EMPTY) tiles[k] = T_NOGO;
     if (p.def.key.endsWith(CENTRE_KEY)) for (const k of hurtsOf(level, p)) centre.add(k);
   }
   const walled: Level = { ...level, tiles };
