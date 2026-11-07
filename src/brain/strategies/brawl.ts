@@ -160,6 +160,7 @@ function dodge(v: BrainView, me: SelfSense, t: Threat): Intent | null {
  */
 export const brawlStrategy: StrategyDef = {
   lay: brawlLay,
+  haste: true,
   make(rng, traits) {
     const items = new ItemPlay(rng, traits, BRAWL_ERRANDS);
     const patience = lerp(PATIENCE, traits.press);

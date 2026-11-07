@@ -56,8 +56,11 @@ const FRAME_COST = 1.1;
 const DRIFT = 0.5;
 /** Route units a choice may fall short of the route's promise before the motor lines up and looks again. */
 const SHORT = 12;
-/** Frames lining up may take. */
+/** Frames lining up may take, and frames past the walk to the middle it reckons on to start and stop (`linesUp`). */
 const SETTLE_FRAMES = 40;
+const LINE_UP = 3;
+/** Px/s across a chase reads as running away from its target. */
+const FLEE = 30;
 /** Route units added to a landing per time the motor has already set off from that cell this race: it tries something new rather than circle. */
 const AGAIN = 15;
 /** Within this many px of the target, the cursor taps instead of holding, so it stops where it means to. */
@@ -168,6 +171,13 @@ export class Motor {
   private rushed = false;
   /** Match frame until which it goes by the route rather than look at a leap again (one it played out didn't come down safe). */
   private leapBarred = -1;
+  /**
+   * This frame's goTo is a fight's (Intent `haste`), and the target the act under way was chosen for and the race frame
+   * it was chosen on (`chase`).
+   */
+  private haste = false;
+  private aim = -1;
+  private chose = -1;
 
   constructor(
     /** Its hands: how quick, clean and careful it is. Set again when the room's Bots rule changes. */
@@ -186,6 +196,7 @@ export class Motor {
   drive(m: Match, p: Player, intent: Intent, rushed = false): InputFrame {
     this.rushed = rushed;
     this.now = m.frame;
+    this.haste = false;
     const out = this.frame(m, p, intent);
     if (out.confirmPressed || out.altPressed) this.pressed = m.frame;
     this.prev = out;
@@ -227,6 +238,7 @@ export class Motor {
       case 'aim':
         return m.phase === 'place' && !p.placed ? this.steer(p, intent.x * TILE, intent.y * TILE, TILE / 2 - 2) : NO_INPUT;
       case 'goTo':
+        this.haste = !!intent.haste;
         return this.race(m, p, intent.tx, intent.ty);
       case 'leap':
         return this.leap(m, p, intent.tx, intent.ty);
@@ -352,6 +364,7 @@ export class Motor {
       this.last = -1;
     }
     const b = r.body;
+    if (this.haste) this.chase(run, b, tx, ty);
     if (this.rushed) return this.follow(b) ?? this.coast(b);
     const map = raceMap(run);
     this.fore = foresight(run, map);
@@ -378,8 +391,26 @@ export class Motor {
       return Math.abs(b.vx) <= BRAKE_TO || this.gust() !== 0 ? this.still(b) : this.brake(b);
     }
     this.hesitate = 0;
-    this.act = this.choose(map, run, b, ty * map.field.w + tx);
+    this.aim = ty * map.field.w + tx;
+    this.chose = run.frame;
+    this.act = this.choose(map, run, b, this.aim);
     return this.follow(b) ?? NO_INPUT;
+  }
+
+  /**
+   * Chasing a target that moves (`haste`): the act under way was for where the target was, so once it has moved the
+   * motor drops it and picks again. In the air at once, and on the ground at once if it's running away from where the
+   * target is now; otherwise once its reaction has passed since it chose, so a target flickering from side to side
+   * doesn't keep it from ever setting off. Up against a rival, running is no sign of anything: bodies shove. A fumble
+   * still plays out. Where it set off from before says nothing about circling a target that has moved.
+   */
+  private chase(run: RunWorld, b: Body, tx: number, ty: number): void {
+    const act = this.act;
+    if (ty * run.level.w + tx === this.aim || (act?.kind === 'move' && act.loose !== undefined)) return;
+    const fleeing = Math.abs(b.vx) > FLEE && Math.sign(b.vx) !== Math.sign((tx + 0.5) * TILE - (b.x + b.w / 2)) && !againstRival(run, b);
+    if (b.onGround && !fleeing && run.frame - this.chose < this.traits.reaction) return;
+    this.act = null;
+    this.visits.clear();
   }
 
   /** The next input of the act under way, or null if there's none or it's over. */
@@ -394,8 +425,12 @@ export class Motor {
         const { m, i } = act;
         const off = i > 0 && i > (act.loose ?? -1) && (Math.abs(b.x - m.path[2 * i - 2]) > DRIFT || Math.abs(b.y - m.path[2 * i - 1]) > DRIFT);
         if (i >= m.controls.length || off) {
-          // A landing, or the world not doing what it expected: it takes a moment to see what's next.
-          if (m.air || off) this.hesitate = this.traits.reaction;
+          // A landing, or the world not doing what it expected: it takes a moment to see what's next. In a fight
+          // (`haste`) not when what moved it was a rival it's up against (its recordings know nothing of bodies, and
+          // shoving is the fight), and a landing costs only what's left of that moment once it's down: it read the
+          // fight in the air.
+          if (off) this.hesitate = this.haste && this.run && againstRival(this.run, b) ? 0 : this.traits.reaction;
+          else if (m.air) this.hesitate = Math.max(0, this.traits.reaction - (this.haste ? airborne(m) : 0));
           return (this.act = null);
         }
         act.i++;
@@ -410,7 +445,14 @@ export class Motor {
         if (this.run && hurtsStill(raceMap(this.run), this.fore, this.run.frame, b, NO_SHOTS, this.traits.margin)) return (this.act = null);
         // Against the skid past a walk, as the landing's own stop was proven (reach.ts brakeFrom).
         const hard = Math.abs(b.vx) > PHYS.walkSpeed + 1;
-        if (Math.abs(b.vx) >= 0.5) return this.press({ left: hard && b.vx > 0, right: hard && b.vx < 0, jump: false, jumpPressed: false });
+        if (hard) return this.press({ left: b.vx > 0, right: b.vx < 0, jump: false, jumpPressed: false });
+        if (this.haste) {
+          // In a fight it walks at the middle and lets go once its stop would carry it the rest of the way: at a walk
+          // that takes a frame or two, so it's there in a few frames rather than inching up a tap at a time.
+          const rest = off - (b.vx * Math.abs(b.vx)) / (2 * (b.surface.skid ?? PHYS.groundDecel * b.surface.friction));
+          return this.press({ left: rest < -1, right: rest > 1, jump: false, jumpPressed: false });
+        }
+        if (Math.abs(b.vx) >= 0.5) return NO_INPUT;
         return this.press({ left: off < 0 && act.t % 3 === 0, right: off > 0 && act.t % 3 === 0, jump: false, jumpPressed: false });
       }
       case 'leap':
@@ -475,8 +517,12 @@ export class Motor {
     // There, and nothing coming for it: it lets go, unless coasting on would carry it off a ledge, off the side of the
     // map or into something: then it brakes, the way the step that got it here was proven to stop. With something
     // coming, it gets out of the way like anywhere else.
-    if (here === target && b.onGround && !hurtsStill(map, this.fore, f, b, shotsAhead(run, map), this.traits.margin))
+    if (here === target && b.onGround && !hurtsStill(map, this.fore, f, b, shotsAhead(run, map), this.traits.margin)) {
+      // On a ledge's lip with its middle over the drop it stands on the ledge's cell by its feet, but a brain reads
+      // where it is by its middle (view.ts): it steps in over the cell, or the brain would wait on it to get there.
+      if (Math.floor((b.x + b.w / 2) / TILE) !== target % map.field.w && gustAir(run.level, f) === 0) return { kind: 'settle', at: target, t: 0 };
       return Math.abs(b.vx) < 0.5 || this.coasts(map, run, b) ? null : this.hold(map, run, b, NO_SHOTS, gustAir(run.level, f), f + 1);
+    }
     if (b.onGround && here !== this.last) {
       this.last = here;
       this.visits.set(here, (this.visits.get(here) ?? 0) + 1);
@@ -537,7 +583,7 @@ export class Motor {
       }
       if (b.onGround && !exposed && this.settled !== here && cost > dist[here] + SHORT && this.canStop(map, run, b, shots, air, f, SETTLE_FRAMES)) {
         this.settled = here;
-        return { kind: 'settle', at: here, t: 0 };
+        if (!this.haste || this.linesUp(map, run, b, here, dist, cost, air)) return { kind: 'settle', at: here, t: 0 };
       }
       if (best) {
         let fatal = best.air ? fatalSlips(map.field, b, best.controls) : NO_SLIPS;
@@ -580,6 +626,29 @@ export class Motor {
       }
     }
     return exposed || cornered || !b.onGround ? this.escape(map, run, b, shots, moves, target) : null;
+  }
+
+  /**
+   * In a fight, does lining up in `here` win back the time it takes? Its best clear move from the cell's middle at
+   * rest, started once it has stopped and walked there, against `cost`, the best it has from where it is. One trace,
+   * once an arrival: a fight's target moves, and most of the time the next move needs no clean start.
+   */
+  private linesUp(map: RaceMap, run: RunWorld, b: Body, here: number, dist: Float64Array, cost: number, air: number): boolean {
+    const f = run.frame;
+    const mid = (here % map.field.w) * TILE + (TILE - b.w) / 2;
+    const stop = Math.abs(b.vx) < 0.5 ? null : brakeFrom(map.field, b, run.solids, air, columns(map, f));
+    const k = (stop?.controls.length ?? 0) + Math.ceil(Math.abs(mid - (stop?.end.x ?? b.x)) / (PHYS.walkSpeed * DT)) + LINE_UP;
+    if (dist[here] + k * FRAME_COST >= cost) return false;
+    const at: Body = { ...b, x: mid, vx: 0 };
+    const ranked: { mv: Move; p: number }[] = [];
+    for (const mv of movesFrom(map.field, at, run.solids, air, columns(map, f + k)))
+      if (mv.to !== here && Number.isFinite(dist[mv.to])) ranked.push({ mv, p: dist[mv.to] + mv.controls.length * FRAME_COST });
+    ranked.sort((x, y) => x.p - y.p);
+    for (const { mv, p } of ranked) {
+      if (p + k * FRAME_COST >= cost) return false;
+      if (!hurts(map, this.fore, mv, f + k, at, NO_SHOTS, this.traits.margin)) return true;
+    }
+    return false;
   }
 
   /**
@@ -711,6 +780,26 @@ export class Motor {
 /** The parts' winds from race frame `f` on, as a trace started then meets them. */
 function columns(map: RaceMap, f: number): WindColumns {
   return (i) => map.winds(f + i);
+}
+
+/** Frames of `mv` after it leaves the height it started at: its flight, the time it had to look past its landing. */
+function airborne(mv: Move): number {
+  const y = mv.path[1];
+  for (let i = 1; i < mv.controls.length; i++) if (mv.path[2 * i + 1] !== y) return mv.controls.length - i;
+  return 0;
+}
+
+/** Px apart a rival's body may be and still be up against this one: runners are solid to each other (sim/collide.ts). */
+const AGAINST = 1;
+
+/** Is a rival's body up against `b`, beside, under or on top of it? A move's recording knows nothing of other bodies. */
+function againstRival(run: RunWorld, b: Body): boolean {
+  for (const r of run.runners) {
+    const q = r.body;
+    if (q === b || !r.alive || r.finished) continue;
+    if (q.x < b.x + b.w + AGAINST && q.x + q.w > b.x - AGAINST && q.y < b.y + b.h + AGAINST && q.y + q.h > b.y - AGAINST) return true;
+  }
+  return false;
 }
 
 /**
