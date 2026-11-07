@@ -2,11 +2,12 @@ import type { FlatKind } from '../kinds';
 
 // The tin wind-up toy speedster (2026-11-06): the big key out of his hip is the twist and the joke; his head is a
 // pressed-tin box with a grey flange round its seam and a square snout block, the quills three fat tin strips with a
-// pale folded edge, the shoes boxy tin blocks on grey soles.
+// pale folded edge, the shoes boxy tin blocks on grey soles. In a player's colour, the white gloves and shoes and the
+// peach muzzle and belly carry the read (the clean colour read, 2026-11-06).
 export const kind: FlatKind = {
   body: 273,
   map: {
-    roles: ['blue', 'edge', 'peach', 'shoe', 'steel', 'white', 'dark', 'iris'],
+    roles: ['blue', 'edge', 'peach', 'shoe', 'steel', 'white', 'dark', 'iris', 'glove'],
     families: [
       ['blue', [74, 98, 153]],
       ['blue', [60, 81, 130]],
@@ -45,9 +46,12 @@ export const kind: FlatKind = {
       ['dark', [37, 28, 31]],
       ['dark', [75, 51, 48]],
       ['iris', [88, 140, 68]],
+      // The hands, drawn as peach mittens and painted lime in every drawing (art/sprites/hedgehog/gloves.py), so
+      // they trace as the white gloves; the second idle's were drawn lime and are flattened to it.
+      ['glove', [200, 230, 150]],
     ],
     line: 'dark',
-    thin: ['blue', 'edge', 'peach', 'shoe', 'steel', 'white'],
+    thin: ['blue', 'edge', 'peach', 'shoe', 'steel', 'white', 'glove'],
     fringe: 5,
     stroke: 2.4,
     feet: ['shoe', 'steel'],
@@ -62,14 +66,16 @@ export const kind: FlatKind = {
     // The quills' folded edge, a light of them: the tin strips stay strips at play size.
     { name: 'edge', color: '#808080', on: 0, tone: 30 },
     { name: 'peach', color: '#f0c99c' },
-    // The tin shoes, a dark of the quills: far enough off them that the legs end in shoes.
-    { name: 'shoe', color: '#808080', on: 0, tone: -22 },
+    // The tin shoes and the gloves, white: in a player's colour that isn't his, white gloves and big white shoes
+    // name the speedster where a dark of the costume read as nobody (the clean colour audit, 2026-11-06).
+    { name: 'shoe', color: '#f1eee7' },
     // A colourway is the key (VARIETY.palette): steel, bright tin or dark iron, the soles and straps with it.
     // Greys only: brass and copper keys sank into an orange or tan player's tin and the twist went.
     { name: 'steel', color: '#9a9d9f', alts: ['#bcbfc0', '#76797c'], vary: 6 },
     { name: 'white', color: '#fbf8f2' },
     { name: 'dark', color: '#2a1f1a' },
     { name: 'iris', color: '#3a9a46' },
+    { name: 'glove', color: '#f6f4ef' },
     { name: 'scuff', color: '#808080', on: 2, tone: 10 },
     { name: 'scorch', color: '#808080', on: 2, tone: -16 },
     { name: 'plaster', color: '#e9d3b0' },
@@ -83,7 +89,7 @@ export const kind: FlatKind = {
     on: ['peach'],
     chin: 3,
     // One quiet streak each on the belly: two, or a strong tone, read as a rash on the peach.
-    marks: [[['scuff', 0.5, 0.6, 0.45]], [['scorch', 0.5, 0.6, 0.45]]],
+    marks: [[['scuff', 0.5, 0.88, 0.4]], [['scorch', 0.5, 0.88, 0.4]]],
   },
   accessories: [{ slot: 'plaster', role: 'plaster', at: 'cheek', size: [2.2, 0.9] }],
   face: { r: 0.9, iris: '#3a9a46', mouth: [1.4, 2.7] },
@@ -104,7 +110,7 @@ export const kind: FlatKind = {
     death: { frames: ['death'], loop: false, fps: 1, eyes: false, centre: 'box', scale: 0.92 },
   },
   poses: {
-    idle2: { pose: 'standing with his arms folded across his chest, tapping one toe, smirking.' },
+    idle2: { pose: 'standing tall and cocky, both white mitten fists on his hips, chest out, grinning.' },
     'walk-1': { pose: 'walking to the right, mid-step: the near shoe forward, the far one back, the arms swinging the other way.' },
     'walk-2': { pose: 'walking to the right, the legs passing under the body: one shoe planted, the other lifted a little.' },
     'run-1': { pose: 'running flat out to the right, leaning hard forward, the legs in a long stride, the arms swept back, the quills streaming behind.' },

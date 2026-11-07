@@ -113,9 +113,11 @@ export const BRIEFS: Record<string, Brief> = {
       'standing idle with his chest puffed out; mid-run stride leaning forward with arms pumping and one knee high; crouched low before a jump, knees bent, arms swung back; jumping up with one fist punched high overhead and the other arm down, legs tucked; falling with both arms flailing up and legs reaching down; sliding down a wall on his right with one gauntlet flat against it and both boots braced; cheering with both fists in the air; knocked flat on his back with stars circling',
   },
   hedgehog: {
-    // The nod, each part of the read at race size: cobalt quills swept straight back (the whole silhouette), big
-    // red shoes (the second thing anyone names), a peach muzzle and belly, green eyes and a cocky grin; the run
-    // leaning hard forward and the jump curled into a spinning ball.
+    // The nod, each part of the read at race size: quills swept straight back (the whole silhouette), big shoes
+    // and mitten gloves (the second thing anyone names), a peach muzzle and belly, green eyes and a cocky grin; the
+    // run leaning hard forward and the jump curled into a spinning ball. The game draws the shoes and gloves white
+    // whatever the drawing's colour (their roles), since the costume is the player's: the drawings keep red shoes so
+    // the role map tells them from the eye whites, and lime hands (gloves.py) from the peach.
     // Ours, and the joke: the fastest thing alive is an old pressed-tin wind-up toy, and he has to be wound up.
     // Two big changes that each read alone: a big wind-up key sticks out of his hip (the outline and a big grey
     // block, in every pose: it turns round the spin ball and stands up out of him when he's run down), and his head
