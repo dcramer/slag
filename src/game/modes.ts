@@ -115,9 +115,11 @@ export const MODES: Record<ModeId, ModeDef> = {
       ends: true,
       // Mist hides a one-screen arena's edges, the very things that kill in it (owner decision).
       noWeather: ['mist'],
-      // Deadly from round 1: as many set pieces as fit, from the nastiest of the set's mix.
+      // Deadly from round 1: as many set pieces as fit, from the nastiest of the set's mix, and only what kills or
+      // knocks (no platform or lift to stand on).
       hazards: 6,
       danger: 0.9,
+      setPieceRoles: ['hazard', 'utility'],
       boxes: { chase: [...BRAWL_ITEMS], lead: [...BRAWL_ITEMS] },
       tide: { wait: 25, speed: 0.4, gain: 0.04 },
     },

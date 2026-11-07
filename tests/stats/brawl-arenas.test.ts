@@ -3,16 +3,23 @@ import { MODES } from '../../src/game/modes';
 import { generateLevel, lastGenInfo } from '../../src/gen/level';
 import { throughFaults } from '../../src/gen/setpieces';
 import { LEVEL_H } from '../../src/sim/constants';
-import { T_EMPTY, type Level } from '../../src/sim/level';
+import { spawnZones, T_EMPTY, type Level } from '../../src/sim/level';
 import { analyzeReach } from '../../src/sim/reach';
 import { THEME_IDS } from '../../src/themes';
+import { arenaSafety } from '../lib/arena-safety';
+import { expectClearOfSpawnAndGoal } from '../lib/set-piece-checks';
 
 /**
  * Brawl's arenas over every set (gen/level/builders/arena.ts, docs/MODES.md → Brawl): built for knocking people off
- * things. Most places you stand have a drop beside them, the field reaches ledges in the top third of the screen,
- * both sides are open to a knock over most of their height, the two ends mirror each other, and the shapes vary.
+ * things. Most places you stand have a drop beside them, and nearly all a way to die near them (`arenaSafety`), the
+ * field reaches ledges in the top third of the screen, both sides are open to a knock over most of their height, the
+ * two ends mirror each other, the shapes vary, and every set's arenas make room for nearly all the set pieces they ask
+ * for, from the set's own mix.
  */
 const SEEDS = Array.from({ length: 12 }, (_, i) => i + 1);
+
+/** Share of stand cells with no way to die near them the arenas keep under, on average (52% before the shafts). */
+const SAFE = 0.2;
 
 /** Columns either side of a stand cell within which a drop counts as beside it. */
 const BESIDE = 3;
@@ -32,6 +39,12 @@ interface Arena {
   stands: number;
   /** Boxes the arena hangs. */
   boxes: number;
+  /** The set pieces it stood, by recipe (loot boxes aside). */
+  pieces: string[];
+  /** Share of the stand cells the field reaches with no way to die near them (`arenaSafety`). */
+  safe: number;
+  /** Share of them with a set piece that hurts near them. */
+  hazard: number;
   /** Set pieces reaching through the arena's terrain (`throughFaults`). */
   through: string[];
   shape: string;
@@ -80,6 +93,8 @@ function measure(lv: Level): Arena {
     tiers: rows.size,
     stands: reach.size,
     boxes: lv.setPieces.filter((p) => p.def.key === 'loop-box').length,
+    pieces: lv.setPieces.filter((p) => p.def.key !== 'loop-box').map((p) => p.def.key.split(':')[2]),
+    ...((s) => ({ safe: s.safe.size / s.stands.length, hazard: s.hazard.size / s.stands.length }))(arenaSafety(lv)),
     through: lv.setPieces.flatMap((p) => throughFaults(lv, p)),
     shape: lv.style.split(':arena-')[1] ?? lv.style,
     fallback: lastGenInfo.fallback,
@@ -87,13 +102,18 @@ function measure(lv: Level): Arena {
 }
 
 describe('Brawl arenas', () => {
-  const arenas = THEME_IDS.flatMap((theme) => SEEDS.map((seed) => ({ theme, a: measure(generateLevel(seed, theme, MODES.brawl.profile)) })));
+  const arenas = THEME_IDS.flatMap((theme) =>
+    SEEDS.map((seed) => {
+      const level = generateLevel(seed, theme, MODES.brawl.profile);
+      return { theme, seed, level, a: measure(level) };
+    }),
+  );
   const all = arenas.map((x) => x.a);
   const mean = (f: (a: Arena) => number) => all.reduce((s, a) => s + f(a), 0) / all.length;
   const shapes: Record<string, number> = {};
   for (const a of all) shapes[a.shape] = (shapes[a.shape] ?? 0) + 1;
   console.log(
-    `${all.length} arenas: ${Math.round(mean((a) => a.edgy) * 100)}% of stand cells by a drop, ${Math.round(mean((a) => +a.high) * 100)}% reach the top third, side walls ${Math.max(...all.map((a) => a.wall))} rows at most, ${Math.round(mean((a) => a.mirrored) * 100)}% mirrored, ${mean((a) => a.tiers).toFixed(1)} rows stood on; ${JSON.stringify(shapes)}`,
+    `${all.length} arenas: ${Math.round(mean((a) => a.edgy) * 100)}% of stand cells by a drop, ${Math.round(mean((a) => +a.high) * 100)}% reach the top third, side walls ${Math.max(...all.map((a) => a.wall))} rows at most, ${Math.round(mean((a) => a.mirrored) * 100)}% mirrored, ${Math.round(mean((a) => a.safe) * 100)}% of stand cells safe and ${Math.round(mean((a) => a.hazard) * 100)}% by a hazard, ${mean((a) => a.tiers).toFixed(1)} rows stood on; ${JSON.stringify(shapes)}`,
   );
 
   it('never falls back', () => expect(arenas.filter((x) => x.a.fallback).map((x) => x.theme)).toEqual([]));
@@ -114,6 +134,27 @@ describe('Brawl arenas', () => {
     });
     console.log(`stand cells by set: ${THEME_IDS.map((t, i) => `${t} ${Math.round(per[i])}`).join(', ')}`);
     expect(Math.min(...per)).toBeGreaterThan(0.8 * Math.max(...per));
+  });
+  it('nearly every place to stand has a way to die near it', () => expect(mean((a) => a.safe)).toBeLessThan(SAFE));
+  it('every set stands nearly all the set pieces its arenas ask for, from its own varied mix', () => {
+    const asked = MODES.brawl.profile.hazards!;
+    const per = THEME_IDS.map((theme) => {
+      const mine = arenas.filter((x) => x.theme === theme).map((x) => x.a.pieces);
+      const kinds = new Set(mine.flat());
+      return { theme, mean: mine.reduce((s, p) => s + p.length, 0) / mine.length, least: Math.min(...mine.map((p) => p.length)), kinds: kinds.size };
+    });
+    console.log(`set pieces by set (of ${asked}): ${per.map((p) => `${p.theme} ${p.mean.toFixed(2)} (${p.kinds} kinds)`).join(', ')}`);
+    for (const p of per) {
+      expect(p.mean, p.theme).toBeGreaterThanOrEqual(asked - 1);
+      expect(p.least, p.theme).toBeGreaterThanOrEqual(3);
+      expect(p.kinds, p.theme).toBeGreaterThanOrEqual(4);
+    }
+    // No arena is one recipe over and over: a repeatable recipe comes back once at most.
+    for (const a of all) for (const n of new Set(a.pieces)) expect(a.pieces.filter((q) => q === n).length).toBeLessThanOrEqual(2);
+  });
+  // The spawn shield ends 5 s after GO (SHIELD_FRAMES), so anything reaching into a spawn could kill there.
+  it('no set piece reaches into either end', () => {
+    for (const { theme, seed, level } of arenas) expectClearOfSpawnAndGoal({ theme, seed, level, zs: spawnZones(level).map((z) => z.zone) });
   });
   it('every set builds arenas of several tiers', () => {
     for (const theme of THEME_IDS) expect(Math.min(...arenas.filter((x) => x.theme === theme).map((x) => x.a.tiers)), theme).toBeGreaterThanOrEqual(3);

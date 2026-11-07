@@ -14,6 +14,7 @@ import type { ModeId } from '../../src/game/modes';
 import { MODES } from '../../src/game/modes';
 import { DEFAULT_RULES, withMode } from '../../src/game/rules';
 import type { ThemeId } from '../../src/themes';
+import { deadlyCells } from './arena-safety';
 
 export interface BotRace {
   finished: boolean;
@@ -187,6 +188,9 @@ export interface Fight {
   gap: number;
   /** Deaths with no knock credited that came within `SHOVED` frames of touching a rival: shoved in, or tangled with one. */
   shoved: number;
+  /** Of the counted frames, those standing on the ground, and of them those with no way to die near (`arenaSafety`): Brawl only. */
+  grounded: number;
+  safe: number;
   /** Race frame each slot last touched a rival. */
   touched: number[];
 }
@@ -197,7 +201,7 @@ const SHOVED = 30;
 /** Px/s across that counts as moving away. */
 const RETREAT_VX = 30;
 
-function watchFight(run: Run, f: Fight, credit: number[], apart: Set<number>): void {
+function watchFight(run: Run, f: Fight, credit: number[], apart: Set<number>, deadly: Set<number> | null): void {
   const live = run.runners.filter((r) => r.alive && !r.finished);
   const t = run.frame - RUN_COUNTDOWN;
   for (const r of live) {
@@ -231,6 +235,10 @@ function watchFight(run: Run, f: Fight, credit: number[], apart: Set<number>): v
     f.frames++;
     f.gap += d;
     if (b.onGround && Math.abs(b.vx) < 1 && !touching) f.still++;
+    if (deadly && b.onGround) {
+      f.grounded++;
+      if (!deadly.has(Math.floor((b.y + b.h - 1) / TILE) * run.level.w + Math.floor((b.x + b.w / 2) / TILE))) f.safe++;
+    }
     if (near && Math.abs(b.vx) > RETREAT_VX && Math.sign(b.vx) !== Math.sign(near.body.x - b.x) && Math.abs(near.body.x - b.x) > TILE) f.retreat++;
   }
   for (const r of run.runners) credit[r.slot] = r.items.bonkCredit;
@@ -304,7 +312,9 @@ function playRound(seed: number, m: Match, bots: BotSeats, { at = 15 * 60, limit
   let next = -1;
   let since = 0;
   const causes: Record<string, number> = {};
-  const fight: Fight = { contact: -1, hit: -1, bonks: 0, frames: 0, still: 0, retreat: 0, gap: 0, shoved: 0, touched: [] };
+  const fight: Fight = { contact: -1, hit: -1, bonks: 0, frames: 0, still: 0, retreat: 0, gap: 0, shoved: 0, grounded: 0, safe: 0, touched: [] };
+  // Where a brawl's field stands safe, with the parts placed so far: what hurts and the drops into the pit.
+  const deadly = m.rules.mode === 'brawl' ? deadlyCells({ ...m.level, setPieces: [...m.level.setPieces, ...m.placed] }).deadly : null;
   const credit: number[] = [];
   const apart = new Set<number>();
   while (run.endFrame < 0 && run.frame < limit) {
@@ -337,7 +347,7 @@ function playRound(seed: number, m: Match, bots: BotSeats, { at = 15 * 60, limit
       causes[k] = (causes[k] ?? 0) + 1;
       if (!k.endsWith('+') && run.frame - (fight.touched[r.slot] ?? -Infinity) <= SHOVED) fight.shoved++;
     });
-    if (run.frame > RUN_COUNTDOWN) watchFight(run, fight, credit, apart);
+    if (run.frame > RUN_COUNTDOWN) watchFight(run, fight, credit, apart, deadly);
   }
   const alive = run.runners.filter((r) => r.alive && !r.finished);
   let winner = alive.length === 1 ? alive[0].slot : -1;

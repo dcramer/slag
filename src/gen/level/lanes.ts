@@ -68,6 +68,8 @@ function forbiddenColumns(level: Level, shape: Shape, bridges: readonly BridgeHi
   for (const b of bridges) mark(b.x - CROSSING_MARGIN, b.x + BRIDGE_W + CROSSING_MARGIN - 1);
   // A second route never runs through the air a landmark's movers sweep (a wheel's disc, a lift's shaft).
   for (const a of shape.landmark?.air ?? []) mark(a.x, a.x + a.w - 1);
+  // Nor through the room a builder leaves for set pieces.
+  for (const [x0, x1] of shape.open ?? []) mark(x0, x1);
   return out;
 }
 

@@ -72,9 +72,17 @@ export const LEAD_HOLDS = {
  * `BONK_CREDIT`), thrown or bumped into the level. How hard it's fought (tests/lib/bot-race.ts `Fight`): `contact`
  * and `hit`, seconds from GO to the first touch or bonk and to the first bonk; `uses`, items used a round; `still`
  * and `retreat`, the shares of frames in it standing still and moving away from the nearest rival; `gap`, the tiles
- * to that rival. Measured bare 2%, 23.4 s, 77%, 1.6 s, 3.6 s, 11.0 uses, 10%, 20%, 5.2 tiles; placed 5%, 22.9 s, 63%,
- * 1.3 s, 3.0 s, 10.2 uses, 11%, 19%, 4.2 tiles (22 of 48 and 27 of 64 rounds in 20–40 s, 6 and 5 under 10 s; 37 and 32
- * deaths off the sides) since the spawn shield ends 5 s after GO (sim/constants.ts `SHIELD_FRAMES`): a rival back at its
+ * to that rival. Measured bare 2%, 21.9 s, 74%, 1.7 s, 3.6 s, 8.9 uses, 10%, 16%, 5.1 tiles; placed 5%, 20.5 s, 65%,
+ * 1.5 s, 5.1 s, 7.3 uses, 10%, 15%, 5.1 tiles (23 of 48 and 31 of 64 rounds in 20–40 s, 6 and 12 under 10 s; 26 and
+ * 43 deaths to hazards, 27 and 35 off the sides) since the arena is cut into bands of ledges with shafts to the pit
+ * between them and a hall either side for the set's pieces, which are only what kills or knocks: its 6 come in 5.5 to
+ * 6 of every set's arenas (from 2.6 to 6), a hazard within 3 tiles of 42% of the places to stand (from 23%), and no
+ * way to die that near only 14% (from 52%), where bots stand 27% of their time on the ground (from 51%). A knock
+ * kills more often, so rounds are shorter; rivals across a shaft take longer to get at, so the field uses fewer items
+ * and the first bonk comes later with parts placed. Asking 8 set pieces made it 19.4 s, 19 of 48 in 20–40 s. From
+ * bare 2%, 23.4 s, 77%, 1.6 s, 3.6 s, 11.0 uses, 10%, 20%, 5.2 tiles; placed 5%, 22.9 s, 63%,
+ * 1.3 s, 3.0 s, 10.2 uses, 11%, 19%, 4.2 tiles (22 of 48 and 27 of 64 rounds in 20–40 s, 6 and 5 under 10 s; 21 and 79
+ * deaths to hazards, 37 and 32 off the sides) since the spawn shield ends 5 s after GO (sim/constants.ts `SHIELD_FRAMES`): a rival back at its
  * spawn can be knocked, so more deaths are knocks and rounds are a little shorter. From bare 6%, 25.6 s, 68%, 1.6 s,
  * 3.8 s, 12.9 uses, 10%, 20%, 4.8 tiles; placed 2%, 23.7 s, 58%, 1.3 s, 3.4 s, 10.8 uses, 10%, 19%, 4.3 tiles (25 of 48
  * and 31 of 64 rounds in 20–40 s, 4 and 5 under 10 s; 32 and 22 deaths off the sides of the map) with a shield that
@@ -114,7 +122,7 @@ export const BRAWL_ROUNDS = {
       knocked: [0.55, 0.8],
       contact: [0, 2],
       hit: [0, 4.2],
-      uses: [9, 15],
+      uses: [8.5, 15],
       still: [0, 0.14],
       retreat: [0, 0.21],
       gap: [0, 5.2],
@@ -124,11 +132,11 @@ export const BRAWL_ROUNDS = {
       seconds: [18, 25],
       knocked: [0.5, 0.7],
       contact: [0, 1.9],
-      hit: [0, 5],
+      hit: [0, 5.4],
       uses: [7, 11],
       still: [0, 0.18],
       retreat: [0, 0.2],
-      gap: [0, 4.8],
+      gap: [0, 5.4],
     },
   },
 } as const satisfies {

@@ -250,9 +250,9 @@ describe('the motor’s own moves', () => {
 
   it('in a fight it reads its landings in the air: slow hands cost a run across the arena no stops, where a race still pays them', () => {
     // Across a brawl arena, end to end, with hands that take 18 frames to see what's next and no other lapses.
-    // Seed 2's arena: a run across it lands a few times on the way.
+    // Seed 4's arena: a run across it lands a few times on the way.
     const across = (reaction: number, haste: boolean) => {
-      const m = new Match(2, undefined, { ...DEFAULT_RULES, mode: 'brawl' });
+      const m = new Match(4, undefined, { ...DEFAULT_RULES, mode: 'brawl' });
       const { spawn, goal } = m.level;
       const { p, r } = standing(m, spawn.tx, spawn.ty);
       const motor = new Motor({ ...rollPersonality(1, 'normal'), reaction, slip: 0, think: 0, stray: 0 }, 1);

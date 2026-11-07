@@ -1,6 +1,6 @@
-import type { Rect } from '../../core/geom';
+import { type Rect, rectCircle } from '../../core/geom';
 import { RUN_COUNTDOWN, TILE } from '../../sim/constants';
-import { type Level, T_EMPTY } from '../../sim/level';
+import { type Level, spawnZones, T_EMPTY } from '../../sim/level';
 import {
   type Contrib,
   footprintCells,
@@ -13,6 +13,7 @@ import {
   type PlacedProp,
   resolveProp,
 } from '../../sim/props';
+import { RunWorld } from '../../sim/run';
 import type { Recipe } from './place';
 
 /**
@@ -105,6 +106,27 @@ export function throughFaults(level: Level, pp: PlacedProp): string[] {
         out.push(`${pp.def.name}: reaches through terrain at ${x},${y}`);
         break;
       }
+  }
+  return out;
+}
+
+/** Frames of a level's set pieces firing that `shotsIntoSpawns` plays: a few volleys of the slowest gun. */
+const SHOT_FRAMES = 900;
+
+/**
+ * The set pieces whose shots reach a spawn's safe zone, played through the real sim: a shot bouncing off another
+ * piece goes where no trace of it alone says. The placer keeps every gun's own trace off the ends; on a level whose
+ * field keeps coming back to them (an arena's two ends), a shot that gets there anyway kills at a spawn once the
+ * shield is down, so the gun goes. Their uids.
+ */
+export function shotsIntoSpawns(level: Level): Set<number> {
+  const out = new Set<number>();
+  if (!level.setPieces.some((p) => p.def.modules.some((m) => m.type === 'cannon'))) return out;
+  const zones = spawnZones(level).map((z) => z.zone);
+  const run = new RunWorld(level, [], []);
+  for (let f = 0; f < SHOT_FRAMES; f++) {
+    run.step([]);
+    for (const p of run.projectiles) if (p.source >= 0 && zones.some((z) => rectCircle(z, p.x, p.y, 4))) out.add(p.source);
   }
   return out;
 }
