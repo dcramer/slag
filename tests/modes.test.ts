@@ -3,6 +3,7 @@ import { Match } from '../src/game/match';
 import { climbed, MODES } from '../src/game/modes';
 import { DEFAULT_RULES } from '../src/game/rules';
 import { generateCrate } from '../src/gen/props';
+import { throughFaults } from '../src/gen/setpieces';
 import { leaderOf as leaderIndex } from '../src/sim/standing';
 import { POINTS, scoreSurvival, SURVIVE_PLACES } from '../src/game/scoring';
 import { generateLevel, planHolds } from '../src/gen/level';
@@ -483,7 +484,13 @@ describe("a brawl's arena", () => {
         expect(there.reachable.has((y + 2) * w + x), `box ${x},${y}`).toBe(true);
         expect([lv.tiles[(y - 1) * w + x], lv.tiles[(y - 2) * w + x]]).toEqual([0, 0]);
       }
-      // Nothing in the top rows but what the set's look hangs as a whole (a canopy): no board up there nobody reaches.
+      // Nothing in the top rows but what the set's look hangs as a whole (a canopy): no board up there nobody reaches,
+      // and every board has two rows of air over it.
       for (let x = 0; x < w; x++) expect([lv.tiles[x], lv.tiles[w + x]]).not.toContain(T_ONEWAY);
+      for (let y = 2; y < h; y++)
+        for (let x = 0; x < w; x++)
+          if (lv.tiles[y * w + x] === T_ONEWAY) expect([lv.tiles[(y - 1) * w + x], lv.tiles[(y - 2) * w + x]], `board ${x},${y}`).toEqual([0, 0]);
+      // No set piece reaches through the arena's ledges or boards.
+      expect(lv.setPieces.flatMap((p) => throughFaults(lv, p))).toEqual([]);
     });
 });

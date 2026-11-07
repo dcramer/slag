@@ -1,7 +1,18 @@
 import type { Rect } from '../../core/geom';
 import { RUN_COUNTDOWN, TILE } from '../../sim/constants';
-import type { Level } from '../../sim/level';
-import { type Contrib, type Hazard, type Module, type ModuleOf, moduleSim, motionOffset, newPropState, type PlacedProp, resolveProp } from '../../sim/props';
+import { type Level, T_EMPTY } from '../../sim/level';
+import {
+  type Contrib,
+  footprintCells,
+  type Hazard,
+  type Module,
+  type ModuleOf,
+  moduleSim,
+  motionOffset,
+  newPropState,
+  type PlacedProp,
+  resolveProp,
+} from '../../sim/props';
 import type { Recipe } from './place';
 
 /**
@@ -76,6 +87,28 @@ export function tellFaults(mods: readonly Module[]): string[] {
 /** Frames `windowFaults` watches a piece for, from the race start: longer than every hazard's cycle. */
 const WINDOW_SPAN = 900;
 /** A cell a moving hazard crosses has to stay clear longer than this between passes. */
+/**
+ * Nothing a set piece holds reaches through terrain: in each column of its footprint (every cell it claims over its
+ * cycle), no tile of the level between two of its cells. The placer claims a hazard's cells best-effort and skips
+ * tiles it can't, so a fall, a drip's path or a hail of rocks laid over a board or a ledge would be drawn, and hurt,
+ * straight through it. Empty when it holds.
+ */
+export function throughFaults(level: Level, pp: PlacedProp): string[] {
+  const cols = new Map<number, Set<number>>();
+  for (const [x, y] of footprintCells(pp)) cols.set(x, (cols.get(x) ?? new Set()).add(y));
+  const out: string[] = [];
+  for (const [x, ys] of cols) {
+    const lo = Math.min(...ys);
+    const hi = Math.max(...ys);
+    for (let y = lo + 1; y < hi; y++)
+      if (!ys.has(y) && level.tiles[y * level.w + x] !== T_EMPTY) {
+        out.push(`${pp.def.name}: reaches through terrain at ${x},${y}`);
+        break;
+      }
+  }
+  return out;
+}
+
 export const SAFE_WINDOW = 60;
 
 /**

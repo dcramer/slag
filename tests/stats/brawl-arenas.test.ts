@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { MODES } from '../../src/game/modes';
 import { generateLevel, lastGenInfo } from '../../src/gen/level';
+import { throughFaults } from '../../src/gen/setpieces';
 import { LEVEL_H } from '../../src/sim/constants';
 import { T_EMPTY, type Level } from '../../src/sim/level';
 import { analyzeReach } from '../../src/sim/reach';
@@ -31,6 +32,8 @@ interface Arena {
   stands: number;
   /** Boxes the arena hangs. */
   boxes: number;
+  /** Set pieces reaching through the arena's terrain (`throughFaults`). */
+  through: string[];
   shape: string;
   fallback: boolean;
 }
@@ -77,6 +80,7 @@ function measure(lv: Level): Arena {
     tiers: rows.size,
     stands: reach.size,
     boxes: lv.setPieces.filter((p) => p.def.key === 'loop-box').length,
+    through: lv.setPieces.flatMap((p) => throughFaults(lv, p)),
     shape: lv.style.split(':arena-')[1] ?? lv.style,
     fallback: lastGenInfo.fallback,
   };
@@ -101,6 +105,7 @@ describe('Brawl arenas', () => {
     expect(Object.keys(shapes).sort()).toEqual(['bowl', 'pyramid', 'tiers']);
     for (const n of Object.values(shapes)) expect(n / all.length).toBeGreaterThan(0.18);
   });
+  it('no set piece reaches through a ledge or a board', () => expect(all.flatMap((a) => a.through)).toEqual([]));
   it('every arena hangs at least three boxes', () => expect(Math.min(...all.map((a) => a.boxes))).toBeGreaterThanOrEqual(3));
   it('every set gives the field about as many places to stand as the busiest (low gravity included)', () => {
     const per = THEME_IDS.map((theme) => {
