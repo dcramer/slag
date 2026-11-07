@@ -181,6 +181,31 @@ export const EYES: Record<EyeStyle, EyeArt> = {
       poly(s, oval(f * r * 0.12, lookY(m) * r * 0.6, p, p, 7), INK);
     },
   },
+  // A skull's eye: a big black socket with a pinprick of light in it, the far one lit, a glow in the iris's colour
+  // (the punny skeleton's). A skull has no brows, so the socket acts: squashed into the run, wide on a fall, where
+  // the light shrinks to a point.
+  socket: {
+    extent: [0.95, 1.05],
+    brow: false,
+    open(s, r, m, f, iris, far) {
+      const rx = r * 0.95 * (m === 'fall' ? 1.1 : 1);
+      const ry = r * 1.05 * (m === 'run' ? 0.84 : m === 'fall' ? 1.14 : 1);
+      const pts = oval(0, 0, rx, ry, 12);
+      poly(s, pts, INK);
+      const px = f * r * 0.16;
+      const py = lookY(m) * r * 0.8;
+      within(s, pts, () => {
+        if (far) {
+          const g = r * (m === 'fall' ? 0.36 : 0.56);
+          poly(s, oval(px, py, g, g, 9), iris);
+          glint(s, px + f * g * 0.2, py - g * 0.25, g * 0.42);
+        } else {
+          const p = r * (m === 'fall' ? 0.18 : 0.27);
+          poly(s, oval(px, py, p, p, 8), WHITE);
+        }
+      });
+    },
+  },
   // A tall white with a tall pupil toward the front: the plumber's, the saddled dino's.
   pill: {
     extent: [0.78, 1.5],

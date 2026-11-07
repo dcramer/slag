@@ -1115,6 +1115,27 @@ export const BRIEFS: Record<string, Brief> = {
     // towel's corner frayed, a boot's lace trailing.
     worn: "the near oven-mitt glove has a big dark brown scorch mark on its side; the grey tape on the near wrist has come loose and one end flaps out; one corner of the tea towel is frayed ragged; the back boot's lace has come undone and trails. Both gloves stay big and round, held up in front of his chin with white background between them and his face. His face stays as it is.",
   },
+  skeleton: {
+    // The nod, each a shape at race size: the huge round skull, as wide as his shoulders, with the fixed wide toothy
+    // grin and two big dark sockets (the read, and what keeps him off the cuptoon's white cup head: a cup is a flat-
+    // topped box with a lid, a handle and a straw, this is a ball with a grin); one socket lit, a pale glow in it; the
+    // baggy hoodie with its thick fur-trimmed hood down round the neck, a collar between skull and body; both hands
+    // in the pockets, so no arms stand out (his lazy slouch, and nobody else in the cast is armless in a coat); the
+    // shorts, the thin bone legs and the slippers under it.
+    // Ours, and the joke: he's a plastic Halloween decoration come loose. A moulding seam runs over the skull, rivets
+    // show at his knees, the hoodie is a hand-me-down with a ragged hem, and a ketchup squeeze bottle sticks up out of
+    // the side pocket, standing proud of the outline. The design drew a hanging loop on the crown too, but the
+    // drawings ship without it: on the crown, in every form tried, the round skull read as a ghost's, an onion, an
+    // egg or an antenna, and the homage went (art/sprites/skeleton/design.prompt.txt).
+    // The palette is neutral (Decisions 4): the hoodie in the player's colour, the bottle a light of it; the skull
+    // and bones bone white, the fur a mid grey apart from the skull, the shorts a dark grey, the slippers a pale
+    // grey; the glow a cool fixed tone, a face mark.
+    design:
+      'A short stocky cartoon skeleton in a three-quarter view facing right, slouching lazily: a huge round bone-white plastic skull (#f4f1e8), as wide as his shoulders, with a fixed wide toothy grin and a thin moulding seam down its middle, two big black eye sockets, the near one with a pale cyan glowing pupil (#9fe0ff), and a small plastic hanging loop sticking up off the top of the skull with a snapped string end. ' +
+      'A baggy blue hoodie (#3f7fc4) two sizes too big, its hem down to his knees, a thick grey fur-trimmed hood (#a9a296) down round his neck, both hands deep in its pockets, a red ketchup squeeze bottle (#d63a2a) sticking up out of the side pocket. Dark grey baggy shorts (#3a3a40), thin bone legs with round rivets at the knees, fluffy pale grey slippers (#d8d4cc).',
+    // Off the face and off the skull's round outline: the hem torn, a slipper's sole flapping, a rivet gone.
+    worn: "the hoodie's hem has a big ragged tear on one side; the near slipper's sole has come loose at the toe and flaps open; the rivet at the near knee is missing, leaving a dark hole and the knee bent a little crooked; the ketchup bottle's cap is snapped open. The skull, the grin, the eye sockets, the hanging loop, the fur hood and the hands in the pockets stay exactly as they are.",
+  },
   junior: {
     // No homage and no twist: Junior is Sentry's own robot, which the owner's team made (docs/characters/junior.md), so
     // the design is the reference (art/sprites/junior/reference.png) redrawn flat, every trait kept: the square yellow
@@ -1157,6 +1178,51 @@ export const BRIEFS: Record<string, Brief> = {
       'A short blue dress (#3f5fa8) flaring out wide at the hem, dark blue trim (#25396a), long legs in tall blue boots up to her thighs. ' +
       'Floating beside her shoulder, a small brown cardboard box (#c49a64) hangs on a string from a short stick poking up behind her back, with white background all round the box.',
     worn: "the two black tails of the sleep mask's knot are longer and fly out far behind her head; the letter opener's long blade is bent a little near its tip and has a big nick out of its edge; the cardboard box has a big dent caved into one corner and a strip of grey tape (#9a9c98) across its lid, and hangs further out from her shoulder, a wide gap of white all round it; the hem of the dress is torn into a big ragged notch at one side. Her face, the white bob with its straight fringe, the black mask and the stick stay as they are.",
+  },
+  bomber: {
+    // The nod, each part of the read at race size and each a shape in outline: the huge round white helmet as wide as
+    // he is (the head nobody else has: the robot boy's is in the player's colour with a ridge and ear discs, the
+    // puffball and the slime are round bodies, not a helmet on a body); the ball on a stalk standing up off its crown
+    // (the one bump on the outline, his alone); the dark face slot with two eyes (the face); the small body on big
+    // mitts and boots (the proportions); the round bomb with its lit fuse (what he does). The bomb is held low ahead of
+    // him at the hip, never out level at shoulder height: a round helmet over a level arm on big boots is the robot
+    // boy's outline.
+    // Ours, and the joke: a garage knock-off. The helmet is an upturned white paint bucket, a rolled rim round its
+    // bottom edge and its wire handle folded down its side; the antenna a coiled spring with an orange ping-pong ball;
+    // the bomb a black bowling ball with three finger holes and a shoelace for a fuse.
+    // The palette is neutral (Decisions 4): the suit in the player's colour, the belt a dark of it; the bucket white,
+    // the face slot dark, the mitts and boots a pale grey, the bowling ball a charcoal, the ping-pong ball orange
+    // (a fixed warm mark, like a blush).
+    design:
+      'The character: a small round cartoon bomber kid, two heads tall. Colours: a white helmet (#f4f2ec), a blue suit (#3a6fd0) with a dark blue belt (#1f3f80), pale grey mitts and boots (#cfcdc8), a dark face slot (#26262e), an orange ball (#f08a3c), a charcoal bowling ball (#34343c). ' +
+      'His head, big and bold: a huge round white helmet as wide as he is, made from an upturned white paint bucket, a thick rolled rim round its bottom edge and its thin wire handle folded down its side; sticking straight up from its crown a short coiled spring with an orange ping-pong ball on top. ' +
+      'In its front a wide dark face slot with two big white oval eyes. ' +
+      'A small round body in a blue suit with a dark belt, stubby arms, big round pale mitts and big round boots. ' +
+      'His front mitt holds a charcoal bowling ball with three finger holes low ahead of him at hip height, clear of his body, a short shoelace fuse sticking up from it lit with a small yellow spark.',
+    // The edit carries the bowling ball too: the design hung it off the bucket's handle like a mace (and the other
+    // design lost it). Off the face and off the helmet's round outline: the paint drips, a chunk cracked out of the
+    // bucket, the shoelace frayed.
+    worn: "the dark ball hanging from the helmet's handle is gone, and the thin wire handle hangs empty down the helmet's side; his front mitt, on the right of the picture, now holds a charcoal bowling ball (#34343c) about as big as his torso, with three finger holes, out ahead of him low at hip height with white background all round it and between it and his body, a short frayed white shoelace sticking up from its top as a fuse, lit with a small yellow spark; a big blue paint drip (#3a6fd0) runs down the back of the white helmet from its crown; a chunk is cracked out of the helmet's rolled rim at the back. The helmet's round shape, the coiled spring with its orange ball and the dark face slot with its two white eyes stay exactly as they are. No drop shadow behind him.",
+  },
+  climber: {
+    // The nod, each part of the read at race size and each a shape in outline: the big messy mop of red hair floating
+    // up and streaming back off her head as if in a wind, as big as the rest of her head and more, with background
+    // round its ragged tips (the read: short and loose, never the archer's braids beside a bow, the raider's one
+    // braid or the genie's ponytail from the crown); the puffy banded parka to her hips (her bulk under the hair); her
+    // size, a small girl on slim legs in chunky boots, leaning forward into the climb (the top-hat girl is small too,
+    // but her read is a hat as tall as she is).
+    // Ours, and the joke: the parka is a sleeping bag with arms cut in, the backpack a lunchbox on a string, and the
+    // strawberry on her pocket a plastic fridge magnet.
+    // The palette is neutral (Decisions 4): the parka in the player's colour, its puffy bands a light of it; the red
+    // hair a fixed tone the read needs (hair is a neutral), the skin, the lunchbox, the leggings and the boots neutrals.
+    // Side on: her read is a profile, the hair streaming back behind it. The lunchbox is drawn grey and ships a tan tin:
+    // grey at play size read as nothing, tan as her pack (art/sprites/climber/design.prompt.txt).
+    design:
+      'A small determined girl seen side on in profile facing right, leaning forward, one boot stepping ahead. Her signature, big and bold: a big messy mop of bright red hair (#c8382e), chin length, floating up and streaming back behind her head as if in a strong wind, as big as her head, with white background round its ragged tips. ' +
+      'A puffy quilted parka to her hips made from a blue sleeping bag (#3f6fb5) with arms cut in, fat puffy bands (pale blue #a8c4e8), a red strawberry magnet on its pocket. A small grey lunchbox on a string as a backpack. Slim dark leggings, chunky brown boots, pale skin, dot eyes.',
+    // Off the face and the hair: stuffing out of a torn hem, tape round a sleeve, the lunchbox's lid hanging open,
+    // a boot's sole flapping.
+    worn: "a big ragged tear in the parka's hem with a white tuft of stuffing poking out of it; a strip of grey tape (#9a9c98) wrapped round the near sleeve; the grey lunchbox's lid hanging open on one hinge; the back boot's sole flapping loose at the toe. Her face, the red hair's size and shape streaming back and the puffy parka stay exactly as they are.",
   },
 };
 
