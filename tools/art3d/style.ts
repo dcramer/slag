@@ -1138,6 +1138,31 @@ export const BRIEFS: Record<string, Brief> = {
     // Off the face, the antennae and the cap: a torn hem, tape at the claw arm's elbow.
     worn: "the hoodie's hem has a big ragged tear at one side; a wide band of grey tape (#9a9c98) is wrapped round the elbow of the long claw arm; the near roller skate has lost its front wheel and tips a little. The head, the eye, the grin, the cap, the antennae, the claw and the phone stay exactly as they are.",
   },
+  bomber: {
+    // The nod, each part of the read at race size and each a shape in outline: the huge round white helmet as wide as
+    // he is (the head nobody else has: the robot boy's is in the player's colour with a ridge and ear discs, the
+    // puffball and the slime are round bodies, not a helmet on a body); the ball on a stalk standing up off its crown
+    // (the one bump on the outline, his alone); the dark face slot with two eyes (the face); the small body on big
+    // mitts and boots (the proportions); the round bomb with its lit fuse (what he does). The bomb is held low ahead of
+    // him at the hip, never out level at shoulder height: a round helmet over a level arm on big boots is the robot
+    // boy's outline.
+    // Ours, and the joke: a garage knock-off. The helmet is an upturned white paint bucket, a rolled rim round its
+    // bottom edge and its wire handle folded down its side; the antenna a coiled spring with an orange ping-pong ball;
+    // the bomb a black bowling ball with three finger holes and a shoelace for a fuse.
+    // The palette is neutral (Decisions 4): the suit in the player's colour, the belt a dark of it; the bucket white,
+    // the face slot dark, the mitts and boots a pale grey, the bowling ball a charcoal, the ping-pong ball orange
+    // (a fixed warm mark, like a blush).
+    design:
+      'The character: a small round cartoon bomber kid, two heads tall. Colours: a white helmet (#f4f2ec), a blue suit (#3a6fd0) with a dark blue belt (#1f3f80), pale grey mitts and boots (#cfcdc8), a dark face slot (#26262e), an orange ball (#f08a3c), a charcoal bowling ball (#34343c). ' +
+      'His head, big and bold: a huge round white helmet as wide as he is, made from an upturned white paint bucket, a thick rolled rim round its bottom edge and its thin wire handle folded down its side; sticking straight up from its crown a short coiled spring with an orange ping-pong ball on top. ' +
+      'In its front a wide dark face slot with two big white oval eyes. ' +
+      'A small round body in a blue suit with a dark belt, stubby arms, big round pale mitts and big round boots. ' +
+      'His front mitt holds a charcoal bowling ball with three finger holes low ahead of him at hip height, clear of his body, a short shoelace fuse sticking up from it lit with a small yellow spark.',
+    // The edit carries the bowling ball too: the design hung it off the bucket's handle like a mace (and the other
+    // design lost it). Off the face and off the helmet's round outline: the paint drips, a chunk cracked out of the
+    // bucket, the shoelace frayed.
+    worn: "the dark ball hanging from the helmet's handle is gone, and the thin wire handle hangs empty down the helmet's side; his front mitt, on the right of the picture, now holds a charcoal bowling ball (#34343c) about as big as his torso, with three finger holes, out ahead of him low at hip height with white background all round it and between it and his body, a short frayed white shoelace sticking up from its top as a fuse, lit with a small yellow spark; a big blue paint drip (#3a6fd0) runs down the back of the white helmet from its crown; a chunk is cracked out of the helmet's rolled rim at the back. The helmet's round shape, the coiled spring with its orange ball and the dark face slot with its two white eyes stay exactly as they are. No drop shadow behind him.",
+  },
 };
 
 function brief(kind: string): Brief {
