@@ -7,6 +7,7 @@ import type { ProfileOverride } from '../gen/level';
 import { type CrateMix, RACE_CRATE } from '../gen/props';
 import type { ThemeId } from '../themes';
 import type { ShoveRules } from '../sim/collide';
+import type { ScreenRules } from '../sim/screen';
 import { TILE } from '../sim/constants';
 import { type BuildUp, feetUp, RACE_RUN, type RunRules, type RunWorld } from '../sim/run';
 import { type RoundResult, scoreKnockouts, scoreRound, scoreSurvival, type Standing } from './scoring';
@@ -85,6 +86,20 @@ const BRAWL_SHOVE: ShoveRules = { share: 0.5, carry: true, check: 180 };
  */
 const BRAWL_BUILDUP: BuildUp = { per: 0.25, max: 6 };
 
+/**
+ * Rising Slag's screen (sim/screen.ts): fall off the bottom of the leader's and you're out, 21 rows under their feet
+ * (the first lap's leash is 25), with three quarters of a second to climb back. It rises no faster than 5 rows a
+ * second, under the 5.5 a bot climbs, and its top holds whoever gets there, so a leader who pulls away waits at the top
+ * of the screen for the field: the regroup the gates were, without a shut gate to die under. Four Normal bots, 512
+ * seeds, the 15 s leader winning with the boxes, items in every hand and items never used: 44%, 47% and 47%, 2.4, 2.6
+ * and 2.4 lead changes a round; rising at 5.25, 49%, 42% and 48%; at 5.5, 51% and 44% with 2.1 and 2.5 lead changes;
+ * at 4.5, 45%, 41% and 43% with rounds a second longer; never held back, 55% and 1.8 (384 seeds), about what no screen
+ * gives (59%), since the slag's leash already kills about where its bottom does. A top 6 rows over the leader's feet
+ * clipped their jumps (41%, and more rounds with nobody left standing); 8 clears a jump. 29 rows or 34, 45 or 90 frames
+ * of grace, moved nothing past the noise.
+ */
+const SLAG_SCREEN: ScreenRules = { rows: 29, up: 8, grace: 45, follow: 0.08, keep: 4, rise: 5 };
+
 export const MODES: Record<ModeId, ModeDef> = {
   race: {
     label: 'Race',
@@ -112,10 +127,9 @@ export const MODES: Record<ModeId, ModeDef> = {
       loop: true,
       bare: true,
       boxes: { chase: ['hook', 'upper', 'upper', 'rocket', 'block', 'tax'], lead: ['shield', 'sword', 'block'] },
-      gates: true,
       tide: true,
     },
-    run: { flag: false, lastStanding: true, ahead: 'height' },
+    run: { flag: false, lastStanding: true, ahead: 'height', screen: SLAG_SCREEN },
     // A loop climbs bare, so no bridge is owed: the crate leans to what you put in each other's way, and to
     // utility, and away from building (a shortcut for whoever's ahead) and demolition (nothing needs clearing).
     crate: { bridges: false, roles: { hazard: 1.6, utility: 1.3, build: 0.6, demolish: 0.35 } },

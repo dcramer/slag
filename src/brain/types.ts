@@ -15,7 +15,7 @@ import type { Temperament } from './temperament';
  */
 
 /** Bumped when BrainView changes shape. A player's script will declare the version it was written against. */
-export const BRAIN_VIEW_VERSION = 11;
+export const BRAIN_VIEW_VERSION = 12;
 
 /** How fast across the ground, as a player would say it. */
 export type Pace = 'still' | 'walking' | 'running' | 'flying';
@@ -46,6 +46,11 @@ export interface SelfSense {
   up: number;
   /** Rising Slag: rows from its feet down to the slag, rounded; null with no slag. */
   slag: number | null;
+  /**
+   * Rising Slag: rows from its feet down to the bottom edge of the leader's screen, rounded; null with no screen. Under
+   * it a moment and it's out, as it is in the slag. The screen's top holds whoever reaches it; that it plays into.
+   */
+  screen: number | null;
   /** Its place in the race, 0 leading: nearest the flag by route, or round a climb, highest. */
   rank: number;
   /** The item in its hands and the uses left on it, or null. */

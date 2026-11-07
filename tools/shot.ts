@@ -73,6 +73,7 @@
  *          --q high (pin the quality tier: slow software GL otherwise reads as a slow device and drops it)
  *          --bout N (race: play the bouts before it out first, `--game brawl` plays 3)
  *          --runframe N (race: stop on exact sim frame N)  --campin x,y,zoom (race: pin the view, for before/after sheets)
+ *          --under N (race, with --runframe and --game slag: the lowest runner under the leader's screen, N frames into its grace)
  *          --spread (race: stand the runners on open ground)  --hits 0,2,4 (race, with --runframe: the runners' brawl build-up, in turn)
  *          --pop N (race: after --frames, the first runner holds self-destruct N frames: ring and countdown)  --popall (every runner)
  *          --mode keyboard|gamepad|touch (footer prompt glyphs)  --net (fake online-lobby info)

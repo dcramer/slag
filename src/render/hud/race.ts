@@ -1,7 +1,9 @@
 import { css } from '../../core/color';
 import type { Match } from '../../game/match';
-import { POP_HOLD, RUN_COUNTDOWN, VIEW_H, VIEW_W } from '../../sim/constants';
-import { popCountdown } from '../../sim/run';
+import { POP_HOLD, RUN_COUNTDOWN, TILE, VIEW_H, VIEW_W } from '../../sim/constants';
+import { feetUp, popCountdown } from '../../sim/run';
+import { screenEdges } from '../../sim/screen';
+import { MODES } from '../../game/modes';
 import { PAL, TYPE } from '../../ui/style';
 import { drawInkRunner } from '../ink-character';
 import { discPts, icon, inkShape, plate, standings } from '../hud-kit';
@@ -15,6 +17,7 @@ import { DISPLAY, UI, MAX_CHIPS_H } from './layout';
 export function race(hud: Hud, m: Match, t: number) {
   const run = m.run!;
   const c = hud.ctx;
+  screenEdge(hud, m, t);
   popRings(hud, m, t);
   if (run.frame < RUN_COUNTDOWN + 30) {
     const left = RUN_COUNTDOWN - run.frame;
@@ -184,6 +187,72 @@ function countDigit(c: CanvasRenderingContext2D, s: string, size: number) {
   c.strokeText(s, 0, y);
   c.fillStyle = PAL.molten;
   c.fillText(s, 0, y);
+}
+
+/** Rows over the screen's bottom edge a runner's head starts to warm it: about a slip off a ledge. */
+const EDGE_NEAR = 3;
+
+/**
+ * The bottom of the leader's screen (sim/screen.ts) is a kill line, so it shows as one: it glows hot under whoever
+ * comes near it, and whoever has dropped under it gets a mark in their color on the edge, pointing back up, with a
+ * ring around it that runs out with their grace and flashes as it goes. Read from the sim, so every peer sees the same.
+ */
+function screenEdge(hud: Hud, m: Match, t: number) {
+  const run = m.run!;
+  const s = MODES[m.rules.mode].run.screen;
+  if (!s || !run.screen) return;
+  const c = hud.ctx;
+  const { bottom } = screenEdges(s, run.screen);
+  const ey = hud.worldToView(0, bottom).y;
+  const k = hud.worldToView(1, bottom).x - hud.worldToView(0, bottom).x;
+  run.runners.forEach((r, i) => {
+    if (!r.alive || r.finished) return;
+    const p = m.player(r.slot);
+    if (!p) return;
+    const over = (bottom - (feetUp(m.level, r) - r.body.h)) / TILE;
+    const under = run.screen!.under[i];
+    const heat = under > 0 ? 1 : Math.max(0, 1 - over / EDGE_NEAR);
+    if (heat <= 0) return;
+    const x = hud.worldToView(r.body.x + r.body.w / 2, bottom).x;
+    // The edge heats under them: a glow, and a bar of the edge itself.
+    glowDot(hud.gctx, x, ey, (40 + 30 * heat) * Math.max(0.8, k), { h: 8, s: 100, l: 55 }, 0.35 + 0.5 * heat, 0.15);
+    const bar = c.createLinearGradient(x - 46, 0, x + 46, 0);
+    bar.addColorStop(0, 'rgba(255,74,61,0)');
+    bar.addColorStop(0.5, `rgba(255,74,61,${(0.35 + 0.55 * heat).toFixed(3)})`);
+    bar.addColorStop(1, 'rgba(255,74,61,0)');
+    c.fillStyle = bar;
+    c.fillRect(x - 46, ey - 3, 92, 3);
+    if (under <= 0) return;
+    const left = Math.max(0, 1 - under / s.grace);
+    const blink = left < 0.4 && Math.sin(t * (18 + 30 * (0.4 - left))) > 0;
+    const y = ey - 20;
+    c.save();
+    c.lineCap = 'round';
+    c.lineJoin = 'round';
+    // A chevron up: get back on.
+    c.beginPath();
+    c.moveTo(x - 8, y + 5);
+    c.lineTo(x, y - 5);
+    c.lineTo(x + 8, y + 5);
+    c.strokeStyle = 'rgba(18,11,8,0.85)';
+    c.lineWidth = 7;
+    c.stroke();
+    c.strokeStyle = css(p.character.body);
+    c.lineWidth = 4;
+    c.stroke();
+    // The grace, running out.
+    c.strokeStyle = 'rgba(18,11,8,0.75)';
+    c.lineWidth = 5;
+    c.beginPath();
+    c.arc(x, y, 14, 0, Math.PI * 2);
+    c.stroke();
+    c.strokeStyle = blink ? PAL.whiteHot : PAL.danger;
+    c.lineWidth = 2.5;
+    c.beginPath();
+    c.arc(x, y, 14, -Math.PI / 2, -Math.PI / 2 + left * Math.PI * 2);
+    c.stroke();
+    c.restore();
+  });
 }
 
 /**

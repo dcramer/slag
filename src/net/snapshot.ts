@@ -8,6 +8,7 @@ import type { BloodCell } from '../sim/blood';
 import { isProtected, type Level, T_EMPTY } from '../sim/level';
 import type { PlacedProp } from '../sim/props';
 import { RunWorld } from '../sim/run';
+import type { Screen } from '../sim/screen';
 import type { Weather } from '../sim/weather';
 import type { ThemeId } from '../themes';
 import { cleanCharacter } from './actions';
@@ -49,6 +50,8 @@ export interface RunSnap {
   items: unknown;
   itemSeed: number;
   slag: number | null;
+  /** The leader's screen (sim/screen.ts), or null in a race without one. */
+  screen?: Screen | null;
 }
 
 export interface MatchSnap {
@@ -254,6 +257,7 @@ export function snapshotMatch(m: Match): MatchSnap {
           items: toWire(run.items),
           itemSeed: run.itemSeed,
           slag: run.slag,
+          screen: run.screen && { y: run.screen.y, under: [...run.screen.under] },
         }
       : null,
   };
@@ -345,6 +349,7 @@ function restoreRun(run: RunWorld, s: RunSnap): RunWorld {
   run.projectiles = fromWire(s.projectiles) as RunWorld['projectiles'];
   run.finishOrder = [...s.finishOrder];
   run.slag = s.slag ?? null;
+  run.screen = s.screen ? { y: s.screen.y, under: [...s.screen.under] } : null;
   run.kills = s.kills.map((k) => ({ ...k }));
   run.endFrame = s.endFrame;
   run.propState = fromWire(s.propState) as RunWorld['propState'];
