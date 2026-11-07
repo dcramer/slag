@@ -99,6 +99,8 @@ Every game design decision, preference and direction the owner has given, groupe
   2026-11-06 · `done` (`SHIELD_FRAMES`; each bout's own GO; the shield blinks through its last second; placement's protected rects unchanged) · AGENTS.md → Game rules, DESIGN.md, `src/sim/run.ts`
 - **Brawl has no safe areas and knocks throw people off ledges: bots don't pause, nearly everywhere to stand has a way to die next to it, and a hit near an edge sends you over.** "also the ai pauses too much on brawl" / "theres too many safe areas, and its hard to push people off ledges etc"
   2026-11-06 · `in progress` · MODES.md → Brawl
+- **A brawl round aims for 15–30 s (from 20–40), and item use counts per minute of fighting, not per round.** "Yes, 15–30 s"
+  2026-11-06 · `in progress` · MODES.md → Brawl, `BRAWL_ROUNDS` (src/game/expectations.ts)
 - **Brawl is won by knocking people out, not by hiding: knockouts pay, each hit you take throws you farther (fresh each bout), and a couple of weapons reach from range.** "you shouldn't be able to win by just standing around" / "maybe just make it easier to get knocked out" / "or we need more weapons or something?" / "Yes, all three"
   2026-11-06 · `in progress` (an earlier slag waits on these) · MODES.md → Brawl
 - **Brawl's hazards are amped up: its set pieces are things that kill or knock, more of them, near the ledges.** "we may need to amp up the hazards in brawl"
