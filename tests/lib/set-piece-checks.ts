@@ -66,19 +66,26 @@ export function expectPlacementRules({ theme, seed, level }: ThemedLevel) {
 
 /** No hazard, moving solid or projectile ever reaches the spawn or goal zones (the placer's, or the ones given). */
 export function expectClearOfSpawnAndGoal({ theme, seed, level, zs = zones(level) }: ThemedLevel & { zs?: readonly Rect[] }) {
+  const found = spawnIntrusions(level, zs);
+  expect(found, `${theme} ${seed}: ${found.join('; ')}`).toEqual([]);
+}
+
+/** Every set piece whose hazards, moving solids or shots get into one of `zs` over its cycle, a line each. */
+export function spawnIntrusions(level: Level, zs: readonly Rect[]): string[] {
+  const out = new Set<string>();
   for (const pp of level.setPieces) {
     const r = resolveProp(pp);
     const state = newPropState();
-    const out: Contrib = { solids: [], hazards: [], springs: [], winds: [] };
+    const c: Contrib = { solids: [], hazards: [], springs: [], winds: [] };
     for (let f = RUN_COUNTDOWN; f < RUN_COUNTDOWN + 900; f += 2) {
-      out.solids.length = 0;
-      out.hazards.length = 0;
+      c.solids.length = 0;
+      c.hazards.length = 0;
       // Where the piece's own motion has carried it (a combine on its rail): its hazards ride along.
       const off = motionOffset(r, f);
       const prev = motionOffset(r, f - 1);
-      r.mods.forEach((m, mi) => moduleSim(m.type).build?.(m, { level, frame: f, r, off, prev, state, mi, live: true }, out));
-      for (const h of out.hazards) for (const z of zs) expect(hits(h, z), `${theme} ${seed} ${pp.def.name} hazard @${f}`).toBe(false);
-      for (const s of out.solids) if (s.dx || s.dy) for (const z of zs) expect(overlaps(s, z), `${theme} ${seed} ${pp.def.name} solid`).toBe(false);
+      r.mods.forEach((m, mi) => moduleSim(m.type).build?.(m, { level, frame: f, r, off, prev, state, mi, live: true }, c));
+      if (c.hazards.some((h) => zs.some((z) => hits(h, z)))) out.add(`${pp.def.name} hazard`);
+      if (c.solids.some((s) => (s.dx || s.dy) && zs.some((z) => overlaps(s, z)))) out.add(`${pp.def.name} solid`);
     }
   }
   // Projectiles, through the real sim.
@@ -86,9 +93,10 @@ export function expectClearOfSpawnAndGoal({ theme, seed, level, zs = zones(level
     const run = new RunWorld(level, [], []);
     for (let f = 0; f < 700; f++) {
       run.step([]);
-      for (const p of run.projectiles) for (const z of zs) expect(rectCircle(z, p.x, p.y, 4), `${theme} ${seed} projectile`).toBe(false);
+      if (run.projectiles.some((p) => zs.some((z) => rectCircle(z, p.x, p.y, 4)))) out.add(`projectile`);
     }
   }
+  return [...out];
 }
 
 /** No piece is lethal every frame (`windowFaults`, the contract the pipeline enforces while generating). */

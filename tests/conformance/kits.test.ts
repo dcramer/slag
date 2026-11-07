@@ -6,12 +6,13 @@ import { MODES } from '../../src/game/modes';
 import { BUILDERS, type BuilderId } from '../../src/gen/level/builders';
 import { setLevelDifficulty } from '../../src/gen/level/difficulty';
 import { setProbeGravity } from '../../src/gen/level/probe';
-import { type ProfileOverride, rollProfile } from '../../src/gen/level/profile';
+import { rollProfile } from '../../src/gen/level/profile';
 import { KIT_KINDS, kitShortfalls, SET_KITS } from '../../src/gen/level/sets';
 import type { SculptCtx } from '../../src/gen/level/types';
 import { generateTheme } from '../../src/gen/theme';
 import type { LevelProfile } from '../../src/sim/level';
 import { THEME_IDS, type ThemeId } from '../../src/themes';
+import { BUILDER_PROFILES } from '../lib/builder-contract';
 
 /**
  * The kit contract (src/gen/AGENTS.md → Set kits and level builders): every set provides every kind of piece
@@ -27,19 +28,6 @@ describe('every set provides every kind', () => {
     else it(`${theme} provides ${Object.keys(KIT_KINDS).join(', ')}`, () => expect(kitShortfalls(SET_KITS[theme])).toEqual([]));
   }
 });
-
-/** The profiles a builder takes, forced from the seed: a course, a climb, a descent, a race tower and a Rising Slag shaft. A set that never rolls one (farm races never go tall) skips it. */
-const FORCE: Record<BuilderId, ProfileOverride[]> = {
-  course: [
-    { size: 'classic', route: 'ltr' },
-    { size: 'wide', route: 'ltr' },
-  ],
-  climb: [{ size: 'classic', route: 'climb' }],
-  descent: [{ size: 'wide', route: 'descent' }],
-  tower: [{ size: 'tall', route: 'zigzag' }],
-  shaft: [MODES.slag.profile],
-  arena: [MODES.brawl.profile],
-};
 
 function ctxFor(seed: number, theme: ThemeId, p: LevelProfile, attempt = 0): SculptCtx {
   setProbeGravity(p.gravity);
@@ -58,7 +46,9 @@ describe('every builder composes every set’s kit', () => {
           it.todo(`${theme}: needs ${missing.join(', ')} (TODO 32)`);
           continue;
         }
-        const cases = FORCE[id].flatMap((force) => [1, 2].map((seed) => ({ seed, p: rollProfile(seed, theme, force) }))).filter(({ p }) => b.takes(p));
+        const cases = BUILDER_PROFILES[id]
+          .flatMap((force) => [1, 2].map((seed) => ({ seed, p: rollProfile(seed, theme, force) })))
+          .filter(({ p }) => b.takes(p));
         // A set that never rolls a level this builder takes (farm races never go tall) has nothing to build with it.
         if (!cases.length) continue;
         it(theme, () => {
