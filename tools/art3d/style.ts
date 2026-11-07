@@ -638,27 +638,28 @@ export const BRIEFS: Record<string, Brief> = {
   },
 
   rapper: {
-    // The nod, each part of the read at race size: the tall knit beanie standing straight up off the head, a thumb
-    // with a round top and a snug band, no brim and no pompom (with a brim, or leaning back to a point, it read as a
-    // wizard's hat); a big dog's head with a long snout jutting far forward and a big round nose on its tip, the jaw
-    // dropped open rapping (a short snout level with the band read as a cap's bill, the plumber); a short floppy ear
-    // hanging straight down behind the head (flying up or back beside the beanie, it read as a rabbit's ears); the mic
-    // held out in front (the rapper); the card's edge round the outline (the paper look the original is known for).
-    // Side on: in the three-quarter view the beanie, head, ears and mic were one tall pill in silhouette. A skinny
-    // body under the big head: the chubby one under the beanie read as a gnome, a monkey or a princess.
-    // Ours, and the joke: he's a cardboard shop standee come loose (the card's edge, a fold crease, torn bites out of
-    // the card at his shorts). The karaoke mic's coiled cord went: hanging below his arm, it read as a monkey's tail.
-    // The palette is neutral (Decisions 4): the beanie and the tee in the player's colour, the shorts a dark of it;
-    // the fur cream, the nose brown, the trainers grey, the mic black, the card's edge plain cardboard.
-    // Round 8 was reached in edits (art/sprites/rapper/design.prompt.txt); this is it as one brief, for a redraw.
+    // The nod, each part of the read at race size: a huge dog's head, half his height, side on, with a long thick
+    // snout jutting far forward and a big brown nose on its tip, the jaw open rapping (a small head under a tall hat
+    // read as "a figure in a green cap", the dog lost); one big floppy ear hanging straight down to the shoulder, in a
+    // brown of its own (a cream ear sank into the head; flying up beside the beanie it read as rabbit ears); a tall
+    // soft knit beanie, a dome as wide as its thick ribbed cuff, never a point (a point read as a gnome's, a wizard's
+    // or an elf's cap); the mic, a grey stick with a light ball head, held up to his mouth (a black mic was cut
+    // through with the open mouth, and read as a glove or a weapon); a skinny body. Side on: in three-quarter the
+    // beanie, head, ears and mic were one mass.
+    // Ours, and the joke: he's a cardboard shop standee come loose: the card's brown edge all round him, a fold
+    // crease and a torn bite out of the card at his shorts.
+    // The palette is neutral (Decisions 4): the beanie and the tee in the player's colour, the cuff and the shorts a
+    // dark of it; the fur cream, the ear and nose browns, the trainers white canvas, the mic greys, the card's edge
+    // plain cardboard. Round 9 (art/sprites/rapper/design.prompt.txt) was this brief, then the beanie made taller in an
+    // edit.
     design:
-      'The character: a skinny cartoon puppy who is a flat cardboard cut-out, seen side on in profile, facing right, with a big head on a small body. ' +
-      'His signature: a very tall knitted beanie (#e8922e) standing straight up on his head like a thumb, round on top, with a snug ribbed band, no brim and no pompom. ' +
-      'An exaggerated long dog snout juts far forward from the lower half of his face, a big round dark brown nose (#4a3428) on its tip; his mouth is wide open, rapping. ' +
-      'One short floppy cream ear (#f1dfb8) hangs straight down from the back of his head to his shoulder, with white space between it and his neck. ' +
-      'He holds a chunky black cordless microphone out in front of him in his fist, below the snout. An orange tee (#e8922e), dark orange shorts, thin legs, big grey trainers (#9aa0a8). ' +
-      'A narrow strip of plain brown cardboard edge (#b8946a) shows round his outline, the thickness of the cut-out.',
-    worn: "he is a cardboard shop standee come loose: a narrow strip of plain brown cardboard edge shows along the back of his outline; a crisp fold crease runs straight across him, the card kinked a little there; a torn bite is missing from the card at his shorts, showing the rough brown card inside. The beanie, the ear, the snout, the nose, the open mouth and the mic don't change.",
+      'The character: a skinny cartoon puppy dog who is a flat cardboard cut-out, seen side on in profile, facing right, with a huge dog head, half his whole height, on a tiny stick-thin paper-flat body. ' +
+      'The head is the main shape: a very long thick dog snout juts far forward, as long as the head is wide, with a big round dark brown nose (#4a3428) on its tip, two round black eyes, his mouth wide open rapping. ' +
+      'A big long floppy brown ear (#8a6448) hangs straight down from the back of his head to his shoulder. ' +
+      'On top of the head a tall soft knitted beanie (#e8922e), round-topped like a dome, as wide as his head, with a thick folded-up cuff in darker orange (#b86a1c) with bold vertical ribs, no brim, no pompom, never pointed. ' +
+      'In his fist a chunky grey microphone (#6a6e76) with a big round light grey ball head, held up under his open mouth; his other arm flung out behind him. ' +
+      'Cream fur (#f1dfb8). An orange tee, dark orange shorts, stick-thin arms and legs, big white trainers (#e8e4dc). A narrow strip of plain brown cardboard edge (#b8946a) along the back of his outline, the thickness of the card.',
+    worn: 'he is a flat cardboard shop standee come loose: a thick strip of plain brown cardboard edge (#b8946a) shows along the whole back of his outline, the thickness of the cut-out, so he is plainly flat card; a crisp fold crease runs straight across his body at the chest, the card kinked a little there; a big torn bite is missing from the card at the edge of his shorts, showing the rough brown card inside. The tall beanie, the floppy brown ear, the snout, the brown nose, the open mouth and the grey microphone with its round light grey ball head do not change.',
   },
   limbless: {
     // The nod, each part of the read at race size: the gaps where the arms and legs should be (the read in
