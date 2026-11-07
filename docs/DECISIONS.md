@@ -102,7 +102,7 @@ Every game design decision, preference and direction the owner has given, groupe
 - **A brawl round aims for 15–30 s (from 20–40), and item use counts per minute of fighting, not per round.** "Yes, 15–30 s"
   2026-11-06 · `done` (bare 16.5 s, placed 18.2 s; uses 24.1 / 20.5 a minute) · MODES.md → Brawl, `BRAWL_ROUNDS` (src/game/expectations.ts)
 - **Brawl is won by knocking people out, not by hiding: knockouts pay, each hit you take throws you farther (fresh each bout), and a couple of weapons reach from range.** "you shouldn't be able to win by just standing around" / "maybe just make it easier to get knocked out" / "or we need more weapons or something?" / "Yes, all three"
-  2026-11-06 · `in progress` (an earlier slag waits on these) · MODES.md → Brawl
+  2026-11-06 · `in progress`: knockouts pay 5 and the last one standing 5 (`scoreKnockouts`; a still seat wins 0 of 6 matches, from 2) `done`; hits build up a quarter each, up to six (`RunRules.buildup`) `done`, its smoulder look being redrawn; two ranged weapons in progress. An earlier slag waits on these · MODES.md → Brawl
 - **Brawl's hazards are amped up: its set pieces are things that kill or knock, more of them, near the ledges.** "we may need to amp up the hazards in brawl"
   2026-11-06 · `done` (`setPieceRoles`: hazards and utility only; arenas stand 5.8 of 6, factory 2.6 → 5.5; stand cells with no way to die within 3 tiles 52 → 14%; nothing shoots into a spawn) · MODES.md → Brawl, `src/gen/level/builders/arena.ts`
 - **A brawl's arena is deadly by default.** "also the arena could be a little deadly by default, thats a thing we can tweak"
