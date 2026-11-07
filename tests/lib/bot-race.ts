@@ -400,7 +400,6 @@ function playRound(seed: number, m: Match, bots: BotSeats, { at = 15 * 60, limit
     const before = run.runners.map((r) => r.items.bonkCredit);
     m.step(bots.frames(m));
     const hitBy = new Map<number, string>();
-    const got = new Map<number, string>();
     for (const e of m.drainEvents())
       if (e.type === 'item' && e.what === 'use') {
         uses[e.kind] = (uses[e.kind] ?? 0) + 1;
@@ -410,11 +409,10 @@ function playRound(seed: number, m: Match, bots: BotSeats, { at = 15 * 60, limit
         }
       } else if (e.type === 'item' && e.what === 'pickup') {
         pickups++;
-        got.set(e.slot, e.kind);
         parcel.delete(e.slot);
       } else if (e.type === 'item' && e.what === 'hit' && e.kind === 'parcel') {
-        // A Hand-Me-Down lands: what it handed over is the pickup just before it.
-        const kind = got.get(e.slot);
+        // A Hand-Me-Down lands: what it handed over is in their hands now.
+        const kind = run.runners.find((r) => r.slot === e.slot)?.items.held?.kind;
         if (kind) {
           handed++;
           parcel.set(e.slot, kind);

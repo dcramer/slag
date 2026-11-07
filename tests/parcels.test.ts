@@ -7,15 +7,16 @@ import { type Level, T_SOLID } from '../src/sim/level';
 import type { ParcelRules } from '../src/sim/parcels';
 import { bodyAtCell } from '../src/sim/physics';
 import { RACE_RUN, RunWorld, type RunRules } from '../src/sim/run';
-import { screenEdges } from '../src/sim/screen';
+import { screenEdges, type ScreenRules } from '../src/sim/screen';
 import { type GameEvent, NO_INPUT } from '../src/sim/types';
 
 /** Hand-Me-Downs (src/sim/parcels.ts): a parcel from the top of the screen for whoever is far behind with empty hands. */
 
 const FLOOR = 24;
-/** A shelf across columns 10..20 at row 3, the leader's; a ledge over 30..34 at row 9, six rows under it. */
+/** A shelf across columns 10..20 at row 3, the leader's; a ledge over 30..34 at row 9, six rows under it; a step over 4..8 at row 15, twelve under. */
 const SHELF = 3;
 const LEDGE = 9;
+const STEP = 15;
 const DEAL: ParcelRules['deal'] = { chase: ['block'], lead: ['shield'], behind: [{ rows: 12, deal: ['grapple'] }] };
 const PARCELS: ParcelRules = { rows: 12, wait: 30, rest: 120, after: 0, deal: DEAL };
 
@@ -24,6 +25,7 @@ function level(): Level {
   for (let y = FLOOR; y < LEVEL_H; y++) for (let x = 0; x < LEVEL_W; x++) tiles[y * LEVEL_W + x] = T_SOLID;
   for (let x = 10; x <= 20; x++) tiles[SHELF * LEVEL_W + x] = T_SOLID;
   for (let x = 30; x <= 34; x++) tiles[LEDGE * LEVEL_W + x] = T_SOLID;
+  for (let x = 4; x <= 8; x++) tiles[STEP * LEVEL_W + x] = T_SOLID;
   return {
     seed: 1,
     w: LEVEL_W,
@@ -43,14 +45,17 @@ function level(): Level {
  * Past the countdown: the leader (0) on the shelf, a chaser (1) on the ledge 6 rows under, and two (2, 3) on the floor
  * 21 rows under, 3 holding something. Rising Slag's screen over them, the hand-outs on `parcels`.
  */
-function race(parcels: ParcelRules | null = PARCELS): { run: RunWorld; events: GameEvent[] } {
-  const rules: RunRules = { ...RACE_RUN, flag: false, ahead: 'height', screen: MODES.slag.run.screen, ...(parcels && { parcels }) };
-  const at: [number, number][] = [
+function race(
+  parcels: ParcelRules | null = PARCELS,
+  screen: ScreenRules = MODES.slag.run.screen!,
+  at: [number, number][] = [
     [15, SHELF - 1],
     [32, LEDGE - 1],
     [6, FLOOR - 1],
     [40, FLOOR - 1],
-  ];
+  ],
+): { run: RunWorld; events: GameEvent[] } {
+  const rules: RunRules = { ...RACE_RUN, flag: false, ahead: 'height', screen, ...(parcels && { parcels }) };
   const run = new RunWorld(level(), [], [0, 1, 2, 3], 0, undefined, [], false, rules);
   at.forEach(([tx, ty], i) => (run.runners[i].body = bodyAtCell(tx, ty)));
   giveItem(run.runners[3], 'block');
@@ -92,7 +97,6 @@ describe('Hand-Me-Downs', () => {
     expect(frames).toBeLessThan(90);
     expect(far.items.held?.kind).toBe('grapple');
     expect(parcelEvents(events, 'hit').map((e) => e.slot)).toEqual([2]);
-    expect(events.some((e) => e.type === 'item' && e.what === 'pickup' && e.kind === 'grapple' && e.slot === 2)).toBe(true);
   });
 
   it('pass over the leader, a chaser close behind, and a climber with full hands', () => {
@@ -117,6 +121,31 @@ describe('Hand-Me-Downs', () => {
     }
     step(run, events);
     expect(run.parcels!.falling.map((p) => p.target)).toEqual([2]);
+  });
+
+  it('pass over a climber the screen has lost, and are lost with one who drops off its bottom on the way', () => {
+    // A screen 20 rows tall: its bottom edge 12 rows under the leader, so the step is in view and the floor isn't. A
+    // long grace, so nobody goes out to it here.
+    const short: ScreenRules = { ...MODES.slag.run.screen!, rows: 20, grace: 99_999 };
+    const { run, events } = race(PARCELS, short, [
+      [15, SHELF - 1],
+      [32, LEDGE - 1],
+      [6, STEP - 1],
+      [40, FLOOR - 1],
+    ]);
+    // Empty-handed on the floor, 21 rows behind, but under the screen's bottom edge.
+    run.runners[3].items.held = null;
+    for (let k = 0; k < PARCELS.wait; k++) step(run, events);
+    expect(run.screen!.under[3]).toBeGreaterThan(0);
+    expect(run.parcels!.falling.map((p) => p.target)).toEqual([2]);
+    // Its climber drops off the bottom while it falls: gone, and nothing in their hands.
+    run.runners[2].body = bodyAtCell(20, FLOOR - 1);
+    for (let k = 0; k < 90; k++) step(run, events);
+    expect(parcelEvents(events, 'fizzle').map((e) => e.slot)).toEqual([2]);
+    expect(parcelEvents(events, 'hit')).toHaveLength(0);
+    expect(run.runners[2].items.held).toBeNull();
+    expect(parcelEvents(events, 'warn').map((e) => e.slot)).toEqual([2]);
+    expect(run.runners[3].items.held).toBeNull();
   });
 
   it('are gone with the climber they were for', () => {

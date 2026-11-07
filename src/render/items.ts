@@ -849,24 +849,24 @@ const KIND_FX: Record<string, (fx: Fx, e: ItemEvent, shake: (k: number) => void)
     fx.add('ring', e.x, e.y + 6, 0, 0, { h: 335, s: 90, l: 70 }, 18, 0.3);
     fx.burst('spark', e.x, e.y + 6, 10, 120, [{ h: 335, s: 90, l: 75 }, WHITE], 1, 0.4);
   },
-  // A Hand-Me-Down lands on its climber's head: a pop of brown paper and twine.
+  // A Hand-Me-Down lands on its climber's head: torn scraps of its brown paper, not sparkle.
   'hit:parcel'(fx, e, shake) {
-    fx.add('ring', e.x, e.y, 0, 0, { h: 32, s: 44, l: 70 }, 16, 0.25);
     fx.burst(
-      'confetti',
+      'debris',
       e.x,
       e.y - 2,
-      10,
-      110,
+      9,
+      120,
       [
         { h: 32, s: 44, l: 62 },
-        { h: 32, s: 30, l: 80 },
-        { h: 24, s: 36, l: 34 },
+        { h: 30, s: 40, l: 52 },
+        { h: 34, s: 30, l: 74 },
       ],
-      1.1,
-      0.7,
-      60,
+      1.3,
+      0.6,
+      140,
     );
+    fx.burst('dust', e.x, e.y - 1, 4, 40, [{ h: 32, s: 20, l: 80 }], 1.2, 0.35);
     shake(1.5);
   },
   'use:tremor'(fx, e) {

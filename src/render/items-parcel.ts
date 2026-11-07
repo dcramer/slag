@@ -41,13 +41,22 @@ export function drawParcels(rc: RC, run: RunWorld, lapY: number, colour: (slot: 
     const x = p.x;
     const y = p.y - PARCEL_HALF + lapY;
     const sway = Math.sin(rc.t * 7 + p.born) * 0.12;
-    // Speed lines trailing up off it, on the layer that gets no ink, longer the faster it falls.
-    const len = Math.min(26, 6 + p.vy * 0.03);
-    rc.bg.fillStyle = css(KRAFT, 20, 0.7);
-    for (let k = 0; k < 3; k++) {
-      const lx = x - 4 + k * 4 + (hash2(k, p.born, 7) - 0.5) * 1.4;
-      const top = y - PARCEL_HALF - 6 - len * (k === 1 ? 1 : 0.7);
-      line(rc.bg, lx, top, lx, y - PARCEL_HALF - 5, { w: 0.8, seed: k + p.born, taper: [0.9, 0.1], press: 0 });
+    // Speed lines trailing up off its sides (never off the loop, where they'd read as strings it hangs from), short and
+    // fading out upward, on the layer that gets no ink; longer the faster it falls.
+    const len = Math.min(11, 3 + p.vy * 0.012);
+    const h = PARCEL_HALF;
+    for (const [k, ox] of [
+      [0, -h - 1.6],
+      [1, h + 1.6],
+      [2, -h + 2.2],
+    ] as const) {
+      const lx = x + ox + (hash2(k, p.born, 7) - 0.5) * 0.8;
+      const from = y - (k === 2 ? h + 1 : 1);
+      const l = len * (k === 2 ? 0.6 : 1);
+      for (let n = 0; n < 3; n++) {
+        rc.bg.fillStyle = css(KRAFT, 20, 0.6 - n * 0.2);
+        line(rc.bg, lx, from - (l * n) / 3, lx, from - (l * (n + 1)) / 3, { w: 0.8, seed: k + n + p.born, taper: [0, 0], press: 0 });
+      }
     }
     s.save();
     s.translate(x, y);

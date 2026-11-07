@@ -112,11 +112,11 @@ const SLAG_DEAL: ItemDeal = {
 
 /**
  * Rising Slag's Hand-Me-Downs (sim/parcels.ts; owner decision: "Add items, no boxes"): a climber `rows` or more under the
- * leader, hands empty for `wait` frames on end, gets a parcel dropped from the top of the screen holding what the
+ * leader, still on the screen, hands empty for `wait` frames on end, gets a parcel dropped from the top of the screen holding what the
  * far-behind table deals, and another `rest` frames after it lands if still that far back with nothing in hand.
  * Measured in docs/MODES.md → Rising Slag, 11.
  */
-const SLAG_PARCELS: ParcelRules = { rows: 12, wait: 60, rest: 6 * 60, after: 5 * 60, deal: SLAG_DEAL };
+const SLAG_PARCELS: ParcelRules = { rows: 12, wait: 60, rest: 8 * 60, after: 5 * 60, deal: SLAG_DEAL };
 
 /**
  * What a brawl starts everyone holding (`RunRules.armed`), so the first seconds are a fight: something from the stands'

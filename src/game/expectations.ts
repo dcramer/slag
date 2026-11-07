@@ -59,9 +59,9 @@ export const PASS_BANDS: Partial<Record<ModeId, Record<BotLevel, Record<Difficul
  * and 54, with 2.4 lead changes (2.6 with the deal in every hand); 512 seeds: 52, 43, 52 and 2.3, 2.7, 2.4. With the
  * deal graded by how far behind (`ItemDeal.behind`, game/modes.ts): 53, 45 and 54 and 2.4, 2.8, 2.3 lead changes;
  * 512 seeds: 47, 40, 52 and 2.4, 2.6, 2.4. With Hand-Me-Downs (sim/parcels.ts: a parcel from the top of the screen
- * for whoever is 12 rows behind with empty hands): 47, 45 and 54 and 3.0, 2.9, 2.3 lead changes; 512 seeds: 42, 43,
- * 52 and 3.0, 2.8, 2.4 (`bare` doesn't move: its hands never empty). `leads` was [1.9, 3.1]: its floor rose to 2.5,
- * which boxes alone (2.4) fail. The target, from the lead-camera racer, is the early leader winning about half the time
+ * for whoever is 12 rows behind, on the screen, with empty hands): 40, 48 and 54 and 3.0, 2.8, 2.3 lead changes; 512
+ * seeds: 40, 44, 52 and 3.0, 2.7, 2.4 (`bare` doesn't move: its hands never empty). `leads` was [1.9, 3.1]: its floor
+ * rose to 2.5, which boxes alone (2.4) fail; 3.0 sits near its top. The target, from the lead-camera racer, is the early leader winning about half the time
  * (docs/MODES.md); these bands only catch a regression.
  */
 export const LEAD_HOLDS = {

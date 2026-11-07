@@ -189,29 +189,43 @@ export const shots: Scenarios = {
           },
           [Number(under), flag('underall')] as const,
         );
-      // `--parcel` (Rising Slag): on from there to the first Hand-Me-Down (sim/parcels.ts) well on its way down, shot,
-      // then shot again as it lands on whoever it's for.
+      // `--parcel` (Rising Slag): on from there to a Hand-Me-Down (sim/parcels.ts) well on its way down, shot, then shot
+      // again a twelfth of a second after it lands, its scraps flying off and the item in the climber's hands. A parcel
+      // whose climber goes out, drops off the screen or has used the item by then is passed over for the next one.
       if (flag('parcel')) {
         const name = `race-${seed}${opt('theme') ? `-${opt('theme')}` : ''}-parcel`;
-        const falling = await page.evaluate(() => {
-          const d = (window as any).slagDebug;
-          for (let f = 0; f < 90 * 60 && d.match.phase === 'run'; f++) {
-            const p = d.match.run.parcels?.falling[0];
-            if (p && d.match.run.frame - p.born >= 24) return true;
-            d.step(1);
-          }
-          return false;
-        });
-        if (!falling) throw new Error('no Hand-Me-Down fell in 90 s: --parcel needs a Rising Slag race with someone far behind (--game slag)');
-        await step(1);
-        await snap(name);
-        await page.evaluate(() => {
-          const d = (window as any).slagDebug;
-          for (let f = 0; f < 120 && d.match.run.parcels.falling.length; f++) d.step(1);
-        });
-        await step(3);
-        await snap(`${name}-landed`);
-        return;
+        for (let tries = 0; tries < 12; tries++) {
+          const target = await page.evaluate(() => {
+            const d = (window as any).slagDebug;
+            for (let f = 0; f < 90 * 60 && d.match.phase === 'run'; f++) {
+              const run = d.match.run;
+              const p = run.parcels?.falling[0];
+              if (p && run.frame - p.born >= 24 && !run.screen.under[p.target]) return p.target;
+              d.step(1);
+            }
+            return -1;
+          });
+          if (target < 0) throw new Error('no Hand-Me-Down fell in 90 s: --parcel needs a Rising Slag race with someone far behind (--game slag)');
+          await step(1);
+          await snap(name);
+          const held = await page.evaluate((i) => {
+            const d = (window as any).slagDebug;
+            for (let f = 0; f < 120 && d.match.run.parcels.falling.some((p: any) => p.target === i); f++) d.step(1);
+            const got = d.match.run.runners[i].items.held;
+            if (!got) return false;
+            const was = { kind: got.kind, uses: got.uses };
+            d.step(5);
+            const run = d.match.run;
+            const r = run.runners[i];
+            // Still in hand and not used yet (a Queue Jumper has two goes), its line not out.
+            const out = run.items.hooks.some((h: any) => h.owner === i) || run.items.climbs.some((c: any) => c.owner === i);
+            return !!(r.alive && r.items.held?.kind === was.kind && r.items.held.uses === was.uses && !out && !run.screen.under[i]);
+          }, target);
+          if (!held) continue;
+          await snap(`${name}-landed`);
+          return;
+        }
+        throw new Error('no Hand-Me-Down landed in view in 12 tries');
       }
       // The sim frame alone isn't the same picture: camera smoothing depends on frames rendered before the pause.
       await page.evaluate(
