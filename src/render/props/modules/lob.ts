@@ -98,8 +98,8 @@ function segment(rc: RC, x: number, y: number, r: number, i: number, heading: nu
 const SURFACING = 40;
 
 /**
- * At rest, between its leaps, the serpent's back breaks the lava between its ends: three crusted humps, a lava seam
- * along each, rippling the surface, drifting to and fro and bobbing; the lava over it glows. So a pit with a serpent
+ * At rest, between its leaps, the serpent's back breaks the lava between its ends: three humps of dark crust, cracked
+ * with lava, rippling the surface, drifting to and fro and bobbing; the lava round it glows. So a pit with a serpent
  * in it never reads as plain lava. `vis` 0..1 is how far it has surfaced: it sinks before the boil, which still
  * rises out of still lava.
  */
@@ -118,7 +118,7 @@ function lurk(rc: RC, a: readonly number[], b: readonly number[], r: number, vis
     const hr = r * (1.2 - i * 0.22);
     const x = mid + dir * (1 - i) * gap;
     const bob = Math.sin(rc.frame * 0.06 + i * 1.7) * r * 0.1;
-    humps.push([x, y + hr * (1.05 - 0.95 * vis) + bob, hr]);
+    humps.push([x, y + hr * (1.05 - 1.1 * vis) + bob, hr]);
   }
   // Only what's above the surface shows.
   s.save();
@@ -126,25 +126,41 @@ function lurk(rc: RC, a: readonly number[], b: readonly number[], r: number, vis
   s.rect(lo - span, y - r * 3, span * 3, r * 3 + 0.5);
   s.clip();
   for (const [i, [x, hy, hr]] of humps.entries()) {
+    // A lumpy rock back with a heavy edge: the cel pass eats a thin one and leaves a glossy dome.
     s.fillStyle = inkFor(CRUST);
-    blob(s, x, hy, hr + 0.6, 23 + i, 1, 0.12);
+    blob(s, x, hy, hr + 1.4, 23 + i, 1, 0.22);
     s.fill();
-    s.fillStyle = css(CRUST, 2);
-    blob(s, x, hy, hr, 23 + i, 1, 0.12);
+    s.fillStyle = css(CRUST, -3);
+    blob(s, x, hy, hr, 23 + i, 1, 0.22);
     s.fill();
-    // The seam between its plates, glowing along the top of the back.
+    // Crust plates across the top, each its own shade.
+    for (let k = -1; k <= 1; k++) {
+      s.fillStyle = css(CRUST, k * 3 - 1);
+      blob(s, x + k * hr * 0.48, hy - hr * (0.5 - Math.abs(k) * 0.12), hr * 0.42, 61 + i * 3 + k, 1, 0.3);
+      s.fill();
+    }
+    // A crack up between the plates from the waterline, jagged and forking, and a short one beside it: lava showing
+    // through the crust, never a slit across it.
     s.fillStyle = css(HOT, 0, vis);
-    line(s, x - hr * 0.55, hy - hr * 0.62, x + hr * 0.5, hy - hr * 0.7, { w: 1.5, seed: 41 + i, taper: [0.3, 0.3], press: 0 });
+    const side = i % 2 ? 1 : -1;
+    const cx = x + side * hr * 0.2;
+    const o = { w: 0.9, taper: [0.15, 0.35] as [number, number], press: 0 };
+    const p1: [number, number] = [cx + side * hr * 0.18, hy - hr * 0.35];
+    const p2: [number, number] = [cx - side * hr * 0.05, hy - hr * 0.62];
+    line(s, cx, y - 1.5, p1[0], p1[1], { ...o, seed: 71 + i * 4 });
+    line(s, p1[0], p1[1], p2[0], p2[1], { ...o, w: 0.8, seed: 72 + i * 4 });
+    line(s, p2[0], p2[1], cx - side * hr * 0.22, hy - hr * 0.86, { ...o, w: 0.6, seed: 73 + i * 4 });
+    line(s, p2[0], p2[1], cx + side * hr * 0.42, hy - hr * 0.74, { ...o, w: 0.6, seed: 74 + i * 4 });
+    line(s, x - side * hr * 0.55, y - 1.5, x - side * hr * 0.46, hy - hr * 0.42, { ...o, w: 0.7, seed: 75 + i * 4 });
   }
   s.restore();
   for (const [i, [x, , hr]] of humps.entries()) {
-    // The lava it pushes aside: a bright lip either side where the back breaks the surface.
+    // The lava it pushes aside: a bright lip either side where the back breaks the surface. No glow: the crust stays
+    // dark, and only its cracks and the lava are hot.
     s.fillStyle = css(HOT, 0, 0.8 * vis);
     for (const side of [-1, 1])
-      line(s, x + side * hr * 0.7, y - 0.4, x + side * hr * 1.35, y - 0.2, { w: 0.9, seed: 51 + i * 2 + side, taper: [0.2, 0.4], press: 0 });
-    glowDot(rc.g, x, y - 1, hr * 1.6, LAVA, 0.2 * vis);
+      line(s, x + side * hr * 0.9, y - 0.4, x + side * hr * 1.5, y - 0.2, { w: 0.9, seed: 51 + i * 2 + side, taper: [0.2, 0.4], press: 0 });
   }
-  light(rc, mid, y - 4, 56, LAVA, 0.25 * vis);
 }
 
 function serpent(rc: RC, m: Lob, d: DrawCtx) {
