@@ -8,7 +8,9 @@ import type { ItemDeal } from '../../sim/items/types';
  * arena), as SpeedRunners' tracks have their item boxes: placed by the level, not by players, so every round has
  * items. Each hangs over a floor where someone standing under it can knock it from below, a few apart, and round a
  * loop off the seam's band. They deal by rank from the mode's table (`ItemDeal`, sim/props/modules/mystery.ts): catch-up
- * items to whoever is behind, a defensive one to the leader.
+ * items to whoever is behind, a defensive one to the leader. A level whose profile asks for `stands` (a brawl's) gets
+ * item stands on the same spots instead, each on the floor under where its box would hang (sim/props/modules/stand.ts):
+ * the party brawler's weapon spawners, showing what they hold, taken by walking in, filling again a few seconds on.
  */
 
 /** Rows of shaft per box: about one every two storeys. */
@@ -22,18 +24,34 @@ const CLOSE_APART = 5;
 /** Frames a loop's box takes to fill again: about a lap's worth of climbing behind you. */
 const REFILL = 5 * 60;
 
-/** A loop's box as a level piece: one solid crate cell at (tx, ty) that refills forever and deals by rank from `deal`. */
-function boxAt(tx: number, ty: number, seed: number, deal: ItemDeal): PropDef {
+/**
+ * Frames a stand takes to show a fresh item once one is taken: where everyone's second weapon comes from, the starter
+ * being good for one go (game/modes.ts). Four Normal bots on 96 bare arenas: at 5 s, 43 rounds in 15–30 s and 41
+ * under 15; at 3 s, 33 and 52 (rounds 17.5 s); at 8 s, 35 and 44, more running past 30 s.
+ */
+const STAND_REFILL = 5 * 60;
+
+/**
+ * A level's box as a level piece: one solid crate cell at (tx, ty) that refills forever and deals by rank from `deal`;
+ * or with `stand`, an item stand on the floor two rows under it, holding what `deal` deals. Both are keyed `loop-box`:
+ * a builder's `boxes` (and everything that counts them) counts either.
+ */
+function boxAt(tx: number, ty: number, seed: number, deal: ItemDeal, stand: boolean): PropDef {
+  const cell: [number, number] = stand ? [tx, ty + 2] : [tx, ty];
   return {
     key: 'loop-box',
-    name: 'Loot Box',
+    name: stand ? 'Weapon Stand' : 'Loot Box',
     maker: 'the level',
     archetype: 'mystery',
     role: 'utility',
     style: { metal: 'steel', trim: 'none', hue: 0, glowHue: 0, woodHue: 30 },
     motion: { type: 'none' },
-    modules: [{ type: 'mystery', cells: [[tx, ty]], pool: [...deal.chase], uses: 0, refill: REFILL, look: 'crate', seed, deal }],
-    footprint: [[tx, ty]],
+    modules: [
+      stand
+        ? { type: 'stand', cells: [cell], pool: [...deal.chase], refill: STAND_REFILL, seed }
+        : { type: 'mystery', cells: [cell], pool: [...deal.chase], uses: 0, refill: REFILL, look: 'crate', seed, deal },
+    ],
+    footprint: [cell],
   };
 }
 
@@ -70,6 +88,8 @@ export function loopBoxes(
    * what they pop, nearest the spawns' tier first, in mirrored pairs. Absent (a loop): over any floor.
    */
   stands?: ReadonlySet<number>,
+  /** Item stands on the floor under each spot rather than boxes hanging there (the profile's `stands`). */
+  asStands = false,
 ): PlacedProp[] {
   const loop = level.loop;
   const taken = new Set(pieces.flatMap((p) => footprintCells(p).map(([x, y]) => y * level.w + x)));
@@ -87,7 +107,7 @@ export function loopBoxes(
   const apart = (b: PlacedProp, x: number, y: number) =>
     loop ? Math.abs(b.def.footprint[0][1] - y) >= MIN_APART : Math.abs(b.def.footprint[0][0] - x) >= MIN_APART;
   const out: PlacedProp[] = [];
-  const at = (x: number, y: number): PlacedProp => ({ uid: 0, def: boxAt(x, y, rng.int(0, 1 << 20), deal), owner: -1, tx: 0, ty: 0, rot: 0 });
+  const at = (x: number, y: number): PlacedProp => ({ uid: 0, def: boxAt(x, y, rng.int(0, 1 << 20), deal, asStands), owner: -1, tx: 0, ty: 0, rot: 0 });
   if (stands) {
     // An arena's ends are mirrored, and so are its boxes: a pair, one each side, then one in the middle, so neither
     // end is nearer its first item. With no spot in the middle, another pair. `add(x, y, true)` hangs one alone.

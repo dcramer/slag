@@ -302,7 +302,7 @@ export function generateLevel(seed: number, themeOverride?: ThemeId, profileOver
         ...(live && landmark ? { standing: fixed, avoid: landmark.air, family: live.family } : {}),
       });
       // (The placer already avoids these cells; this is a safety net. Keep uids contiguous, the landmark's first.)
-      // A level that asks for boxes gets mystery boxes of its own, after the builder and its set pieces (./loop-boxes.ts).
+      // A level that asks for boxes gets mystery boxes (or item stands) of its own, after the builder and its set pieces (./loop-boxes.ts).
       const kept = [...fixed, ...pieces.filter(clearOfBridges)];
       // A loop that asks for gates gets them across its shaft before the boxes, which keep off their rows (./loop-gates.ts).
       const gated = profile.gates ? loopGates(level, kept, keep) : null;
@@ -310,7 +310,9 @@ export function generateLevel(seed: number, themeOverride?: ThemeId, profileOver
       const fitted = [...kept, ...(gated?.pieces ?? [])];
       // An arena's boxes hang only over floors the field can get to; a loop's every floor is on the climb.
       const stands = profile.loop ? undefined : new Set(cache.analyze(level, false).cells);
-      const boxes = profile.boxes ? loopBoxes(level, fitted, keep, new Rng(deriveSeed(seed, lab(`loop-boxes:${attempt}`))), profile.boxes, stands) : [];
+      const boxes = profile.boxes
+        ? loopBoxes(level, fitted, keep, new Rng(deriveSeed(seed, lab(`loop-boxes:${attempt}`))), profile.boxes, stands, !!profile.stands)
+        : [];
       level.setPieces = [...fitted, ...boxes].map((p, i) => ({ ...p, uid: SET_PIECE_UID + i }));
       // A field that starts at both ends keeps coming back to them: no gun's shot may get there.
       for (let shots = profile.ends ? shotsIntoSpawns(level) : null; shots?.size; shots = shotsIntoSpawns(level))

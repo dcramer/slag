@@ -1,7 +1,7 @@
 import type { Rng } from '../../core/rng';
 import type { Personality } from '../personality';
 import { T_SOLID } from '../../sim/level';
-import { floorAt, ITEM_TACTICS, tile } from '../tactics';
+import { floorAt, ITEM_TACTICS, KNOCKS, tile } from '../tactics';
 import type { BrainView, Intent, SelfSense } from '../types';
 
 /**
@@ -43,12 +43,14 @@ const TOUCH = 0.6;
 const standable = (v: BrainView, x: number, y: number) => tile(v, x, y) === 0 && floorAt(v, x, y + 1);
 /** Frames a spot it turned down stays turned down: round a loop it comes past again, and its boxes refill. */
 const PASS_FRAMES = 3 * 60;
+/** Tiles nearer a stand holding something that knocks counts, against one holding something that doesn't: it would rather fight with it. */
+const UPGRADE = 4;
 
-/** Where it's going for something: a stand cell, and the box over it to knock, if any. */
+/** Where it's going for something: a stand cell, and the box over it to knock (or the item stand in it), if any. */
 interface Errand {
   tx: number;
   ty: number;
-  box: { tx: number; ty: number; hands: boolean } | null;
+  box: { tx: number; ty: number; hands: boolean; stand: boolean } | null;
   until: number;
   hops: number;
 }
@@ -95,10 +97,10 @@ export class ItemPlay {
     }
     if (e.box) {
       const ready = v.boxes.some((b) => b.tx === e.box!.tx && b.ty === e.box!.ty && b.ready);
-      // Popped: whatever it dropped is the next errand.
+      // Popped (or someone took what the stand held): whatever it dropped is the next errand.
       if (!ready) return (this.errand = null);
-      // Under it: hop until it pops, carrying on through each hop's air.
-      if ((e.hops > 0 && !me.grounded) || (me.tx === e.tx && me.ty === e.ty && me.grounded)) {
+      // Under it: hop until it pops, carrying on through each hop's air. A stand needs only walking into.
+      if (!e.box.stand && ((e.hops > 0 && !me.grounded) || (me.tx === e.tx && me.ty === e.ty && me.grounded))) {
         if (++e.hops > HOP_FRAMES) return (this.errand = null);
         return { do: 'hop', tx: e.tx };
       }
@@ -130,23 +132,30 @@ export class ItemPlay {
     const boxes = climbing && me.rank === 0 ? [] : v.boxes;
     for (const b of boxes) {
       if (!b.ready) continue;
+      // A stand is on the floor in its own cell: walk in.
+      if (b.stand) {
+        if (near(b.tx, b.ty))
+          spots.push({ tx: b.tx, ty: b.ty, box: { tx: b.tx, ty: b.ty, hands: true, stand: true }, worth: b.kind && KNOCKS[b.kind] ? UPGRADE : 0 });
+        continue;
+      }
       // The stand cell under it: open cells down to a floor, a jump's head room at most.
       for (let k = 1; k <= BOX_HANG; k++) {
         const y = b.ty + k;
         if (tile(v, b.tx, y) !== 0) break;
         if (floorAt(v, b.tx, y + 1)) {
-          if (near(b.tx, y)) spots.push({ tx: b.tx, ty: y, box: { tx: b.tx, ty: b.ty, hands: b.hands } });
+          if (near(b.tx, y)) spots.push({ tx: b.tx, ty: y, box: { tx: b.tx, ty: b.ty, hands: b.hands, stand: false } });
           break;
         }
       }
     }
-    // Each new spot priced costs the route a field (tens of ms), so it prices one a look, nearest first, and
-    // remembers the ones it turned down.
+    // Each new spot priced costs the route a field (tens of ms), so it prices one a look, nearest first (a stand with
+    // something better on it counting nearer), and remembers the ones it turned down.
     const fresh = spots.filter((s) => (this.passed.get(key(s, v.level.w)) ?? 0) <= this.frame);
-    fresh.sort((a, b) => Math.abs(a.tx - me.tx) + Math.abs(a.ty - me.ty) - (Math.abs(b.tx - me.tx) + Math.abs(b.ty - me.ty)));
+    const far = (s: Spot) => Math.abs(s.tx - me.tx) + Math.abs(s.ty - me.ty) - (s.worth ?? 0);
+    fresh.sort((a, b) => far(a) - far(b));
     const s = fresh[0];
     if (!s) return null;
-    if (this.worth(v, me, s)) return { ...s, until: this.frame + ERRAND_FRAMES, hops: 0 };
+    if (this.worth(v, me, s)) return { tx: s.tx, ty: s.ty, box: s.box, until: this.frame + ERRAND_FRAMES, hops: 0 };
     this.passed.set(key(s, v.level.w), this.frame + PASS_FRAMES);
     return null;
   }
@@ -166,5 +175,6 @@ export class ItemPlay {
   }
 }
 
-type Spot = Pick<Errand, 'tx' | 'ty' | 'box'>;
+/** A spot to fetch from, and how many tiles nearer it counts for what it holds. */
+type Spot = Pick<Errand, 'tx' | 'ty' | 'box'> & { worth?: number };
 const key = (s: Spot, w: number) => (s.box ? -1 - (s.box.ty * w + s.box.tx) : s.ty * w + s.tx);

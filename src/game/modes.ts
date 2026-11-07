@@ -8,7 +8,7 @@ import { type CrateMix, RACE_CRATE } from '../gen/props';
 import type { ThemeId } from '../themes';
 import type { ShoveRules } from '../sim/collide';
 import { TILE } from '../sim/constants';
-import { type BuildUp, feetUp, RACE_RUN, type RunRules, type RunWorld } from '../sim/run';
+import { type Armed, type BuildUp, feetUp, RACE_RUN, type RunRules, type RunWorld } from '../sim/run';
 import { type RoundResult, scoreKnockouts, scoreRound, scoreSurvival, type Standing } from './scoring';
 
 export type ModeId = 'race' | 'slag' | 'brawl';
@@ -85,6 +85,22 @@ const BRAWL_SHOVE: ShoveRules = { share: 0.5, carry: true, check: 180 };
  */
 const BRAWL_BUILDUP: BuildUp = { per: 0.25, max: 6 };
 
+/**
+ * What a brawl starts everyone holding (`RunRules.armed`), so the first seconds are a fight: something from the stands'
+ * deal, good for one go, and then to a stand for more. With an item's own uses, half the bare rounds with bots ran under
+ * 15 s (47 of 96) and 31 in 15–30 s; one go, 41 and 43.
+ */
+const BRAWL_ARMED: Armed = { deal: BRAWL_ITEMS, uses: 1 };
+
+/**
+ * A brawl's slag (`LevelProfile.tide`): the last resort that ends a stalemate, not what does the killing. It starts
+ * `deep` rows under the arena, out of sight, so till then the drop is only a drop, and pours up `wait` s after GO at
+ * `speed` tiles/s gaining `gain` tiles/s², in view about 4 s later. Pooled in the drop from GO, it took 101 of 144
+ * deaths on the bare arena, nearly all falls into it; from under, 8, the rest knocks into the drop, a hazard or off the
+ * side. Waiting 30 s left as many rounds in 15–30 s and stalemates running longer.
+ */
+const BRAWL_TIDE = { wait: 25, speed: 0.4, gain: 0.04, deep: 2 };
+
 export const MODES: Record<ModeId, ModeDef> = {
   race: {
     label: 'Race',
@@ -138,7 +154,7 @@ export const MODES: Record<ModeId, ModeDef> = {
    */
   brawl: {
     label: 'Brawl',
-    // 25 s in, slag pours in from below and the arena closes in, so a round always comes to a fight; 60 s is the end.
+    // Late in a round slag pours in from below and the arena closes in, so a stalemate always comes to an end; 60 s is the end.
     profile: {
       // Its own arena in every set: ledges in tiers to the top of the screen, open at the sides (gen/level/builders/arena.ts).
       builder: 'arena',
@@ -153,13 +169,16 @@ export const MODES: Record<ModeId, ModeDef> = {
       hazards: 6,
       danger: 0.9,
       setPieceRoles: ['hazard', 'utility'],
+      // Its boxes are weapon stands, as the party brawler's spawners are: on the floor, showing what they hold, taken by
+      // walking in, a fresh one a few seconds on (gen/level/loop-boxes.ts, sim/props/modules/stand.ts).
       boxes: { chase: [...BRAWL_ITEMS], lead: [...BRAWL_ITEMS] },
-      tide: { wait: 25, speed: 0.4, gain: 0.04 },
+      stands: true,
+      tide: BRAWL_TIDE,
     },
     // Bodies shove hard enough to put someone over an edge (sim/collide.ts `ShoveRules`): a walk moves a bystander at
     // half a walk, whoever is shoved off goes out over the drop, and a run-up into someone who isn't pushing back knocks
     // them like a bump. Everyone in the brawl shares it; a race keeps its own.
-    run: { flag: false, lastStanding: true, ahead: 'none', seconds: 60, shove: BRAWL_SHOVE, buildup: BRAWL_BUILDUP },
+    run: { flag: false, lastStanding: true, ahead: 'none', seconds: 60, shove: BRAWL_SHOVE, buildup: BRAWL_BUILDUP, armed: BRAWL_ARMED },
     // No gap to cross: the crate leans to hazards to knock people into and utility to throw them about.
     crate: { bridges: false, roles: { hazard: 1.8, utility: 1.2, build: 0.4, demolish: 0.5 } },
     camera: 'pack',

@@ -24,6 +24,7 @@ export const PART_INFO: Record<Module['type'], { title: string; blurb: string }>
   deco: { title: 'Scenery', blurb: 'Set dressing. Load-bearing set dressing.' },
   coat: { title: 'Attachment', blurb: 'Paint jobs with consequences.' },
   mystery: { title: 'Mystery crate', blurb: 'Contents may vary. Odds not disclosed.' },
+  stand: { title: 'Weapon stand', blurb: 'Free sample. One per customer, every few seconds.' },
   bomb: { title: 'Demolition', blurb: 'Renovation, the fast way.' },
   pipe: { title: 'Pipe', blurb: 'Sold separately. Works in pairs.' },
   bumper: { title: 'Bumper', blurb: 'Ding ding ding. Extra ball not included.' },
@@ -154,6 +155,9 @@ export function summarize(def: PropDef): string[] {
         out.push(
           `items: ${m.pool.join(', ')} · ${m.uses ? `${m.uses} pop${m.uses > 1 ? 's' : ''} then spent` : 'refills forever'}${m.uses === 1 ? '' : ` · refill ${secs(m.refill)}`}`,
         );
+        break;
+      case 'stand':
+        out.push(`items: ${m.pool.join(', ')} · restocks ${secs(m.refill)} after it's taken`);
         break;
       case 'rotor':
         out.push(`${m.count} platforms on a ${fmt(m.arm, 1)}-tile wheel · ${secs(m.period)} per turn`);

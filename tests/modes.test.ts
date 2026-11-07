@@ -510,6 +510,36 @@ describe('knockout scoring', () => {
   });
 });
 
+describe("a brawl's bouts", () => {
+  const BRAWL = { ...DEFAULT_RULES, mode: 'brawl' as const };
+  /** What each seat holds at GO in a brawl match's first `bouts` bouts on seed 4. */
+  function armed(bouts: number): string[] {
+    const m = new Match(4, 'farm', BRAWL);
+    for (const k of ['kb1', 'kb2', 'kb3']) m.join(k);
+    m.startMatch();
+    const out: string[] = [];
+    for (let b = 0; b < bouts; b++) {
+      // As the match's next bout does (`startBout`): a round of its own, so a race seed of its own.
+      if (b) m.round++;
+      m.startRun();
+      out.push(m.run!.runners.map((r) => `${r.items.held?.kind}:${r.items.held?.uses}`).join());
+    }
+    return out;
+  }
+
+  it('start everyone holding a starter from the stands deal, the same in two matches, drawn again each bout', () => {
+    const a = armed(4);
+    expect(armed(4)).toEqual(a);
+    for (const bout of a)
+      for (const held of bout.split(',')) {
+        const [kind, uses] = held.split(':');
+        expect(MODES.brawl.run.armed!.deal).toContain(kind);
+        expect(Number(uses)).toBe(MODES.brawl.run.armed!.uses);
+      }
+    expect(new Set(a).size).toBeGreaterThan(1);
+  });
+});
+
 describe("a brawl's weather", () => {
   it('never mists the arena: a mist roll comes out clear', () => {
     const seeds = Array.from({ length: 60 }, (_, i) => i + 1)
@@ -525,7 +555,7 @@ describe("a brawl's arena", () => {
   const cases = [1, 2, 3].map((seed) => ({ seed, theme: THEME_IDS[(seed * 4) % THEME_IDS.length] }));
 
   for (const { seed, theme } of cases)
-    it(`seed ${seed} ${theme}: two mirrored ends that reach each other bare, boxes the field gets to, a ledge over the middle`, () => {
+    it(`seed ${seed} ${theme}: two mirrored ends that reach each other bare, stands the field gets to, a ledge over the middle`, () => {
       const lv = generateLevel(seed, theme, MODES.brawl.profile);
       const { w, h } = lv;
       expect(lv.style).toContain(':arena-');
@@ -543,14 +573,13 @@ describe("a brawl's arena", () => {
       expect([...there.reachable].some((k) => Math.floor(k / w) < h / 2)).toBe(true);
       const open = (x: number) => Array.from({ length: h }, (_, y) => lv.tiles[y * w + x]).filter((t) => t === 0).length;
       expect(Math.min(open(0), open(w - 1))).toBeGreaterThan(h / 2);
-      // At least three boxes, a mirrored pair among them, each over a floor the field reaches, with room on top.
-      const boxes = lv.setPieces.filter((p) => p.def.key === 'loop-box').map((p) => p.def.footprint[0]);
-      expect(boxes.length).toBeGreaterThanOrEqual(3);
-      expect(boxes.some(([x, y]) => boxes.some(([mx, my]) => mx !== x && mx === w - 1 - x && my === y))).toBe(true);
-      for (const [x, y] of boxes) {
-        expect(there.reachable.has((y + 2) * w + x), `box ${x},${y}`).toBe(true);
-        expect([lv.tiles[(y - 1) * w + x], lv.tiles[(y - 2) * w + x]]).toEqual([0, 0]);
-      }
+      // At least three item stands, a mirrored pair among them, each on a floor the field reaches.
+      const boxes = lv.setPieces.filter((p) => p.def.key === 'loop-box');
+      expect(boxes.every((p) => p.def.modules[0].type === 'stand')).toBe(true);
+      const cells = boxes.map((p) => p.def.footprint[0]);
+      expect(cells.length).toBeGreaterThanOrEqual(3);
+      expect(cells.some(([x, y]) => cells.some(([mx, my]) => mx !== x && mx === w - 1 - x && my === y))).toBe(true);
+      for (const [x, y] of cells) expect(there.reachable.has(y * w + x), `stand ${x},${y}`).toBe(true);
       // Nothing in the top rows but what the set's look hangs as a whole (a canopy): no board up there nobody reaches,
       // and every board has two rows of air over it.
       for (let x = 0; x < w; x++) expect([lv.tiles[x], lv.tiles[w + x]]).not.toContain(T_ONEWAY);
