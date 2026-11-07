@@ -1,4 +1,4 @@
-import { barrierOf, footprintCells, hurtsOf, type PlacedProp } from '../../sim/props';
+import { barrierOf, drivenOf, footprintCells, hurtsOf, type PlacedProp } from '../../sim/props';
 import { BRIDGE_W } from './validate';
 import { deriveSeed, Rng } from '../../core/rng';
 import { type Level, type LevelProfile, LOOP_BAND } from '../../sim/level';
@@ -459,7 +459,7 @@ function toLevel(seed: number, s: Shape, theme: Theme, profile: LevelProfile): L
 function walls(level: Level, pp: PlacedProp | undefined): boolean {
   if (!pp) return false;
   const b = barrierOf(level, pp);
-  return b.noGo.length > 0 || b.ground.length > 0 || hurtsOf(level, pp, CROSSING).length > 0;
+  return b.noGo.length > 0 || b.ground.length > 0 || hurtsOf(level, pp, CROSSING).length > 0 || drivenOf(level, pp).length > 0;
 }
 
 /** Flat floor, always solvable. Only used if every candidate fails. */
