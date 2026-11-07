@@ -44,12 +44,12 @@ function worm(d: D) {
     0.6 * d.k,
     0.3,
   );
-  // The head, wider than the neck, pointing forward.
-  tonedOval(d.s, x(0.26 + lean) + sway, Y(d, 0.93), W * 0.15, d.H * 0.055, 12, PINK, PINK_SH, d.lk.ink, 0.3, 0.6 * d.k, 0.3);
+  // The head, far wider than the neck, pointing forward: big enough to read as a head at play size, not a hook.
+  tonedOval(d.s, x(0.26 + lean) + sway, Y(d, 0.93), W * 0.18, d.H * 0.065, 12, PINK, PINK_SH, d.lk.ink, 0.3, 0.6 * d.k, 0.3);
   // The huge eyes standing up out of its top.
   for (const [u, r] of [
-    [0.22, 1.35],
-    [0.33, 1.2],
+    [0.21, 1.6],
+    [0.34, 1.45],
   ] as const)
     tonedOval(d.s, x(u + lean) + sway, Y(d, 1.0), r, r * 1.1, 10, WHITE, WHITE_SH, d.lk.ink, 0.3, 0.6 * d.k, 0.3);
 }
@@ -101,9 +101,9 @@ export const art: KindArt = {
   gait: (g) => (g.moving ? { hop: Math.abs(Math.sin(g.ph)) * (0.4 + g.run * 0.4), sy: 1 - Math.abs(Math.sin(g.ph)) * 0.04, upright: 0.7 } : {}),
   paintFace: (d) => {
     const y = Y(d, 1.0);
-    const xs = [d.f * d.W * 0.22, d.f * d.W * 0.33];
-    eye(d, xs[0] + d.f * 0.3, y, 0.55);
-    eye(d, xs[1] + d.f * 0.3, y, 0.5);
+    const xs = [d.f * d.W * 0.21, d.f * d.W * 0.34];
+    eye(d, xs[0] + d.f * 0.3, y, 0.65);
+    eye(d, xs[1] + d.f * 0.3, y, 0.6);
     brows(d, xs, y - 0.5, 0.55);
     // The wide grin along the head's front.
     mouthMark(d, d.f * d.W * 0.32, Y(d, 0.915), 2.2, 'smile');

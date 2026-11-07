@@ -1,61 +1,61 @@
 import type { FlatKind } from '../kinds';
 
-// Every pose keeps the three things that carry him (the redraw, art/sprites/worm/design.prompt.txt): the thin
-// pink worm neck rising out of the collar and arcing forward once at the top, with a head wider than it and huge
-// eyes standing up out of it (a pole the head's own width read as a thumb, an S as a dragon's snout); the hero's
-// build, round shoulder pads, a narrow belted waist, slim legs in big boots (a stuffed boiler suit was a sack); and
-// the small hair dryer held out in one hand like a raygun, clear of the body (across the belly, it was never seen).
+// Every pose keeps the three things that carry him (round 8, art/sprites/worm/design.prompt.txt): the thin pink
+// worm neck rising out of the collar and arcing forward once at the top, with a big head on it, far wider than the
+// neck, and huge eyes standing up out of it (at round 7's size the head read as a hook or a tube snout at play
+// size); the hero's build, two huge round shoulder pads in a pale tint of the suit so they stay their own shapes,
+// a narrow belted waist, slim legs in big boots (pads in the suit's own colour merged into one blob); and the big
+// hair dryer held out in one hand like a raygun, clear of the body.
 const KIT =
-  "his thin pink worm neck always rising out of the collar and arcing forward at the top, his head with its two huge bulging eyes on its end, and the small grey hair dryer always held out like a raygun at arm's length in his front gloved hand, angled down a little, clear of his body with white background round it";
+  "his thin pink worm neck always rising out of the collar and arcing forward at the top, his big worm head on its end exactly as big as in the reference with its two huge bulging white eyes, his two huge round pale shoulder pads always showing, and the big grey hair dryer always held out like a raygun at arm's length in his front gloved hand, clear of his body with white background round it";
 
 export const kind: FlatKind = {
-  body: 132,
+  body: 134,
   map: {
-    roles: ['suit', 'glove', 'patch', 'grey', 'pink', 'eye', 'dark'],
-    // Sampled from the design (art/sprites/worm/design.prompt.txt).
+    roles: ['suit', 'glove', 'patch', 'grey', 'pink', 'eye', 'dark', 'pad'],
+    // Sampled from round 8's design (art/sprites/worm/design.prompt.txt).
     families: [
-      // The suit and its cel shadow, pads and chest alike.
-      ['suit', [88, 138, 175]],
-      ['suit', [84, 132, 174]],
-      ['suit', [90, 138, 174]],
-      ['suit', [100, 139, 172]],
-      ['suit', [85, 132, 169]],
-      ['suit', [47, 92, 133]],
-      ['suit', [55, 93, 127]],
-      // The gloves, boots and belt, and their shadow.
-      ['glove', [62, 91, 114]],
-      ['glove', [64, 88, 112]],
-      ['glove', [60, 84, 108]],
-      ['glove', [43, 61, 83]],
-      ['glove', [39, 48, 70]],
-      ['glove', [36, 54, 78]],
-      ['glove', [81, 95, 115]],
-      ['glove', [65, 66, 84]],
-      // The small paler patch on the shin, and the pads' shine (too close to it to tell apart).
-      ['patch', [150, 186, 204]],
-      ['patch', [168, 187, 203]],
-      // The hair dryer, lit and shaded.
+      // The suit and its cel shadow, chest, arms and legs alike.
+      ['suit', [93, 137, 173]],
+      ['suit', [91, 137, 173]],
+      ['suit', [92, 136, 171]],
+      ['suit', [90, 136, 172]],
+      ['suit', [57, 95, 128]],
+      ['suit', [115, 140, 161]],
+      // The gloves, boots and belt, and their shadow and shine.
+      ['glove', [67, 91, 113]],
+      ['glove', [63, 90, 113]],
+      ['glove', [68, 94, 115]],
+      ['glove', [64, 72, 88]],
+      ['glove', [38, 40, 59]],
+      ['glove', [100, 114, 129]],
+      // The small paler patch on the shin.
+      ['patch', [154, 174, 190]],
+      // The two big round shoulder pads, a pale tint of the suit, and their shine.
+      ['pad', [197, 225, 238]],
+      ['pad', [230, 236, 239]],
+      // The hair dryer, lit and shaded, and its shine.
       ['grey', [144, 138, 132]],
-      ['grey', [150, 144, 138]],
       ['grey', [134, 123, 137]],
       ['grey', [110, 104, 100]],
+      ['grey', [229, 222, 225]],
       // The worm, and the ring lines down him.
-      ['pink', [244, 157, 161]],
-      ['pink', [240, 150, 156]],
-      ['pink', [172, 149, 157]],
-      ['pink', [200, 110, 120]],
+      ['pink', [242, 155, 161]],
+      ['pink', [242, 159, 164]],
+      ['pink', [226, 180, 183]],
+      ['pink', [194, 151, 151]],
+      ['pink', [155, 114, 119]],
       // The eyes' whites and the teeth, repainted by art/sprites/worm/prep.py so they aren't holes: the eyes are
       // found by their whites, and the kit draws its own.
       ['eye', [220, 222, 240]],
-      ['eye', [230, 202, 214]],
       // The ink.
-      ['dark', [32, 13, 33]],
-      ['dark', [20, 11, 31]],
-      ['dark', [32, 21, 41]],
-      ['dark', [19, 2, 16]],
+      ['dark', [35, 13, 32]],
+      ['dark', [27, 11, 28]],
+      ['dark', [43, 13, 33]],
+      ['dark', [58, 50, 67]],
     ],
     line: 'dark',
-    thin: ['suit', 'glove', 'patch', 'grey', 'pink', 'eye'],
+    thin: ['suit', 'glove', 'patch', 'grey', 'pink', 'eye', 'pad'],
     fringe: 5,
     stroke: 2.4,
     // The background the figure closes in (between an arm and the body, round the cord's stub) cut through.
@@ -83,6 +83,8 @@ export const kind: FlatKind = {
     { name: 'scuff', color: '#808080', on: 0, tone: 14 },
     { name: 'scorch', color: '#808080', on: 0, tone: -18 },
     { name: 'plaster', color: '#e9d3b0' },
+    // The shoulder pads, a light of the suit: in the suit's own colour they merged into the chest at play size.
+    { name: 'pad', color: '#808080', on: 0, tone: 28 },
   ],
   slots: [
     { name: 'plaster', vary: 1, options: 2 },
@@ -92,14 +94,14 @@ export const kind: FlatKind = {
   // in most poses, so the far eye is set from the near one. The whites and the teeth stay: they are the huge
   // bulging eyes and the wide grin, and the kit's pupils sit on them. When the eyes shut the kit lids them in the
   // worm's pink (`lid`, role 4): erased instead, the eyes sank inside the head and the grin went with them.
-  eyes: { role: 'eye', area: [0.15, 9], gap: [0.6, 3], band: [0, 0.3], specks: { eye: 1, dark: 2 }, count: 1, pair: [1.8, -0.1] },
+  eyes: { role: 'eye', area: [0.15, 16], gap: [0.6, 3], band: [0, 0.3], specks: { eye: 1, dark: 2 }, count: 1, pair: [1.8, -0.1] },
   wear: {
     on: ['suit'],
     chin: 6,
     marks: [[['scuff', 0.4, 0.7, 0.5]], [['scorch', 0.5, 0.75, 0.35]]],
   },
   accessories: [{ slot: 'plaster', role: 'plaster', at: 'cheek', size: [1.4, 0.6] }],
-  face: { r: 0.7, iris: '#2a1f1a', far: 'sliver', lid: { role: 4, r: 2 } },
+  face: { r: 1.05, iris: '#2a1f1a', far: 'sliver', lid: { role: 4, r: 2 } },
   gait: { bounce: [0.2, 0.8], lean: [0, 0.03] },
   clips: {
     idle: { frames: ['idle'], loop: true, fps: 1 },
@@ -109,9 +111,9 @@ export const kind: FlatKind = {
     air: { frames: ['air-1', 'air-2'], loop: false, vy: [-200, 200], scale: 0.88 },
     wall: { frames: ['wall'], loop: true, fps: 1, centre: 'box', scale: 0.9 },
     cheer: { frames: ['cheer', 'idle'], loop: true, holds: [0.5, 0.25] },
-    // The laugh's eyes are shut and drawn as lids, so it finds no whites and draws no face.
-    cheer2: { frames: ['cheer2', 'idle'], loop: true, holds: [0.6, 0.3] },
-    death: { frames: ['death'], loop: false, fps: 1, eyes: false, centre: 'box', scale: 0.7 },
+    // The laugh's eyes are shut and drawn as lids; the whites it finds are the teeth, so it draws no face.
+    cheer2: { frames: ['cheer2', 'idle'], loop: true, holds: [0.6, 0.3], eyes: false },
+    death: { frames: ['death'], loop: false, fps: 1, eyes: false, centre: 'box', scale: 0.66 },
   },
   // Drawn three to a 16:9 image and cut apart (README → 3. Poses); the sheets' prompts are in
   // art/sprites/worm/design.prompt.txt. These are each pose alone, for a redraw.

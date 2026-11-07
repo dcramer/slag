@@ -629,12 +629,15 @@ export const BRIEFS: Record<string, Brief> = {
     // never level from the shoulder: that's the hunter's and the robot boy's outline.
     // Ours, and the joke: a knock-off hero. The raygun is an old hair dryer, its cord dangling; one small patch on
     // the suit. Kept clean: the stuffed, patched boiler suit of the first rounds was a shapeless sack at play size.
+    // Round 8 (the clean colour read): the head and eyes half as big again (smaller, the head read as a hook, "a
+    // thin pink figure with a long neck", or the hopper's tube snout), the pads a pale tint of the suit so they stay
+    // two balls (in its own colour they merged into the chest), and the dryer bigger.
     design:
-      'The character: a cartoon earthworm wearing a superhero space suit, seen from the side, facing right. ' +
-      'The suit (#5f8fb5) has a heroic build: two big round ball-shaped shoulder pads, a broad chest, a narrow waist with a dark belt, slim legs and big chunky dark boots (#33506b), big dark gloves (#33506b); one smooth clean shape with few lines. ' +
+      'The character: a cartoon earthworm wearing a superhero space suit far too big for him, seen from the side, facing right. ' +
+      'The suit (#5f8fb5) has a heroic build: two huge round ball-shaped shoulder pads in a pale icy tint of the suit (#c4e2f0), each as big as his head, a broad chest, a narrow waist with a dark belt, slim legs and big chunky dark boots (#33506b), big dark gloves (#33506b); one smooth clean shape with few lines. ' +
       'Out of the collar rises his thin bare pink worm neck (#f19aa6), as long as his torso and clearly thinner than his head, rising up and curving forward in one gentle arc at the top. ' +
-      'On its end his worm head, clearly wider than the neck, with two huge round bulging white eyes standing up out of the top of the head and a wide open toothy grin. ' +
-      "His front arm is held out in front of him, angled down a little, and at arm's length in that gloved hand he holds a small chunky grey hair dryer (#8e8a84) like a raygun pistol, its round barrel pointing forward, clear of his body with white background all round it, its short black cord dangling. " +
+      'On its end his big worm head, far wider than the neck, with two huge round bulging white eyes standing up out of the top of the head and a wide open toothy grin. ' +
+      "His front arm is held out in front of him, and at arm's length in that gloved hand he holds a big chunky grey hair dryer (#8e8a84) like a raygun pistol, its round barrel pointing forward, clear of his body with white background all round it, its short black cord dangling. " +
       'One small paler patch on one knee.',
     worn: "the hair dryer's barrel is dented in at its middle; a small square paler patch (#9fbfd8) is stitched onto one knee; one boot's toe is scuffed and its sole coming away a little. The worm's head, eyes, grin and neck, the shoulders and the outline of the suit stay as they are.",
   },
