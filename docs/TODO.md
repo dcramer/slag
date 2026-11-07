@@ -55,9 +55,7 @@ The black read (`sprites-blind.png`) named about 20 of 46 cleanly. It's the hars
 
 A full-cast read (2026-11-04, every kind drawn, cells wide enough for a held prop; two fresh readers) agrees: the warrior "King Dedede, low" twice (a round body under a tall headpiece); the slayer "Princess Peach or Zelda, low" twice (his long coat reads as a gown, his hair as a princess's). The worm passed at medium twice. Both readers also paired the plumber with the engineer (4 and 22, capped and moustached), the robot with the hunter (the arm cannons) and the hopper with the dino (a round head with a long snout); the merc read as "Crash Bandicoot or Tails, low" twice.
 
-Pipeline bugs the redraws worked around: `paintOver` (`tools/art3d/flat/build.ts`) paints a speck over in its majority colour, so an eye traced to a few pixels floods the face with skin (the fighter set `min.eye: 5`); paint a speck by its own role, or skip specks under a few pixels. And `pnpm shot variety --theme mine` came out byte-identical to the light theme for the slayer's agent; check `--theme` reaches the scene.
-
-Tools that would have saved their agents turns: a design read from a quick trace of the design at blind-sheet size (a design read from the drawing passed the slayer at medium while the traced sheet failed); a `keep` list of white roles exempt from `holes` (the hopper's and the slayer's tint scripts); keeping a design prompt under about 900 characters, since the image model drops what comes last.
+A tool that would still save agents turns: a `keep` list of white roles exempt from `holes` (the hopper's, the slayer's and the hedgehog's tint scripts all protect eye whites from it).
 
 ## 32. Grow the cast toward 100
 Tripo's `403: Your project has been banned due to violation of our policy` refuses that one prompt (it flags what reads as copyright), not the account: README → Tripo's refusals.
