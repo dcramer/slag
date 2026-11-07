@@ -53,17 +53,52 @@ function laneOf(v: BrainView, rng: Rng, line: Cell): Cell {
   return line;
 }
 
+/** Rows under the top of what it sees that it looks through for somewhere to climb to: a few rises' worth. */
+const LOOK = 8;
+/**
+ * Cells it asks the route about, nearest its column on the highest row first: every new cell is a distance field to
+ * work out, so few. Past them it takes the highest it saw anyway and lets the motor find the rough way.
+ */
+const TRIES = 2;
+/** Rows its sight must move up before it looks again for somewhere higher: about a rise. */
+const RELOOK = 3;
+
+/**
+ * Where to climb to when the lap line is out of sight (`BrainView.sight`): the highest stand cell it can see and get to,
+ * nearest its column, as a player climbs toward the top edge of the screen and looks again as rows come into view.
+ * Null with nothing over it in sight it can get to.
+ */
+function frontier(v: BrainView, me: SelfSense, col: number): Cell | null {
+  const top = Math.max(0, v.sight ?? 0);
+  let first: Cell | null = null;
+  let tries = TRIES;
+  for (let y = top; y < me.ty && y < top + LOOK && tries > 0; y++) {
+    let best = -1;
+    for (let x = 1; x < v.level.w - 1; x++) if (tile(v, x, y) === 0 && floorAt(v, x, y + 1) && (best < 0 || Math.abs(x - col) < Math.abs(best - col))) best = x;
+    if (best < 0) continue;
+    first ??= { tx: best, ty: y };
+    tries--;
+    if (Number.isFinite(v.reach(best, y))) return { tx: best, ty: y };
+  }
+  return first;
+}
+
 /**
  * Rising Slag: climb. Round a loop the objective is the lap line, and crossing it puts the whole climb ahead again,
  * which is a new lap, not a loss. With no loop the top is somewhere to hold: stand on it. On the way it knocks the
  * loop's boxes it passes near and uses what they give when that helps. A stuck bot leaps and tries again; it never
- * gives up into the slag. Round a loop it climbs toward a column of the lap line of its own, a new one each lap.
+ * gives up into the slag. Round a loop it climbs toward a column of the lap line of its own, a new one each lap. With
+ * the leader's screen it sees only what the screen shows: until the lap line comes into view it climbs to the highest
+ * place it can see, under its column.
  */
 export const slagStrategy: StrategyDef = {
   make(rng, traits) {
     const way = new Headway();
     const items = new ItemPlay(rng, traits, ERRAND);
     let lane: Cell | null = null;
+    // Out of sight of the lap line: its column this lap, and where it's climbing to for the sight it last had.
+    let col = -1;
+    let seen: { sight: number; to: Cell | null } | null = null;
     return {
       think(v, me) {
         const side = items.think(v, me, way.stalled());
@@ -74,6 +109,7 @@ export const slagStrategy: StrategyDef = {
         if (Number.isFinite(me.togo) && Number.isFinite(way.best) && me.togo > way.best + LAP_RESET) {
           way.restart(me.togo);
           lane = null;
+          col = -1;
         }
         way.note(me);
         if (me.togo === 0) {
@@ -85,8 +121,15 @@ export const slagStrategy: StrategyDef = {
         if (hit) return hit;
         if (way.leapt(me)) way.calm();
         const o = v.objective;
-        if (o.kind === 'climb' && o.loop && !lane) lane = laneOf(v, rng, o.lapLine);
-        const { tx, ty } = lane ?? aimOf(o);
+        let aim: Cell | null = null;
+        if (o.kind === 'climb' && v.sight !== null && o.lapLine.ty < v.sight) {
+          if (col < 0) col = rng.int(LANE_EDGE, v.level.w - 1 - LANE_EDGE);
+          if (!seen || v.sight <= seen.sight - RELOOK || v.sight > seen.sight || (seen.to && me.ty <= seen.to.ty))
+            seen = { sight: v.sight, to: frontier(v, me, col) };
+          // Nothing in sight to get to: up toward the top edge anyway, the rough way, and look again.
+          aim = seen.to ?? { tx: col, ty: Math.min(v.level.h - 1, Math.max(0, v.sight)) };
+        } else if (o.kind === 'climb' && o.loop && !lane) lane = laneOf(v, rng, o.lapLine);
+        const { tx, ty } = aim ?? lane ?? aimOf(o);
         return way.stage(me) === 'leap' ? { do: 'leap', tx, ty } : { do: 'goTo', tx, ty };
       },
     };

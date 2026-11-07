@@ -15,7 +15,10 @@ import type { Temperament } from './temperament';
  */
 
 /** Bumped when BrainView changes shape. A player's script will declare the version it was written against. */
-export const BRAIN_VIEW_VERSION = 13;
+export const BRAIN_VIEW_VERSION = 14;
+
+/** A tile it can't see (`BrainView.sight`): neither open nor solid, as far as it knows. */
+export const T_UNKNOWN = 255;
 
 /** How fast across the ground, as a player would say it. */
 export type Pace = 'still' | 'walking' | 'running' | 'flying';
@@ -183,7 +186,7 @@ export interface BrainView {
   level: {
     w: number;
     h: number;
-    /** Tile per cell (y * w + x): 0 empty, 1 solid, 2 one-way. Read only. */
+    /** Tile per cell (y * w + x): 0 empty, 1 solid, 2 one-way, `T_UNKNOWN` out of sight (`sight`). Read only. */
     tiles: Uint8Array;
     spawn: { tx: number; ty: number };
     /** Bridges that would finish the level as it stands, left end first (BRIDGE_W wide). Empty when it's open. */
@@ -198,6 +201,12 @@ export interface BrainView {
   placed: boolean;
   /** What the race is for. */
   objective: Objective;
+  /**
+   * Race with a leader's screen (src/sim/screen.ts): the topmost row it can see, in its own lap's rows, the screen and
+   * a row or two over its top, as a player sees no further. Every row over it is `T_UNKNOWN`, and nothing standing
+   * there (boxes, boosts, items, runners, parts) is in the view. Null: it sees the whole level.
+   */
+  sight: number | null;
   /** Race: mystery boxes in the level, set pieces and parts alike. */
   boxes: BoxSense[];
   /** Race: loose items. */
@@ -209,6 +218,11 @@ export interface BrainView {
    * Infinity when no route leads through it.
    */
   detour(tx: number, ty: number): number;
+  /**
+   * Race: tiles of route from where it stands to stand cell (tx, ty), rounded as `togo` is; Infinity when none leads
+   * there. Only worth asking of a cell it can see.
+   */
+  reach(tx: number, ty: number): number;
   /** Race: this seat's runner; null outside a race. */
   self: SelfSense | null;
   /** Race: the other runners. */

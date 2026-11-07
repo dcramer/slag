@@ -33,6 +33,8 @@ function view(over: Partial<BrainView>): BrainView {
     drops: [],
     surges: [],
     detour: () => Infinity,
+    sight: null,
+    reach: () => Infinity,
     self: null,
     runners: [],
     rivals: [],

@@ -1,6 +1,6 @@
 import { BotSeats } from '../../src/brain/bots';
 import { deriveSeed, Rng } from '../../src/core/rng';
-import { giveItem, slickAt } from '../../src/sim/items';
+import { dealFor, giveItem, slickAt } from '../../src/sim/items';
 import { type Personality, steady as steadyHands } from '../../src/brain/personality';
 import { type BotLevel, Match, type Phase } from '../../src/game/match';
 import type { ProfileOverride } from '../../src/gen/level';
@@ -9,7 +9,7 @@ import type { Difficulty } from '../../src/sim/level';
 import type { PlacedProp } from '../../src/sim/props';
 import { RUN_COUNTDOWN, TILE } from '../../src/sim/constants';
 import { feetUp, type RunWorld as Run } from '../../src/sim/run';
-import { leaderOf } from '../../src/sim/standing';
+import { behindOf, leaderOf } from '../../src/sim/standing';
 import type { ModeId } from '../../src/game/modes';
 import type { Award } from '../../src/game/scoring';
 import { NO_INPUT } from '../../src/sim/types';
@@ -387,7 +387,7 @@ function playRound(seed: number, m: Match, bots: BotSeats, { at = 15 * 60, limit
     }
     if (deal > 0 && run.frame > RUN_COUNTDOWN && (run.frame - RUN_COUNTDOWN) % deal === 0) {
       const lead = top();
-      for (const r of run.runners) if (r.alive && !r.finished && !r.items.held) giveItem(r, dealer.pick(r.slot === lead ? CATCH_UP.lead : CATCH_UP.chase));
+      for (const r of run.runners) if (r.alive && !r.finished && !r.items.held) giveItem(r, dealer.pick(dealFor(CATCH_UP, r.slot === lead, behindOf(run, r))));
     }
     const was = run.runners.map((r) => r.alive);
     const before = run.runners.map((r) => r.items.bonkCredit);
