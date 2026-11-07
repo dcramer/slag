@@ -1,8 +1,8 @@
-import { inset, overlaps, type Rect, type Vec } from '../core/geom';
+import { inset, overlaps, pointInRect, type Rect, type Vec } from '../core/geom';
 import { deriveSeed, Rng } from '../core/rng';
 import { type BloodCell, buildBlood, groundOf, spillBlood } from './blood';
-import { FPS, PLAYER_W, POP_HOLD, RUN_COUNTDOWN, TILE } from './constants';
-import { BUMP, type Bump, collideRunners, contactStart, footing as stackFooting } from './collide';
+import { FPS, PLAYER_W, POP_HOLD, RUN_COUNTDOWN, SHIELD_FRAMES, TILE } from './constants';
+import { BUMP, type Bump, CHECK, collideRunners, contactStart, type ShoveRules, footing as stackFooting } from './collide';
 import {
   absorbHit,
   bonk,
@@ -138,6 +138,8 @@ export interface RunRules {
   ahead: 'route' | 'height' | 'none';
   /** The round's own time limit, seconds after GO, over the match's race time rule; when it runs out, everyone left is out. */
   seconds?: number;
+  /** How hard bodies shove each other (sim/collide.ts), the same for everyone in the race; the race's own (`RACE_SHOVE`) unset. */
+  shove?: ShoveRules;
 }
 
 /** The race the game was built on: run for the flag. */
@@ -167,9 +169,9 @@ export class RunWorld {
   /** Loose held items and smoke clouds (src/sim/items). */
   items: ItemWorld = newItemWorld();
   /**
-   * Spawn safe zone (world px), or null. A runner whose body overlaps it can't
-   * be killed by props: hazards, projectiles (they pop harmlessly) and crushing.
-   * Falling into the pit, giving up and the race timer still apply.
+   * Spawn safe zone (world px), or null. Until the shield runs out (`shieldLeft`), a runner whose body overlaps it
+   * can't be killed by props: hazards, projectiles (they pop harmlessly) and crushing. Falling into the pit, giving up
+   * and the race timer still apply. Ask `isSafe` or `safeAt`, which know the time, rather than the rect.
    */
   readonly safeZone: Rect | null;
   /** Every spawn cell's safe zone (Level.spawns), the first being `safeZone`. */
@@ -258,9 +260,19 @@ export class RunWorld {
     return this.out.beams!;
   }
 
-  /** Is this runner inside the spawn safe zone (immune to props) right now? */
+  /** Frames left of the spawn shield (SHIELD_FRAMES from GO), 0 once it's gone: then the zones are just ground. */
+  get shieldLeft(): number {
+    return Math.max(0, RUN_COUNTDOWN + SHIELD_FRAMES - this.frame);
+  }
+
+  /** Is this runner inside a spawn safe zone while the shield lasts (immune to props) right now? The one place that decides. */
   isSafe(r: Runner): boolean {
-    return this.safeZones.some((s) => overlaps(r.body, s.zone));
+    return this.shieldLeft > 0 && this.safeZones.some((s) => overlaps(r.body, s.zone));
+  }
+
+  /** Is this point in a spawn safe zone while the shield lasts (a dive landing there just pops)? */
+  safeAt(x: number, y: number): boolean {
+    return this.shieldLeft > 0 && this.safeZones.some((s) => pointInRect(x, y, s.zone));
   }
 
   get active(): Runner[] {
@@ -431,7 +443,7 @@ export class RunWorld {
     settleGrabs(this, this.grabs);
 
     // Bodies are solid to each other (sim/collide.ts): everyone has moved, so nobody's order matters.
-    for (const bump of collideRunners(this.runners, start, this.world, (r) => this.isSafe(r))) this.bump(bump);
+    for (const bump of collideRunners(this.runners, start, this.world, (r) => this.isSafe(r), this.rules.shove)) this.bump(bump);
 
     stepItems(this, inputs, live);
     this.stepProjectiles(f);
@@ -453,14 +465,16 @@ export class RunWorld {
   }
 
   /**
-   * A runner bumped from below (sim/collide.ts): knocked sideways, seeing stars, the bump credited like any bonk. Off
-   * a ledge it hops clear; in the air it never leaves faster upward than that hop, so a bump can't lift anyone.
+   * A runner bumped from below or body-checked from the side (sim/collide.ts): knocked sideways, seeing stars, the bump
+   * credited like any bonk. Off a ledge it hops clear; in the air it never leaves faster upward than that hop, so a bump
+   * can't lift anyone. A check throws it on ahead of whoever ran into it.
    */
-  private bump({ victim, by, side, stood }: Bump) {
+  private bump({ victim, by, side, stood, closing }: Bump) {
     const r = this.runners.find((x) => x.slot === victim)!;
+    const k = closing === undefined ? BUMP : { kick: Math.max(CHECK.kick, closing * CHECK.carry), hop: CHECK.hop };
     letGo(r);
-    r.body.vx = side * BUMP.kick;
-    r.body.vy = stood ? -BUMP.hop : Math.max(r.body.vy, -BUMP.hop);
+    r.body.vx = side * k.kick;
+    r.body.vy = stood ? -k.hop : Math.max(r.body.vy, -k.hop);
     r.body.onGround = false;
     r.body.groundRef = -1;
     r.body.jumping = false;

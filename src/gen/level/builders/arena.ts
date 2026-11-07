@@ -168,9 +168,13 @@ export function sculptArena(ctx: SculptCtx, kit: TallKit): Shape {
   // Whatever the set's floor or dressing lays, every ledge keeps two rows of air over it: a thick ledge above only
   // reaches down into them, and is thinned there.
   for (const [row, a, b] of spans) g.clear(a, row - 1, b, row);
-  // Nothing gets up into the top rows, over the top tier: no board the set's dressing hangs there (timber under a
-  // ceiling the arena hasn't got) is left as a scrap nobody can stand on.
-  for (let y = 0; y <= TOP[0] - 3; y++) for (let x = 0; x < W; x++) if (g.get(x, y) === T_ONEWAY) g.set(x, y, T_EMPTY, true);
+  // A board is somewhere to stand or it goes: none in the top rows, over the top tier (timber the set's dressing hangs
+  // under a ceiling the arena hasn't got), and none without two rows of air over it (timber under a ledge, a second
+  // board doubled under the first),
+  for (let y = 0; y < H; y++)
+    for (let x = 0; x < W; x++) if (g.get(x, y) === T_ONEWAY && (y <= TOP[0] - 3 || !g.empty(x, y - 1) || !g.empty(x, y - 2))) g.set(x, y, T_EMPTY, true);
+  // and a stub that leaves goes too: a board a tile wide with nothing either side.
+  for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) if (g.get(x, y) === T_ONEWAY && g.empty(x - 1, y) && g.empty(x + 1, y)) g.set(x, y, T_EMPTY, true);
 
   // The two ends, mirrored: a pocket on the spawn tier at each side, with a lip at the edge, so nobody holding a
   // direction at GO walks off the map; leaving takes a jump on purpose. A post taller than a jump (a race's spawn)

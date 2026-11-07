@@ -33,7 +33,7 @@ import '../../sim/props/modules';
 import { ReachCache } from '../../sim/reach';
 import { gustPeak } from '../../sim/weather';
 import { noFreeRide } from '../level/winnable';
-import { hazardBox, tellFaults, windowFaults } from './contract';
+import { hazardBox, tellFaults, throughFaults, windowFaults } from './contract';
 
 /**
  * Shared machinery for set-piece placers: a terrain scan (`Site`) that
@@ -453,7 +453,13 @@ export function makePlacer(themeKey: string, recipes: readonly Recipe[], uidBase
         if (++tries > tryCap) break;
         if (tellFaults(cand.modules).length) continue;
         const pp = finalize(s, cand, uidBase + first + out.length, `setpiece:${themeKey}:${recipe.name}`);
-        if (pp && !windowFaults(level, pp).length && (!opts.keep || opts.keep([...out, pp])) && noFreeRide(level, pp, [...standing, ...out], s.cache)) {
+        if (
+          pp &&
+          !windowFaults(level, pp).length &&
+          !throughFaults(level, pp).length &&
+          (!opts.keep || opts.keep([...out, pp])) &&
+          noFreeRide(level, pp, [...standing, ...out], s.cache)
+        ) {
           out.push(pp);
           commit(s, pp);
           break;
