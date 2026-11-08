@@ -93,11 +93,10 @@ function clearRow(v: BrainView, a: number, b: number, y: number): boolean {
   return true;
 }
 
-/** The nearest rival matching `fits`, by tiles across. Never one in a spawn's shield: nothing reaches them there, and a starter spent on them is gone. */
+/** The nearest rival matching `fits`, by tiles across. */
 function nearest(v: BrainView, me: SelfSense, fits: (r: RunnerSense, dx: number, dy: number) => boolean): RunnerSense | null {
   let best: RunnerSense | null = null;
   for (const r of rivals(v)) {
-    if (r.shielded) continue;
     const dx = Math.abs(r.x - me.x);
     if (fits(r, dx, rise(me, r)) && (!best || dx < Math.abs(best.x - me.x))) best = r;
   }
