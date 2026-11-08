@@ -40,8 +40,11 @@ const BEAT = [0.6 * 60, 0.15 * 60] as const;
 const NEAR = [2, 4] as const;
 /** Tiles off a rival (across plus rows) inside which it won't turn its back on them to fetch something. */
 const TURN_BACK = 6;
-/** Tiles off its rival it stands to hit with each item: in reach, and no nearer. */
-const GAP: Partial<Record<ItemKind, number>> = { sword: 1, bat: 1, glove: 2, puck: 4, boomerang: 4, clock: 5, rod: 5 };
+/**
+ * Tiles off its rival it stands to hit with each item: in reach, and no nearer. The clock and the rod reach further
+ * (a lob, a cast) but stand in at 3: from 5 a bot spent the fight standing off, half a screen from anyone.
+ */
+const GAP: Partial<Record<ItemKind, number>> = { sword: 1, bat: 1, glove: 2, puck: 4, boomerang: 4, clock: 3, rod: 3 };
 /** Tiles past a rival's reach and rows it is close enough that its hit is coming. */
 const THREAT_ACROSS = 0.75;
 const THREAT_ROWS = 1.25;
