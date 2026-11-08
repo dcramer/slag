@@ -73,7 +73,9 @@ export function race(hud: Hud, m: Match, t: number) {
     c.globalAlpha = dead ? 0.4 : 1;
     drawInkRunner({ s: c, g: null }, p.character, x + 14, y + 21, { facing: 1, vx: 0, vy: 0, grounded: true, t, scale: 1.05, celebrate: done });
     c.restore();
-    hud.text(p.character.name, x + 26, y + 8.5, TYPE.caption + 0.5, PAL.bone, 'left', UI, 700);
+    // The name and the status line hold generated names: each fits what the icons right of it leave.
+    hud.fitText(p.character.name, x + 26, y + 8.5, (p.away ? 70 : 81) - 26, TYPE.caption + 0.5, TYPE.caption, PAL.bone, UI, 700);
+    const held = r?.items.held;
     const status = done
       ? `#${run.finishOrder.indexOf(p.slot) + 1} Safe`
       : dead
@@ -83,10 +85,10 @@ export function race(hud: Hud, m: Match, t: number) {
         : p.afk
           ? 'AFK'
           : `${p.score} Pts`;
-    hud.text(status, x + 26, y + 18, TYPE.caption, done ? PAL.toxic : dead ? '#ff8a7a' : PAL.ash, 'left', UI, 600);
+    const statusEnd = !held ? 81 : held.uses > 1 ? 57 : 69;
+    hud.fitText(status, x + 26, y + 18, statusEnd - 26, TYPE.caption, TYPE.caption, done ? PAL.toxic : dead ? '#ff8a7a' : PAL.ash, UI, 600);
     // Gone (no link to its peer): the same on every screen, from the host's sequenced `away`.
     if (p.away) icon(c, 'unplugged', x + 76, y + 8, 9, PAL.danger);
-    const held = r?.items.held;
     if (held) {
       // On the status line: names fill the row above.
       drawItemIcon(c, held.kind, x + 75, y + 17, 0.7, t);

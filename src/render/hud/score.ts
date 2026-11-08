@@ -135,14 +135,17 @@ export function score(hud: Hud, m: Match, t: number) {
       scale: L.scale,
       celebrate: res.finishers.includes(p.slot),
     });
-    hud.text(p.character.name, LANE_X, y + L.nameY, L.name, leader ? PAL.amber : PAL.bone, 'left', DISPLAY, 400);
     c.font = `400 ${L.name}px ${DISPLAY}`;
     const nameEnd = LANE_X + c.measureText(p.character.name).width;
+    // Where the name row's ink ends (the crown and the plug after it): a reason's tag pops up on that row past here.
+    const rowEnd = nameEnd + L.name * (p.away ? (leader ? 2.1 : 1.1) : leader ? 1 : 0);
+    const prev = m.prevScores.get(p.slot) ?? 0;
+    const landed = lane(hud, p.character.body, prev, res.awards, p.slot, beats, y + L.laneY, L, k, ff, rowEnd);
+    // The name over its lane, so a block dropping in falls behind it.
+    hud.text(p.character.name, LANE_X, y + L.nameY, L.name, leader ? PAL.amber : PAL.bone, 'left', DISPLAY, 400);
     if (leader) icon(c, 'crown', nameEnd + L.name * 0.6, y + L.nameY - 0.5, L.name * 0.75, PAL.amber);
     // Gone: unplugged, after the name (and the crown).
     if (p.away) icon(c, 'unplugged', nameEnd + L.name * (leader ? 1.7 : 0.7), y + L.nameY - 0.5, L.name * 0.8, PAL.danger);
-    const prev = m.prevScores.get(p.slot) ?? 0;
-    const landed = lane(hud, p.character.body, prev, res.awards, p.slot, beats, y + L.laneY, L, k, ff);
     const flash = landed.at >= 0 && ff - landed.at < 8;
     const color = flash ? PAL.whiteHot : leader ? PAL.amber : PAL.bone;
     hud.text(String(prev + landed.points), TOTAL_X, y + L.laneY + L.laneH / 2, L.num, color, 'center', DISPLAY, 400, 3);
@@ -175,6 +178,7 @@ function lane(
   L: Tier,
   k: number,
   ff: number,
+  rowEnd: number,
 ): { points: number; at: number } {
   const c = hud.ctx;
   track(c, LANE_X, y, LANE_W, L.laneH, (g) => {
@@ -192,6 +196,9 @@ function lane(
   x += w0;
   let points = 0;
   let at = -1;
+  // Tags go left to right over the lane, never back over the name or a tag before them, whether or not that one is
+  // still up: a tag that slid left as the one before it faded would read as a new one.
+  let tagX = rowEnd + 6;
   for (const r of beats) {
     const pts = awards.reduce((sum, a) => sum + (a.slot === slot && a.reason === r ? a.points : 0), 0);
     if (!pts) continue;
@@ -203,14 +210,17 @@ function lane(
       at = start + DROP;
     }
     const w = cut(Math.round(pts * k * 2) / 2);
-    if (w >= 2) block(c, AWARD[r], pts, x, by, w - 1, bh, u, L.stamp);
+    if (w >= 2) tagX = block(c, AWARD[r], pts, x, by, w - 1, bh, u, L.stamp, tagX);
     x += w;
   }
   return { points, at };
 }
 
-/** An award's block: it falls into the lane like a dropped brick, hops once as it lands, and carries its stamp. */
-function block(c: CanvasRenderingContext2D, a: Look, pts: number, x: number, y: number, w: number, h: number, u: number, size: number) {
+/**
+ * An award's block: it falls into the lane like a dropped brick, hops once as it lands, and carries its stamp. A block
+ * too short for its reason gets a tag, over it or right of `tagX` if that's further; returns where the next tag may start.
+ */
+function block(c: CanvasRenderingContext2D, a: Look, pts: number, x: number, y: number, w: number, h: number, u: number, size: number, tagX: number): number {
   const fall = u < 1 ? -14 * (1 - u * u) : -1.5 * Math.sin(Math.PI * clamp01((u - 1) * 1.6));
   c.save();
   c.globalAlpha *= clamp01(u * 3);
@@ -225,12 +235,21 @@ function block(c: CanvasRenderingContext2D, a: Look, pts: number, x: number, y: 
     c.fillText(label, x + w / 2, y + fall + h / 2 + 0.5);
   }
   // A block too short for its reason shows it on a tag that pops up off it as it lands, then keeps the points alone.
+  if (label === full) {
+    c.restore();
+    return tagX;
+  }
+  // tag()'s own width, so it can be placed before it's drawn.
+  c.font = `800 ${size}px ${UI}`;
+  const tw = Math.ceil((c.measureText(full).width + size * 1.1) * 2) / 2;
+  const tx = Math.min(LINE_X - tw, Math.max(tagX, x + w / 2 - tw / 2));
   const age = (u - 1) * DROP;
-  if (label !== full && age >= 0 && age < TAG_HOLD) {
+  if (age >= 0 && age < TAG_HOLD) {
     c.globalAlpha = clamp01((TAG_HOLD - age) / 10);
-    tag(c, full, x + w / 2, y - 5 - 3 * clamp01(age / 4), a.fill, PAL.ink, size, 'center');
+    tag(c, full, tx, y - 5 - 3 * clamp01(age / 4), a.fill, PAL.ink, size, 'left');
   }
   c.restore();
+  return tx + tw + 3;
 }
 
 /** The flag on the finish line: an inked pole from the line up into the board's top, the target on the cloth. */

@@ -64,7 +64,7 @@ export function lobby(hud: Hud, m: Match, t: number, dt: number) {
   const tw = tag(c, themeLabel, lx + 8, 28, PAL.hazard, PAL.ink, TYPE.caption);
   // The name stops short of the refresh button: smaller type first, then cut.
   const nameW = lw - 24 - tw - refreshW;
-  fitText(hud, lv.name, lx + 16 + tw, 28.5, nameW, 14, 10, PAL.bone, DISPLAY, 400);
+  hud.fitText(lv.name, lx + 16 + tw, 28.5, nameW, 14, 10, PAL.bone, DISPLAY, 400);
   if (m.players.length) {
     const device = me?.device ?? m.players[0].device;
     if (phone) hud.btn({ x: lx + lw - 38, y: 16, w: 32, h: 25, action: 'level', device }, '', 'ghost', 'refresh');
@@ -166,7 +166,7 @@ function modePlate(hud: Hud, m: Match, x: number, w: number) {
   const over = hud.button({ x, y: 13, w, h: 30, action: 'modeMenu' });
   plate(c, x, 13, w, 30, { rivets: false, ...(over ? { stroke: PAL.amber } : {}) });
   modeEmblem(c, m.rules.mode, x + 16, 28, 20);
-  fitText(hud, MODES[m.rules.mode].label, x + 30, 28.5, w - 38, 13, 9, PAL.bone, DISPLAY, 400);
+  hud.fitText(MODES[m.rules.mode].label, x + 30, 28.5, w - 38, 13, 9, PAL.bone, DISPLAY, 400);
 }
 
 function phoneBar(hud: Hud, safeW: number): { s: number; lw: number; step: number } {
@@ -210,19 +210,6 @@ function phoneGrid(n: number, w: number, h: number, maxS: number): Grid {
     if (!best || s > best.s * 1.01 || (s > best.s * 0.99 && rows < best.rows)) best = { cols, rows, s };
   }
   return { ...best!, s: Math.max(1, best!.s) };
-}
-
-/** Text that fits `maxW`: smaller type down to `min`, then cut with an ellipsis. */
-function fitText(hud: Hud, s: string, x: number, y: number, maxW: number, size: number, min: number, color: string, font: string, weight: number) {
-  const c = hud.ctx;
-  c.font = `${weight} ${size}px ${font}`;
-  const w = c.measureText(s).width;
-  let k = size;
-  if (w > maxW) k = Math.max(min, Math.floor(size * (maxW / w) * 2) / 2);
-  c.font = `${weight} ${k}px ${font}`;
-  let out = s;
-  while (out.length > 1 && c.measureText(out).width > maxW) out = out.slice(0, -2) + '…';
-  hud.text(out, x, y, k, color, 'left', font, weight);
 }
 
 /**

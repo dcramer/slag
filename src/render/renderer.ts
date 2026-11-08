@@ -553,7 +553,8 @@ export class Renderer {
     }
     if (!this.hud.hidden) this.hud.draw(m, t, this.pw, this.ph);
     else this.hud.clear(this.pw, this.ph);
-    if (this.wordsOn) this.letters.draw(this.hudCanvas.getContext('2d')!, this.cam, this.pw);
+    // Words belong to the race: the kill that ends a round would otherwise shout over the score card drawn under it.
+    if (this.wordsOn && m.phase === 'run') this.letters.draw(this.hudCanvas.getContext('2d')!, this.cam, this.pw);
     this.placeLogo?.(this.logoBox());
   }
 

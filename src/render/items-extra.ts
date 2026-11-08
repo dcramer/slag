@@ -1,7 +1,7 @@
 import { css, type HSL } from '../core/color';
 import { hash2 } from '../core/rng';
 import { TILE } from '../sim/constants';
-import { BAT, POCKET, swingAngle, TAX, TREMOR } from '../sim/items';
+import { ARCS, BAT, POCKET, swingAngle, TAX, TREMOR } from '../sim/items';
 import { T_EMPTY, tileAt } from '../sim/level';
 import type { Runner, RunWorld } from '../sim/run';
 import { inkFor, line, type P, stroke } from './ink';
@@ -49,8 +49,15 @@ const batSprite = () =>
     ball(g, 0, 4, 1.45, { h: 30, s: 50, l: 48 }, 23);
   });
 
+/**
+ * How far out from the hands the sprite's barrel ends (its cap, 3 px past the pivot it's drawn from), and the stretch
+ * along its length that puts that end at the arc's reach: the bat is drawn as long as it hits (sim/items/swing.ts `ARCS`).
+ */
+const BAT_TIP = 19.9;
+const BAT_LONG = ARCS.bat.r / BAT_TIP;
+
 /** The noodle's swing smear, in the bat's colors and reach. */
-const BAT_SMEAR = { r: 22, cuts: [[9, css(WOOD, 18, 1, -10)] as const, [3.4, css(WOOD, 32, 1, -30)] as const], line: css(WOOD, -32) };
+const BAT_SMEAR = { r: ARCS.bat.r, cuts: [[9, css(WOOD, 18, 1, -10)] as const, [3.4, css(WOOD, 32, 1, -30)] as const], line: css(WOOD, -32) };
 
 /** Icons for the four, keyed by kind. */
 export const EXTRA_ICONS = {
@@ -100,15 +107,18 @@ export function drawBat(
   s.save();
   s.translate(x - fc, b.y + 7);
   s.scale(fc, 1);
-  if (active) sweep(s, -Math.PI / 2 - 2, -Math.PI / 2 + ang, BAT_SMEAR);
+  if (active) sweep(s, -Math.PI / 2 + ARCS.bat.from, -Math.PI / 2 + ang, BAT_SMEAR);
   s.rotate(ang);
+  // Stretched from the hands, so the grip stays put and the barrel's end is where the swing reaches.
+  s.scale(1, BAT_LONG);
   s.translate(0, -3);
   stamp(s, batSprite());
   s.restore();
   if (charge >= 1 || (it.windup > 0 && charge > 0.98)) {
     // Full: a hard twinkle at the barrel's end, the cue to let go.
-    const tipX = x - fc + Math.sin(ang) * 18 * fc;
-    const tipY = b.y + 7 - Math.cos(ang) * 18;
+    const tip = ARCS.bat.r - 2;
+    const tipX = x - fc + Math.sin(ang) * tip * fc;
+    const tipY = b.y + 7 - Math.cos(ang) * tip;
     twinkle(s, tipX, tipY, 3.2 + Math.sin(rc.t * 40), '#fff3c4');
     light(rc, tipX, tipY, 24, { h: 48, s: 100, l: 70 }, 0.6);
   } else if (charge > 0) {

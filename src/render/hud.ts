@@ -355,6 +355,22 @@ export class Hud {
     c.fillText(s, x, y);
   }
 
+  /**
+   * Left-aligned text that fits `maxW`: smaller type down to `min`, then cut with an ellipsis. Names are generated,
+   * so any slot sized for a name or a line holding one goes through here.
+   */
+  fitText(s: string, x: number, y: number, maxW: number, size: number, min: number, color: string, font: string = UI, weight = 600) {
+    const c = this.ctx;
+    c.font = `${weight} ${size}px ${font}`;
+    const w = c.measureText(s).width;
+    let k = size;
+    if (w > maxW) k = Math.max(min, Math.floor(size * (maxW / w) * 2) / 2);
+    c.font = `${weight} ${k}px ${font}`;
+    let out = s;
+    while (out.length > 1 && c.measureText(out).width > maxW) out = out.slice(0, -2) + '…';
+    this.text(out, x, y, k, color, 'left', font, weight);
+  }
+
   /** The window, in view coords: the HUD lays out in the play view, and full-screen washes fill this. */
   setFrame(f: ViewFrame) {
     this.frame = f;

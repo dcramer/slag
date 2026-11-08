@@ -209,6 +209,9 @@ export const shots: Scenarios = {
             };
             const devs: string[] = d.match.players.slice(0, kinds.length).map((p: any) => p.device);
             d.step(1, Object.fromEntries(devs.map((dev) => [dev, { ...idle, usePressed: true }])));
+            // A bat's first press only winds it up: the second lets it go, so its swing starts a frame later.
+            const wound = devs.filter((_, i) => run.runners[i].items.windup > 0);
+            if (wound.length) d.step(1, Object.fromEntries(wound.map((dev) => [dev, { ...idle, usePressed: true }])));
             d.step(Math.max(0, at - 5));
           },
           [swing, Number(opt('swingat', '7'))] as const,
@@ -313,6 +316,19 @@ export const shots: Scenarios = {
         opt('campin')?.split(',').map(Number) ?? null,
       );
       await step(4);
+      // Frames of each posed swing left in the shot (SWORD: it hits from activeHi down to activeLo), and where its swinger
+      // stands, for a `--campin` close-up of it.
+      if (swing)
+        console.log(
+          await page.evaluate(
+            (n) =>
+              (window as any).slagDebug.match.run.runners
+                .slice(0, n)
+                .map((r: any) => `swing ${r.items.swing} frames left at ${Math.round(r.body.x + r.body.w / 2)},${Math.round(r.body.y + r.body.h / 2)}`)
+                .join('\n'),
+            swing.length,
+          ),
+        );
       await snap(`race-${seed}${bout > 1 ? `-bout${bout}` : ''}-${exact}`);
       return;
     }
@@ -355,24 +371,27 @@ export const shots: Scenarios = {
     // Everyone but the leader finishes, the trailing one first and overdue a point, and the second one
     // traps the leader: every award in one round. `--nobody` keeps it scoreless. With no flag (`--game slag|brawl`)
     // they fall in turn instead, the last one standing, and the second one, overdue a point, knocks out the
-    // first and the third before falling.
-    await page.evaluate((nobody) => {
-      const m = (window as any).slagDebug.match;
-      const slots = m.players.map((p: any) => p.slot);
-      m.players.forEach((p: any, i: number) => (p.score = 6 + i * 6));
-      if (!nobody && m.rules.mode !== 'race') {
-        m.players[1].scoreless = 2;
-        m.run.runners.forEach((r: any, i: number) => {
-          if (i < slots.length - 1) Object.assign(r, { alive: false, deathFrame: m.run.frame - 60 + i });
-        });
-        for (const i of [0, 2]) if (i < slots.length - 1 && i !== 1) m.run.kills.push({ victim: slots[i], killer: slots[1] });
-      } else if (!nobody) {
-        m.players[0].scoreless = 2;
-        m.run.finishOrder = slots.length > 1 ? slots.slice(0, -1) : slots;
-        if (slots.length > 2) m.run.kills.push({ victim: slots.at(-1), killer: slots[1] }, { victim: slots.at(-1), killer: slots[1] });
-      }
-      m.finishRound();
-    }, flag('nobody'));
+    // first and the third before falling. `--fresh`: a first round, everyone from 0, so short blocks sit under the names.
+    await page.evaluate(
+      ([nobody, fresh]) => {
+        const m = (window as any).slagDebug.match;
+        const slots = m.players.map((p: any) => p.slot);
+        m.players.forEach((p: any, i: number) => (p.score = fresh ? 0 : 6 + i * 6));
+        if (!nobody && m.rules.mode !== 'race') {
+          m.players[1].scoreless = 2;
+          m.run.runners.forEach((r: any, i: number) => {
+            if (i < slots.length - 1) Object.assign(r, { alive: false, deathFrame: m.run.frame - 60 + i });
+          });
+          for (const i of [0, 2]) if (i < slots.length - 1 && i !== 1) m.run.kills.push({ victim: slots[i], killer: slots[1] });
+        } else if (!nobody) {
+          m.players[0].scoreless = 2;
+          m.run.finishOrder = slots.length > 1 ? slots.slice(0, -1) : slots;
+          if (slots.length > 2) m.run.kills.push({ victim: slots.at(-1), killer: slots[1] }, { victim: slots.at(-1), killer: slots[1] });
+        }
+        m.finishRound();
+      },
+      [flag('nobody'), flag('fresh')] as const,
+    );
     // Blocks mid-fall, mid-slide, and settled.
     for (const at of [27, 60, 120]) {
       await step(at - (await page.evaluate(() => (window as any).slagDebug.match.phaseFrame)));
