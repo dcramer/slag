@@ -35,7 +35,7 @@ import { cleanCharacter } from './actions';
  * for a batch that changed this file's code, that test's field lists, or the wire shape in
  * snapshot-shape.json (`pnpm snap:shape` rewrites it; `--snap` for a change in what a field means).
  */
-export const SNAP_VERSION = 66;
+export const SNAP_VERSION = 67;
 
 export interface RunSnap {
   slots: number[];
