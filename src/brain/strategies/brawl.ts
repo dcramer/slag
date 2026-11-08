@@ -58,8 +58,12 @@ const COMING = 0.25;
 const CHARGE_HOLD = 50;
 /** Tiles across a rival's reach counts as melee: its swing winding back up, it shoves instead of standing off. */
 const MELEE = 2;
-/** Tiles across a rival in the air over it may be for it to jump at them rather than wait where it stands. */
-const OVERHEAD = 2.5;
+/**
+ * Rows up a rival standing over it may be for a hop to bump from below (past a step, inside a jump), and tiles across
+ * its feet may be from its middle: a bump hits only someone standing (sim/collide.ts `ShoveRules.footed`).
+ */
+const BUMP_ROWS = [1, 3.5] as const;
+const BUMP_ACROSS = 0.75;
 /** Frames it spends getting over a rival it couldn't shove: hopping onto their head and down their other side. */
 const FLANK_FRAMES = 50;
 
@@ -96,6 +100,18 @@ function standNear(v: BrainView, x: number, ty: number): Cell | null {
       for (const y of [ty, ty - 1, ty + 1])
         if (tx >= 0 && tx < v.level.w && tile(v, tx, y) === 0 && floorAt(v, tx, y + 1) && !hurtsAt(v, tx, y)) return { tx, ty: y };
   return null;
+}
+
+/**
+ * A rival a hop from under them would bump: standing a jump's height over it, on a board it rises up through or out
+ * over a lip it rises past, nothing solid between. Someone in the air a hop only bucks, as a rider is.
+ */
+function bumpable(v: BrainView, me: SelfSense, r: RunnerSense): boolean {
+  const rise = me.y - r.y;
+  if (!r.grounded || rise <= BUMP_ROWS[0] || rise > BUMP_ROWS[1] || Math.abs(r.x - me.x) >= BUMP_ACROSS) return false;
+  const x = Math.floor(me.x);
+  for (let y = Math.round(r.y); y < me.ty; y++) if (tile(v, x, y) === T_SOLID) return false;
+  return true;
 }
 
 /** Each arena's knock lanes, by its parts as they stand. */
@@ -371,9 +387,8 @@ export const brawlStrategy: StrategyDef = {
         // Bare-handed it walks into them from the far side of the danger; armed, it stands off in reach.
         const gap = kind ? (GAP[kind] ?? 1) : 0;
         const wrong = sideOf(me.x, r.x) !== d;
-        // Where it stands already, with them in the air over it: up at them.
-        const aim = (c: Cell): Intent =>
-          mine(c) && !r.grounded && r.y < me.y - 1 && Math.abs(r.x - me.x) < OVERHEAD ? { do: 'hop', tx: Math.floor(r.x) } : { do: 'goTo', ...c };
+        // Under them standing on a board or a lip over it: up into their feet.
+        const aim = (c: Cell): Intent => (bumpable(v, me, r) ? { do: 'hop', tx: Math.floor(r.x) } : { do: 'goTo', ...c });
         // Bare-handed on the right side it walks in, but not to the cell it's in already (they share it): from there it
         // backs off a step and comes again, where a goTo its own cell would stand it still beside them.
         if (!kind && !wrong && !mine(at) && Math.abs(r.x - me.x) >= 0.75) return aim(at);

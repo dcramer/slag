@@ -293,6 +293,25 @@ describe('pressing a brawl (strategies/brawl.ts)', () => {
     expect(go(RACE_SHOVE).do).not.toBe('charge');
   });
 
+  it('hops into the feet of a rival standing on a board over it, and not at one in the air, whom a bump only bucks', () => {
+    const board = tiles((set) => {
+      for (let y = 6; y < 14; y++) {
+        set(0, y, T_SOLID);
+        set(W - 1, y, T_SOLID);
+      }
+      for (let x = 3; x <= 8; x++) set(x, 11, T_ONEWAY);
+    });
+    const hops = (r: RunnerSense) => {
+      const s = brawler('normal');
+      const v = view({ tiles: board, objective: fight, runners: [r], self: SELF });
+      let n = 0;
+      for (let f = 0; f < 60; f++) if (s.think(v, SELF).do === 'hop') n++;
+      return n;
+    };
+    expect(hops(rival(5.6, 3))).toBeGreaterThan(0);
+    expect(hops(rival(5.6, 3, { grounded: false }))).toBe(0);
+  });
+
   it('stays in the fight while the slag only boils, and climbs once it pours in under it', () => {
     const s = brawler('normal');
     const r = rival(13.5, 0);
