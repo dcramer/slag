@@ -83,6 +83,9 @@ export function sweepFaults(c: BuilderContract, bySet: readonly Built[][]): stri
       if (set.fill !== undefined && fill < set.fill - EPS) out.push(`${theme}: set.fill ${pct(fill)} of the ask stands, under ${pct(set.fill)}`);
       const kinds = new Set(xs.flatMap((b) => fillerOf(b.level).map((f) => f.recipe))).size;
       if (set.kinds !== undefined && kinds < set.kinds) out.push(`${theme}: set.kinds ${kinds} recipes, under ${set.kinds}`);
+      const falls = mean(xs, (b) => b.m.falls);
+      if (set.falls !== undefined && !(falls > set.falls))
+        out.push(`${theme}: set.falls ${pct(falls)} of stand cells by a fall that kills, not over ${pct(set.falls)}`);
       if (set.stands !== undefined && stands[i] <= set.stands * Math.max(...stands))
         out.push(
           `${theme}: set.stands ${Math.round(stands[i])} stand cells, not over ${pct(set.stands)} of the busiest set's ${Math.round(Math.max(...stands))}`,
@@ -95,9 +98,9 @@ export function sweepFaults(c: BuilderContract, bySet: readonly Built[][]): stri
       floor !== undefined && !(v > floor) && out.push(`all.${name} ${pct(v)}, not over ${pct(floor)}`);
     if (all.safe !== undefined && !(mean(xs, (b) => b.m.safe) < all.safe)) out.push(`all.safe ${pct(mean(xs, (b) => b.m.safe))}, not under ${pct(all.safe)}`);
     over(
-      'edgy',
-      mean(xs, (b) => b.m.edgy),
-      all.edgy,
+      'falls',
+      mean(xs, (b) => b.m.falls),
+      all.falls,
     );
     over(
       'high',
@@ -134,7 +137,7 @@ const shapeOf = (level: Level) => level.style.split(':').at(-1)!;
 export function summary(id: BuilderId, bySet: readonly Built[][]): string {
   const xs = bySet.flat();
   const sets = bySet.map((s) => `${s[0].theme} ${mean(s, (b) => fillerOf(b.level).length).toFixed(2)}/${mean(s, (b) => b.asked).toFixed(0)}`).join(', ');
-  return `${id}, ${xs.length} levels: ${pct(mean(xs, (b) => b.m.safe))} of stand cells safe, ${pct(mean(xs, (b) => b.m.hazard))} by a hazard (${pct(mean(xs, (b) => b.m.centre))} by the centrepiece), ${pct(mean(xs, (b) => b.m.edgy))} by a drop, ${pct(mean(xs, (b) => +b.m.high))} reach the top third, ${pct(mean(xs, (b) => b.m.mirrored))} mirrored, side walls ${Math.max(...xs.map((b) => b.m.wall))} rows at most; set pieces stood by set: ${sets}`;
+  return `${id}, ${xs.length} levels: ${pct(mean(xs, (b) => b.m.safe))} of stand cells safe, ${pct(mean(xs, (b) => b.m.hazard))} by a hazard (${pct(mean(xs, (b) => b.m.centre))} by the centrepiece), ${pct(mean(xs, (b) => b.m.falls))} by a fall that kills (${bySet.map((s) => `${s[0].theme} ${pct(mean(s, (b) => b.m.falls))}`).join(', ')}), ${pct(mean(xs, (b) => +b.m.high))} reach the top third, ${pct(mean(xs, (b) => b.m.mirrored))} mirrored, side walls ${Math.max(...xs.map((b) => b.m.wall))} rows at most; set pieces stood by set: ${sets}`;
 }
 
 /** Every set's levels from `id` at `seeds`, one array per set. */

@@ -479,7 +479,9 @@ export class Motor {
     this.chose = run.frame;
     this.act = this.choose(map, run, b, this.aim);
     this.hemmed = this.act?.kind === 'wait' ? this.hemmed + 1 : 0;
-    return this.follow(b) ?? NO_INPUT;
+    // In the air with no move to play out (held up in a part's wind over open sky, where no trace comes down within
+    // its length): it steers for the target, as a player drifts out of an updraft, rather than hang there.
+    return this.follow(b) ?? (b.onGround ? NO_INPUT : { ...NO_INPUT, ...hopLean(b, tx) });
   }
 
   /**

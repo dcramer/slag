@@ -57,15 +57,15 @@ export const BUILDERS: Record<BuilderId, BuilderDef> = {
     build: (ctx, set) => (set.tower ? (set.towerPost ?? keep)(sculptShaft(ctx, set.tower), ctx) : onCourse(ctx, set)),
   },
   arena: {
-    about: 'Brawl: one screen of ledges in tiers from islands over the pit to the top, open at the sides, its two ends mirrored',
+    about: 'Brawl: a platform fighter’s stage, slabs over the drop open at both ends with boards over them, its two ends mirrored',
     takes: (p) => p.builder === 'arena',
     asks: ['floor'],
     // The arena is the stage: a landmark would take the middle of the one screen, so its levels are plain.
     landmark: false,
     // Built for knocking people off things (docs/MODES.md → Brawl): room for nearly all the set pieces it asks for,
-    // three boxes (a brawl's stands) mirrored and clear of what its pieces reach, several tiers, no wall at either
-    // side, nearly every place to stand with a way to die near it, and laid round a centrepiece of the set's own that
-    // much of the field fights near.
+    // three boxes (a brawl's stands) mirrored and clear of what its pieces reach, several rows to stand on, no wall at
+    // either side, nearly every place to stand a knock from a fall that kills (`falls`) and a way to die near it, and
+    // laid round a centrepiece of the set's own that much of the field fights near.
     contract: {
       each: {
         fill: 0.5,
@@ -79,13 +79,13 @@ export const BUILDERS: Record<BuilderId, BuilderDef> = {
         clearWay: true,
         centre: 0.06,
       },
-      set: { fill: 5 / 6, kinds: 4, stands: 0.8 },
+      set: { fill: 5 / 6, kinds: 4, stands: 0.8, falls: 0.8 },
       all: {
-        safe: 0.2,
-        edgy: 0.6,
-        high: 0.6,
+        safe: 0.08,
+        falls: 0.85,
+        high: 0.8,
         mirrored: 0.9,
-        shapes: { names: ['arena-bowl', 'arena-pyramid', 'arena-tiers'], share: 0.18 },
+        shapes: { names: ['arena-dip', 'arena-ends', 'arena-flat', 'arena-peak'], share: 0.18 },
         centre: 0.14,
       },
     },

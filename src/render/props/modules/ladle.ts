@@ -177,7 +177,11 @@ defineArt<'ladle'>({
     if (m.hang > 0) return;
     const f = frame(m, d.off[0], d.off[1]);
     const floor = m.at[1] + m.drop + d.off[1];
-    stamp(rc.s, gantry(Math.max(m.spill[0] + m.spill[1] + 18, 40 * f.k), floor - f.hy + 4), f.p.x, floor);
+    // Its legs stand at the ends of the spill, on the floor the recipe found under both (gen/setpieces/factory.ts
+    // `ladleSpots`), the bowl hanging between them.
+    const l = m.at[0] + d.off[0] - m.spill[0];
+    const r = m.at[0] + d.off[0] + m.spill[1];
+    stamp(rc.s, gantry(r - l, floor - f.hy + 4), (l + r) / 2, floor);
   },
 });
 

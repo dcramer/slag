@@ -28,7 +28,9 @@ const LADLE_ROWS = 3;
 
 /**
  * Lips over flat floor a ladle can pour on: `drop` rows over a run of stand cells with at least a column
- * of floor either side of the stream, the ladle's own cells free, clear of the spawn and the goal.
+ * of floor either side of the stream, the ladle's own cells free, clear of the spawn and the goal. A ladle
+ * with no ceiling over it hangs in a gantry whose legs stand at the ends of its spill (render/props/modules/
+ * ladle.ts), on the run's own floor, so the air over the whole spill, up to the bowl, is free too.
  */
 export function ladleSpots(s: Site, drops: readonly [number, number], spillMax: number): LadleSpot[] {
   const out: LadleSpot[] = [];
@@ -40,12 +42,9 @@ export function ladleSpots(s: Site, drops: readonly [number, number], spillMax: 
         const lip = floor - d;
         if (!s.freeRect(x - 2, lip - LADLE_ROWS, x + 1, r.y)) continue;
         const c = s.ceilingAbove(x, lip, 9);
-        out.push({
-          at: [x + 0.5, lip],
-          drop: d,
-          spill: [Math.min(spillMax, x + 0.5 - r.x0 - 0.25), Math.min(spillMax, r.x1 + 1 - (x + 0.5) - 0.25)],
-          hang: c >= 0 ? lip - (c + 1) : 0,
-        });
+        const spill: Vec = [Math.min(spillMax, x + 0.5 - r.x0 - 0.25), Math.min(spillMax, r.x1 + 1 - (x + 0.5) - 0.25)];
+        if (c < 0 && !s.freeRect(Math.floor(x + 0.5 - spill[0]), lip - LADLE_ROWS, Math.ceil(x + 0.5 + spill[1]) - 1, r.y)) continue;
+        out.push({ at: [x + 0.5, lip], drop: d, spill, hang: c >= 0 ? lip - (c + 1) : 0 });
         break;
       }
     }
@@ -71,16 +70,22 @@ export function ladleAt(rng: Rng, sp: LadleSpot, dir: 1 | -1, spill: number): Mo
 
 export const LADLE_NAMES = ['Slag Ladle', 'The Big Pour', 'Hot Soup', 'Ladle of Regret', 'Pour Decisions'];
 
-/** The slag ladle: over a stretch of floor the route crosses, its spill along it. */
+/** Tiles of spill (and so of gantry) on the bowl's side of the stream, at least: the bowl hangs inside its gantry. */
+const BOWL_SIDE = 1.5;
+
+/**
+ * The slag ladle: over a stretch of floor the route crosses, its spill along it. It pours toward the shorter
+ * side, the bowl over the longer, so the bowl hangs inside the gantry over the run.
+ */
 function* ladles(rng: Rng, s: Site): Generator<Piece> {
-  const spots = ladleSpots(s, [4, 6], 3.5).filter((sp) => sp.spill[0] >= 1 && sp.spill[1] >= 1);
+  const spots = ladleSpots(s, [4, 6], 3.5).filter((sp) => sp.spill[0] >= 1 && sp.spill[1] >= 1 && Math.max(...sp.spill) >= BOWL_SIDE);
   for (const sp of best(rng, spots, (sp) => sp.spill[0] + sp.spill[1] + (s.reachable(Math.floor(sp.at[0]), Math.floor(sp.at[1]) + sp.drop - 1) ? 3 : 0)))
     yield {
       name: rng.pick(LADLE_NAMES),
       archetype: 'flamer',
       role: 'hazard',
       style: makeStyle(rng, ['rust', 'steel'], [24, 30]),
-      modules: [ladleAt(rng, sp, rng.chance(0.5) ? 1 : -1, rng.range(2, 3.5))],
+      modules: [ladleAt(rng, sp, sp.spill[0] < BOWL_SIDE ? -1 : sp.spill[1] < BOWL_SIDE ? 1 : rng.chance(0.5) ? 1 : -1, rng.range(2, 3.5))],
     };
 }
 

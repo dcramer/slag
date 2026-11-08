@@ -238,14 +238,19 @@ describe('the motor’s own moves', () => {
   }
 
   it('won’t leap off a side of the map: it goes by the route instead, and stops at the end of it', () => {
-    // A brawl arena's ledges run off the sides of the map, where a leap toward the edge runs off and out.
+    // A ledge running off the side of the map, where a leap toward the edge runs off and out: a brawl arena's right
+    // spawn slab run on out to the edge (the arena itself leaves air there).
     const m = new Match(1, undefined, { ...DEFAULT_RULES, mode: 'brawl' });
-    const { tiles, w, h } = m.level;
-    // What's under test is the edge of the map, not the arena's set pieces (seed 1's guns reach its right side).
-    m.level = { ...m.level, setPieces: [] };
-    const stands = (x: number, y: number) => tiles[(y + 1) * w + x] !== 0 && tiles[y * w + x] === 0 && tiles[(y - 1) * w + x] === 0;
-    const ty = Array.from({ length: h - 3 }, (_, i) => i + 2).find((y) => [w - 4, w - 3, w - 2, w - 1].every((x) => stands(x, y)));
-    expect(ty, 'a ledge running off the right side').toBeDefined();
+    const { w, h } = m.level;
+    const ty = m.level.goal.ty;
+    const tiles = m.level.tiles.slice();
+    for (let x = m.level.goal.tx; x < w; x++) {
+      tiles[(ty + 1) * w + x] = T_SOLID;
+      for (let y = 0; y <= ty; y++) tiles[y * w + x] = 0;
+    }
+    // What's under test is the edge of the map, not the arena's set pieces.
+    m.level = { ...m.level, tiles, setPieces: [] };
+    expect(ty).toBeLessThan(h - 1);
     const { p, run, r } = standing(m, w - 3, ty!);
     const motor = new Motor(rollPersonality(1, 'normal'), 1);
     let stood = false;
@@ -255,6 +260,70 @@ describe('the motor’s own moves', () => {
     }
     expect(r.alive, `${r.cause} at race frame ${run.frame}`).toBe(true);
     expect(stood).toBe(true);
+  });
+
+  // A placed fan blowing up into open sky holds a runner at the top of its column, where no move the controller has
+  // comes down within its length: it steers out for where it's going, as a player drifts out of an updraft, rather
+  // than hang there (a brawl bot hung 22 s in one over a stage, its rival waiting under it).
+  it('held up in a fan over open sky, it drifts out for its target instead of hanging there', () => {
+    const m = new Match(1, undefined, { ...DEFAULT_RULES, mode: 'brawl' });
+    const { w, h } = m.level;
+    const floor = h - 4;
+    const tiles = new Uint8Array(w * h);
+    for (let x = 0; x < w; x++) for (let y = floor + 1; y < h; y++) tiles[y * w + x] = T_SOLID;
+    m.level = { ...m.level, tiles, setPieces: [], protectedRects: [], spawn: { tx: 2, ty: floor }, goal: { tx: w - 3, ty: floor }, spawns: [] };
+    const fan: PlacedProp = {
+      uid: 100_000,
+      owner: -1,
+      tx: 0,
+      ty: 0,
+      rot: 0,
+      def: {
+        key: 'test',
+        name: 'test',
+        maker: 'test',
+        archetype: 'fan',
+        role: 'utility',
+        style: { metal: 'steel', trim: 'none', hue: 0, glowHue: 0, woodHue: 30 },
+        motion: { type: 'none' },
+        footprint: [[10, floor]],
+        modules: [
+          { type: 'body', cells: [[10, floor]], material: 'metal', conveyor: 0, breakFrames: 0, respawnFrames: 0 },
+          { type: 'fan', at: [10.5, floor + 0.5], angle: -Math.PI / 2, length: 8, strength: 2800 },
+        ],
+      },
+    };
+    const { p, r } = standing(m, 10, floor - 9, [fan]);
+    const motor = new Motor(rollPersonality(1, 'normal'), 1);
+    let landed = false;
+    for (let f = 0; f < 300 && r.alive && !landed; f++) {
+      m.step({ kb: motor.drive(m, p, { do: 'goTo', tx: 20, ty: floor }) });
+      landed = r.body.onGround && Math.abs(r.body.x / TILE - 10) > 2;
+    }
+    expect(landed).toBe(true);
+  });
+
+  // A brawl stage's slabs float over the drop, their ends wall faces: a knock off one carries a runner out past the
+  // end and down the face, where it slides and jumps back up rather than fall out. A rotation of seeds, each a knock
+  // off its spawn slab's outer end, down the face and out over the side's drop.
+  it.each([2, 7, 11])('knocked off a brawl stage’s end, it climbs back up its wall face (seed %i)', (seed) => {
+    const m = new Match(seed, undefined, { ...DEFAULT_RULES, mode: 'brawl' });
+    m.level = { ...m.level, setPieces: [] };
+    const { spawn, w, tiles } = m.level;
+    let edge = spawn.tx;
+    while (edge > 0 && tiles[(spawn.ty + 1) * w + edge - 1] !== 0) edge--;
+    expect(tiles[(spawn.ty + 1) * w + edge - 1], 'air past the stage’s end').toBe(0);
+    const { p, r } = standing(m, edge - 1, spawn.ty + 3);
+    r.body.vx = -3;
+    r.body.vy = 2;
+    const motor = new Motor(rollPersonality(1, 'normal'), 1);
+    let back = false;
+    for (let f = 0; f < 150 && r.alive && !back; f++) {
+      m.step({ kb: motor.drive(m, p, { do: 'goTo', tx: spawn.tx, ty: spawn.ty }) });
+      back = r.body.onGround && Math.floor((r.body.x + r.body.w / 2) / TILE) >= edge;
+    }
+    expect(r.alive, `${r.cause}`).toBe(true);
+    expect(back).toBe(true);
   });
 
   // Across a brawl arena, end to end, with hands that take 18 frames to see what's next and no other lapses: a run

@@ -12,9 +12,6 @@ import { withBridges } from './validate';
 /** Tiles from a way to die within which a place to stand isn't safe: about as far as a knock carries you. */
 const DEADLY_NEAR = 3;
 
-/** Columns either side of a stand cell within which a drop counts as beside it. */
-const BESIDE = 3;
-
 /** A set piece that is the level's own loot box, not a hazard or a helper. */
 export const isBox = (key: string) => key === 'loop-box';
 
@@ -83,8 +80,12 @@ export interface Measures {
   stands: number;
   /** Distinct rows the field stands on. */
   tiers: number;
-  /** Share of the stand cells with a drop within `BESIDE` columns on their row (no wall between). */
-  edgy: number;
+  /**
+   * Share of the stand cells within `DEADLY_NEAR` tiles of a fall that kills (into the pit or off the side of the map,
+   * no wall between; `deadlyCells` with the set pieces taken out): what the level's shape alone does, hazards not counted.
+   * A drop onto a ledge below doesn't count, where a drop of any height would.
+   */
+  falls: number;
   /** The field reaches a stand cell in the top third of the level. */
   high: boolean;
   /** The tallest run of terrain in either side column, in rows: a wall a knock stops against. */
@@ -106,22 +107,8 @@ export function measureLevel(level: Level, cache?: ReachCache): Measures {
   const at = (x: number, y: number) => (x < 0 || x >= w || y >= h ? T_EMPTY : tiles[y * w + x]);
   const s = standSafety(lv, cache);
   const n = Math.max(1, s.stands.length);
-  let edgy = 0;
-  const rows = new Set<number>();
-  for (const k of s.stands) {
-    const x = k % w;
-    const y = Math.floor(k / w);
-    rows.add(y);
-    for (let d = 1; d <= BESIDE; d++) {
-      const drop = (cx: number) => cx < 0 || cx >= w || (at(cx, y) === T_EMPTY && at(cx, y + 1) === T_EMPTY);
-      const wall = (cx: number) => cx >= 0 && cx < w && at(cx, y) !== T_EMPTY;
-      // A drop only counts if no wall stands between it and you.
-      if ((drop(x - d) && ![...Array(d - 1).keys()].some((i) => wall(x - 1 - i))) || (drop(x + d) && ![...Array(d - 1).keys()].some((i) => wall(x + 1 + i)))) {
-        edgy++;
-        break;
-      }
-    }
-  }
+  const rows = new Set(s.stands.map((k) => Math.floor(k / w)));
+  const { deadly } = deadlyCells({ ...lv, setPieces: [] });
   const run = (x: number) => {
     let best = 0;
     let cur = 0;
@@ -139,7 +126,7 @@ export function measureLevel(level: Level, cache?: ReachCache): Measures {
   return {
     stands: s.stands.length,
     tiers: rows.size,
-    edgy: edgy / n,
+    falls: s.stands.filter((k) => deadly.has(k)).length / n,
     high: s.stands.some((k) => Math.floor(k / w) < h / 3),
     wall: Math.max(run(0), run(w - 1)),
     mirrored: solid ? both / solid : 1,

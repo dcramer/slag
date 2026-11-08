@@ -341,7 +341,8 @@ export function generateLevel(seed: number, themeOverride?: ThemeId, profileOver
           : fixed.length
             ? (ps) => keep([...fixed, ...ps])
             : keep,
-        ...(live && landmark ? { standing: fixed, avoid: landmark.air, family: live.family } : {}),
+        ...(live && landmark ? { standing: fixed, family: live.family } : {}),
+        ...((live && landmark) || shape.keepOut ? { avoid: [...(live && landmark ? landmark.air : []), ...(shape.keepOut ?? [])] } : {}),
       });
       // (The placer already avoids these cells; this is a safety net. Keep uids contiguous, the landmark's first.)
       // A level that asks for boxes gets mystery boxes (or item stands) of its own, after the builder and its set pieces (./loop-boxes.ts).
