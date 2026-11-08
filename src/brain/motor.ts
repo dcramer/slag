@@ -207,6 +207,11 @@ export class Motor {
   private pinned = false;
   /** Looks in a row that ended in standing a beat for something that hurts to pass. */
   private hemmed = 0;
+  /**
+   * Looks in a row it stood inside its margin of something that never reached it, with every move from there as near
+   * and none of them hit later than standing: room to spare it can't win back by standing there.
+   */
+  private cramped = 0;
   /** Moves in a row that went off their recording on their first frame with the body standing where it was. */
   private balked = 0;
 
@@ -604,6 +609,8 @@ export class Motor {
    */
   private choose(map: RaceMap, run: RunWorld, b: Body, target: number): Act | null {
     const f = run.frame;
+    const cramped = this.cramped;
+    this.cramped = 0;
     const here = standCell(map.field, b);
     // There, and nothing coming for it: it lets go, unless coasting on would carry it off a ledge, off the side of the
     // map or into something: then it brakes, the way the step that got it here was proven to stop. With something
@@ -629,7 +636,9 @@ export class Motor {
     }
     // Standing here is about to hurt: no waiting for a better moment.
     // In a fight, kept standing a while by moves that all pass too near something, it takes one with no room to spare.
-    const margin = this.haste && this.hemmed > HEMMED ? 0 : this.traits.margin;
+    // In any race, kept standing a while inside its margin of something that doesn't reach it (flush against a part's
+    // spikes, say), it does the same: every move it has starts as near as standing, so with room to spare it has none.
+    const margin = (this.haste && this.hemmed > HEMMED) || cramped > HEMMED ? 0 : this.traits.margin;
     const exposed = hurtsStill(map, this.fore, f, b, shots, margin);
     const blocked = (mv: Move) => hurts(map, this.fore, mv, f, b, shots, margin) || (mv.air && gusty(run.level, mv, f, air));
     // Whether it could wait where it is, asked once and only by a landing whose way on is shut.
@@ -726,7 +735,11 @@ export class Motor {
         break;
       }
     }
-    if (exposed || cornered || !b.onGround) return this.escape(map, run, b, shots, moves, target);
+    if (exposed || cornered || !b.onGround) {
+      const out = this.escape(map, run, b, shots, moves, target);
+      if (!out && exposed && b.onGround) this.cramped = cramped + 1;
+      return out;
+    }
     // No move goes anywhere but where it stands: off the middle of its cell (on a ledge's lip with its middle over the
     // drop, say) the moves it has are that spot's own. It steps in to the middle, where the route's moves start, and
     // looks again.
@@ -998,7 +1011,10 @@ const NO_SHOTS: readonly Shot[] = [];
 const BLIND: Foresight = { watch: () => ({ at: () => ({ hazards: [], moved: [] }) }) };
 /** How far ahead (frames) and how finely it watches a blocked move for its moment, and how many blocked moves it watches. */
 const WAIT_AHEAD = 150;
-/** Looks in a row a fight (Intent `haste`) stands waiting for something that hurts to pass before it takes a move with no room to spare. */
+/**
+ * Looks in a row a fight (Intent `haste`) stands waiting for something that hurts to pass, and any race stands cramped
+ * (Motor `cramped`), before it takes a move with no room to spare.
+ */
 const HEMMED = 20;
 /** How far ahead it waits for a hazard in a fight (Intent `haste`): its target moves on long before a slow one passes. */
 const FIGHT_WAIT = 45;
