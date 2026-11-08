@@ -190,11 +190,12 @@ export const shots: Scenarios = {
           [Number(under), flag('underall')] as const,
         );
       // `--parcel` (Rising Slag): on from there to a Hand-Me-Down (sim/parcels.ts) well on its way down, shot, then shot
-      // again a twelfth of a second after it lands, its scraps flying off and the item in the climber's hands. A parcel
-      // whose climber goes out, drops off the screen or has used the item by then is passed over for the next one.
+      // again five frames after it lands, each rendered a frame apart so its paper scraps have spread, the item in the
+      // climber's hands. A parcel whose climber goes out, drops off the screen, has used the item by then, or (while there
+      // are tries to spare) stands in the bottom 40 px is passed over for the next one.
       if (flag('parcel')) {
         const name = `race-${seed}${opt('theme') ? `-${opt('theme')}` : ''}-parcel`;
-        for (let tries = 0; tries < 12; tries++) {
+        for (let tries = 0; tries < 16; tries++) {
           const target = await page.evaluate(() => {
             const d = (window as any).slagDebug;
             for (let f = 0; f < 90 * 60 && d.match.phase === 'run'; f++) {
@@ -208,24 +209,37 @@ export const shots: Scenarios = {
           if (target < 0) throw new Error('no Hand-Me-Down fell in 90 s: --parcel needs a Rising Slag race with someone far behind (--game slag)');
           await step(1);
           await snap(name);
-          const held = await page.evaluate((i) => {
-            const d = (window as any).slagDebug;
-            for (let f = 0; f < 120 && d.match.run.parcels.falling.some((p: any) => p.target === i); f++) d.step(1);
-            const got = d.match.run.runners[i].items.held;
-            if (!got) return false;
-            const was = { kind: got.kind, uses: got.uses };
-            d.step(5);
-            const run = d.match.run;
-            const r = run.runners[i];
-            // Still in hand and not used yet (a Queue Jumper has two goes), its line not out.
-            const out = run.items.hooks.some((h: any) => h.owner === i) || run.items.climbs.some((c: any) => c.owner === i);
-            return !!(r.alive && r.items.held?.kind === was.kind && r.items.held.uses === was.uses && !out && !run.screen.under[i]);
-          }, target);
+          const held = await page.evaluate(
+            async ([i, clear]) => {
+              const d = (window as any).slagDebug;
+              for (let f = 0; f < 120 && d.match.run.parcels.falling.some((p: any) => p.target === i); f++) d.step(1);
+              const got = d.match.run.runners[i].items.held;
+              if (!got) return false;
+              const was = { kind: got.kind, uses: got.uses };
+              // Each frame rendered a frame's time apart: particles age by the clock between renders, so the burst has
+              // spread as far as five frames carry it.
+              for (let f = 0; f < 5; f++) {
+                await new Promise((ok) => setTimeout(ok, 17));
+                d.step(1);
+              }
+              const run = d.match.run;
+              const r = run.runners[i];
+              // Still in hand and not used yet (a Queue Jumper has two goes), its line not out.
+              const out = run.items.hooks.some((h: any) => h.owner === i) || run.items.climbs.some((c: any) => c.owner === i);
+              // Its feet `clear` px over the screen's bottom edge, clear of the footer's prompts.
+              const s = run.rules.screen;
+              const feet = r.body.y + r.body.h - r.lap * (run.level.loop ?? 0) * 16;
+              const above = run.screen.y + (s.rows - s.up) * 16 - feet >= clear;
+              return !!(r.alive && r.items.held?.kind === was.kind && r.items.held.uses === was.uses && !out && above);
+            },
+            // Clear of the bottom 40 screen px (about 24 world px) while there are tries to spare.
+            [target, tries < 8 ? 32 : 0] as const,
+          );
           if (!held) continue;
           await snap(`${name}-landed`);
           return;
         }
-        throw new Error('no Hand-Me-Down landed in view in 12 tries');
+        throw new Error('no Hand-Me-Down landed in view in 16 tries');
       }
       // The sim frame alone isn't the same picture: camera smoothing depends on frames rendered before the pause.
       await page.evaluate(

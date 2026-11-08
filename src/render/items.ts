@@ -852,19 +852,19 @@ const KIND_FX: Record<string, (fx: Fx, e: ItemEvent, shake: (k: number) => void)
   // A Hand-Me-Down lands on its climber's head: torn scraps of its brown paper, not sparkle.
   'hit:parcel'(fx, e, shake) {
     fx.burst(
-      'debris',
+      'scrap',
       e.x,
       e.y - 2,
-      9,
-      120,
+      14,
+      130,
       [
-        { h: 32, s: 44, l: 62 },
-        { h: 30, s: 40, l: 52 },
-        { h: 34, s: 30, l: 74 },
+        { h: 34, s: 46, l: 70 },
+        { h: 32, s: 42, l: 60 },
+        { h: 36, s: 36, l: 78 },
       ],
-      1.3,
-      0.6,
-      140,
+      2.6,
+      1.1,
+      90,
     );
     fx.burst('dust', e.x, e.y - 1, 4, 40, [{ h: 32, s: 20, l: 80 }], 1.2, 0.35);
     shake(1.5);

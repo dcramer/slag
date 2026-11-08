@@ -4,7 +4,7 @@ import { TILE } from '../sim/constants';
 import { type Level, tileAt } from '../sim/level';
 import { light, type RC } from './kit';
 
-export type PKind = 'spark' | 'ember' | 'smoke' | 'dust' | 'gib' | 'confetti' | 'debris' | 'ring' | 'splash' | 'flash' | 'part';
+export type PKind = 'spark' | 'ember' | 'smoke' | 'dust' | 'gib' | 'confetti' | 'scrap' | 'debris' | 'ring' | 'splash' | 'flash' | 'part';
 
 /** What a character bursts into when it dies: shards of it, and a robot's or a plumber's own bits. */
 export const PARTS = ['gear', 'spring', 'key', 'shard', 'bolt', 'wheel', 'coin'] as const;
@@ -20,7 +20,8 @@ export type Part = (typeof PARTS)[number];
  *   On the foreground they'd get the cel pass's ink as scrub, and they could hide a hazard.
  * - Sparks are tapered pen strokes along their flight; embers are spinning flecks; both are hot, so emissive.
  * - A "ring" is a burst of pen speed lines flying outward; a "flash" is a jagged starburst with a hot core.
- * - Gibs, debris, confetti and splashes are hand-cut chunks, paper bits and drops on the foreground.
+ * - Gibs, debris, confetti and splashes are hand-cut chunks, paper bits and drops on the foreground. Scraps are torn paper:
+ *   bigger than confetti, ragged, with an ink edge in a dark of their own colour, fluttering down as confetti does.
  * - Parts are what a character breaks into: shards, and a few kinds' own bits (gears, springs, bolts, coins).
  *
  * Particles live in a pool and are reused: a death or explosion spawns dozens, and eight players spawn them every second.
@@ -151,6 +152,11 @@ function paint(p: P) {
       p.c0 = css(c);
       p.c1 = css(c, 26, 1, -10);
       break;
+    case 'scrap':
+      p.c0 = css(c);
+      p.c1 = css(c, -14, 1, 4);
+      p.c2 = css(c, -Math.min(c.l * 0.62, 40), 1, 6);
+      break;
     default:
       p.c0 = css(c);
       p.c1 = css(c, -17, 1, 5);
@@ -253,9 +259,11 @@ export class Fx {
       case 'part':
       case 'debris':
       case 'confetti':
+      case 'scrap':
       case 'splash': {
-        p.vy += (p.kind === 'confetti' ? 120 : 600) * dt;
-        if (p.kind === 'confetti') {
+        const paper = p.kind === 'confetti' || p.kind === 'scrap';
+        p.vy += (paper ? 120 : 600) * dt;
+        if (paper) {
           p.vx *= 0.985;
           p.vx += Math.sin(p.life * 8 + p.rot) * 30 * dt;
         }
@@ -315,23 +323,12 @@ export class Fx {
         case 'debris':
           this.chunk(s, p, p.size * 1.15 * Math.min(1, p.life / 0.3));
           break;
-        case 'confetti': {
-          // A paper bit flipping: its face and its back are two tones, and edge-on it's a sliver.
-          const flip = Math.cos(p.life * 9 + p.shape);
-          const hw = p.size * Math.min(1, p.life / 0.3);
-          const hh = Math.max(0.12, Math.abs(flip)) * p.size * 0.45 * Math.min(1, p.life / 0.3);
-          const c = Math.cos(p.rot);
-          const sn = Math.sin(p.rot);
-          s.fillStyle = flip > 0 ? p.c0 : p.c1;
-          s.beginPath();
-          s.moveTo(p.x - c * hw + sn * hh, p.y - sn * hw - c * hh);
-          s.lineTo(p.x + c * hw + sn * hh, p.y + sn * hw - c * hh);
-          s.lineTo(p.x + c * hw - sn * hh, p.y + sn * hw + c * hh);
-          s.lineTo(p.x - c * hw - sn * hh, p.y - sn * hw + c * hh);
-          s.closePath();
-          s.fill();
+        case 'confetti':
+          this.paperBit(s, p, 0.45, false);
           break;
-        }
+        case 'scrap':
+          this.paperBit(s, p, 0.7, true);
+          break;
         case 'splash': {
           // A drop: round at the front, drawn out to a point behind, with one hard glint.
           const r = p.size * Math.min(1, k * 2.2);
@@ -382,6 +379,52 @@ export class Fx {
           break;
       }
     }
+  }
+
+  /**
+   * A paper bit flipping: its face and its back are two tones, and edge-on it's a sliver; `tall` is its height to its
+   * width. Inked (a scrap), its corners are torn uneven and it sits on a cut of its own dark a little bigger.
+   */
+  private paperBit(s: CanvasRenderingContext2D, p: P, tall: number, inked: boolean) {
+    const flip = Math.cos(p.life * 9 + p.shape);
+    const grow = Math.min(1, p.life / 0.3);
+    const hw = p.size * grow;
+    const hh = Math.max(0.12, Math.abs(flip)) * p.size * tall * grow;
+    const c = Math.cos(p.rot);
+    const sn = Math.sin(p.rot);
+    // Torn: each corner pulled in by its own amount, the same every frame for this scrap.
+    const t = (k: number) => (inked ? 0.7 + 0.3 * SPOKES[(p.shape + k * 7) & 63] : 1);
+    const ax = hw * t(0);
+    const bx = hw * t(1);
+    const by = hh * t(2);
+    const cy = hh * t(3);
+    const dx = hw * t(4);
+    if (inked) {
+      s.fillStyle = p.c2;
+      this.quad(s, p.x, p.y, c, sn, -ax - 0.55, -hh - 0.55, bx + 0.55, -by - 0.55, hw + 0.55, cy + 0.55, -dx - 0.55, hh + 0.55);
+    }
+    s.fillStyle = flip > 0 ? p.c0 : p.c1;
+    this.quad(s, p.x, p.y, c, sn, -ax, -hh, bx, -by, hw, cy, -dx, hh);
+  }
+
+  /** A four-cornered cut at (x, y), its corners given in its own frame and turned by (c, sn). */
+  private quad(
+    s: CanvasRenderingContext2D,
+    x: number,
+    y: number,
+    c: number,
+    sn: number,
+    ...uv: [number, number, number, number, number, number, number, number]
+  ) {
+    s.beginPath();
+    for (let i = 0; i < 8; i += 2) {
+      const px = x + c * uv[i] - sn * uv[i + 1];
+      const py = y + sn * uv[i] + c * uv[i + 1];
+      if (i) s.lineTo(px, py);
+      else s.moveTo(px, py);
+    }
+    s.closePath();
+    s.fill();
   }
 
   /** A chunk in two tones: the whole cut in shade, its lit face pulled up-left whichever way it has turned. */
