@@ -176,7 +176,8 @@ export interface BotRound {
   bumps: number;
   /**
    * How the runners who went out went out (`DeathCause`, or `slag` where the slag took them), with `+` where a rival's
-   * knock put them there (the bonk's credit still running: sim/items/common.ts `BONK_CREDIT`).
+   * knock put them there (the bonk's credit still running: sim/items/common.ts `BONK_CREDIT`), `~` where only a rival's
+   * shove did (a brawl's `ShoveRules.touch`: credit with no stars).
    */
   causes: Record<string, number>;
   /** Runners out within `at` frames of GO. */
@@ -234,7 +235,7 @@ function watchFight(run: Run, f: Fight, credit: number[], apart: Set<number>, de
   const t = run.frame - RUN_COUNTDOWN;
   for (const r of live) {
     const b = r.body;
-    if (r.items.bonkCredit > (credit[r.slot] ?? 0) && r.items.bonkedBy !== r.slot && r.items.bonkedBy >= 0) {
+    if (r.items.bonkCredit > (credit[r.slot] ?? 0) && r.items.bonkedBy !== r.slot && r.items.bonkedBy >= 0 && r.items.daze > 0) {
       f.bonks++;
       if (f.contact < 0) f.contact = t;
       if (f.hit < 0) f.hit = t;
@@ -378,6 +379,8 @@ function playRound(seed: number, m: Match, bots: BotSeats, { at = 15 * 60, limit
   // Where a brawl's field stands safe, with the parts placed so far: what hurts and the drops into the pit.
   const deadly = m.rules.mode === 'brawl' ? deadlyCells({ ...m.level, setPieces: [...m.level.setPieces, ...m.placed] }).deadly : null;
   const credit: number[] = [];
+  // Whether each runner's running credit is a rival's shove's (no stars) rather than a knock's.
+  const shoved: boolean[] = [];
   const apart = new Set<number>();
   while (run.endFrame < 0 && run.frame < limit) {
     if (run.frame === RUN_COUNTDOWN + at) leader = top();
@@ -426,7 +429,8 @@ function playRound(seed: number, m: Match, bots: BotSeats, { at = 15 * 60, limit
       }
     run.runners.forEach((r, i) => {
       const it = r.items;
-      if (r.alive && it.bonkCredit > before[i] && it.bonkedBy >= 0 && it.bonkedBy !== r.slot) {
+      if (r.alive && it.bonkCredit > before[i] && it.bonkedBy >= 0 && it.bonkedBy !== r.slot) shoved[i] = it.daze === 0;
+      if (r.alive && it.bonkCredit > before[i] && it.bonkedBy >= 0 && it.bonkedBy !== r.slot && it.daze > 0) {
         const k = hitBy.get(it.bonkedBy) ?? '?';
         knocks[k] = (knocks[k] ?? 0) + 1;
       }
@@ -443,7 +447,7 @@ function playRound(seed: number, m: Match, bots: BotSeats, { at = 15 * 60, limit
     });
     run.runners.forEach((r, i) => {
       if (!was[i] || r.alive) return;
-      const k = `${slagAt(run.slag, m.level, r) ? 'slag' : r.cause}${r.items.bonkCredit > 0 && r.items.bonkedBy !== r.slot ? '+' : ''}`;
+      const k = `${slagAt(run.slag, m.level, r) ? 'slag' : r.cause}${r.items.bonkCredit > 0 && r.items.bonkedBy !== r.slot ? (shoved[i] ? '~' : '+') : ''}`;
       causes[k] = (causes[k] ?? 0) + 1;
       if (!k.endsWith('+') && run.frame - (fight.touched[r.slot] ?? -Infinity) <= SHOVED) fight.shoved++;
     });
