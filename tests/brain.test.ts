@@ -262,6 +262,47 @@ describe('the motor’s own moves', () => {
     expect(stood).toBe(true);
   });
 
+  // A placed fan blowing up into open sky holds a runner at the top of its column, where no move the controller has
+  // comes down within its length: it steers out for where it's going, as a player drifts out of an updraft, rather
+  // than hang there (a brawl bot hung 22 s in one over a stage, its rival waiting under it).
+  it('held up in a fan over open sky, it drifts out for its target instead of hanging there', () => {
+    const m = new Match(1, undefined, { ...DEFAULT_RULES, mode: 'brawl' });
+    const { w, h } = m.level;
+    const floor = h - 4;
+    const tiles = new Uint8Array(w * h);
+    for (let x = 0; x < w; x++) for (let y = floor + 1; y < h; y++) tiles[y * w + x] = T_SOLID;
+    m.level = { ...m.level, tiles, setPieces: [], protectedRects: [], spawn: { tx: 2, ty: floor }, goal: { tx: w - 3, ty: floor }, spawns: [] };
+    const fan: PlacedProp = {
+      uid: 100_000,
+      owner: -1,
+      tx: 0,
+      ty: 0,
+      rot: 0,
+      def: {
+        key: 'test',
+        name: 'test',
+        maker: 'test',
+        archetype: 'fan',
+        role: 'utility',
+        style: { metal: 'steel', trim: 'none', hue: 0, glowHue: 0, woodHue: 30 },
+        motion: { type: 'none' },
+        footprint: [[10, floor]],
+        modules: [
+          { type: 'body', cells: [[10, floor]], material: 'metal', conveyor: 0, breakFrames: 0, respawnFrames: 0 },
+          { type: 'fan', at: [10.5, floor + 0.5], angle: -Math.PI / 2, length: 8, strength: 2800 },
+        ],
+      },
+    };
+    const { p, r } = standing(m, 10, floor - 9, [fan]);
+    const motor = new Motor(rollPersonality(1, 'normal'), 1);
+    let landed = false;
+    for (let f = 0; f < 300 && r.alive && !landed; f++) {
+      m.step({ kb: motor.drive(m, p, { do: 'goTo', tx: 20, ty: floor }) });
+      landed = r.body.onGround && Math.abs(r.body.x / TILE - 10) > 2;
+    }
+    expect(landed).toBe(true);
+  });
+
   // A brawl stage's slabs float over the drop, their ends wall faces: a knock off one carries a runner out past the
   // end and down the face, where it slides and jumps back up rather than fall out. A rotation of seeds, each a knock
   // off its spawn slab's outer end, down the face and out over the side's drop.

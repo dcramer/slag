@@ -32,11 +32,12 @@ import type { SculptCtx, Shape } from '../types';
 
 /**
  * The stage's outline, slab by slab from the side in: flat, the outer slabs stepped up over the middle, the middle
- * peaked over the ends, or dipped under them. The style's last segment, so the contract's `shapes` counts each.
+ * peaked over the ends, or dipped under them. The style's last segment, so the contract's `shapes` counts each; a flat
+ * one weighted up, as the pipeline turns more of them down.
  */
 type Outline = 'flat' | 'ends' | 'peak' | 'dip';
 const OUTLINES: readonly (readonly [Outline, number])[] = [
-  ['flat', 1],
+  ['flat', 1.5],
   ['ends', 1],
   ['peak', 1],
   ['dip', 1],
@@ -88,7 +89,7 @@ const TOP_BOARD = 4;
  * from a ceiling (a press in its gantry, a forklift's run, a ladle's pour, a pendulum's arc, a roof's cave-in), which
  * boards a jump apart never leave between them, and nothing over the roof.
  */
-const HALL = [7, 9] as const;
+const HALL = [8, 9] as const;
 const HALL_ROWS = 9;
 /** Rows a hall's pier hangs under its roof. */
 const PIER = 4;
@@ -102,12 +103,12 @@ const PIER = 4;
  *   over its outer half with a pier hanging at its inner end: a floor, a ceiling and a wall face, for what stands on a
  *   floor, hangs from a ceiling or mounts on a wall, a pair, one in each, mirrored across the middle; shared once it
  *   stands, the room the rest of a set's machines need.
- * - `arch`: a slab across the middle, `ARCH_HALF` columns either side, and a beam over its middle `ARCH` rows up with
- *   nothing else between, for what swings or drops across the way over: a log, an axe, a hook. Shared once it stands:
- *   its crossing is the arena's widest floor.
+ * - `arch`: a crossing `ARCH_HALF` columns either side of the middle, split by a seam `ARCH_SEAM` wide under a beam
+ *   `ARCH` rows up with nothing else between, for what swings or drops across the way over: a log, an axe, a hook.
+ *   Shared once it stands.
  * Only a pit is the centrepiece's alone. A kind none of the set's hazards stood in (`SculptCtx.noCentre`) isn't laid
- * again in that draw. The arch comes up most; the halls as often as a pit, since a stage's slabs leave little other
- * floor for a set's machines (at 1 in 7, a farm stood about 4.7 of its 6).
+ * again in that draw, so a set whose hazards stand in neither a pit nor an arch gets the halls. The arch comes up
+ * most, the halls as often as a pit (1 in 7 on the tiered arena, where other floors held a set's machines).
  */
 const CENTRES = ['pit', 'halls', 'arch'] as const;
 type CentreKind = (typeof CENTRES)[number];
@@ -120,6 +121,12 @@ const ARCH_HALF = [4, 5] as const;
 const ARCH = 7;
 /** Half the beam's width. */
 const BEAM_HALF = 2;
+/**
+ * Columns of the seam down the middle of an arch's crossing, under the beam: what swings or drops from the beam does it
+ * over a fall, and nothing drives the crossing end to end (a tractor there walled the middle of the stage: what stood
+ * either side of it was turned down for closing the last way across).
+ */
+const ARCH_SEAM = 2;
 /** Half a plain centre slab across the middle, when there's no centrepiece to lay round. */
 const MIDDLE_HALF = [2, 3] as const;
 
@@ -132,6 +139,8 @@ interface Span {
   hall?: boolean;
   /** A court: a long floor with the headroom of a high board over it, never a canopy's. */
   court?: boolean;
+  /** An arch's crossing, the left half of it: its seam down the middle under the beam. */
+  arch?: boolean;
 }
 
 /** Build the arena with a set's tower kit: its floor for the slabs, roofs and ledges, its dressing on them. */
@@ -160,21 +169,25 @@ export function sculptArena(ctx: SculptCtx, kit: TallKit): Shape {
   const widestGap = jumpProfile(1).walkGap;
   const seam = () => Math.min(widestGap, Math.max(2, Math.round(hopGap(rng, 2) * floaty)));
   const step = rng.int(STEP[0], STEP[1]);
-  // A dip's middle goes down from the base row, so its base row stands that much higher: the drop stays under it.
-  const base = H - rng.int(UNDER[0], UNDER[1]) - (outline === 'dip' ? step : 0);
+  // A dip's middle goes down from the base row, its slabs thinner there: the drop stays under it, the sky over it.
+  const base = H - rng.int(UNDER[0], UNDER[1]);
 
+  // The innermost slab, by the middle, is now and then a court, wider: a long floor for what runs along one (a cart, a
+  // forklift, a combine, a robot arm's sweep), with the narrowest seams either side, so it fits by an arch too.
+  let court = centre !== 'halls' && rng.chance(COURT_ODDS) ? rng.int(COURT[0], COURT[1]) : 0;
+  const inner = () => (court ? 2 : seam());
   // The middle: a pit's lip, an arch's crossing, or (with no centre to lay round) a slab across it or a seam.
   const slabs: Span[] = [];
   let end: number;
   if (centre === 'pit') end = mid - PIT_HALF;
   else if (centre === 'arch') {
     const archHalf = rng.int(ARCH_HALF[0], ARCH_HALF[1]);
-    slabs.push({ row: base, a: mid - archHalf + 1, b: mid, kind: 'slab' });
-    end = mid - archHalf - seam();
+    slabs.push({ row: base, a: mid - archHalf + 1, b: mid - ARCH_SEAM / 2, kind: 'slab', arch: true });
+    end = mid - archHalf - inner();
   } else if (rng.chance(0.5)) {
     const m = rng.int(MIDDLE_HALF[0], MIDDLE_HALF[1]);
     slabs.push({ row: base, a: mid - m + 1, b: mid, kind: 'slab' });
-    end = mid - m - seam();
+    end = mid - m - inner();
   } else end = mid - Math.max(1, seam() >> 1);
   // A hall stands by the middle, off the spawn's slab: its floor is the innermost slab.
   if (centre === 'halls') {
@@ -184,11 +197,9 @@ export function sculptArena(ctx: SculptCtx, kit: TallKit): Shape {
     slabs.push({ row: base, a: end - w + 1, b: end, kind: 'slab', hall: true });
     end -= w + c;
   }
-  // Slabs from the middle out, seams between, until the side's air is what's left. The innermost, by the middle,
-  // is now and then a court, wider: a long floor for what runs along one (a cart, a forklift, a robot arm's sweep).
-  let court = centre !== 'halls' && rng.chance(COURT_ODDS) ? rng.int(COURT[0], COURT[1]) : 0;
+  // Slabs from the middle out, seams between, until the side's air is what's left.
   for (let x = end; ;) {
-    const c = seam();
+    const c = inner();
     // A court with no room past it for the spawn's slab is a slab like the rest.
     if (x - court + 1 - c - SPAWN_SLAB < SIDE[0]) court = 0;
     const w = court || rng.int(least, widest);
@@ -220,7 +231,7 @@ export function sculptArena(ctx: SculptCtx, kit: TallKit): Shape {
   });
   const spawn = slabs[0];
   const hall = slabs.find((s) => s.hall);
-  const crossing = centre === 'arch' ? slabs.find((s) => s.b === mid) : undefined;
+  const crossing = slabs.find((s) => s.arch);
   const beamRow = crossing ? crossing.row - ARCH : -1;
   const roofRow = hall ? hall.row - HALL_ROWS : -1;
   // Past the spawn's, every slab outside a room (a hall, an arch's crossing) is high: its first board `highRows` up,
@@ -258,8 +269,17 @@ export function sculptArena(ctx: SculptCtx, kit: TallKit): Shape {
     return board;
   };
   const by = (i: number) => slabs[i] as Span | undefined;
-  // Each slab's first board: a layer up over a low one, `highRows` up over a high one; a canopy is a high one's.
-  const first = slabs.map((s, i) => (canopies.has(s) ? s.row - roofed : s.hall || s === crossing ? -Infinity : s.row - (high[i] ? highRows : layer)));
+  // Each slab's first board: a layer up over a low one, `highRows` up over a high one; a canopy is a high one's. A high
+  // one beside an arch's crossing is the board a row over the beam, that runs on to it: one board, not two a row apart.
+  const first = slabs.map((s, i) =>
+    canopies.has(s)
+      ? s.row - roofed
+      : s.hall || s === crossing
+        ? -Infinity
+        : high[i] && crossing && by(i + 1) === crossing && beamRow > TOP_BOARD
+          ? beamRow - 1
+          : s.row - (high[i] ? highRows : layer),
+  );
   slabs.forEach((s, i) => {
     if (s.hall || s === crossing) return;
     // Beside a high board, a hall's or a canopy's roof, the layers go on up to a jump under it (a step under a roof);
@@ -310,7 +330,7 @@ export function sculptArena(ctx: SculptCtx, kit: TallKit): Shape {
         g.plank(a, b, s.row + 1);
         continue;
       }
-      if (s.kind === 'slab') g.fill(a, s.row + 2, b, Math.min(H - 1 - DROP, s.row + thick), T_SOLID, true);
+      if (s.kind === 'slab') g.fill(a, s.row + 2, b, Math.max(s.row + 3, Math.min(H - 1 - DROP, s.row + thick)), T_SOLID, true);
       kit.deck(g, rng, storey(s.row, a, b), a, b, false, k);
       // Its top solid whatever boards the set lays in it: something to stand on with a wall under each end.
       for (let x = a; x <= b; x++) if (g.get(x, s.row + 1) === T_ONEWAY) g.set(x, s.row + 1, T_SOLID, true);
@@ -359,7 +379,15 @@ export function sculptArena(ctx: SculptCtx, kit: TallKit): Shape {
   // Nothing of the set's dressing hangs under an arch's beam, in the swing over the crossing.
   if (crossing) g.clear(crossing.a, beamRow + 2, W - 1 - crossing.a, crossing.row);
   const pit = centre === 'pit' ? [mid - PIT_HALF + 1, W - mid + PIT_HALF - 2] : null;
-  for (let x = 0; x < W; x++) if (!stage[x]) g.clear(x, pit && x >= pit[0] && x <= pit[1] ? 0 : top, x, H - 1);
+  // An arch's seam stays clear from under its beam down.
+  const under = (x: number) => {
+    let y = beamRow + 1;
+    while (y < H && g.get(x, y) === T_SOLID) y++;
+    return y;
+  };
+  for (let x = 0; x < W; x++)
+    if (!stage[x])
+      g.clear(x, pit && x >= pit[0] && x <= pit[1] ? 0 : crossing && x > mid - ARCH_SEAM / 2 && x < W - mid + ARCH_SEAM / 2 - 1 ? under(x) : top, x, H - 1);
   // A board's planks keep only to what's stood on, never doubled under another span or left a stub a tile wide.
   for (let y = 0; y < H; y++)
     for (let x = 0; x < W; x++) if (g.get(x, y) === T_ONEWAY && (y <= air || !g.empty(x, y - 1) || !g.empty(x, y - air))) g.set(x, y, T_EMPTY, true);
@@ -397,7 +425,7 @@ function centreRooms(centre: CentreKind | null, slabs: Span[], mid: number, W: n
     return [{ x: lip, y: 0, w: W - 2 * lip, h: H }];
   }
   if (centre === 'arch') {
-    const c = slabs.find((s) => s.b === mid)!;
+    const c = slabs.find((s) => s.arch)!;
     return [{ x: c.a - 2, y: beamRow + 2, w: W - 2 * (c.a - 2), h: c.row - beamRow - 1 }];
   }
   const hall = slabs.find((s) => s.hall);
