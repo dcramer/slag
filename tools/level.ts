@@ -107,6 +107,7 @@ if (flag('stats')) {
     let stood = 0;
     let safe = 0;
     let nearHazard = 0;
+    let falls = 0;
     let contractFaults = 0;
     let contractRejects = 0;
     // What each arena was laid round: room kinds, the recipes that stood there (`pair` when mirrored), and how near.
@@ -149,6 +150,7 @@ if (flag('stats')) {
       stood += r.setPieces.placed.length;
       safe += r.measures.safe;
       nearHazard += r.measures.hazard;
+      falls += r.measures.falls;
       if (lastGenInfo.contractFaults) contractFaults++;
       contractRejects += lastGenInfo.rejects.contract;
       if (r.boxes !== undefined) boxes.push(r.boxes);
@@ -184,6 +186,7 @@ if (flag('stats')) {
       boxes: boxes.length ? `${Math.min(...boxes)}/${(boxes.reduce((a, b) => a + b, 0) / boxes.length).toFixed(1)}` : '-',
       safe: `${((safe / n) * 100).toFixed(0)}%`,
       nearHazard: `${((nearHazard / n) * 100).toFixed(0)}%`,
+      falls: `${((falls / n) * 100).toFixed(0)}%`,
       contractFaults,
       contractRejects,
       ...(Object.keys(centres).length
@@ -360,7 +363,7 @@ function holds(r: LevelReport): string {
       ? [`centre: ${r.centre.kind}, ${r.centre.recipe ? `${r.centre.recipe}${r.centre.pieces > 1 ? ', a mirrored pair' : ''}` : 'nothing stood there'}`]
       : []),
     ...(r.boxes !== undefined ? [`boxes: ${r.boxes}`] : []),
-    `stand cells: ${m.stands} on ${m.tiers} rows, ${pct(m.safe)} safe, ${pct(m.hazard)} near a hazard${m.centres ? ` (${pct(m.centre)} near the centrepiece)` : ''}, ${pct(m.edgy)} by a drop`,
+    `stand cells: ${m.stands} on ${m.tiers} rows, ${pct(m.safe)} safe, ${pct(m.hazard)} near a hazard${m.centres ? ` (${pct(m.centre)} near the centrepiece)` : ''}, ${pct(m.falls)} by a fall that kills`,
     `spawns, bare: ${(r.spawns ?? [])
       .map(
         (c, _, all) =>

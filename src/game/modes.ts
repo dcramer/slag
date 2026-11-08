@@ -192,7 +192,7 @@ export const MODES: Record<ModeId, ModeDef> = {
     label: 'Brawl',
     // Late in a round slag pours in from below and the arena closes in, so a stalemate always comes to an end; 60 s is the end.
     profile: {
-      // Its own arena in every set: ledges in tiers to the top of the screen, open at the sides (gen/level/builders/arena.ts).
+      // Its own arena in every set: a platform fighter's stage over the drop, open at both ends (gen/level/builders/arena.ts).
       builder: 'arena',
       size: 'classic',
       route: 'ltr',

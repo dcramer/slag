@@ -219,13 +219,15 @@ export interface BuilderContract {
     kinds?: number;
     /** Mean stand cells the field reaches, at least this share of the busiest set's. */
     stands?: number;
+    /** Mean share of stand cells a knock from a fall that kills (`Measures.falls`), over this. */
+    falls?: number;
   };
   /** Over every set's levels together. */
   all?: {
     /** Mean share of stand cells with no way to die near them, under this. */
     safe?: number;
-    /** Mean share of stand cells with a drop beside them, over this. */
-    edgy?: number;
+    /** Mean share of stand cells a knock from a fall that kills (`Measures.falls`), over this. */
+    falls?: number;
     /** Share of levels whose field reaches the top third, over this. */
     high?: number;
     /** Mean share of terrain mirrored across the middle, over this. */

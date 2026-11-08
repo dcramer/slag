@@ -1,93 +1,117 @@
-import { withDifficulty } from '../difficulty';
 import { Grid, POCKET, T_EMPTY, T_ONEWAY, T_SOLID } from '../kit';
 import { jumpProfile } from '../probe';
-import { easyRise, hopGap, knobs, LAST_RESORT } from '../sculptors/common';
+import { hopGap, knobs, LAST_RESORT } from '../sculptors/common';
 import type { Storey, TallKit } from '../sculptors/tall';
 import type { TileRect } from '../../../sim/level';
 import type { SculptCtx, Shape } from '../types';
 
 /**
- * A Brawl arena (docs/MODES.md → Brawl): one screen of ledges stacked in tiers from islands over the pit up to the top
- * of the view, built for knocking people off things. The screen is cut into bands of columns with shafts between them,
- * clear from the top tier down to the pit: every tier is a ledge on each band, so a knock off nearly any ledge falls
- * out of the arena rather than onto the ledge below, and the outermost ledges run off the open sides, where a knock
- * carries you off the map. Each tier's ledges step in a column at alternate ends, so every band climbs (`climbs`).
- * One band each side is a hall: a floor on the bottom tier, nothing over it but a roof `HALL_ROWS` up, stepped and
- * with a pier hanging at one end, and nothing over the roof: room for whatever the set stands on a floor, hangs from a
- * ceiling or mounts on a wall, which tiers a jump apart never leave (the set's pieces are the placer's, the room is
- * the arena's, the same for every set). The two ends mirror each other (the same tiers, ledges and kinds; the set's
- * floor varies the details), so neither spawn gets the high ground.
+ * A Brawl arena (docs/MODES.md → Brawl): a platform fighter's stage, as the crossover brawler's are (owner decision).
+ * A main stage floats over the drop across the screen, open at both ends, with air between each end and the side of
+ * the map, where a knock carries you off it, and nothing under it but the drop. It's laid in slabs a few columns wide
+ * with seams of drop between them, each a walking jump (`hopGap`), so a knock from nearly anywhere on it is a fall that
+ * kills (`Measures.falls`, level/measure.ts). Each slab is thick enough that its ends are wall faces a knocked runner
+ * slides down and jumps back up from: the seams are chimneys and the ends cliffs, the recovery and the edge-guarding
+ * over it. Over the stage, boards you jump up through (and drop through, down and jump) stand straight over the slabs
+ * and their width, so a knock off one falls past the slab's end too: the spawn's slab a layer at a time, as high as
+ * the real controller lands on one straight up, and every slab past it one board high up (`highRows`) with headroom
+ * under it, reached across a seam from the layers beside it. Those boards are a second way across, over the stage.
  *
- * It's laid round a centre (`CENTRES`), first: a pit in the middle, the halls, or an arch over the main crossing, the
- * room the set's own hazard stands in before any other piece as the arena's centrepiece (`Shape.centre`,
- * setpieces/place.ts `placeCentre`); a pit arena has no halls, its ledges running to the pit instead.
+ * What varies by seed: its outline (`OUTLINES`: flat, stepped up at the ends, peaked or dipped in the middle), the
+ * slabs, seams and side air, its centre (below), a court by the middle (a slab wider than the rest, for what runs along
+ * a floor), canopies (a solid roof over a slab, two layers up: a ceiling over a floor and a floor with the sky over it),
+ * a pillar under a slab a side (rock to the bottom, a wall down the seam beside it that still falls to the drop), the
+ * layers stacked over the boards, and a small ledge out over each side's drop. Both spawns stand on the outermost
+ * slab of their side, the spawn's shield covering GO. The two halves mirror each other (the set's floor varies the
+ * details), so neither end gets the high ground. It owes no part, and the pipeline proves each end reaches the other.
  *
- * What varies by seed: how the tiers fill the screen (`SHAPES`: full tiers, a pyramid with the high ground in the
- * middle, a bowl with it at the sides), its centre, which tier the two spawns stand on, the tiers' rows, the bands and shafts,
- * whether the halls stand by the sides or by the middle, which ledges are boards you jump up through and which are the
- * set's own floor, and which islands of the bottom tier stand on the bottom. It owes no part: every tier is a jump or a
- * drop from the next, shafts are walking jumps (`hopGap`), and the pipeline proves each end reaches the other bare.
+ * The set's pieces need room, the same for every set (no per-theme tuning): headroom over a floor (under the high
+ * boards, in a court, a hall, the sky over the top boards and roofs), a ceiling (a canopy, a hall's roof, an arch's
+ * beam, the stage's underside over the drop) and wall faces (every slab's ends, a hall's pier).
  */
 
 /**
- * How the tiers fill the screen: every tier full width, upper tiers drawn in to the middle, or out to the sides.
- * Weighted against the draws the pipeline turns down for their precision (a bowl's way across is the bottom tiers'
- * running jumps, a tight route for a gentle level), so each comes out in about a third of arenas.
+ * The stage's outline, slab by slab from the side in: flat, the outer slabs stepped up over the middle, the middle
+ * peaked over the ends, or dipped under them. The style's last segment, so the contract's `shapes` counts each.
  */
-type ArenaShape = 'tiers' | 'pyramid' | 'bowl';
-const SHAPES: readonly (readonly [ArenaShape, number])[] = [
-  ['tiers', 2],
-  ['pyramid', 2],
-  ['bowl', 3],
+type Outline = 'flat' | 'ends' | 'peak' | 'dip';
+const OUTLINES: readonly (readonly [Outline, number])[] = [
+  ['flat', 1],
+  ['ends', 1],
+  ['peak', 1],
+  ['dip', 1],
 ];
 
 /**
- * Band widths and the share of upper ledges that are boards, per tier: wide and forgiving on gentle, narrow on hard.
- * Narrow enough that from anywhere on a ledge a knock of three tiles or so reaches a shaft or a side.
+ * Slab widths, by difficulty: no wider than six, so from anywhere on one a fall is within three tiles (`DEADLY_NEAR`,
+ * level/measure.ts), and narrower on hard. The outermost holds a spawn and its fanned-out field, so it's five at least.
+ * Wider (5 to 7) cost the falls share two points and stood no more set pieces.
  */
-const LEDGES = {
-  gentle: { ledge: [5, 6], boards: 0.5 },
-  medium: { ledge: [4, 6], boards: 0.4 },
-  hard: { ledge: [3, 5], boards: 0.3 },
+const SLABS = {
+  gentle: [5, 6],
+  medium: [4, 6],
+  hard: [4, 5],
 } as const;
+/** The spawn's slab, at least. */
+const SPAWN_SLAB = 5;
+/** A court's width, and the odds of one: the innermost slab widened, when there's no hall. */
+const COURT = [8, 9] as const;
+const COURT_ODDS = 0.85;
+/** Columns of air between the stage's ends and the side of the map. */
+const SIDE = [2, 4] as const;
+/** Rows from the stage's stand row down to the bottom of the screen, its slab and the drop under it. */
+const UNDER = [10, 11] as const;
+/** Rows thick a slab is (its ends' wall faces), and rows of drop under it at least. */
+const THICK = [4, 5] as const;
+const DROP = 5;
+/** Rows a step of the outline rises or falls, from the stage's base row. */
+const STEP = [1, 2] as const;
+/** Boards over a slab, at most, but for the way up to a high board, a hall's roof or an arch's beam. */
+const LAYERS = 4;
+/** Odds a board has another over it on the layer up (never over a high board's height), and of a board over an arch's beam. */
+const STACK = 0.35;
+const CENTRE_BOARD = 0.6;
+/** Odds of a small solid ledge out over each side's drop, a jump from the stage's end, and its width. */
+const SIDE_LEDGE = 0.5;
+const SIDE_LEDGE_W = [2, 3] as const;
+const SIDE_RISE = 3;
+/** Odds of a canopy over each high slab, and the rows from the slab's stand row to the canopy's. */
+const CANOPY = 0.85;
+const CANOPY_ROWS = [5, 7] as const;
+/** Odds of a slab a side standing on a pillar of rock to the bottom. */
+const PILLAR = 0.5;
+/** The highest stand row a board takes: room over it for a jump. */
+const TOP_BOARD = 4;
 
-/** Stand rows the top tier takes: in the top third of the view, with room over it for a jump. */
-const TOP = [5, 7] as const;
-/** Share of the bottom tier's islands that stand on the bottom (a mesa) rather than float over the pit. */
-const MESAS = 0.35;
-/** Columns the spawn ledge runs on past its pocket. */
-const SPAWN_STEPS = [1, 3] as const;
-/** Rows of the lip at the outer edge of each spawn pocket. */
-const LIP = 2;
-/** How far in (a share of the half width) the top tier's band starts (pyramid) or stops short (bowl). */
-const DRAW_IN = 0.55;
 /**
  * A hall's floor columns, and the rows from its floor up to its roof: room for what stands on a floor and what hangs
  * from a ceiling (a press in its gantry, a forklift's run, a ladle's pour, a pendulum's arc, a roof's cave-in), which
- * tiers a jump apart never leave between them, and nothing over the roof, the same room again on top of it.
+ * boards a jump apart never leave between them, and nothing over the roof.
  */
-const HALL = [9, 11] as const;
+const HALL = [7, 9] as const;
 const HALL_ROWS = 9;
 /** Rows a hall's pier hangs under its roof. */
 const PIER = 4;
 
 /**
  * What the arena is built round (`Shape.centre`): the room its centrepiece stands in, the set's own hazard that goes in
- * before any other set piece, and the ledges laid to bring the fight to it.
- * - `pit`: the middle is a pit `PIT_HALF` × 2 columns wide, clear from the top of the view down, with no halls: ledge
- *   bands all the way to it, every tier's running to its lips, so a knock off one falls in. For what rises out of a pit,
- *   leaps across one or sweeps it.
- * - `halls`: the two halls, where they'd stand anyway, for what stands on a floor or hangs from a ceiling: a pair, one
- *   in each, mirrored across the middle.
- * - `arch`: the main crossing, a floor across the middle on the bottom tier `ARCH_HALF` columns either side, and a beam
- *   over its middle `ARCH` rows up with nothing else between, for what swings or drops across the way over: a log, an
- *   axe, a hook. Tiers go on over the beam; the halls stand only where they keep most of their width.
- * A kind none of the set's hazards stood in (`SculptCtx.noCentre`) isn't laid again in that draw. Weighted by how
- * hard bots fight round it (tests/stats/brawl.test.ts): the halls' pair keeps the field apart most (7 to 9 tiles to the
- * nearest rival, against 5 round a pit or an arch) and kills least, so they come up least, the arch most.
+ * before any other set piece, and the stage laid to bring the fight to it.
+ * - `pit`: the stage splits in the middle round a pit `PIT_HALF` × 2 columns wide, clear from the top of the view down,
+ *   the two halves its islands: for what rises out of a pit, leaps across one or sweeps it.
+ * - `halls`: a slab each side by the middle widened to a hall, a solid roof `HALL_ROWS` over it stepped a row down
+ *   over its outer half with a pier hanging at its inner end: a floor, a ceiling and a wall face, for what stands on a
+ *   floor, hangs from a ceiling or mounts on a wall, a pair, one in each, mirrored across the middle; shared once it
+ *   stands, the room the rest of a set's machines need.
+ * - `arch`: a slab across the middle, `ARCH_HALF` columns either side, and a beam over its middle `ARCH` rows up with
+ *   nothing else between, for what swings or drops across the way over: a log, an axe, a hook. Shared once it stands:
+ *   its crossing is the arena's widest floor.
+ * Only a pit is the centrepiece's alone. A kind none of the set's hazards stood in (`SculptCtx.noCentre`) isn't laid
+ * again in that draw. The arch comes up most; the halls as often as a pit, since a stage's slabs leave little other
+ * floor for a set's machines (at 1 in 7, a farm stood about 4.7 of its 6).
  */
 const CENTRES = ['pit', 'halls', 'arch'] as const;
-const CENTRE_WEIGHTS: Record<(typeof CENTRES)[number], number> = { pit: 2, halls: 1, arch: 4 };
+type CentreKind = (typeof CENTRES)[number];
+const CENTRE_WEIGHTS: Record<CentreKind, number> = { pit: 2, halls: 2, arch: 3 };
 /** Half a pit's width: as wide as a walking jump at normal gravity, and as a serpent's leap needs. */
 const PIT_HALF = 2;
 /** Half the crossing under an arch: as wide as a slung log's swing (`jungle.ts` logTraps) and then some. */
@@ -96,375 +120,329 @@ const ARCH_HALF = [4, 5] as const;
 const ARCH = 7;
 /** Half the beam's width. */
 const BEAM_HALF = 2;
+/** Half a plain centre slab across the middle, when there's no centrepiece to lay round. */
+const MIDDLE_HALF = [2, 3] as const;
 
-/** A band of the left half's columns, a ledge on it every tier; `b` at the half's last column joins its mirror. */
-interface Band {
-  a: number;
-  b: number;
-  hall: boolean;
-  /** The crossing under an arch: a hall whose roof is the beam, tiers going on over it. */
-  arch?: boolean;
-}
-
-/** One ledge of the left half: stand row `row`, columns [a, b]; `b` at the half's last column joins its mirror. */
-interface Ledge {
-  /** Its tier, and its band (-1 for a board over a bowl's middle). */
-  t: number;
-  i: number;
+/** Something to stand on, in the left half: stand row `row`, columns [a, b]; `b` at the half's last column runs whole across the middle. */
+interface Span {
   row: number;
   a: number;
   b: number;
-  board: boolean;
-  ground: boolean;
+  kind: 'slab' | 'board' | 'ledge';
+  hall?: boolean;
+  /** A court: a long floor with the headroom of a high board over it, never a canopy's. */
+  court?: boolean;
 }
 
-/** Build the arena with a set's tower kit: its floor for the solid ledges and islands, its dressing on them. */
+/** Build the arena with a set's tower kit: its floor for the slabs, roofs and ledges, its dressing on them. */
 export function sculptArena(ctx: SculptCtx, kit: TallKit): Shape {
   const { rng } = ctx;
   const k = knobs(ctx);
   const { W, H } = k;
   const g = new Grid(W, H);
   const j = jumpProfile();
-  // The last attempts lay gentle ledges, which always connect.
+  // The last attempts lay gentle slabs, which always connect.
   const tier = ctx.attempt >= LAST_RESORT ? 'gentle' : ctx.profile.difficulty;
-  const sizes = LEDGES[tier];
-  const shape = rng.weighted(SHAPES);
+  const [least, widest] = SLABS[tier];
+  const outline = rng.weighted(OUTLINES);
   const half = W >> 1;
   const mid = half - 1;
   // The centre first, of the kinds the set's hazards haven't turned down: the rest is laid round it.
   const kinds = CENTRES.filter((c) => !ctx.noCentre?.includes(c));
   let roll = rng.next() * kinds.reduce((t, c) => t + CENTRE_WEIGHTS[c], 0);
   const centre = kinds.find((c) => (roll -= CENTRE_WEIGHTS[c]) < 0) ?? kinds.at(-1) ?? null;
-  const pitHalf = centre === 'pit' ? PIT_HALF : 0;
-  const archHalf = centre === 'arch' ? rng.int(ARCH_HALF[0], ARCH_HALF[1]) : 0;
-  // The middle's last column a ledge takes: the pit's lip, or the middle itself.
-  const lip = mid - pitHalf;
 
-  // Tier rows, bottom first, evenly from the bottom tier up to the top one near the top of the view: as many as keep
-  // them at most a jump apart (one rise up through a board or beside a ledge).
-  // No farther apart than at normal gravity: a floatier jump goes higher, but the screen keeps its tiers.
-  const spacing = Math.max(4, Math.min(j.rise, withDifficulty(tier, () => Math.min(easyRise(), easyRise(1))) + 1));
-  const bottom = H - rng.int(5, 7);
-  const top = rng.int(TOP[0], TOP[1]);
-  const steps = Math.max(1, Math.ceil((bottom - top) / spacing));
-  const rows = Array.from({ length: steps + 1 }, (_, i) => Math.round(bottom - ((bottom - top) * i) / steps));
-  const n = rows.length;
-  // The spawns stand at the two ends of the bottom tier or the one over it: never the top, never the high ground.
-  const spawnTier = n > 2 && rng.chance(0.5) ? 1 : 0;
-
-  // Gaps as wide as a normal gravity's: a floatier jump carries further, but a wider gap only empties the screen.
+  // Layers of boards a jump up through apart: as high as the real controller lands on one straight over it
+  // (src/sim/reach.ts), three rows at normal gravity and two at high; a step to a ledge beside it, a row or so more.
+  const layer = Math.max(2, Math.min(4, j.rise - 3));
+  // Seams as wide as a normal gravity's walking jump: a floatier jump carries further, but a wider seam only empties the stage.
   const floaty = Math.min(1, jumpProfile(1).walkGap / j.walkGap);
-  const widest = jumpProfile(1).walkGap;
-  const gap = () => Math.min(widest, Math.max(2, Math.round(hopGap(rng, 2) * floaty)));
-  const most = Math.min(widest, Math.max(2, Math.round(j.walkGap * floaty)));
+  const widestGap = jumpProfile(1).walkGap;
+  const seam = () => Math.min(widestGap, Math.max(2, Math.round(hopGap(rng, 2) * floaty)));
+  const step = rng.int(STEP[0], STEP[1]);
+  // A dip's middle goes down from the base row, so its base row stands that much higher: the drop stays under it.
+  const base = H - rng.int(UNDER[0], UNDER[1]) - (outline === 'dip' ? step : 0);
 
-  // The bands, from the side in: the side band holds the spawn; a hall either side, by the side or by the middle, and
-  // bands of ledges the rest of the way; in the middle, a ledge across it beyond a shaft, or a shaft no wider than a
-  // gap. Each shaft is a gap's width less the column every tier's ledges step in by at one end (below), so every tier
-  // crosses it with a hop.
-  const shaft = () => Math.max(1, gap() - 1);
-  const [least, widestBand] = sizes.ledge;
-  const bands: Band[] = [];
-  /** Bands from column `x` to `end`, shafts between them. */
-  const fill = (x: number, end: number) => {
-    for (;;) {
-      const rest = end - x + 1;
-      const c = shaft();
-      // Three columns at least, so a ledge stepped in at one end still has two.
-      if (rest <= widestBand || rest - c < 6) return void bands.push({ a: x, b: end, hall: false });
-      const w = Math.max(3, Math.min(rng.int(least, widestBand), rest - c - 3));
-      bands.push({ a: x, b: x + w - 1, hall: false });
-      x += w + c;
+  // The middle: a pit's lip, an arch's crossing, or (with no centre to lay round) a slab across it or a seam.
+  const slabs: Span[] = [];
+  let end: number;
+  if (centre === 'pit') end = mid - PIT_HALF;
+  else if (centre === 'arch') {
+    const archHalf = rng.int(ARCH_HALF[0], ARCH_HALF[1]);
+    slabs.push({ row: base, a: mid - archHalf + 1, b: mid, kind: 'slab' });
+    end = mid - archHalf - seam();
+  } else if (rng.chance(0.5)) {
+    const m = rng.int(MIDDLE_HALF[0], MIDDLE_HALF[1]);
+    slabs.push({ row: base, a: mid - m + 1, b: mid, kind: 'slab' });
+    end = mid - m - seam();
+  } else end = mid - Math.max(1, seam() >> 1);
+  // A hall stands by the middle, off the spawn's slab: its floor is the innermost slab.
+  if (centre === 'halls') {
+    const c = seam();
+    // No wider than leaves the spawn's slab its room past it.
+    const w = Math.min(rng.int(HALL[0], HALL[1]), end - c - SPAWN_SLAB - SIDE[0] + 1);
+    slabs.push({ row: base, a: end - w + 1, b: end, kind: 'slab', hall: true });
+    end -= w + c;
+  }
+  // Slabs from the middle out, seams between, until the side's air is what's left. The innermost, by the middle,
+  // is now and then a court, wider: a long floor for what runs along one (a cart, a forklift, a robot arm's sweep).
+  let court = centre !== 'halls' && rng.chance(COURT_ODDS) ? rng.int(COURT[0], COURT[1]) : 0;
+  for (let x = end; ;) {
+    const c = seam();
+    // A court with no room past it for the spawn's slab is a slab like the rest.
+    if (x - court + 1 - c - SPAWN_SLAB < SIDE[0]) court = 0;
+    const w = court || rng.int(least, widest);
+    const wide = !!court;
+    court = 0;
+    const a = x - w + 1;
+    // Room past it for the spawn's slab and the side's air: on; or it's the last, the spawn's, and the side takes the rest.
+    if (a - c - SPAWN_SLAB >= SIDE[0] && !(a <= SIDE[1] + 2 && rng.chance(0.35))) {
+      slabs.push({ row: base, a, b: x, kind: 'slab', ...(wide ? { court: true } : {}) });
+      x = a - c - 1;
+      continue;
     }
-  };
-  const side = POCKET + rng.int(SPAWN_STEPS[0], SPAWN_STEPS[1]);
-  bands.push({ a: 0, b: side - 1, hall: false });
-  const x = side + shaft();
-  // A pit or an arch takes the middle; otherwise a ledge across it beyond a shaft, or a shaft.
-  const across = !pitHalf && !archHalf && rng.chance(0.5) ? rng.int(2, 3) : 0;
-  const end = pitHalf ? lip : archHalf ? mid - archHalf - shaft() : across ? mid - across - shaft() : mid - 1;
-  // A pyramid's halls stand by the sides, under the air its drawn-in tiers leave; a bowl's by the middle, under its.
-  const inner = shape === 'bowl' || (shape === 'tiers' && rng.chance(0.5));
-  const room = end - x + 1;
-  const c = shaft();
-  let w = rng.int(HALL[0], HALL[1]);
-  if (room < w + c + 3) w = room >= HALL[0] - 1 + c + 3 ? room - c - 3 : room;
-  // A pit is the room its arena's pieces ask for, and the ledges round it are its way in: bands all the way to it.
-  // An arch's halls stand only where they keep most of their width.
-  if (pitHalf || (archHalf && room < HALL[0] - 2)) fill(x, end);
-  else if (w === room) bands.push({ a: x, b: end, hall: true });
-  else if (inner) {
-    fill(x, end - w - c);
-    bands.push({ a: end - w + 1, b: end, hall: true });
-  } else {
-    bands.push({ a: x, b: x + w - 1, hall: true });
-    fill(x + w + c, end);
+    // The spawn's slab, wide enough for the field it fans out. Past one with more air than the side takes, the
+    // spawn's goes beyond it across the narrowest seam if it fits, or else it runs on out toward the side.
+    const from = Math.max(2, Math.min(Math.max(SIDE[0], a), x - SPAWN_SLAB + 1));
+    if (from > SIDE[1] && from - 3 - SPAWN_SLAB + 1 >= SIDE[0]) {
+      slabs.push({ row: base, a: from, b: x, kind: 'slab' });
+      slabs.push({ row: base, a: Math.max(SIDE[0], from - 2 - widest), b: from - 3, kind: 'slab' });
+    } else slabs.push({ row: base, a: from > SIDE[1] ? Math.max(SIDE[1], x - widest - 1) : from, b: x, kind: 'slab' });
+    break;
   }
-  if (across) bands.push({ a: mid - across + 1, b: mid, hall: false });
-  if (archHalf) bands.push({ a: mid - archHalf + 1, b: mid, hall: true, arch: true });
-  // A hall's floor is the bottom tier and its roof `HALL_ROWS` over it, the set's floor whole across the band, a
-  // ceiling to hang from; no tier takes its band but the floor, so the roof has the sky over it. The roof counts as
-  // the tier at or under its row, for the climbs.
-  const roofRow = rows[0] - HALL_ROWS;
-  const roof = Math.max(1, rows.filter((r) => r >= roofRow).length - 1);
-  // An arch's beam, and the tiers over the crossing that go on over it, with two rows of air over the beam.
-  const beamRow = rows[0] - ARCH;
-  const beam = Math.max(1, rows.filter((r) => r >= beamRow).length - 1);
-  const inHall = (band: Band, t: number) => band.hall && t > 0 && (!band.arch || rows[t] > beamRow - 4);
-  const hallEnd = Math.max(-2, ...bands.filter((b) => b.hall).map((b) => b.b));
-
-  const ledges: Ledge[] = [];
-  // Bricks in miniature: each tier's ledges step in a column at one end and the next tier's at the other, so every
-  // band climbs, a jump up beside the ledge over it at alternate ends.
-  const phase = rng.int(0, 1);
-  for (let t = 0; t < n; t++) {
-    const row = rows[t];
-    const up = n > 1 ? t / (n - 1) : 0;
-    // The band of the half this tier fills: a pyramid draws its upper tiers in to the middle, a bowl out to the sides.
-    let lo = shape === 'pyramid' ? Math.round(up * half * DRAW_IN) : 0;
-    const hi = shape === 'bowl' ? mid - Math.round(up * half * DRAW_IN) : mid;
-    if (t === spawnTier) lo = 0;
-    // The tier over the spawns keeps off the air over their pockets, which would cut it, and the one under them off
-    // the columns under the pockets: an island stacked under a whole spawn ledge is a crawlspace a runner can't jump
-    // out of (a bot spent most of 17 s in one), and under the open side it should be the drop anyway.
-    if (t === spawnTier + 1) lo = Math.max(lo, POCKET + 1);
-    if (t === spawnTier - 1) lo = Math.max(lo, POCKET);
-    const islands = t === 0;
-    const right = (t + phase) % 2 === 0;
-    bands.forEach((band, i) => {
-      if (inHall(band, t)) return;
-      const spawn = i === 0 && t === spawnTier;
-      // A hall's floor runs whole, the width of its band; any other ledge steps in, across the middle with its mirror,
-      // but never back from a pit's lip: every tier runs to the pit, a walking jump across it, and a knock falls in.
-      const whole = band.hall && (!band.arch || t === 0);
-      const a = Math.max(lo, band.a + (!right && !spawn && !whole ? 1 : 0));
-      const b = Math.min(hi, band.b - (right && !whole && !(pitHalf && band.b === lip) ? 1 : 0));
-      if (b - a + 1 < 2) return;
-      const board = !islands && !spawn && rng.chance(sizes.boards);
-      // An island at the side floats, so the side stays open down to the pit.
-      ledges.push({ t, i, row, a, b, board, ground: islands && i > 0 && rng.chance(MESAS) });
-    });
-    // The middle: no wider a void than a gap, or than the pit. A bowl's tiers under the top one, drawn back to the
-    // sides, get a board over it, clear of a hall's air, out to the pit's lip.
-    const far = ledges.filter((l) => l.row === row).reduce((m, l) => Math.max(m, l.b), lo - 1);
-    const a = Math.max(lip - rng.int(1, 3), hallEnd + 2);
-    if (far < lip && 2 * (mid - far) > widest && t < n - 1 && a <= lip - (pitHalf ? 1 : 0))
-      ledges.push({ t, i: -1, row, a, b: lip, board: true, ground: false });
-  }
-  bands.forEach((band, i) => {
-    if (band.arch) ledges.push({ t: beam, i, row: beamRow, a: mid - BEAM_HALF + 1, b: mid, board: false, ground: false });
-    else if (band.hall && roofRow > TOP[0]) ledges.push({ t: roof, i, row: roofRow, a: band.a, b: band.b, board: false, ground: false });
+  // Outermost first; each slab's row from the outline, by how far in it stands.
+  slabs.sort((p, q) => p.a - q.a);
+  const n = slabs.length;
+  slabs.forEach((s, i) => {
+    const t = n > 1 ? i / (n - 1) : 0;
+    const off = outline === 'ends' ? -Math.round(step * (1 - t)) : outline === 'peak' ? -Math.round(step * t) : outline === 'dip' ? Math.round(step * t) : 0;
+    s.row = base + off;
   });
-  climbs(ledges, n, spawnTier, W, most);
+  const spawn = slabs[0];
+  const hall = slabs.find((s) => s.hall);
+  const crossing = centre === 'arch' ? slabs.find((s) => s.b === mid) : undefined;
+  const beamRow = crossing ? crossing.row - ARCH : -1;
+  const roofRow = hall ? hall.row - HALL_ROWS : -1;
+  // Past the spawn's, every slab outside a room (a hall, an arch's crossing) is high: its first board `highRows` up,
+  // headroom under it for what stands on its floor (tried alternating low and high: the set pieces found too little
+  // room, a factory's standing two in three of its ask). The spawn's slab is low, its layers the way up. A canopy over
+  // most high slabs, but a court's or a pit's lip; and now and then one slab a side stands on a pillar.
+  const regular = slabs.map((s) => !s.hall && s !== crossing);
+  const high = slabs.map((_, i) => regular[i] && i > 0);
+  const covers = slabs.filter((s, i) => i > 0 && high[i] && !s.court && !s.hall && s !== crossing && !(centre === 'pit' && s.b === mid - PIT_HALF));
+  const canopies = new Set(covers.filter(() => rng.chance(CANOPY)));
+  // A high board stands three layers up (no higher than a hall's roof); a canopy two.
+  const highRows = Math.min(HALL_ROWS, 3 * layer);
+  const roofed = Math.max(CANOPY_ROWS[0], Math.min(CANOPY_ROWS[1], 2 * layer));
+  const pillar = n > 1 && rng.chance(PILLAR) ? rng.pick(slabs.slice(1)) : undefined;
 
-  // Lay each ledge and its mirror (one ledge across the middle when it reaches it): boards as one-way planks, the rest
-  // as the set's floor, its two ends solid whatever boards the set lays in it, for the climb onto it.
-  const lay = (l: Ledge, a: number, b: number) => {
-    if (l.board) return g.plank(a, b, l.row + 1);
-    kit.deck(g, rng, storey(l.row, a, b), a, b, l.ground, k);
-    for (const x of [a, b]) if (g.get(x, l.row + 1) === T_ONEWAY) g.set(x, l.row + 1, T_SOLID, true);
+  // The rooms nothing else stands in: a hall's air under its roof, the swing under an arch's beam, a pit's columns.
+  const rooms = centreRooms(centre, slabs, mid, W, H, beamRow, roofRow);
+  // A pit's room takes its lips, which the boards over the slabs beside it run to.
+  const inRoom = (row: number, a: number, b: number) =>
+    centre !== 'pit' &&
+    rooms.some((r) => row + 1 >= r.y && row - 1 < r.y + r.h && [a, W - 1 - b].some((x0, i) => x0 < r.x + r.w && (i ? W - 1 - a : b) >= r.x));
+
+  // Boards over the slabs, straight over them and their width, so a knock off one falls past the slab's end. None in
+  // a room or over a pit; over a hall the way across goes on along its roof, over an arch's crossing along its beam,
+  // reached from a board beside it a row over the beam.
+  const spans: Span[] = [...slabs];
+  const boards: Span[] = [];
+  const over = (s: Span, row: number, a = s.a, b = s.b) => {
+    if (row < TOP_BOARD || inRoom(row, a, b)) return null;
+    // One there already runs on as far as this one would.
+    const there = boards.find((q) => q.row === row && q.a <= b + 1 && q.b >= a - 1);
+    if (there) return Object.assign(there, { a: Math.min(there.a, a), b: Math.max(there.b, b) });
+    const board: Span = { row, a, b, kind: 'board' };
+    boards.push(board);
+    return board;
   };
-  for (const l of ledges) {
-    if (l.b === mid) lay(l, l.a, W - 1 - l.a);
-    else {
-      lay(l, l.a, l.b);
-      lay(l, W - 1 - l.b, W - 1 - l.a);
+  const by = (i: number) => slabs[i] as Span | undefined;
+  // Each slab's first board: a layer up over a low one, `highRows` up over a high one; a canopy is a high one's.
+  const first = slabs.map((s, i) => (canopies.has(s) ? s.row - roofed : s.hall || s === crossing ? -Infinity : s.row - (high[i] ? highRows : layer)));
+  slabs.forEach((s, i) => {
+    if (s.hall || s === crossing) return;
+    // Beside a high board, a hall's or a canopy's roof, the layers go on up to a jump under it (a step under a roof);
+    // beside an arch's crossing, to a jump under the board onto its beam. Over a high board or a canopy, by chance.
+    const near = [by(i - 1), by(i + 1)];
+    const need = Math.max(
+      ...near.map((q, d) => (q && high[i + 2 * d - 1] ? first[i + 2 * d - 1] + (canopies.has(q) ? 2 : layer) : -Infinity)),
+      hall && near.includes(hall) ? roofRow + 2 : -Infinity,
+      crossing && near.includes(crossing) ? beamRow - 1 + layer : -Infinity,
+    );
+    let row = first[i];
+    const canopy = canopies.has(s);
+    if (canopy) spans.push({ row, a: s.a, b: s.b, kind: 'ledge' });
+    for (let l = 1, up = canopy || !!over(s, row); up && row - layer >= TOP_BOARD; l++) {
+      // By chance no higher than a high board, and never over a canopy: the sky over the top layer is room too.
+      if (!(row > need || (!canopy && l < LAYERS && row - layer >= s.row - highRows && rng.chance(STACK)))) break;
+      up = !!over(s, (row -= layer));
     }
+  });
+  if (crossing && beamRow > TOP_BOARD) {
+    const inner = by(slabs.indexOf(crossing) - 1);
+    if (inner) over(inner, beamRow - 1, inner.a, mid - BEAM_HALF - 1);
+    // Over the beam, now and then, a board across the middle to stand over the swing on.
+    if (rng.chance(CENTRE_BOARD)) over(crossing, beamRow - layer, mid - BEAM_HALF - 1, mid);
+    spans.push({ row: beamRow, a: mid - BEAM_HALF + 1, b: mid, kind: 'ledge' });
   }
-  const spans = ledges.flatMap((l) =>
-    l.b === mid
-      ? [[l.row, l.a, W - 1 - l.a]]
+  // A hall's roof over its slab, the set's floor: a floor over the room, a ceiling in it.
+  if (hall) spans.push({ row: roofRow, a: hall.a, b: hall.b, kind: 'ledge' });
+  // A ledge out over each side's drop, a jump up and out from the stage's end.
+  const out = rng.int(1, 2);
+  const lw = rng.int(SIDE_LEDGE_W[0], SIDE_LEDGE_W[1]);
+  if (spawn.a - out - lw >= 2 && rng.chance(SIDE_LEDGE)) spans.push({ row: spawn.row - SIDE_RISE, a: spawn.a - out - lw, b: spawn.a - out - 1, kind: 'ledge' });
+  spans.push(...climbs(boards, spans, layer, W));
+
+  // Lay each span and its mirror (one span across the middle when it reaches it). A slab is solid `thick` rows down,
+  // the set's floor on top; a roof or ledge the set's floor alone; a board a one-way plank.
+  const whole = (s: Span): [number, number][] =>
+    s.b === mid
+      ? [[s.a, W - 1 - s.a]]
       : [
-          [l.row, l.a, l.b],
-          [l.row, W - 1 - l.b, W - 1 - l.a],
-        ],
-  );
+          [s.a, s.b],
+          [W - 1 - s.b, W - 1 - s.a],
+        ];
+  const thick = rng.int(THICK[0], THICK[1]);
+  for (const s of spans)
+    for (const [a, b] of whole(s)) {
+      if (s.kind === 'board') {
+        g.plank(a, b, s.row + 1);
+        continue;
+      }
+      if (s.kind === 'slab') g.fill(a, s.row + 2, b, Math.min(H - 1 - DROP, s.row + thick), T_SOLID, true);
+      kit.deck(g, rng, storey(s.row, a, b), a, b, false, k);
+      // Its top solid whatever boards the set lays in it: something to stand on with a wall under each end.
+      for (let x = a; x <= b; x++) if (g.get(x, s.row + 1) === T_ONEWAY) g.set(x, s.row + 1, T_SOLID, true);
+    }
+  const laid = spans.flatMap((s) => whole(s).map(([a, b]) => [s.row, a, b] as const)).sort((p, q) => q[0] - p[0]);
   kit.dress?.(
     g,
     rng,
-    spans.map(([row, a, b]) => storey(row, a, b)),
+    laid.map(([row, a, b]) => storey(row, a, b)),
     [],
     k,
   );
-  // Whatever the set's floor or dressing lays, every ledge keeps two rows of air over it: a thick ledge above only
-  // reaches down into them, and is thinned there.
-  for (const [row, a, b] of spans) g.clear(a, row - 1, b, row);
-  // The shafts stay open from over the top tier down to the pit, whatever the set's dressing hung in them; the pit in
-  // the middle from the top of the view, nothing standing anywhere over it.
-  bands.forEach((band, i) => {
-    const a = band.b + 1;
-    const b = i + 1 < bands.length ? bands[i + 1].a - 1 : mid;
-    if (a > b) return;
-    const y0 = pitHalf && b === mid ? 0 : rows[n - 1] - 2;
-    g.clear(a, y0, b, H - 1);
-    g.clear(W - 1 - b, y0, W - 1 - a, H - 1);
-  });
-  // Nothing of the set's dressing hangs under an arch's beam, in the swing over the crossing.
-  for (const band of bands) if (band.arch) g.clear(band.a, beamRow + 2, W - 1 - band.a, rows[0]);
+  // Whatever the set's floor or dressing lays, everything stood on keeps its air over it: two rows, or the one a board
+  // two rows over it leaves.
+  const air = Math.min(2, layer - 1);
+  for (const [row, a, b] of laid) g.clear(a, row - air + 1, b, row);
+  // Nothing under the stage but the drop: under each column's solid, down from a slab's top, nothing to the bottom;
+  // the seams, the sides and the pit open from over the highest board down (the pit from the top of the view).
+  const top = Math.min(...laid.map(([row]) => row)) - 2;
+  const stage = new Uint8Array(W);
+  for (const s of slabs)
+    for (const [a, b] of whole(s))
+      for (let x = a; x <= b; x++) {
+        stage[x] = 1;
+        let y = s.row + 1;
+        while (y < H && g.get(x, y) === T_SOLID) y++;
+        if (s === pillar) g.fill(x, y, x, H - 1, T_SOLID, true);
+        else g.clear(x, y, x, H - 1);
+      }
   // Each hall's roof steps a row down over its outer half, two heights of room under it (a low roof's gas pocket, a
-  // tall one's pendulum), and at its end by the middle a pier hangs `PIER` rows: a wall face to mount on (a broken
-  // window's glass), with more than a runner's height of air under it.
-  const under = (x: number) => {
-    let c = roofRow + 1;
-    if (g.get(x, c) !== T_SOLID) return -1;
-    while (c + 1 < H && g.get(x, c + 1) === T_SOLID) c++;
-    return c;
-  };
-  const both = (x: number, y0: number, y1: number) => {
-    g.fill(x, y0, x, y1, T_SOLID, true);
-    g.fill(W - 1 - x, y0, W - 1 - x, y1, T_SOLID, true);
-  };
-  for (const band of bands) {
-    if (!band.hall || band.arch || roofRow <= TOP[0]) continue;
-    for (let x = band.a; x < (band.a + band.b + 1) >> 1; x++) {
-      const c = under(x);
-      if (c >= 0) both(x, c + 1, c + 1);
+  // tall one's pendulum), and at its end by the middle a pier hangs `PIER` rows: a wall face to mount on, with more
+  // than a runner's height of air under it.
+  if (hall)
+    for (const [a, b] of whole(hall)) {
+      const outer = a < mid ? [a, (a + b) >> 1] : [((a + b) >> 1) + 1, b];
+      const pier = a < mid ? b : a;
+      const under = (x: number) => {
+        let y = roofRow + 1;
+        while (y + 1 < H && g.get(x, y + 1) === T_SOLID) y++;
+        return y;
+      };
+      for (let x = outer[0]; x <= outer[1]; x++) g.set(x, under(x) + 1, T_SOLID, true);
+      const p = under(pier);
+      if (hall.row - (p + PIER) >= 3) g.fill(pier, p + 1, pier, p + PIER, T_SOLID, true);
     }
-    const c = under(band.b);
-    if (c >= 0 && rows[0] - (c + PIER) >= 3) both(band.b, c + 1, c + PIER);
-  }
-  // A board is somewhere to stand or it goes: none in the top rows, over the top tier (timber the set's dressing hangs
-  // under a ceiling the arena hasn't got), and none without two rows of air over it (timber under a ledge, a second
-  // board doubled under the first),
+  // Nothing of the set's dressing hangs under an arch's beam, in the swing over the crossing.
+  if (crossing) g.clear(crossing.a, beamRow + 2, W - 1 - crossing.a, crossing.row);
+  const pit = centre === 'pit' ? [mid - PIT_HALF + 1, W - mid + PIT_HALF - 2] : null;
+  for (let x = 0; x < W; x++) if (!stage[x]) g.clear(x, pit && x >= pit[0] && x <= pit[1] ? 0 : top, x, H - 1);
+  // A board's planks keep only to what's stood on, never doubled under another span or left a stub a tile wide.
   for (let y = 0; y < H; y++)
-    for (let x = 0; x < W; x++) if (g.get(x, y) === T_ONEWAY && (y <= TOP[0] - 3 || !g.empty(x, y - 1) || !g.empty(x, y - 2))) g.set(x, y, T_EMPTY, true);
-  // and a stub that leaves goes too: a board a tile wide with nothing either side.
+    for (let x = 0; x < W; x++) if (g.get(x, y) === T_ONEWAY && (y <= air || !g.empty(x, y - 1) || !g.empty(x, y - air))) g.set(x, y, T_EMPTY, true);
   for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) if (g.get(x, y) === T_ONEWAY && g.empty(x - 1, y) && g.empty(x + 1, y)) g.set(x, y, T_EMPTY, true);
 
-  // The two ends, mirrored: a pocket on the spawn tier at each side, with a lip at the edge, so nobody holding a
-  // direction at GO walks off the map; leaving takes a jump on purpose. A post taller than a jump (a race's spawn)
-  // would wall the spawn tier's sides, and with them a third of the knocks off the map. Above and below it the sides
-  // are open.
-  const row = rows[spawnTier];
-  for (const [x0, edge] of [
-    [0, 0],
-    [W - POCKET, W - 1],
-  ] as const) {
-    g.clear(x0, row - 3, x0 + POCKET - 1, row);
-    g.fill(x0, row + 1, x0 + POCKET - 1, row + 1, T_SOLID, true);
-    g.fill(edge, row - LIP + 1, edge, row, T_SOLID, true);
-  }
+  // The two spawns: on the outermost slab of each side, a column in from its outer end, so the spawn's safe zone
+  // keeps off the slabs past it, where the set pieces stand; the field fans out over it, and the shield covers GO.
+  const tx = spawn.a + 1;
+  const row = spawn.row;
   return {
     w: W,
     h: H,
     tiles: g.t,
-    spawn: { tx: 2, ty: row },
-    goal: { tx: W - 3, ty: row },
+    spawn: { tx, ty: row },
+    goal: { tx: W - 1 - tx, ty: row },
     protectedRects: [
-      { x: 0, y: row - 3, w: POCKET, h: 5 },
-      { x: W - POCKET, y: row - 3, w: POCKET, h: 5 },
+      { x: tx - 2, y: row - 3, w: POCKET, h: 5 },
+      { x: W - 3 - tx, y: row - 3, w: POCKET, h: 5 },
     ],
-    style: `${kit.style}:arena-${shape}`,
-    ...(centre
-      ? { centre: { kind: centre, rooms: centreRooms(centre, bands, lip, rows[0], centre === 'arch' ? beamRow : roofRow, W, H), alone: centre !== 'halls' } }
-      : {}),
+    style: `${kit.style}:arena-${outline}`,
+    ...(centre && rooms.length ? { centre: { kind: centre, rooms, alone: centre === 'pit' } } : {}),
     bridgeHints: [],
-    open: bands
-      .filter((b) => b.hall)
-      .flatMap((b): [number, number][] =>
-        b.b === mid
-          ? [[b.a, W - 1 - b.a]]
-          : [
-              [b.a, b.b],
-              [W - 1 - b.b, W - 1 - b.a],
-            ],
-      ),
+    open: hall ? whole(hall) : [],
   };
 }
 
 /**
  * Where the centrepiece stands: a pit's columns from the top down with a lip either side (something rooted on a lip
- * reaches over it); the air of the halls, floor to roof, both mirrors; or under an arch's beam, down to the crossing and
- * out over the shafts beside it, which a swing may cross.
+ * reaches over it); a hall's air, floor to roof, both mirrors; or under an arch's beam, down to the crossing and out
+ * over the seams beside it, which a swing may cross.
  */
-function centreRooms(centre: (typeof CENTRES)[number], bands: Band[], lip: number, floor: number, roofRow: number, W: number, H: number): TileRect[] {
-  if (centre === 'pit') return [{ x: lip, y: 0, w: W - 2 * lip, h: H }];
-  const arch = bands.find((b) => b.arch);
-  if (arch) return [{ x: arch.a - 2, y: roofRow + 2, w: W - 2 * (arch.a - 2), h: floor - roofRow - 1 }];
-  if (roofRow <= TOP[0]) return [];
-  return bands
-    .filter((b) => b.hall)
-    .flatMap((b) => {
-      const room = (a: number, z: number): TileRect => ({ x: a, y: roofRow + 1, w: z - a + 1, h: floor - roofRow });
-      return b.b === (W >> 1) - 1 ? [room(b.a, W - 1 - b.a)] : [room(b.a, b.b), room(W - 1 - b.b, W - 1 - b.a)];
-    });
+function centreRooms(centre: CentreKind | null, slabs: Span[], mid: number, W: number, H: number, beamRow: number, roofRow: number): TileRect[] {
+  if (centre === 'pit') {
+    const lip = mid - PIT_HALF;
+    return [{ x: lip, y: 0, w: W - 2 * lip, h: H }];
+  }
+  if (centre === 'arch') {
+    const c = slabs.find((s) => s.b === mid)!;
+    return [{ x: c.a - 2, y: beamRow + 2, w: W - 2 * (c.a - 2), h: c.row - beamRow - 1 }];
+  }
+  const hall = slabs.find((s) => s.hall);
+  if (centre !== 'halls' || !hall || roofRow < 2) return [];
+  const room = (a: number, z: number): TileRect => ({ x: a, y: roofRow + 1, w: z - a + 1, h: hall.row - roofRow });
+  return [room(hall.a, hall.b), room(W - 1 - hall.b, W - 1 - hall.a)];
 }
 
-/** Columns of air a jump up from one tier onto the next carries across beside a ledge, from a standstill. */
+/** Columns of air a jump up from one span onto the next carries across beside it, from a standstill. */
 const ACROSS = 3;
 
 /**
- * Every tier climbs, by construction: a ledge is climbed onto from the tier under it where the ledge under it sticks
- * out past one of its ends (a jump up beside it), or across a shaft of `ACROSS` or less; a board only from its own
- * tier (the real controller never lands on one a full tier's rise straight over it, src/sim/reach.ts). The ledges a
- * hop apart on a tier are one stretch, climbed when any of its solid ledges is. A stretch none of whose ledges climbs
- * gets a board of it laid solid where that climbs, or else one ledge stepped in a column over the ledge under it. The
- * rule is the normal gravity's and cautious: a stretch it can't prove stays, for a floatier jump or a run-up to reach.
- * Ledges are the left half's; a ledge to the middle (`b` at the half's last column) is whole across it, and a band's
- * mirror across the middle is a neighbour.
+ * Every board climbs, by construction: a board is climbed onto from a span under it, a jump up through it where they
+ * share two columns or more, or beside it where the span under it sticks out past one of its ends or stands within
+ * `ACROSS` of it, a rise of `layer` at most; or dropped onto from a span over it that overlaps it. Slabs, roofs and
+ * ledges stand where the field reaches (the pipeline proves the slabs; a roof or ledge it can't reach only stands
+ * there). A board nothing climbs onto isn't laid. Spans are the left half's; one to the middle runs whole across it.
  */
-function climbs(ledges: Ledge[], n: number, from: number, W: number, hop: number): void {
+function climbs(boards: Span[], ground: readonly Span[], layer: number, W: number): Span[] {
   const mid = (W >> 1) - 1;
-  // Both halves' spans of a tier, for the neighbours across the middle.
-  const spans = (t: number) =>
-    ledges
-      .filter((l) => l.t === t)
-      .flatMap((l) =>
-        l.b === mid
-          ? [{ l, a: l.a, b: W - 1 - l.a }]
-          : [
-              { l, a: l.a, b: l.b },
-              { l, a: W - 1 - l.b, b: W - 1 - l.a },
-            ],
-      );
-  let reached = new Set(ledges.filter((l) => l.t <= from));
-  for (let t = from + 1; t < n; t++) {
-    const below = spans(t - 1).filter((s) => reached.has(s.l));
-    const onto = (l: Ledge) =>
-      !l.board &&
-      below.some(
-        (d) =>
-          (d.l.i === l.i && d.l.i >= 0 && (d.a < l.a || d.b > (l.b === mid ? W - 1 - l.a : l.b))) ||
-          (d.b < l.a && l.a - d.b - 1 <= ACROSS) ||
-          (d.a > l.b && d.a - l.b - 1 <= ACROSS),
-      );
-    // The tier's stretches, left to right over the left half (a ledge to the middle ends it).
-    const tier = ledges.filter((l) => l.t === t).sort((p, q) => p.a - q.a);
-    const stretches: Ledge[][] = [];
-    for (const l of tier) {
-      const s = stretches[stretches.length - 1];
-      if (s && l.a - s[s.length - 1].b - 1 <= hop) s.push(l);
-      else stretches.push([l]);
+  const full = (s: Span) => (s.b === mid ? W - 1 - s.a : s.b);
+  const reached = [...ground];
+  const left = new Set(boards);
+  for (let more = true; more;) {
+    more = false;
+    for (const u of left) {
+      const ub = full(u);
+      const onto = reached.some((d) => {
+        const db = full(d);
+        const rise = d.row - u.row;
+        const share = Math.min(ub, db) - Math.max(u.a, d.a) + 1;
+        if (rise < 0) return share >= 1;
+        if (rise === 0 || rise > layer) return false;
+        return share >= 2 || (share >= 0 && (d.a < u.a || db > ub)) || (d.b < u.a && u.a - db - 1 <= ACROSS) || (d.a > ub && d.a - ub - 1 <= ACROSS);
+      });
+      if (!onto) continue;
+      reached.push(u);
+      left.delete(u);
+      more = true;
     }
-    const next = new Set(reached);
-    for (const s of stretches) {
-      // A board of it laid solid climbs from across a shaft; or one ledge steps in over the ledge under it. Innermost
-      // first: the middle is where the fight goes.
-      const inward = s.map((_, k) => s[s.length - 1 - k]);
-      for (const l of inward) {
-        if (s.some(onto) || !l.board) continue;
-        l.board = false;
-        if (!onto(l)) l.board = true;
-      }
-      if (!s.some(onto)) {
-        for (const l of inward) {
-          const under = below.filter((q) => q.l.i === l.i && l.i >= 0);
-          const left = under.find((q) => q.a <= l.a && q.b >= l.a && l.b - q.a >= 2);
-          const right = l.b === mid ? undefined : under.find((q) => q.a <= l.b && q.b >= l.b && q.b - l.a >= 2);
-          if (!left && !right) continue;
-          l.board = false;
-          if (left) l.a = left.a + 1;
-          else if (right) l.b = right.b - 1;
-          break;
-        }
-      }
-      if (s.some(onto)) for (const l of s) next.add(l);
-    }
-    reached = next;
   }
+  return boards.filter((b) => !left.has(b));
 }
 
-/** A ledge as the tower kit's storey: arrive and leave at its ends, so the set's dressing keeps off them. */
+/** A span as the tower kit's storey: arrive and leave at its ends, so the set's dressing keeps off them. */
 function storey(row: number, a: number, b: number): Storey {
   return { row, arrive: a, leave: b, x0: a, x1: b };
 }
