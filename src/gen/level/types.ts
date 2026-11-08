@@ -39,6 +39,8 @@ export interface Shape {
   carve?: boolean;
   /** Columns the builder keeps open for set pieces (an arena's halls, [x0, x1] inclusive): a second route keeps out of them. */
   open?: [number, number][];
+  /** Cells set pieces keep out of (an arena's underside over the drop, where a hazard would only hit someone already falling). */
+  keepOut?: TileRect[];
   /** Per-tile ground kinds (sim/ground.ts), for themes that lay their own: glacier ice. Becomes Level.ground. */
   ground?: Uint8Array;
   /** The stage concept's landmark, when the sculptor raised one (sculptors/common.ts: claimSite, raiseLandmark). */

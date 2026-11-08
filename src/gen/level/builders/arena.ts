@@ -27,7 +27,8 @@ import type { SculptCtx, Shape } from '../types';
  *
  * The set's pieces need room, the same for every set (no per-theme tuning): headroom over a floor (under the high
  * boards, in a court, a hall, the sky over the top boards and roofs), a ceiling (a canopy, a hall's roof, an arch's
- * beam, the stage's underside over the drop) and wall faces (every slab's ends, a hall's pier).
+ * beam) and wall faces (every slab's ends, a hall's pier). Nothing hangs under the stage (`Shape.keepOut`): there it
+ * would only hit someone already falling.
  */
 
 /**
@@ -351,15 +352,21 @@ export function sculptArena(ctx: SculptCtx, kit: TallKit): Shape {
   // the seams, the sides and the pit open from over the highest board down (the pit from the top of the view).
   const top = Math.min(...laid.map(([row]) => row)) - 2;
   const stage = new Uint8Array(W);
+  // Nothing hangs under a slab, where it would only hit someone already falling (the set pieces keep out).
+  const keepOut: TileRect[] = [];
   for (const s of slabs)
-    for (const [a, b] of whole(s))
+    for (const [a, b] of whole(s)) {
+      let low = 0;
       for (let x = a; x <= b; x++) {
         stage[x] = 1;
         let y = s.row + 1;
         while (y < H && g.get(x, y) === T_SOLID) y++;
+        low = Math.max(low, y);
         if (s === pillar) g.fill(x, y, x, H - 1, T_SOLID, true);
         else g.clear(x, y, x, H - 1);
       }
+      if (s !== pillar && low < H) keepOut.push({ x: a, y: low, w: b - a + 1, h: H - low });
+    }
   // Each hall's roof steps a row down over its outer half, two heights of room under it (a low roof's gas pocket, a
   // tall one's pendulum), and at its end by the middle a pier hangs `PIER` rows: a wall face to mount on, with more
   // than a runner's height of air under it.
@@ -411,6 +418,7 @@ export function sculptArena(ctx: SculptCtx, kit: TallKit): Shape {
     ...(centre && rooms.length ? { centre: { kind: centre, rooms, alone: centre === 'pit' } } : {}),
     bridgeHints: [],
     open: hall ? whole(hall) : [],
+    keepOut,
   };
 }
 
