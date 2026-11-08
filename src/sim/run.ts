@@ -28,7 +28,7 @@ import { newScreen, type Screen, type ScreenRules } from './screen';
 import { newParcels, type ParcelRules, type Parcels } from './parcels';
 import { tideStart } from './tide';
 import { type RunFeature, RUN_FEATURES } from './features';
-import { type Body, bodyAtCell, type CollisionWorld, firstOverlap, type Solid, stepBody } from './physics';
+import { type Body, bodyAtCell, type CollisionWorld, firstOverlap, type Knocked, type Solid, stepBody } from './physics';
 import {
   type Beam,
   buildProjectile,
@@ -146,6 +146,8 @@ export interface RunRules {
   seconds?: number;
   /** How hard bodies shove each other (sim/collide.ts), the same for everyone in the race; the race's own (`RACE_SHOVE`) unset. */
   shove?: ShoveRules;
+  /** A body seeing stars bounces off walls and ceilings (`Knocked`, sim/physics.ts) instead of stopping dead. Unset: it stops, as the controller does. */
+  bounce?: Knocked;
   /** Hits build up (`BuildUp`): every rival's knock a runner takes throws the next one farther. Unset: every hit throws as the first. */
   buildup?: BuildUp;
   /** The leader's screen (sim/screen.ts): fall off its bottom and you're out. Unset: no such window. */
@@ -427,7 +429,8 @@ export class RunWorld {
       const takeoff = held ? null : takeoffMark(r.status, b);
 
       // Wind is a velocity field applied inside stepBody (sim/wind.ts); grounding stays physics' call.
-      if (!held && !stepBody(b, inp, this.world, windAt(b, this.out.winds)) && !this.isSafe(r)) {
+      const knocked = this.rules.bounce && r.items.daze > 0 ? this.rules.bounce : null;
+      if (!held && !stepBody(b, inp, this.world, windAt(b, this.out.winds), knocked) && !this.isSafe(r)) {
         // Credit whoever's moving solid did the squishing.
         const s = this.solids.find((s) => s.propUid >= 0 && overlaps(b, s));
         const owner = s ? (this.resolved.find((x) => x.pp.uid === s.propUid)?.pp.owner ?? -1) : -1;

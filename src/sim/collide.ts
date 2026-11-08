@@ -19,7 +19,7 @@ import type { Runner } from './run';
  *  - **A bump from below** (`BUMP`). Come up at jump speed into the feet of anyone not riding you, standing
  *    on the level (a board you jump up through, say) or in the air, and they're bonked and knocked off sideways,
  *    and you carry on up through them. Only a rider on your head is bucked instead, and a head rising slower
- *    than a jump (a lip, a lift) is still a step up.
+ *    than a jump (a lip, a lift) is still a step up. A brawl bumps only someone standing (`ShoveRules.footed`).
  *  - **A perch is not ground** (`PERCH`). Nobody carries a rider sideways: it
  *    keeps its own momentum on a slick, rounded top, slides off the side it's on,
  *    and is thrown off when its base jumps, moves out from under it, or simply
@@ -31,7 +31,10 @@ import type { Runner } from './run';
  *    slows you down. Terrain limits a group; it's never pushed into.
  *
  * Nobody can be held up for good. Press against bodies for `slipFrames` and you
- * slip through them, which also unjams head-on runners in a corridor. A pair that
+ * slip through them, which also unjams head-on runners in a corridor; a brawl's
+ * clock runs only while someone pushes back (`ShoveRules.stall`), so a shove
+ * that's working never ghosts. A body a knock threw is no perch-taker or hitter
+ * of its own in a brawl (`ShoveRules.thrown`). A pair that
  * already overlaps at the start of a frame passes through each other until they
  * have come apart, which covers a slip, the spawn pile, a pipe exit and a pair
  * squeezed together by a crusher, with nothing to remember but the positions.
@@ -102,6 +105,23 @@ export interface ShoveRules {
    * like a bump from below, stars and credit (`CHECK`). Infinity: never.
    */
   check: number;
+  /**
+   * Frames of a mutual stall before its bodies slip through each other, a stall counting only with someone in the
+   * group going the other way: two head-on still get past each other in the end, but a shove toward an edge never
+   * ends in a ghost, and a pushing match lasts long enough to jump over. Unset, every hold winds the clock to
+   * `COLLIDE.slipFrames`, as a race's tunnels need: a bystander there must cost you about a second, not the race.
+   */
+  stall?: number;
+  /**
+   * A bump from below hits only someone standing on something and not already seeing stars; a pair meeting in the air
+   * is a head and a rider, as anywhere else (bucked, or a side contact). Unset, a bump hits whoever it meets.
+   */
+  footed?: boolean;
+  /**
+   * A body seeing stars is a thrown one: heads are air to it (it never perches), and a check or a bump it gives is its
+   * hitter's (`bonkedBy`), or nobody's, never its own. Unset, a dazed body is a body like any other.
+   */
+  thrown?: boolean;
 }
 
 /** The race's shove: a quarter of a walk, nothing carried, no body checks. */
@@ -161,9 +181,10 @@ interface Mover {
   base: Mover | null;
   /** Who bumped it from below this frame, if anyone. */
   bumpedBy: Mover | null;
-  /** Who body-checked it from the side this frame (`ShoveRules.check`), and how fast they closed (px/s). */
+  /** Who body-checked it from the side this frame (`ShoveRules.check`), how fast they closed (px/s), and whose hit it is (`hitter`). */
   checkedBy: Mover | null;
   closing: number;
+  credit: number;
   /** Sideways motion of its own step. Nobody carries anyone, so that's all it moves before side contact. */
   own: number;
   /** Direction it's slipping through bodies this frame (±1), or 0. */
@@ -193,8 +214,9 @@ export function collideRunners(
   shove: ShoveRules = RACE_SHOVE,
 ): Bump[] {
   const ms: Mover[] = [];
+  const slipAt = shove.stall ?? COLLIDE.slipFrames;
   runners.forEach((r, i) => {
-    if (r.alive && !r.finished && !r.attach.grip) ms.push(mover(r, start[i], safe(r)));
+    if (r.alive && !r.finished && !r.attach.grip) ms.push(mover(r, start[i], safe(r), slipAt));
     else {
       r.ride = -1;
       r.perch = 0;
@@ -207,23 +229,32 @@ export function collideRunners(
   }
   // Lowest first, so a base has settled before anyone on it. Riders are always above their base at the start of a frame.
   const order = ms.slice().sort((a, b) => b.start.y - a.start.y || a.start.x - b.start.x || a.r.slot - b.r.slot);
-  settleVertical(order, world);
+  settleVertical(order, world, shove);
   settleSides(order, world, shove);
   if (shove.carry) for (const m of order) carry(m);
-  catchMissed(order, world);
-  for (const m of order) finish(m);
+  catchMissed(order, world, shove);
+  for (const m of order) finish(m, order, shove);
   return order.flatMap((m): Bump[] => {
-    if (m.bumpedBy) return [{ victim: m.r.slot, by: m.bumpedBy.r.slot, side: bumpSide(m, m.bumpedBy), stood: m.b.onGround }];
-    if (m.checkedBy)
-      return [{ victim: m.r.slot, by: m.checkedBy.r.slot, side: m.start.x > m.checkedBy.start.x ? 1 : -1, stood: m.b.onGround, closing: m.closing }];
+    if (m.bumpedBy) return [{ victim: m.r.slot, by: hitter(m.bumpedBy, shove), side: bumpSide(m, m.bumpedBy), stood: m.b.onGround }];
+    if (m.checkedBy) return [{ victim: m.r.slot, by: m.credit, side: m.start.x > m.checkedBy.start.x ? 1 : -1, stood: m.b.onGround, closing: m.closing }];
     return [];
   });
+}
+
+/** Seeing stars, under rules where that makes a body a thrown one (`ShoveRules.thrown`). */
+const flung = (m: Mover, shove: ShoveRules) => !!shove.thrown && m.r.items.daze > 0;
+
+/** Whose hit a bump or a check by `m` is: its own, or, thrown, whoever knocked it (-1: nobody's, so no hit). */
+function hitter(m: Mover, shove: ShoveRules): number {
+  if (!flung(m, shove)) return m.r.slot;
+  const by = m.r.items.bonkedBy;
+  return by === m.r.slot ? -1 : by;
 }
 
 /** Which way a bump knocks `m`: away from the one under it, else the way it faces. */
 const bumpSide = (m: Mover, p: Mover): -1 | 1 => (m.b.x > p.b.x ? 1 : m.b.x < p.b.x ? -1 : m.b.facing);
 
-function mover(r: Runner, s: RunnerStart, safe: boolean): Mover {
+function mover(r: Runner, s: RunnerStart, safe: boolean, slipAt: number): Mover {
   const b = r.body;
   const own = b.x - s.x;
   return {
@@ -236,8 +267,9 @@ function mover(r: Runner, s: RunnerStart, safe: boolean): Mover {
     bumpedBy: null,
     checkedBy: null,
     closing: 0,
+    credit: -1,
     own,
-    slip: r.press >= COLLIDE.slipFrames ? Math.sign(own) : 0,
+    slip: r.press >= slipAt ? Math.sign(own) : 0,
     slipped: false,
     x: s.x,
     want: own,
@@ -257,22 +289,22 @@ function solid(a: Mover, b: Mover): boolean {
 
 // ---------------------------------------------------------------- vertical
 
-function settleVertical(order: readonly Mover[], world: CollisionWorld): void {
+function settleVertical(order: readonly Mover[], world: CollisionWorld, shove: ShoveRules): void {
   for (let i = 0; i < order.length; i++) {
     const m = order[i];
     const p = m.rode;
-    if (p && m.b.onGround) m.rode = null; // Its own step put it on the world.
+    if (p && (m.b.onGround || flung(m, shove))) m.rode = null; // Its own step put it on the world, or a knock threw it.
     else if (p) moveY(m.b, p.b.y - p.start.y, world); // Up and down with the head, never sideways.
     let best: Mover | null = null;
-    for (let j = 0; j < i; j++) if (solid(m, order[j]) && landsOn(m, order[j]) && better(m, order[j], best)) best = order[j];
-    if (best && bumps(m, best)) m.bumpedBy = best;
+    for (let j = 0; j < i; j++) if (solid(m, order[j]) && landsOn(m, order[j], shove) && better(m, order[j], best)) best = order[j];
+    if (best && bumps(m, best, shove)) m.bumpedBy = best;
     else if (best) rest(m, best, world);
   }
 }
 
-/** Did `m` come down on `p`'s head this frame, or `p` come up under its feet? */
-function landsOn(m: Mover, p: Mover): boolean {
-  if (m.b.dropFrames > 0) return false;
+/** Did `m` come down on `p`'s head this frame, or `p` come up under its feet? Never a thrown body: heads are air to it. */
+function landsOn(m: Mover, p: Mover, shove: ShoveRules): boolean {
+  if (m.b.dropFrames > 0 || flung(m, shove)) return false;
   const g0 = m.start.y + m.b.h - p.start.y; // Feet below the head at the start of the frame; negative is above it.
   const g1 = m.b.y + m.b.h - p.b.y;
   if (g0 > (m.b.vy < 0 ? TOUCH : COLLIDE.lip) || g1 < -TOUCH) return false;
@@ -290,10 +322,14 @@ function landsOn(m: Mover, p: Mover): boolean {
 
 /**
  * `p` came up at jump speed from below into the feet of `m`, who wasn't riding anyone: a bump, not a lift. The pair
- * overlaps from here, so they pass through each other until they've come apart.
+ * overlaps from here, so they pass through each other until they've come apart. Under `ShoveRules.footed` only someone
+ * standing on something, and not seeing stars, is bumped; and it's a hit only if it's someone's (`hitter`).
  */
-function bumps(m: Mover, p: Mover): boolean {
-  return !m.rode && p.b.vy < -PERCH.buck && p.b.y < p.start.y - EPS && m.start.y + m.b.h - p.start.y < -TOUCH;
+function bumps(m: Mover, p: Mover, shove: ShoveRules): boolean {
+  if (m.rode || !(p.b.vy < -PERCH.buck && p.b.y < p.start.y - EPS && m.start.y + m.b.h - p.start.y < -TOUCH)) return false;
+  if (shove.footed && (!m.b.onGround || m.r.items.daze > 0)) return false;
+  const by = hitter(p, shove);
+  return by >= 0 && by !== m.r.slot;
 }
 
 const sideOverlap = (m: Mover, p: Mover) => m.b.w - Math.abs(m.start.x + m.own - p.start.x - p.own);
@@ -410,9 +446,13 @@ function check(l: Mover, r: Mover, shove: ShoveRules): void {
   // Each one's motion toward the other: the one coming on harder checks the other.
   const [by, victim, braced] = l.v >= -r.v ? [l, r, -r.v] : [r, l, l.v];
   if (braced > 1e-9 || victim.bumpedBy || victim.r.items.daze > 0) return;
+  // A thrown body's check is its hitter's, and one nobody threw (or that would credit the victim) is only a shove.
+  const credit = hitter(by, shove);
+  if (credit < 0 || credit === victim.r.slot) return;
   if (victim.checkedBy && (closing < victim.closing || (closing === victim.closing && by.r.slot > victim.checkedBy.r.slot))) return;
   victim.checkedBy = by;
   victim.closing = closing;
+  victim.credit = credit;
 }
 
 /**
@@ -494,10 +534,10 @@ function free(b: Body, dir: -1 | 1, dist: number, world: CollisionWorld): number
  * Feet that just missed a head can end the frame in it anyway, when side contact
  * holds that head back under them (a third body blocks it). They land on it after all.
  */
-function catchMissed(order: readonly Mover[], world: CollisionWorld): void {
+function catchMissed(order: readonly Mover[], world: CollisionWorld, shove: ShoveRules): void {
   for (let i = 0; i < order.length; i++) {
     const m = order[i];
-    if (m.base || m.bumpedBy || m.b.dropFrames > 0) continue;
+    if (m.base || m.bumpedBy || m.b.dropFrames > 0 || flung(m, shove)) continue;
     for (let j = 0; j < i; j++) {
       const p = order[j];
       if (solid(m, p) && overlaps(m.b, p.b) && m.start.y + m.b.h - p.start.y <= COLLIDE.lip) {
@@ -510,8 +550,11 @@ function catchMissed(order: readonly Mover[], world: CollisionWorld): void {
 
 // ---------------------------------------------------------------- results
 
-/** Write what the frame came to on the runner. Lowest first, so a base's throw has landed before its rider looks. */
-function finish(m: Mover): void {
+/**
+ * Write what the frame came to on the runner. Lowest first, so a base's throw has landed before its rider looks. Held up
+ * by bodies winds its slip clock (`press`); under `ShoveRules.stall` only against someone in its group going the other way.
+ */
+function finish(m: Mover, order: readonly Mover[], shove: ShoveRules): void {
   const { r, b, base } = m;
   if (base && Math.abs(b.x - base.b.x) < b.w - EPS) perch(m, base);
   else {
@@ -519,9 +562,13 @@ function finish(m: Mover): void {
     r.perch = 0;
   }
   const moved = (m.x - m.start.x) * Math.sign(m.want);
-  const held = m.grouped && m.want !== 0 && moved < Math.abs(m.want) * COLLIDE.heldBelow;
+  const held =
+    m.grouped &&
+    m.want !== 0 &&
+    moved < Math.abs(m.want) * COLLIDE.heldBelow &&
+    (shove.stall === undefined || order.some((o) => o.grouped && o.group === m.group && o.want * m.want < 0));
   if (m.slipped) r.press = 0;
-  else if (held) r.press = Math.min(r.press + 1, COLLIDE.slipFrames);
+  else if (held) r.press = Math.min(r.press + 1, shove.stall ?? COLLIDE.slipFrames);
   else if (r.press > 0) r.press--;
 }
 

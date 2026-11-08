@@ -13,6 +13,7 @@ import { stepClimbItems } from './climb';
 import { stepBlocks } from './pocket';
 import { stepLines } from './rod';
 import { BAT, GLOVE, ITEMS, ROCKET, SHIELD, SMOKE, SWORD, swingBat, TREMOR, tossHeld } from './roster';
+import { bladeBoxes as sweptBoxes, gloveBox } from './swing';
 import { stepShells } from './tax';
 import { stepFists, stepHooks } from './upward';
 import { DROP_HALF, DROP_LIFE, type ItemKind, type ItemSpawn, type RunnerItems } from './types';
@@ -103,11 +104,14 @@ export function burstSmoke(w: RunWorld, x: number, y: number): void {
 
 const tick = (n: number) => (n > 0 ? n - 1 : 0);
 
-function bladeBox(r: Runner): Rect {
-  const b = r.body;
-  const kind = r.items.swingKind;
-  const reach = kind === 'bat' ? BAT.reach : kind === 'glove' ? GLOVE.reach : SWORD.reach;
-  return { x: b.facing > 0 ? b.x + b.w - 2 : b.x + 2 - reach, y: b.y - 6, w: reach, h: b.h + 6 };
+/** Where `r`'s swing can hit this frame (swing.ts): the glove's reach, or the boxes round the blade's sweep. */
+function bladeBoxes(w: RunWorld, r: Runner): Rect[] {
+  const it = r.items;
+  if (it.swingKind === 'glove') {
+    const box = gloveBox(w.world, r.body, it.swing);
+    return box ? [box] : [];
+  }
+  return sweptBoxes(w.world, r.body, it.swingKind === 'bat' ? 'bat' : 'sword', it.swing);
 }
 
 /** Timers, and letting go of what dead and finished runners held. Items that die in the pit are gone. */
@@ -191,6 +195,9 @@ function slamBricks(w: RunWorld): void {
   });
 }
 
+/** The way a swing knocks what it hits at `x`: ahead, or back for what it caught behind its swinger's middle. */
+const knockDir = (a: Runner, x: number): -1 | 1 => ((x - cx(a)) * a.body.facing < 0 ? (a.body.facing > 0 ? -1 : 1) : a.body.facing);
+
 /** Resolve every live swing against this frame's positions, then apply all the knocks at once. */
 function swingSwords(w: RunWorld): void {
   const rs = w.runners;
@@ -198,14 +205,15 @@ function swingSwords(w: RunWorld): void {
   rs.forEach((a, ai) => {
     const it = a.items;
     if (!isActive(a) || it.swing < SWORD.activeLo || it.swing > SWORD.activeHi) return;
-    const box = bladeBox(a);
+    const boxes = bladeBoxes(w, a);
+    if (!boxes.length) return;
     rs.forEach((v, vi) => {
       // The spawn zone shields you from kicks too.
-      if (vi === ai || !isActive(v) || w.isSafe(v) || it.swingHits & (1 << vi) || !overlaps(box, v.body)) return;
+      if (vi === ai || !isActive(v) || w.isSafe(v) || it.swingHits & (1 << vi) || !boxes.some((box) => overlaps(box, v.body))) return;
       it.swingHits |= 1 << vi;
       const k = knocks[vi];
       const power = it.swingPower;
-      k.vx += a.body.facing * SWORD.knockVx * power;
+      k.vx += knockDir(a, cx(v)) * SWORD.knockVx * power;
       k.vy = Math.max(k.vy, SWORD.knockVy * Math.min(power, it.swingKind === 'glove' ? GLOVE.lift : BAT.lift));
       if (it.swingKind === 'bat' && power >= BAT.full) k.homer = true;
       if (k.by < 0 || a.slot < k.by) {
@@ -215,8 +223,10 @@ function swingSwords(w: RunWorld): void {
     });
     for (const p of w.projectiles) {
       const sim = AMMO_SIM[p.ammo];
-      if (p.stuck >= 0 || sim?.platform || !pointInRect(p.x, p.y, box) || (p.owner === a.slot && p.vx * a.body.facing > 0)) continue;
-      p.vx = a.body.facing * Math.max(Math.abs(p.vx), SWORD.swatSpeed);
+      if (p.stuck >= 0 || sim?.platform || !boxes.some((box) => pointInRect(p.x, p.y, box))) continue;
+      const dir = knockDir(a, p.x);
+      if (p.owner === a.slot && p.vx * dir > 0) continue;
+      p.vx = dir * Math.max(Math.abs(p.vx), SWORD.swatSpeed);
       p.vy = Math.min(p.vy, -40);
       p.owner = a.slot;
       p.born = w.frame;

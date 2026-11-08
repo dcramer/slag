@@ -38,7 +38,6 @@ export const SWORD = {
   cooldown: 26,
   /** Swinging is heavy: speed cap (px/s) for the whole swing. */
   crawl: 70,
-  reach: 18,
   knockVx: 360,
   knockVy: 280,
   /** Slowest a swatted shot leaves the blade (px/s). */
@@ -51,18 +50,19 @@ export const SHIELD = { jumpCap: 300, guard: 18, pop: 280 } as const;
 export const ROCKET = { thrust: 7, vy: 470, vx: 120, daze: 50 } as const;
 export const SMOKE = { vx: 190, vy: 230, radius: 46, life: 60 * 5, cooldown: 30 } as const;
 /**
- * Walk-Off Bat: frames to a full wind-up, knock (× the noodle's) from a tap to full, how much of that goes
- * into lift at most, and reach (px).
+ * Walk-Off Bat: frames to a full wind-up, knock (× the noodle's) from a tap to full, and how much of that goes
+ * into lift at most. Its reach is its arc's (`ARCS`, swing.ts), as the noodle's is.
  */
-export const BAT = { windup: 36, tap: 0.6, full: 3, lift: 1.6, reach: 22 } as const;
+export const BAT = { windup: 36, tap: 0.6, full: 3, lift: 1.6 } as const;
 /** Tremor Brick: frames it's held up before it comes down (the tell), and the hop it gives the grounded. */
 export const TREMOR = { delay: 14, pop: 230 } as const;
 /**
- * Sucker Punch: a boxing glove that springs out of a gift box, out to `reach` px in front, knocking whoever it meets
- * `power` times as hard as the noodle and lifting them as hard as the noodle at most, so they fly sideways into whatever
- * is behind them. It's a swing (SWORD's timing) with a long reach, so it swats shots as the noodle does.
+ * Sucker Punch: a boxing glove that springs out of a gift box, its fist out to `reach` px ahead of the puncher's middle
+ * (short of any rock in the way, swing.ts `gloveFront`), knocking whoever it meets `power` times as hard as the noodle
+ * and lifting them as hard as the noodle at most, so they fly sideways into whatever is behind them. It's a swing
+ * (SWORD's timing) with a long reach, so it swats shots as the noodle does.
  */
-export const GLOVE = { reach: 54, power: 1.9, lift: 1 } as const;
+export const GLOVE = { reach: 59, power: 1.9, lift: 1 } as const;
 
 /** Toss the held item forward as a loose drop (down + use, or use with a shield). */
 export function tossHeld(w: RunWorld, r: Runner): void {

@@ -388,8 +388,11 @@ function blockedAt(b: Body, x: number, y: number, world: CollisionWorld): boolea
   return hit;
 }
 
-/** Move along x, stopping at solids (one-ways never block sideways). Pops up small ledge lips. Returns the solid hit. */
-export function moveX(b: Body, dx: number, world: CollisionWorld): Solid | null {
+/**
+ * Move along x, stopping at solids (one-ways never block sideways). Pops up small ledge lips, at least `lip` px (a
+ * knocked body's, `Knocked.lip`) where the solid asks for less. Returns the solid hit.
+ */
+export function moveX(b: Body, dx: number, world: CollisionWorld, lip = 0): Solid | null {
   if (dx === 0) return null;
   const steps = Math.max(1, Math.ceil(Math.abs(dx) / 4));
   const sx = dx / steps;
@@ -399,8 +402,8 @@ export function moveX(b: Body, dx: number, world: CollisionWorld): Solid | null 
     if (!s0) continue;
     // Ledge lip: a step whose top is ≤ ledgeLip px above our feet is climbed instead of blocking.
     // (Tiles are scanned top row first, so s0 is the highest blocking tile.)
-    const lip = b.y + b.h - s0.y;
-    if (lip > 0 && lip <= (s0.step ?? PHYS.ledgeLip) && !blockedAt(b, b.x, s0.y - b.h, world)) {
+    const rise = b.y + b.h - s0.y;
+    if (rise > 0 && rise <= Math.max(s0.step ?? PHYS.ledgeLip, lip) && !blockedAt(b, b.x, s0.y - b.h, world)) {
       b.y = s0.y - b.h;
       continue;
     }
@@ -619,23 +622,34 @@ function wallJump(b: Body, dir: -1 | 1, surf: Surface, held: number): void {
 }
 
 /**
- * Advance one body one fixed step. Deterministic given (body, controls, world, wind).
- * `wind` (see sim/wind.ts) is the air this body is in this frame, if any.
+ * A body thrown by a knock, under rules that bounce it (`RunRules.bounce`, a brawl's): stopped by a wall it leaves at
+ * `bounce` times the speed it came in at, back the way it came, and the same off a ceiling; a floor still lands it, so
+ * it skids on rather than bouncing forever. It climbs a step up to `lip` px, so a knock doesn't snag on a corner.
+ */
+export interface Knocked {
+  bounce: number;
+  lip: number;
+}
+
+/**
+ * Advance one body one fixed step. Deterministic given (body, controls, world, wind, knocked).
+ * `wind` (see sim/wind.ts) is the air this body is in this frame, if any; `knocked`, how it flies while a knock
+ * throws it, or null for the plain controller (everyone else, and every proof in reach.ts).
  * Returns false if the body was crushed.
  */
-export function stepBody(b: Body, c: Controls, world: CollisionWorld, wind: WindForce | null = null): boolean {
+export function stepBody(b: Body, c: Controls, world: CollisionWorld, wind: WindForce | null = null, knocked: Knocked | null = null): boolean {
   passing = -1;
   if (b.pass !== undefined) {
     const s = findSolid(world, b.pass);
     if (s && overlaps(b, s)) passing = b.pass;
     else delete b.pass;
   }
-  const ok = step(b, c, world, wind);
+  const ok = step(b, c, world, wind, knocked);
   passing = -1;
   return ok;
 }
 
-function step(b: Body, c: Controls, world: CollisionWorld, wind: WindForce | null): boolean {
+function step(b: Body, c: Controls, world: CollisionWorld, wind: WindForce | null, knocked: Knocked | null): boolean {
   // Ride whatever we were standing on.
   if (b.groundRef >= 0) {
     const s = findSolid(world, b.groundRef);
@@ -739,7 +753,8 @@ function step(b: Body, c: Controls, world: CollisionWorld, wind: WindForce | nul
   if (wind) windPushY(b, wind, g);
 
   // Integrate.
-  if (moveX(b, b.vx * DT, world)) b.vx = 0;
+  const vx = b.vx;
+  if (moveX(b, vx * DT, world, knocked ? knocked.lip : 0)) b.vx = knocked ? -vx * knocked.bounce : 0;
   const hitY = moveY(b, b.vy * DT, world);
   if (hitY && b.vy > 0 && hitY.surface.bounce > 0 && b.vy > PHYS.bounceMinVy) {
     b.vy = -b.vy * hitY.surface.bounce;
@@ -756,7 +771,7 @@ function step(b: Body, c: Controls, world: CollisionWorld, wind: WindForce | nul
     b.wallJumpCd = 0;
   } else {
     if (hitY && b.vy < 0) {
-      b.vy = 0;
+      b.vy = knocked ? -b.vy * knocked.bounce : 0;
       b.jumping = false;
       // A head that bonks a belt from below is flung along it; air control can still fight it.
       const shove = ceilingBelt(hitY.surface) * PHYS.beltShoveMult;

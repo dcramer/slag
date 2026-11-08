@@ -1,6 +1,7 @@
 import { css, type HSL } from '../core/color';
 import { hash2 } from '../core/rng';
-import { CLOCK, DROP_BLINK, DROP_LIFE, type ItemKind, ROCKET, SHIELD, SWORD } from '../sim/items';
+import { CLOCK, DROP_BLINK, DROP_LIFE, type ItemKind, ROCKET, SHIELD, SWORD, swingAngle } from '../sim/items';
+import type { CollisionWorld } from '../sim/physics';
 import type { Projectile, Runner, RunWorld } from '../sim/run';
 import type { GameEvent } from '../sim/types';
 import type { Fx } from './fx';
@@ -328,9 +329,9 @@ function drawSword(rc: RC, r: Runner, cxp: number): void {
   const b = r.body;
   const fc = b.facing;
   const s = rc.s;
-  // Rests on the shoulder; a swing sweeps from behind the head down in front.
+  // Rests on the shoulder; a swing sweeps from behind the head down in front, the arc the sim hits with (`ARCS`).
   const u = it.swing > 0 ? 1 - it.swing / SWORD.swing : -1;
-  const ang = u < 0 ? 0.5 : -1.1 + Math.min(1, u * 1.6) * 3;
+  const ang = u < 0 ? 0.5 : swingAngle('sword', it.swing);
   // It's foam: it lags behind the swing, then flops back past straight and settles.
   const bend = u < 0 ? 0.8 : u < 0.62 ? -5 * Math.sin((u / 0.62) * Math.PI * 0.5) : 5 * Math.sin(((u - 0.62) / 0.38) * Math.PI * 2.5) * (1 - (u - 0.62) / 0.38);
   s.save();
@@ -576,8 +577,8 @@ function trialFlame(rc: RC, fx: number, fy: number, k: number, fc: number) {
   light(rc, fx, fy, 70, { h: 30, s: 100, l: 60 }, 1);
 }
 
-/** The held item and item effects on one live runner (drawn over the character). */
-export function drawRunnerItems(rc: RC, r: Runner): void {
+/** The held item and item effects on one live runner (drawn over the character); `world` stops a glove at rock as the sim does. */
+export function drawRunnerItems(rc: RC, r: Runner, world: CollisionWorld): void {
   const s = rc.s;
   const b = r.body;
   const it = r.items;
@@ -588,7 +589,7 @@ export function drawRunnerItems(rc: RC, r: Runner): void {
   if (h?.kind === 'bat' || batSwing) {
     const u = batSwing ? 1 - it.swing / SWORD.swing : -1;
     drawBat(rc, r, x, swingSmear, u, batSwing && it.swing >= SWORD.activeLo && it.swing <= SWORD.activeHi);
-  } else if (it.swing > 0 && it.swingKind === 'glove') drawPunch(rc, r, x);
+  } else if (it.swing > 0 && it.swingKind === 'glove') drawPunch(rc, r, x, world);
   else if (h?.kind === 'sword' || it.swing > 0) drawSword(rc, r, x);
   else if (it.slam > 0) drawRaisedBrick(rc, r, x);
   else if (h?.kind === 'shield') bubbleWrap(rc, x, b.y + b.h / 2, r.slot, 0);

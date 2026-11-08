@@ -504,7 +504,7 @@ export class Renderer {
           );
           if (shield && !r.finished && run.isSafe(r)) this.drawShield(rc, level, r.body.x + r.body.w / 2, r.body.y + r.body.h, r.slot);
           drawRunnerStatus(rc, r.body, r.status, r.attach.soot - run.frame);
-          drawRunnerItems(rc, r);
+          drawRunnerItems(rc, r, run.world);
           drawBuildUp(rc, r);
         }
         if (dy) at(0);

@@ -5,7 +5,22 @@ import { generateTheme } from '../src/gen/theme';
 import { defaultSettings, loadSettings } from '../src/input/bindings';
 import { TouchInput, touchLayout } from '../src/input/touch';
 import { KILL_Y, LEVEL_H, LEVEL_W, POP_HOLD, RUN_COUNTDOWN, TILE } from '../src/sim/constants';
-import { BAT, blockCells, DROP_LIFE, giveItem, ITEM_KINDS, ITEMS, type ItemKind, POCKET, SWORD, spawnItem, TAX, TREMOR } from '../src/sim/items';
+import {
+  BAT,
+  blockCells,
+  DROP_LIFE,
+  GLOVE,
+  giveItem,
+  gloveFront,
+  ITEM_KINDS,
+  ITEMS,
+  type ItemKind,
+  POCKET,
+  SWORD,
+  spawnItem,
+  TAX,
+  TREMOR,
+} from '../src/sim/items';
 import type { Level } from '../src/sim/level';
 import { bodyAtCell } from '../src/sim/physics';
 import { canPlace, type Module, mysteryState, type PlacedProp, type PropDef, rollItem, standHolds, THROW_GRACE } from '../src/sim/props';
@@ -885,6 +900,76 @@ describe('walk-off bat', () => {
     expect(a.items.daze).toBeGreaterThan(0);
     expect(a.items.windup).toBe(0);
     expect(a.items.held?.kind).toBe('bat');
+  });
+});
+
+describe('a swing hits where it is drawn, and not through rock', () => {
+  /** The wall column of `testLevel`, and its left face in px. */
+  const WALL = 30 * TILE;
+
+  /**
+   * Swing `kind` facing right from column `tx`, with a rival placed by `put` (held there every frame, so a scene in
+   * the air stays put): the frame of the swing (swing frames left) the rival was first hit on, or null.
+   */
+  function swingAt(kind: ItemKind, tx: number, put: (a: Runner, v: Runner) => void, level = testLevel()) {
+    const run = race([tx, tx + 6], [], level);
+    const [a, v] = run.runners;
+    giveItem(a, kind);
+    face(a, 1);
+    const at = () => {
+      put(a, v);
+      v.body.vx = 0;
+      v.body.vy = 0;
+    };
+    at();
+    use(run);
+    for (let f = 0; f < SWORD.swing + BAT.windup + 4; f++) {
+      if (v.items.daze === 0) at();
+      steps(run, 1);
+      if (v.items.daze > 0) return { swing: a.items.swing, v, a, run };
+    }
+    return { swing: null, v, a, run };
+  }
+  const flushBehind = (a: Runner, v: Runner) => (v.body.x = a.body.x - v.body.w - 0.5);
+  const overhead = (a: Runner, v: Runner) => {
+    v.body.x = a.body.x;
+    v.body.y = a.body.y - v.body.h - 8;
+    v.body.onGround = false;
+  };
+  const ahead = (gap: number) => (a: Runner, v: Runner) => (v.body.x = a.body.x + a.body.w + gap);
+
+  it('the noodle hits someone flush behind or just overhead, where it sweeps from, and knocks the one behind away', () => {
+    const behind = swingAt('sword', 12, flushBehind);
+    expect(behind.swing).toBe(SWORD.activeHi);
+    expect(behind.v.body.vx).toBeLessThan(0);
+    expect(swingAt('sword', 12, overhead).swing).toBe(SWORD.activeHi);
+  });
+
+  it('the noodle misses someone ahead while it still points up, and hits them as it comes down', () => {
+    const hit = swingAt('sword', 12, ahead(14));
+    expect(hit.swing).not.toBeNull();
+    expect(hit.swing!).toBeLessThan(SWORD.activeHi - 1);
+    expect(hit.v.body.vx).toBeGreaterThan(0);
+    // Out past the noodle's arc, nothing.
+    expect(swingAt('sword', 12, ahead(24)).swing).toBeNull();
+  });
+
+  it("the glove and the bat stop at a wall: nobody on its far side is hit, and the glove's fist stops at its face", () => {
+    const pastWall = (a: Runner, v: Runner) => {
+      a.body.x = WALL - a.body.w;
+      v.body.x = WALL + TILE;
+    };
+    const open = testLevel();
+    for (let y = 10; y < FLOOR; y++) open.tiles[y * LEVEL_W + 30] = 0;
+    for (const kind of ['glove', 'bat'] as const) {
+      expect(swingAt(kind, 29, pastWall).swing).toBeNull();
+      expect(swingAt(kind, 29, pastWall, open).swing).not.toBeNull();
+    }
+    const { a, run } = swingAt('glove', 29, pastWall);
+    a.items.swing = SWORD.activeHi - 2;
+    expect(a.body.x + a.body.w / 2 + gloveFront(run.world, a.body, a.items.swing)).toBeLessThanOrEqual(WALL);
+    a.body.x = 20 * TILE;
+    expect(gloveFront(run.world, a.body, a.items.swing)).toBe(GLOVE.reach);
   });
 });
 

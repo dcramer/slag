@@ -302,6 +302,7 @@ export function senseView(m: Match, p: Player): BrainView {
     phase: m.phase,
     mode: m.rules.mode,
     shove: MODES[m.rules.mode].run.shove ?? RACE_SHOVE,
+    bounce: MODES[m.rules.mode].run.bounce?.bounce,
     phaseFrame: m.phaseFrame,
     slot: p.slot,
     ready: p.ready,

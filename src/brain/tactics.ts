@@ -38,8 +38,9 @@ const KICK_RANGE = 12;
 const SWING_REACH = 1.75;
 /** Tiles out a smoke bomb is worth lobbing at someone: it lands a few tiles ahead. */
 const LOB_RANGE = [2, 7] as const;
-/** Tiles a Sucker Punch reaches, about: its glove's reach and a body. */
+/** Tiles a Sucker Punch reaches, about: its glove's reach and a body; and rows up or down a rival can stand for its glove, at chest height, to meet them. */
 const PUNCH_REACH = 3.5;
+const PUNCH_RISE_MAX = 0.75;
 /** Where an Upper Hand reaches: rows up (it rises about 20) and tiles across (it leans about two on the way). */
 const PUNCH_RISE = [1.5, 16] as const;
 const PUNCH_ACROSS = 2.5;
@@ -92,10 +93,11 @@ function clearRow(v: BrainView, a: number, b: number, y: number): boolean {
   return true;
 }
 
-/** The nearest rival matching `fits`, by tiles across. */
+/** The nearest rival matching `fits`, by tiles across. Never one in a spawn's shield: nothing reaches them there, and a starter spent on them is gone. */
 function nearest(v: BrainView, me: SelfSense, fits: (r: RunnerSense, dx: number, dy: number) => boolean): RunnerSense | null {
   let best: RunnerSense | null = null;
   for (const r of rivals(v)) {
+    if (r.shielded) continue;
     const dx = Math.abs(r.x - me.x);
     if (fits(r, dx, rise(me, r)) && (!best || dx < Math.abs(best.x - me.x))) best = r;
   }
@@ -121,11 +123,11 @@ function lift(v: BrainView, me: SelfSense): -1 | 0 | 1 | null {
 /** Under pressure to get up or on: the slag or the bottom of the screen is close, or it's stuck. */
 const pressed = ({ me, stalled }: Moment) => stalled || doomRows(me) < SLAG_NEAR;
 
-/** A swing at whoever is close enough to hit, facing them. */
+/** A swing at whoever is close enough to hit, facing them, with no rock between: a blade stops at it (sim/items/swing.ts). */
 const swing = (grounded: boolean): ItemTactic => ({
   when({ v, me }) {
     if (grounded && !me.grounded) return null;
-    const r = nearest(v, me, (_, dx, dy) => dx <= SWING_REACH && Math.abs(dy) <= 1.25);
+    const r = nearest(v, me, (q, dx, dy) => dx <= SWING_REACH && Math.abs(dy) <= 1.25 && clearRow(v, me.tx, Math.floor(q.x), me.ty));
     return r && { do: 'use', dir: toward(me, r) };
   },
 });
@@ -228,10 +230,10 @@ export const ITEM_TACTICS: Record<ItemKind, ItemTactic> = {
       return r && { do: 'use', dir: toward(me, r) };
     },
   },
-  // The Sucker Punch: a long swing, at a rival level with it and up to its reach across.
+  // The Sucker Punch: a long swing, at a rival level with it and up to its reach across, its glove's line clear of rock.
   glove: {
     when({ v, me }) {
-      const r = nearest(v, me, (_, dx, dy) => dx <= PUNCH_REACH && Math.abs(dy) <= 1.25);
+      const r = nearest(v, me, (q, dx, dy) => dx <= PUNCH_REACH && Math.abs(dy) <= PUNCH_RISE_MAX && clearRow(v, me.tx, Math.floor(q.x), me.ty));
       return r && { do: 'use', dir: toward(me, r) };
     },
   },
@@ -380,13 +382,15 @@ type Landing = 'dies' | 'safe' | 'open';
  * A body with its feet at (x, y) tiles, thrown at (vx, vy) px/s (up positive) with nobody at its controls, the way a
  * dazed one flies, followed until it meets something that kills (a part or a set piece that hurts, a side of the
  * map, the pit or the slag at row `slag`) or comes down on a floor. A sketch of the body's flight, not the sim's: its
- * middle column, the dazed body's gravity and air drag, and a wall it meets stopping it dead. `slide`: it comes down
+ * middle column, the dazed body's gravity and air drag, and a wall it meets stopping it dead, or bouncing it back where
+ * the mode's knocks bounce (`BrainView.bounce`), as a ceiling does its rise. `slide`: it comes down
  * still going and skids on along the floor (a body check's victim does) until it stops or goes off the end. `pass`
  * hears each cell the body's column passes through, and the rock cell of a wall it hits.
  */
 function fly(v: BrainView, x: number, y: number, vx: number, vy: number, slag: number, pass?: (cx: number, cy: number) => void, slide = false): Landing {
   const { w, h } = v.level;
   const mask = noGoMask(v);
+  const bounce = v.bounce ?? 0;
   let px = x * TILE;
   let py = y * TILE;
   let sx = vx;
@@ -403,15 +407,15 @@ function fly(v: BrainView, x: number, y: number, vx: number, vy: number, slag: n
     if (cx < 0 || cx >= w) return 'dies';
     const top = Math.floor((ny - PLAYER_H) / TILE);
     const bottom = Math.floor((ny - 1) / TILE);
-    // A wall across stops it dead, and it drops from there; a ceiling stops its rise.
+    // A wall across stops it dead, and it drops from there, or bounces it back; a ceiling stops its rise, or turns it.
     if (cx !== Math.floor(px / TILE) && (tile(v, cx, top) === T_SOLID || tile(v, cx, bottom) === T_SOLID)) {
       pass?.(cx, tile(v, cx, bottom) === T_SOLID ? bottom : top);
-      sx = 0;
+      sx = -sx * bounce;
       nx = px;
       cx = Math.floor(px / TILE);
     }
     if (sy < 0 && tile(v, cx, top) === T_SOLID) {
-      sy = 0;
+      sy = -sy * bounce;
       ny = py;
     }
     if (ny >= h * TILE || ny / TILE > slag) return 'dies';

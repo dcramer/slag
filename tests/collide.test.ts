@@ -12,7 +12,7 @@ import { BUMP, CHECK, COLLIDE, PERCH } from '../src/sim/collide';
 import { DT, FPS, LEVEL_H, LEVEL_W, PHYS, RUN_COUNTDOWN, SHIELD_FRAMES, TILE } from '../src/sim/constants';
 import { giveItem } from '../src/sim/items';
 import { type Level, spawnZone, tileAt } from '../src/sim/level';
-import { type Body, bodyAtCell, firstOverlap, stepBody } from '../src/sim/physics';
+import { type Body, bodyAtCell, createBody, firstOverlap, type Knocked, stepBody } from '../src/sim/physics';
 import { gliderSolidId, makeProjectile, type Module, moduleSim, type PlacedProp, type PropDef } from '../src/sim/props';
 import { RACE_RUN, type Runner, type RunRules, RunWorld } from '../src/sim/run';
 import { type InputFrame, NO_INPUT } from '../src/sim/types';
@@ -647,6 +647,176 @@ describe("a brawl's shove (RunRules.shove)", () => {
     const headOn = lineup(2, { spacing: 6 * TILE, rules: BRAWL });
     for (let f = 0; f < 60; f++) headOn.run.step([dash(1), dash(-1)]);
     expect(headOn.rs.map((r) => r.items.daze)).toEqual([0, 0]);
+  });
+});
+
+describe("a brawl's knocked bodies and contacts", () => {
+  const BRAWL = MODES.brawl.run;
+  /** `r` seeing stars from runner `by`'s hit (-1: nobody's), the way `bonk` leaves them. */
+  const dazed = (r: Runner, by: number) => {
+    r.items.daze = 28;
+    r.items.bonkedBy = by;
+    r.items.bonkCredit = by >= 0 ? 150 : 0;
+  };
+
+  it('a knock into a wall bounces back off it, where a race stops dead there', () => {
+    const fly = (rules: RunRules) => {
+      const { run, rs, bs } = lineup(1, { tx: WALL_X - 3, rules });
+      dazed(rs[0], -1);
+      bs[0].vx = 500;
+      bs[0].vy = -200;
+      bs[0].onGround = false;
+      let back = 0;
+      for (let f = 0; f < 20; f++) {
+        run.step([NO_INPUT]);
+        back = Math.min(back, bs[0].vx);
+      }
+      return { back, x: bs[0].x };
+    };
+    const brawl = fly(BRAWL);
+    const race = fly(RACE_RUN);
+    expect(race.back).toBe(0);
+    expect(brawl.back).toBeLessThan(-500 * BRAWL.bounce!.bounce * 0.8);
+    expect(brawl.x).toBeLessThan(race.x - TILE);
+  });
+
+  it('a knock up into a ceiling bounces down off it, and a floor still lands it to skid', () => {
+    const level = testLevel();
+    for (let x = 10; x < 20; x++) level.tiles[(FLOOR - 3) * LEVEL_W + x] = 1;
+    const { run, rs, bs } = lineup(1, { tx: 14, level, rules: BRAWL });
+    dazed(rs[0], -1);
+    bs[0].vx = 200;
+    bs[0].vy = -400;
+    bs[0].onGround = false;
+    // The first frame it's coming down, it's already coming down fast: it left the ceiling, it didn't drop off it.
+    let down = 0;
+    for (let f = 0; f < 10 && down <= 0; f++) {
+      run.step([NO_INPUT]);
+      down = bs[0].vy;
+    }
+    expect(down).toBeGreaterThan(PHYS.gravity * PHYS.fallGravityMult * DT * 2);
+    steps(run, 20);
+    expect(bs[0].onGround).toBe(true);
+    expect(bs[0].vy).toBe(0);
+  });
+
+  it('a knocked body climbs a step a lone runner would stop at, so it does not snag on a corner', () => {
+    // A 5 px step: over the controller's lip, under a knocked body's.
+    const step = { x: 20 * TILE, y: FLOOR * TILE - 5, w: 4 * TILE, h: 5, id: 99, dx: 0, dy: 0, surface: createBody(0, 0).surface, propUid: -1, mi: -1 };
+    const world = { ...terrain(testLevel()), solids: [step] };
+    const slide = (knocked: Knocked | null) => {
+      const b = bodyAtCell(17, FLOOR - 1);
+      for (let f = 0; f < 4; f++) stepBody(b, NO_INPUT, world);
+      b.vx = 300;
+      for (let f = 0; f < 20; f++) stepBody(b, NO_INPUT, world, null, knocked);
+      return b.x;
+    };
+    expect(slide(BRAWL.bounce!)).toBeGreaterThan(step.x);
+    expect(slide(null)).toBeLessThan(step.x);
+  });
+
+  it('only a body seeing stars bounces: a runner running into a wall stops at it as ever', () => {
+    const { run, bs } = lineup(1, { tx: WALL_X - 2, rules: BRAWL });
+    for (let f = 0; f < 30; f++) run.step([dash(1)]);
+    expect(bs[0].vx).toBeGreaterThanOrEqual(0);
+    expect(bs[0].x + bs[0].w).toBeCloseTo(WALL_X * TILE, 6);
+  });
+
+  it('a one-sided shove never slips through: it walks someone off a ledge, where a race slips past them', () => {
+    const EDGE = 24;
+    const level = testLevel();
+    for (let y = FLOOR; y < LEVEL_H; y++) for (let x = EDGE; x < LEVEL_W; x++) level.tiles[y * LEVEL_W + x] = 0;
+    for (let y = 10; y < FLOOR; y++) level.tiles[y * LEVEL_W + WALL_X] = 0;
+    const lean = (rules: RunRules) => {
+      const { run, rs, bs } = lineup(2, { level, tx: EDGE - 4, spacing: 0, rules });
+      bs[0].x = bs[1].x - bs[0].w - 0.5;
+      let passed = false;
+      for (let f = 0; f < 240 && rs[1].alive && bs[1].y < (FLOOR + 1) * TILE; f++) {
+        run.step([walk(1), NO_INPUT]);
+        if (bs[0].x > bs[1].x) passed = true;
+      }
+      return { passed, off: !rs[1].alive || bs[1].y >= (FLOOR + 1) * TILE };
+    };
+    expect(lean(BRAWL)).toEqual({ passed: false, off: true });
+    expect(lean(RACE_RUN).passed).toBe(true);
+    // Against a wall, twice the slip clock's frames on, and still flush behind them.
+    const pinned = lineup(2, { tx: WALL_X - 1, spacing: 0, rules: BRAWL });
+    pinned.bs[0].x = pinned.bs[1].x - pinned.bs[0].w - 0.5;
+    for (let f = 0; f < BRAWL.shove!.stall! * 2; f++) pinned.run.step([walk(1), NO_INPUT]);
+    expect(pinned.bs[0].x + pinned.bs[0].w).toBeLessThanOrEqual(pinned.bs[1].x + 1e-6);
+  });
+
+  it('head-on, equal efforts still slip through each other rather than jam for good', () => {
+    const { run, bs } = lineup(2, { spacing: 12, rules: BRAWL });
+    for (let f = 0; f < BRAWL.shove!.stall! + 30; f++) run.step([walk(1), walk(-1)]);
+    expect(bs[0].x).toBeGreaterThan(bs[1].x);
+  });
+
+  it('a bump from below hits only someone standing: a faller met in the air is not bonked', () => {
+    const { run, rs, bs } = lineup(2, { rules: BRAWL });
+    dropOn(bs[1], bs[0], 30);
+    bs[1].vy = PHYS.fastFallMax;
+    run.step([JUMP, press({ down: true })]);
+    for (let f = 0; f < 10; f++) run.step([HOLD_JUMP, press({ down: true })]);
+    expect(rs.map((r) => r.items.daze)).toEqual([0, 0]);
+    expect(rs[1].items.bonkedBy).toBe(-1);
+  });
+
+  it('a bump from below still bonks someone standing on a board', () => {
+    const level = testLevel();
+    for (let x = 12; x <= 18; x++) level.tiles[(FLOOR - 3) * LEVEL_W + x] = 2;
+    const { run, rs, bs } = lineup(2, { tx: 15, spacing: 0, level, rules: BRAWL });
+    bs[1].y = (FLOOR - 3) * TILE - bs[1].h;
+    steps(run, 5);
+    expect(bs[1].onGround).toBe(true);
+    run.step([JUMP, NO_INPUT]);
+    for (let f = 0; f < 30 && !rs[1].items.daze; f++) run.step([HOLD_JUMP, NO_INPUT]);
+    expect(rs[1].items.daze).toBeGreaterThan(0);
+    expect(rs[1].items.bonkedBy).toBe(0);
+  });
+
+  it('never bumps someone already seeing stars: the knock they have keeps its credit', () => {
+    const level = testLevel();
+    for (let x = 12; x <= 18; x++) level.tiles[(FLOOR - 3) * LEVEL_W + x] = 2;
+    const { run, rs, bs } = lineup(3, { tx: 15, spacing: 0, level, rules: BRAWL });
+    bs[1].y = (FLOOR - 3) * TILE - bs[1].h;
+    bs[2].x = 40 * TILE;
+    steps(run, 5);
+    dazed(rs[1], 2);
+    run.step([JUMP, NO_INPUT, NO_INPUT]);
+    for (let f = 0; f < 12; f++) run.step([HOLD_JUMP, NO_INPUT, NO_INPUT]);
+    expect(rs[1].items.bonkedBy).toBe(2);
+  });
+
+  it('a body seeing stars never perches: it falls past a head, where a race stands it there', () => {
+    const { run, rs, bs } = lineup(2, { rules: BRAWL });
+    dropOn(bs[1], bs[0], 20);
+    dazed(rs[1], -1);
+    for (let f = 0; f < 10; f++) {
+      run.step([NO_INPUT, NO_INPUT]);
+      expect(rs[1].ride).toBe(-1);
+    }
+    expect(feet(bs[1])).toBeGreaterThan(bs[0].y + 4);
+    const race = lineup(2);
+    dropOn(race.bs[1], race.bs[0], 20);
+    dazed(race.rs[1], -1);
+    steps(race.run, 10);
+    expect(race.rs[1].ride).toBe(0);
+  });
+
+  it("a knocked body's check on a bystander is its hitter's, and one nobody threw checks nobody", () => {
+    const fling = (by: number) => {
+      const { run, rs, bs } = lineup(3, { spacing: 4 * TILE, rules: BRAWL });
+      bs[0].x = 40 * TILE;
+      dazed(rs[1], by);
+      bs[1].vx = 500;
+      for (let f = 0; f < 30 && !rs[2].items.daze; f++) run.step([NO_INPUT, NO_INPUT, NO_INPUT]);
+      return rs[2].items;
+    };
+    const struck = fling(0);
+    expect(struck.daze).toBeGreaterThan(0);
+    expect(struck.bonkedBy).toBe(0);
+    expect(fling(-1).daze).toBe(0);
   });
 });
 

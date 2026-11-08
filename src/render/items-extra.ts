@@ -1,7 +1,7 @@
 import { css, type HSL } from '../core/color';
 import { hash2 } from '../core/rng';
 import { TILE } from '../sim/constants';
-import { BAT, POCKET, TAX, TREMOR } from '../sim/items';
+import { BAT, POCKET, swingAngle, TAX, TREMOR } from '../sim/items';
 import { T_EMPTY, tileAt } from '../sim/level';
 import type { Runner, RunWorld } from '../sim/run';
 import { inkFor, line, type P, stroke } from './ink';
@@ -95,7 +95,7 @@ export function drawBat(
   const fc = b.facing;
   const charge = it.windup > 0 ? Math.min(1, (it.windup - 1) / BAT.windup) : 0;
   let ang: number;
-  if (swingU >= 0) ang = -2 + Math.min(1, swingU * 1.5) * 3.9;
+  if (swingU >= 0) ang = swingAngle('bat', it.swing);
   else ang = -0.9 - charge * 0.9 + (charge > 0.6 ? Math.sin(rc.t * 70) * 0.06 * charge : 0);
   s.save();
   s.translate(x - fc, b.y + 7);

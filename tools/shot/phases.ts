@@ -153,6 +153,66 @@ export const shots: Scenarios = {
           });
         });
       }
+      // `--swing glove,sword`: runner i, in turn, holding that item on a floor nearest the level's middle, the glove's
+      // facing rock two tiles ahead at its chest, swinging it so the shot lands `--swingat` frames (default 7) into the swing:
+      // where a swing is drawn against what it hits (sim/items/swing.ts).
+      const swing = opt('swing')?.split(',').filter(Boolean);
+      if (swing)
+        await page.evaluate(
+          ([kinds, at]) => {
+            const d = (window as any).slagDebug;
+            const run = d.match.run;
+            const lv = d.match.level;
+            // Tile kinds by cell, read inline (no named helpers in a page function: the bundler's __name isn't there);
+            // every cell read is inside the level, by the loops' bounds.
+            const T: Uint8Array = lv.tiles;
+            const W: number = lv.w;
+            const taken: number[] = [];
+            kinds.forEach((kind, i) => {
+              const r = run.runners[i];
+              if (!r) return;
+              let best: [number, number, number] | null = null;
+              let bestD = Infinity;
+              for (let ty = 2; ty < lv.h - 1; ty++)
+                for (let tx = 2; tx < lv.w - 2; tx++)
+                  for (const fc of [1, -1]) {
+                    if (T[(ty + 1) * W + tx] !== 1 || T[ty * W + tx] !== 0 || T[(ty - 1) * W + tx] !== 0 || taken.some((t) => Math.abs(t - tx) < 4)) continue;
+                    const fits =
+                      kind === 'glove'
+                        ? T[ty * W + tx + fc] === 0 && T[ty * W + tx + 2 * fc] === 1
+                        : T[ty * W + tx + 1] === 0 && T[ty * W + tx - 1] === 0 && T[(ty - 1) * W + tx + fc] === 0;
+                    const dd = Math.abs(tx - lv.w / 2) + Math.abs(ty - lv.h / 2) * 2;
+                    if (fits && dd < bestD) {
+                      best = [tx, ty, fc];
+                      bestD = dd;
+                    }
+                  }
+              if (!best) throw new Error(`--swing: no floor for a ${kind}`);
+              taken.push(best[0]);
+              r.body.x = best[0] * 16 + 3;
+              r.body.y = (best[1] + 1) * 16 - r.body.h;
+              r.body.vx = r.body.vy = 0;
+              r.body.facing = best[2];
+              r.items.held = { kind, uses: 3 };
+              r.items.cooldown = 0;
+            });
+            const idle = {
+              left: false,
+              right: false,
+              up: false,
+              down: false,
+              jump: false,
+              jumpPressed: false,
+              confirmPressed: false,
+              altPressed: false,
+              downPressed: false,
+            };
+            const devs: string[] = d.match.players.slice(0, kinds.length).map((p: any) => p.device);
+            d.step(1, Object.fromEntries(devs.map((dev) => [dev, { ...idle, usePressed: true }])));
+            d.step(Math.max(0, at - 5));
+          },
+          [swing, Number(opt('swingat', '7'))] as const,
+        );
       // `--hits 0,2,4`: the runners' build-up (RunnerItems.hits) in turn, as if they'd taken that many rivals' hits.
       const hits = opt('hits')?.split(',').map(Number);
       if (hits)

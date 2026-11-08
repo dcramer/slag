@@ -15,7 +15,7 @@ import type { Temperament } from './temperament';
  */
 
 /** Bumped when BrainView changes shape. A player's script will declare the version it was written against. */
-export const BRAIN_VIEW_VERSION = 14;
+export const BRAIN_VIEW_VERSION = 15;
 
 /** A tile it can't see (`BrainView.sight`): neither open nor solid, as far as it knows. */
 export const T_UNKNOWN = 255;
@@ -176,6 +176,8 @@ export interface BrainView {
   mode: ModeId;
   /** How hard bodies shove each other in this mode (sim/collide.ts), as anyone learns by playing it: what a shove or a run-up throws a rival. */
   shove: ShoveRules;
+  /** How much of its speed a knocked body keeps off a wall or a ceiling in this mode (`RunRules.bounce`); unset, a knock stops dead on rock. */
+  bounce?: number;
   /** Frames into this phase. */
   phaseFrame: number;
   slot: number;

@@ -1,5 +1,6 @@
 import { css, type HSL } from '../core/color';
-import { GLOVE, SWORD } from '../sim/items';
+import { gloveFront } from '../sim/items';
+import type { CollisionWorld } from '../sim/physics';
 import type { Runner } from '../sim/run';
 import { inkFor, type P, stroke } from './ink';
 import { boxPts, glint, ovalPts, part, poly, sprite, stamp, tick } from './ink-props';
@@ -51,20 +52,17 @@ export const BRAWL_ICONS = {
   },
 };
 
-/** How far out the glove is through a swing (0..1): it shoots out, holds while it connects, and springs back. */
-function reachOf(swing: number): number {
-  const u = 1 - swing / SWORD.swing;
-  return u < 0.3 ? u / 0.3 : u < 0.75 ? 1 : Math.max(0, (1 - u) / 0.25);
-}
+/** The fist's front, past the glove's spring end: the mitt drawn from the box at +4 is 11 px to its knuckles. */
+const FIST = 15;
 
 /**
  * A Sucker Punch going off: the box held out in front, a coiled spring out of it to the glove at the end of its
- * reach (the sim's `GLOVE.reach`, so the glove is drawn where it hits).
+ * reach, stopped at any rock in the way (the sim's `gloveFront`, so the glove is drawn where it hits).
  */
-export function drawPunch(rc: RC, r: Runner, x: number) {
+export function drawPunch(rc: RC, r: Runner, x: number, world: CollisionWorld) {
   const s = rc.s;
   const b = r.body;
-  const out = reachOf(r.items.swing) * (GLOVE.reach - 10);
+  const out = Math.max(0, gloveFront(world, b, r.items.swing) - FIST);
   s.save();
   s.translate(x + b.facing * 4, b.y + 7);
   s.scale(b.facing, 1);

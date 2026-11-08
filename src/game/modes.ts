@@ -7,6 +7,7 @@ import type { ProfileOverride } from '../gen/level';
 import { type CrateMix, RACE_CRATE } from '../gen/props';
 import type { ThemeId } from '../themes';
 import type { ShoveRules } from '../sim/collide';
+import type { Knocked } from '../sim/physics';
 import type { ScreenRules } from '../sim/screen';
 import type { ItemDeal } from '../sim/items/types';
 import type { ParcelRules } from '../sim/parcels';
@@ -78,7 +79,13 @@ const BRAWL_ITEMS = [
  * shove, and a check only from a real run-up (about 11 tiles/s; a run is 13.4): at three quarters, or a check from 150,
  * bots' rounds ran shorter (19 s with parts placed, 11 of 64 under 10 s) for no more deaths off the sides.
  */
-const BRAWL_SHOVE: ShoveRules = { share: 0.5, carry: true, check: 180 };
+const BRAWL_SHOVE: ShoveRules = { share: 0.5, carry: true, check: 180, stall: 180, footed: true, thrown: true };
+
+/**
+ * A brawl's knocks bounce (`RunRules.bounce`, sim/physics.ts `Knocked`): a body seeing stars leaves a wall or a ceiling
+ * at 0.6 of the speed it met it, and climbs a 6 px step, where a third of the knocks stopped dead on rock.
+ */
+const BRAWL_BOUNCE: Knocked = { bounce: 0.6, lip: 6 };
 
 /**
  * A brawl's build-up (`RunRules.buildup`): every rival's hit taken throws the next a quarter as hard again, up to six.
@@ -214,7 +221,7 @@ export const MODES: Record<ModeId, ModeDef> = {
     // Bodies shove hard enough to put someone over an edge (sim/collide.ts `ShoveRules`): a walk moves a bystander at
     // half a walk, whoever is shoved off goes out over the drop, and a run-up into someone who isn't pushing back knocks
     // them like a bump. Everyone in the brawl shares it; a race keeps its own.
-    run: { flag: false, lastStanding: true, ahead: 'none', seconds: 60, shove: BRAWL_SHOVE, buildup: BRAWL_BUILDUP, armed: BRAWL_ARMED },
+    run: { flag: false, lastStanding: true, ahead: 'none', seconds: 60, shove: BRAWL_SHOVE, bounce: BRAWL_BOUNCE, buildup: BRAWL_BUILDUP, armed: BRAWL_ARMED },
     // No gap to cross: the crate leans to hazards to knock people into and utility to throw them about.
     crate: { bridges: false, roles: { hazard: 1.8, utility: 1.2, build: 0.4, demolish: 0.5 } },
     camera: 'pack',
