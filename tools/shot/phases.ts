@@ -154,7 +154,7 @@ export const shots: Scenarios = {
         });
       }
       // `--swing glove,sword`: runner i, in turn, holding that item on a floor nearest the level's middle, the glove's
-      // facing rock two tiles ahead at its chest, swinging it so the shot lands `--swingat` frames (default 7) into the swing:
+      // facing rock two or three tiles ahead at its chest, swinging it so the shot lands `--swingat` frames (default 7) into the swing:
       // where a swing is drawn against what it hits (sim/items/swing.ts).
       const swing = opt('swing')?.split(',').filter(Boolean);
       if (swing)
@@ -174,12 +174,12 @@ export const shots: Scenarios = {
               let best: [number, number, number] | null = null;
               let bestD = Infinity;
               for (let ty = 2; ty < lv.h - 1; ty++)
-                for (let tx = 2; tx < lv.w - 2; tx++)
+                for (let tx = 3; tx < lv.w - 3; tx++)
                   for (const fc of [1, -1]) {
                     if (T[(ty + 1) * W + tx] !== 1 || T[ty * W + tx] !== 0 || T[(ty - 1) * W + tx] !== 0 || taken.some((t) => Math.abs(t - tx) < 4)) continue;
                     const fits =
                       kind === 'glove'
-                        ? T[ty * W + tx + fc] === 0 && T[ty * W + tx + 2 * fc] === 1
+                        ? T[ty * W + tx + fc] === 0 && (T[ty * W + tx + 2 * fc] === 1 || (T[ty * W + tx + 2 * fc] === 0 && T[ty * W + tx + 3 * fc] === 1))
                         : T[ty * W + tx + 1] === 0 && T[ty * W + tx - 1] === 0 && T[(ty - 1) * W + tx + fc] === 0;
                     const dd = Math.abs(tx - lv.w / 2) + Math.abs(ty - lv.h / 2) * 2;
                     if (fits && dd < bestD) {
