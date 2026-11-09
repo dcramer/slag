@@ -1,10 +1,14 @@
 import { describe, expect, it } from 'vitest';
+import { parseSeed } from '../src/core/rng';
 import { generateLevel, lastGenInfo, withBridges } from '../src/gen/level';
 import { rollProfile } from '../src/gen/level/profile';
+import { MODES } from '../src/game/modes';
 import { rollConcept } from '../src/gen/stage';
 import { waysOf } from '../src/gen/stage/kit';
 import { TILE } from '../src/sim/constants';
-import { type Level, T_EMPTY, T_SOLID, tileAt } from '../src/sim/level';
+import { type Level, T_EMPTY, T_ONEWAY, T_SOLID, tileAt } from '../src/sim/level';
+import { BOARD_H } from '../src/render/ink-terrain';
+import { mountOf } from '../src/render/props/modules/sign';
 import {
   type Contrib,
   type Module,
@@ -156,6 +160,33 @@ describe('rooftops hazards', () => {
       }
     }
     expect(hit).toBe(40);
+  });
+
+  it('a falling sign hangs from a ceiling over each end, or a bracket off the wall beside it, never a chain into air', () => {
+    // Brawl stages, where a sign under an arch's beam once overhung it with one chain hooked on nothing, and the
+    // girder works, whose sign once hung an end under the bay left out of its deck. Each chain's hook, as the art
+    // finds it, sits on what's drawn there: rock's underside, or a board's plank, never the bottom of a board's tile.
+    let signs = 0;
+    const levels = [
+      ...[8, 11, 15].map((seed) => generateLevel(seed, 'rooftops', MODES.brawl.profile)),
+      ...['1t', '25', '6'].map((seed) => generateLevel(parseSeed(seed), 'rooftops')),
+    ];
+    for (const l of levels)
+      for (const m of l.setPieces.flatMap((pp) => resolveProp(pp).mods).filter((m): m is ModuleOf<'sign'> => m.type === 'sign')) {
+        signs++;
+        const at = `seed ${l.seed}: sign at ${m.at[0] / TILE}, ${m.at[1] / TILE}`;
+        const { up, wall } = mountOf(l, m);
+        expect(up !== null || wall !== 0, at).toBe(true);
+        if (!up) continue;
+        for (const [i, y] of up.entries()) {
+          const x = Math.floor((i ? m.at[0] + m.w - 3 : m.at[0] + 3) / TILE);
+          const t = tileAt(l, x, Math.floor((y - 0.01) / TILE));
+          expect(t, at).not.toBe(T_EMPTY);
+          expect(y, at).toBeCloseTo(t === T_ONEWAY ? Math.floor(y / TILE) * TILE + BOARD_H : Math.round(y / TILE) * TILE);
+          expect(m.at[1] - y, at).toBeLessThanOrEqual(3 * TILE);
+        }
+      }
+    expect(signs).toBeGreaterThan(3);
   });
 
   it('neon letters are live one after another, never all at once, and only while lit', () => {

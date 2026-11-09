@@ -4,7 +4,7 @@ import { DIFFICULTIES, generateLevel, lastGenInfo } from '../../src/gen/level';
 import { noFreeRide } from '../../src/gen/level/winnable';
 import { hazardSignature, type Recipe, SET_PIECE_RECIPES, SET_PIECES, throughFaults } from '../../src/gen/setpieces';
 import { CONCEPTS, ownPieces } from '../../src/gen/stage';
-import type { Level, SizeClass } from '../../src/sim/level';
+import { type Level, type SizeClass, T_EMPTY, T_SOLID, tileAt } from '../../src/sim/level';
 import type { PlacedProp } from '../../src/sim/props';
 import { THEME_IDS, type ThemeId } from '../../src/themes';
 import { artFaults, hazardFaults, once, rule } from './lib';
@@ -142,6 +142,19 @@ function uniqueSuite(theme: ThemeId, r: Recipe) {
   });
 }
 
+/** A rotor hung from the ceiling (`support: 'ceiling'`) whose hub has no rock within three rows over it, with no board between. */
+function hungFaults(level: Level, pp: PlacedProp): string[] {
+  const out: string[] = [];
+  for (const m of pp.def.modules) {
+    if (m.type !== 'rotor' || m.support !== 'ceiling') continue;
+    const x = Math.floor(m.hub[0] + pp.tx);
+    const y = Math.floor(m.hub[1] + pp.ty);
+    const over = [1, 2, 3].map((k) => tileAt(level, x, y - k)).find((t) => t !== T_EMPTY);
+    if (over !== T_SOLID) out.push(`${pp.def.name} hangs at (${x}, ${y}) with no rock within 3 rows over it`);
+  }
+  return out;
+}
+
 function recipeSuite(theme: ThemeId, r: Recipe) {
   const key = (rule: string) => `hazard/${theme}/${r.name}/${rule}`;
   const mine = () => placed(theme).get(r.name)!;
@@ -162,6 +175,11 @@ function recipeSuite(theme: ThemeId, r: Recipe) {
       key('through'),
       'reaches through no terrain: no board or ledge inside its footprint',
       each(({ level, pp }) => throughFaults(level, pp)),
+    );
+    rule(
+      key('hung'),
+      'hangs what hangs from a ceiling under rock a few rows over it, never off the top of the view',
+      each(({ level, pp }) => hungFaults(level, pp)),
     );
     rule(
       key('free-ride'),

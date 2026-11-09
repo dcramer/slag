@@ -1,10 +1,11 @@
 import { css, type HSL } from '../../../core/color';
 import { hash2 } from '../../../core/rng';
 import { TILE } from '../../../sim/constants';
-import { type Level, T_EMPTY, tileAt } from '../../../sim/level';
+import { type Level, T_EMPTY, T_ONEWAY, T_SOLID, tileAt } from '../../../sim/level';
 import { type ModuleOf, SIGN_FALL, SIGN_LIFT, SIGN_LIVE, SIGN_WARN, signCycle, signRect } from '../../../sim/props';
 import { blob, inkFor, line, stroke } from '../../ink';
 import { barLine, boxPts, part, sprite, stamp, tick, tone } from '../../ink-props';
+import { BOARD_H } from '../../ink-terrain';
 import { glowDot, light, type RC, zap } from '../../kit';
 import { letterPts } from './neon';
 import { type DrawCtx, defineArt } from '../common';
@@ -48,18 +49,35 @@ const PAINTS: readonly [HSL, HSL, HSL][] = [
 ];
 const SPARK: HSL = { h: 50, s: 100, l: 72 };
 const CHAIN: HSL = { h: 210, s: 6, l: 40 };
+/** The shortest chain a sign is drawn hanging on (px): a couple of links you can see. */
+const MIN_CHAIN = 5;
 
 const paintOf = (m: Sign) => PAINTS[m.seed % PAINTS.length];
 
-/** Where the sign hangs from: the underside of whatever is over it (`up`), else a bracket off the wall beside it. */
-function mountOf(level: Level | undefined, m: Sign, ox: number, oy: number): { up: number | null; wall: -1 | 0 | 1 } {
+/**
+ * Where the sign hangs from: the underside of whatever is over each end, where its two chains hook (`up`, left and
+ * right, px), else a bracket off the wall beside it. Rock's underside is its tile's bottom; a board's is its plank's,
+ * drawn only `BOARD_H` deep (ink-terrain.ts). The spot search (gen/setpieces/rooftops.ts, `chainHolds`) asks for a
+ * ceiling within three rows over both ends; this looks one further. Exported for tests/stage-rooftops.test.ts.
+ */
+export function mountOf(level: Level | undefined, m: Sign, ox = 0, oy = 0): { up: readonly [number, number] | null; wall: -1 | 0 | 1 } {
   if (!level) return { up: null, wall: 0 };
   const x0 = Math.floor((m.at[0] + ox) / TILE);
   const x1 = Math.floor((m.at[0] + ox + m.w - 1) / TILE);
   const y0 = Math.floor((m.at[1] + oy) / TILE);
-  for (let k = 1; k <= 4; k++) for (let x = x0; x <= x1; x++) if (tileAt(level, x, y0 - k) !== T_EMPTY) return { up: (y0 - k + 1) * TILE, wall: 0 };
-  if (tileAt(level, x0 - 1, y0) === 1) return { up: null, wall: -1 };
-  if (tileAt(level, x1 + 1, y0) === 1) return { up: null, wall: 1 };
+  const over = (x: number) => {
+    for (let k = 1; k <= 4; k++) {
+      const t = tileAt(level, x, y0 - k);
+      if (t === T_ONEWAY) return (y0 - k) * TILE + BOARD_H;
+      if (t !== T_EMPTY) return (y0 - k + 1) * TILE;
+    }
+    return null;
+  };
+  const a = over(x0);
+  const b = over(x1);
+  if (a !== null && b !== null) return { up: [a, b], wall: 0 };
+  if (tileAt(level, x0 - 1, y0) === T_SOLID) return { up: null, wall: -1 };
+  if (tileAt(level, x1 + 1, y0) === T_SOLID) return { up: null, wall: 1 };
   return { up: null, wall: 0 };
 }
 
@@ -141,16 +159,23 @@ function sparks(rc: RC, x: number, y: number, k: number) {
 function draw(rc: RC, m: Sign, d: DrawCtx) {
   const s = rc.s;
   const c = signCycle(m, rc.frame, d.r.phase);
-  const r = signRect(m, rc.frame, d.r.phase, d.off[0], d.off[1]);
   const lv = d.o.level ?? undefined;
   const mount = mountOf(lv, m, d.off[0], d.off[1]);
   const hx = m.at[0] + d.off[0];
   const hy = m.at[1] + d.off[1];
-  // The two hooks it hangs from: the underside over it, or a bracket arm out of the wall.
-  const top = mount.up ?? hy - (mount.wall ? 6 : TILE);
+  // A sign whose ceiling sits flush on it would hang on no chain at all, jammed against the rock: while it's harmless
+  // (hanging, warning, winched up) it's drawn a short chain lower, easing back onto the sim's box as it falls, so it
+  // lands and lies exactly where it kills.
+  const slack = mount.up ? Math.max(0, MIN_CHAIN - Math.min(hy - mount.up[0], hy - mount.up[1])) : 0;
+  const p = c.t / Math.max(1, c.len);
+  const ease = c.seg === SIGN_LIVE ? 0 : c.seg === SIGN_FALL ? 1 - p : c.seg === SIGN_LIFT ? p * p * (3 - 2 * p) : 1;
+  const box = signRect(m, rc.frame, d.r.phase, d.off[0], d.off[1]);
+  const r = { ...box, y: box.y + slack * ease };
+  // The two hooks it hangs from: the underside over each end, or a bracket arm out of the wall.
+  const top = hy - (mount.wall ? 6 : TILE);
   const hooks: [number, number][] = [
-    [hx + 3, top],
-    [hx + m.w - 3, top],
+    [hx + 3, mount.up?.[0] ?? top],
+    [hx + m.w - 3, mount.up?.[1] ?? top],
   ];
   if (mount.wall) {
     const wx = mount.wall < 0 ? hx - 1 : hx + m.w + 1;
@@ -159,7 +184,7 @@ function draw(rc: RC, m: Sign, d: DrawCtx) {
     // The strut under the arm, back to the wall.
     barLine(s, wx, top + 6, wx + (ex - wx) * 0.45, top + 0.6, 0.7, CHAIN, m.seed + 2, { rim: 0.25 });
   } else if (mount.up !== null) {
-    for (const [x] of hooks) pip(s, x, top + 0.6, 0.9, inkFor(CHAIN), x);
+    for (const [x, y] of hooks) pip(s, x, y + 0.6, 0.9, inkFor(CHAIN), x);
   }
   // Which end lets go: the one away from the wall, else the seed's.
   const loose = mount.wall ? (mount.wall < 0 ? 1 : 0) : m.seed % 2;

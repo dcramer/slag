@@ -33,7 +33,7 @@ export function thawWater(m: Thaw): { x: number; y: number; w: number; h: number
     x1 = Math.max(x1, cx + 1);
     y = Math.min(y, cy);
   }
-  return { x: x0 * TILE, y: y * TILE + WATERLINE, w: (x1 - x0) * TILE, h: m.depth * TILE - WATERLINE };
+  return { x: x0 * TILE, y: y * TILE + WATERLINE, w: (x1 - x0) * TILE, h: Math.max(0, m.depth * TILE - WATERLINE) };
 }
 
 /**
@@ -50,7 +50,8 @@ defineModule<'thaw'>({
   anchors: (m) => m.cells.slice(),
   build(m, ctx, out) {
     const { off, prev } = ctx;
-    if (thawCycle(m, ctx.frame, ctx.r.phase).seg === THAW_OPEN) {
+    // No water under ice over a gap (`depth` 0): open, it's a hole, and the fall does the rest.
+    if (m.depth > 0 && thawCycle(m, ctx.frame, ctx.r.phase).seg === THAW_OPEN) {
       const w = thawWater(m);
       out.hazards.push({ owner: ctx.r.pp.owner, kind: 'rect', r: { x: w.x + off[0], y: w.y + off[1], w: w.w, h: w.h }, sink: true });
     }

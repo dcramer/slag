@@ -3,7 +3,7 @@ import { hash2 } from '../../../core/rng';
 import { TILE } from '../../../sim/constants';
 import { type ModuleOf, THAW_OPEN, THAW_WARN, thawCycle, thawSolid, thawWater, WATERLINE } from '../../../sim/props';
 import { inkFor, line } from '../../ink';
-import { boxPts, glint, pen, poly, tick, tone } from '../../ink-props';
+import { boxPts, glint, part, pen, poly, tick, tone } from '../../ink-props';
 import type { RC } from '../../kit';
 import { type DrawCtx, defineArt } from '../common';
 
@@ -12,7 +12,14 @@ import { type DrawCtx, defineArt } from '../common';
  * water it drowns in. Frozen: a pale sheet flush with the floor, the dark water showing under it. Through the
  * warning the cracks run out across it from a few points, longer and darker toward the end, and it judders.
  * Open: the hole is water to the waterline, broken plates of the old ice bobbing in it and shrinking; near the
- * end a skin of new ice creeps in from the edges, the moment before it holds again.
+ * end a lip of new ice starts at the edges, the moment before it holds again. Nothing is drawn as ice that the sim
+ * doesn't hold solid that frame, beyond a few px of lip (`STUB`), and every cell it does hold is drawn.
+ *
+ * Water stands only where rock holds it, on both sides all the way down (gen/setpieces/glacier.ts, `walled`). Over a
+ * gap (a seam between a brawl stage's slabs, which float over the drop) there's none, `depth` 0: the ice is a sheet
+ * across thin air, icicles under it, and the hole it leaves is the gap itself, its broken edges on the lips and its
+ * plates falling away, a fall with nothing in it that drowns. Painting water there stood a blue pillar in the seam,
+ * and the open hole, brim-full, read as one more floor block.
  */
 
 type Thaw = ModuleOf<'thaw'>;
@@ -37,6 +44,38 @@ function span(m: Thaw, d: DrawCtx) {
     y = Math.min(y, cy);
   }
   return { x0: x0 * TILE + d.off[0], x1: x1 * TILE + d.off[0], y: y * TILE + d.off[1] };
+}
+
+/** Whether the hole is a gap rather than a pool: the sim's own word, no water under it (`depth` 0, set by the recipe where rock doesn't wall it in). */
+const overGap = (m: Thaw): boolean => m.depth <= 0;
+
+/** A few icicles under a sheet over a gap, from its underside at `y`: thin, so it reads as a sheet with air under it. */
+function icicles(s: CanvasRenderingContext2D, m: Thaw, x0: number, x1: number, y: number) {
+  const n = Math.max(2, Math.round((x1 - x0) / 9));
+  for (let i = 0; i < n; i++) {
+    const ix = x0 + 3 + ((i + hash2(i, 40, m.seed)) / n) * (x1 - x0 - 6);
+    const len = 3 + hash2(i, 41, m.seed) * 4;
+    const w = 1.1 + hash2(i, 42, m.seed) * 0.6;
+    part(s, poly(ix - w, y - 0.6, ix + w, y - 0.6, ix + 0.2, y + len), ICE, m.seed + i, { depth: 0.3, thin: 0.25, thick: 0.5 });
+  }
+}
+
+/** The most a stub of ice reaches in off its lip (px): a lip, too little to read as somewhere to stand. */
+const STUB = 4;
+
+/** What's left of the sheet on each lip once it's gone: a jagged stub, so the hole has an edge; `grow` 0..1 thickens it toward STUB. */
+function stubs(s: CanvasRenderingContext2D, m: Thaw, x0: number, x1: number, y: number, grow: number) {
+  for (const side of [-1, 1]) {
+    const e = side < 0 ? x0 : x1;
+    const k = -side;
+    const d1 = STUB * (0.6 + 0.15 * hash2(side, 43, m.seed) + 0.25 * grow);
+    const d2 = d1 * (0.4 + 0.3 * hash2(side, 44, m.seed));
+    part(s, poly(e, y, e + k * d1, y + 0.4, e + k * d1 * 0.6, y + 4.5, e + k * d2, y + 6.5, e, y + 9), ICE, m.seed + 50 + side, {
+      depth: 0.6,
+      thin: 0.3,
+      thick: 0.7,
+    });
+  }
 }
 
 /** The water under the ice, from `top` down the hole: flat bands, darker with depth. */
@@ -70,32 +109,81 @@ function cracks(rc: RC, m: Thaw, x0: number, x1: number, y: number, k: number) {
   }
 }
 
-/** The sheet itself on the cells that hold this frame, judder `dx` px; marks `k` along its cracks. */
+/**
+ * The sheet itself on the cells that hold this frame, judder `dx` px; marks `k` along its cracks. Only what the sim
+ * holds solid is drawn as ice: a cell held open over a runner stays a hole (or water), and the cells either side of
+ * it are a sheet of their own.
+ */
 function sheet(rc: RC, m: Thaw, d: DrawCtx, k: number) {
-  const s = rc.s;
   const { x0, x1, y } = span(m, d);
   const dx = k > 0 ? Math.sin(rc.frame * 1.9) * 0.35 * k : 0;
-  // Only the cells that hold (one held open over a runner stays water).
-  const held = m.cells.every((_, ci) => thawSolid(m, rc.frame, d.r.phase, d.o.state, d.mi, ci));
-  if (!held) return open(rc, m, d, 0);
-  water(rc, m, d, y + TILE);
-  const pts = boxPts(x0 + dx, y, x1 - x0, TILE, 1.2, m.seed, 0.06);
+  const solid = m.cells.map((_, ci) => thawSolid(m, rc.frame, d.r.phase, d.o.state, d.mi, ci));
+  if (solid.every(Boolean)) {
+    if (!overGap(m)) water(rc, m, d, y + TILE);
+    return plate(rc, m, d, x0 + dx, x1 + dx, y, k);
+  }
+  open(rc, m, d, 0, 0);
+  // Each run of cells that holds, a sheet of its own (the cells are one row).
+  const order = m.cells.map((c, ci) => ({ x: c[0] * TILE + d.off[0], ci })).sort((p, q) => p.x - q.x);
+  for (let i = 0; i < order.length; i++) {
+    if (!solid[order[i].ci]) continue;
+    let j = i;
+    while (j + 1 < order.length && solid[order[j + 1].ci]) j++;
+    plate(rc, m, d, order[i].x + dx, order[j].x + TILE + dx, y, k);
+    i = j;
+  }
+}
+
+/** A sheet of ice over [x0, x1] with its top at `y`: icicles under it over a gap, the water's dark through it over a pool. */
+function plate(rc: RC, m: Thaw, d: DrawCtx, x0: number, x1: number, y: number, k: number) {
+  const s = rc.s;
+  const gap = overGap(m);
+  if (gap) icicles(s, m, x0, x1, y + TILE);
+  const pts = boxPts(x0, y, x1 - x0, TILE, 1.2, m.seed, 0.06);
   tone(s, pts, ICE, { depth: 1.1 });
   // The water's dark seen through the ice, low in the sheet.
-  s.fillStyle = css(waterOf(d), 10, 0.35);
-  s.fillRect(x0 + 1.5 + dx, y + TILE * 0.55, x1 - x0 - 3, TILE * 0.4);
-  glint(s, poly(x0 + 3 + dx, y + 1.6, x0 + (x1 - x0) * 0.35 + dx, y + 1.2), 'rgba(255,255,255,0.9)', 0.7, m.seed);
+  if (!gap) {
+    s.fillStyle = css(waterOf(d), 10, 0.35);
+    s.fillRect(x0 + 1.5, y + TILE * 0.55, x1 - x0 - 3, TILE * 0.4);
+  }
+  glint(s, poly(x0 + 3, y + 1.6, x0 + (x1 - x0) * 0.35, y + 1.2), 'rgba(255,255,255,0.9)', 0.7, m.seed);
   // A few old hairlines, always there: this is the ice that goes.
   for (let i = 0; i < 2; i++) {
     const cx = x0 + 4 + hash2(i, 20, m.seed) * (x1 - x0 - 8);
-    tick(s, cx + dx, y + 2, cx + 3 + dx, y + 6, 0.35, i, css(ICE, -28));
+    tick(s, cx, y + 2, cx + 3, y + 6, 0.35, i, css(ICE, -28));
   }
-  if (k > 0) cracks(rc, m, x0 + dx, x1 + dx, y, k);
+  if (k > 0) cracks(rc, m, x0, x1, y, k);
   pen(s, pts, m.seed + 3, 0.4, 1, 3, ICE_INK);
 }
 
-/** Open water: its surface at the sim's waterline, plates of broken ice bobbing and melting, new ice creeping in at the end (`k` 0..1 through the open spell). */
-function open(rc: RC, m: Thaw, d: DrawCtx, k: number) {
+/**
+ * Over a gap, the hole: the old sheet's stubs on the lips (a few px of lip and no more: the sim holds none of it), its
+ * plates dropping away down the seam for the first moments (`t` frames in), and frost thickening the stubs at the
+ * end (`k` 0..1 through the open spell), the moment before the whole sheet is back.
+ */
+function hole(rc: RC, m: Thaw, d: DrawCtx, k: number, t: number) {
+  const s = rc.s;
+  const { x0, x1, y } = span(m, d);
+  stubs(s, m, x0, x1, y, k > 0.7 ? (k - 0.7) / 0.3 : 0);
+  const n = Math.max(2, Math.round((x1 - x0) / 11));
+  for (let i = 0; i < n; i++) {
+    const fall = 0.5 * 0.28 * t * t + hash2(i, 45, m.seed) * 6;
+    if (fall > TILE * 6) continue;
+    const size = 3 + hash2(i, 46, m.seed) * 2.5;
+    const fx = x0 + 4 + ((i + 0.5) / n) * (x1 - x0 - 8);
+    const fy = y + 2 + fall;
+    const a = (hash2(i, 47, m.seed) - 0.5) * 0.04 * t;
+    const c = Math.cos(a);
+    const sn = Math.sin(a);
+    const at = (px: number, py: number) => [fx + px * c - py * sn, fy + px * sn + py * c];
+    const plate = poly(...at(-size, 0), ...at(size * 0.8, -0.6), ...at(size, 1.8), ...at(-size * 0.7, 2.2));
+    part(s, plate, ICE, m.seed + i, { depth: 0.4, thin: 0.3, thick: 0.6 });
+  }
+}
+
+/** Open water: its surface at the sim's waterline, plates of broken ice bobbing and melting, a lip of new ice at the end (`k` 0..1 through the open spell, `t` frames in). */
+function open(rc: RC, m: Thaw, d: DrawCtx, k: number, t: number) {
+  if (overGap(m)) return hole(rc, m, d, k, t);
   const s = rc.s;
   const { x0, x1, y } = span(m, d);
   const top = y + WATERLINE;
@@ -112,8 +200,8 @@ function open(rc: RC, m: Thaw, d: DrawCtx, k: number) {
     pen(s, plate, i + m.seed, 0.3, 0.6, 2, ICE_INK);
   }
   if (k > 0.7) {
-    // The new skin, from both edges in.
-    const reach = ((k - 0.7) / 0.3) * (x1 - x0) * 0.5;
+    // The new skin, starting at both edges: a lip, nothing that looks like it holds before it does.
+    const reach = ((k - 0.7) / 0.3) * STUB;
     s.fillStyle = 'rgba(214,236,248,0.75)';
     s.fillRect(x0, top - 0.6, reach, 2.2);
     s.fillRect(x1 - reach, top - 0.6, reach, 2.2);
@@ -125,7 +213,7 @@ defineArt<'thaw'>({
   layer: 1,
   draw(rc, m, d) {
     const c = thawCycle(m, rc.frame, d.r.phase);
-    if (c.seg === THAW_OPEN) open(rc, m, d, c.t / Math.max(1, c.len));
+    if (c.seg === THAW_OPEN) open(rc, m, d, c.t / Math.max(1, c.len), c.t);
     else sheet(rc, m, d, c.seg === THAW_WARN ? (c.t + 1) / Math.max(1, c.len) : 0);
   },
 });

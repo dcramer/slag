@@ -109,6 +109,16 @@ function held(s: Site, x0: number, x1: number, y: number, depth: number): boolea
 }
 
 /**
+ * Whether rock walls in the water under ice over columns x0..x1 at row y on both sides, every row of its `depth`.
+ * Where it doesn't (a brawl stage's seam, beside a slab that ends over the drop), nothing holds water: the ice is a
+ * sheet over a gap, its water `depth` 0, and the hole it leaves is a fall (render/props/modules/thaw.ts draws it so).
+ */
+function walled(s: Site, x0: number, x1: number, y: number, depth: number): boolean {
+  for (let r = y + 1; r < Math.min(s.h, y + depth); r++) if (!s.solid(x0 - 1, r) || !s.solid(x1 + 1, r)) return false;
+  return true;
+}
+
+/**
  * Thin ice: a narrow crevasse (a hop wide) in the route, banks of solid ground level either side, iced
  * over flush with them, its water held by rock.
  */
@@ -127,7 +137,7 @@ function* thinIces(rng: Rng, s: Site): Generator<Piece> {
       const depth = floor < 0 ? s.h - y : floor - y;
       let open = depth >= 2 && (floor < 0 || depth <= 3);
       for (let c = x; c <= e && open; c++) if (s.groundBelow(c, y) !== floor || !s.free(c, y + 1)) open = false;
-      if (open && held(s, x, e, y, depth)) spots.push({ x0: x, x1: e, y, depth });
+      if (open && held(s, x, e, y, depth)) spots.push({ x0: x, x1: e, y, depth: walled(s, x, e, y, depth) ? depth : 0 });
     }
   for (const c of best(rng, spots, (c) => c.x1 - c.x0))
     yield {
