@@ -487,7 +487,7 @@ There are seven, all additive. Several themes share each one, so they come first
   - a lift's shaft,
   - a gantry's legs.
 
-  Anything hung shows its chain, cable or strut all the way to the anchor.
+  Anything hung shows its chain, cable or strut all the way to the anchor. A pendulum hung from the ceiling needs rock within three rows over its hub (`pendulums`, src/gen/setpieces/builders.ts; the conformance suite's `hung` rule): without it, its chain ran on up to whatever rock was over it, or off the top of the view.
 - **Space** is the exception: there, every piece shows its clamp or strut to a module or asteroid.
 - **Doorways and openings don't break it.** A doorway cut through a wall leaves the wall above it hanging over open sky, so the landmark's backdrop shell covers every column of its structure and stands on the lowest ground under it: behind a doorway it draws the door's frame and the dark room beyond, so the wall reads as running down to its threshold.
 - **A test enforces it** (`tests/landmark-grounding.test.ts`): every column of a landmark's box that holds structure reaches the terrain under it, through solid tiles or through its backdrop shell, unless the column only holds something that hangs. It runs across every registered concept.

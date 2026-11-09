@@ -147,6 +147,22 @@ export interface PendulumOpts extends RotorBase {
   swing: Range;
 }
 
+/** Rows over a hub its chain may climb to the ceiling it hangs from: short enough that you see what holds it. */
+const HANG_ROWS = 3;
+
+/**
+ * Whether a pendulum hung at (x, y) has a ceiling to hang from: rock within HANG_ROWS over its hub with no board
+ * between, so the chain the art runs up to the first rock (`ceilingAbovePx`, render/props/modules/setpiece.ts) ends
+ * on it rather than off the top of the view.
+ */
+function hangsFrom(s: Site, x: number, y: number): boolean {
+  for (let k = 1; k <= HANG_ROWS; k++) {
+    if (s.solid(x, y - k)) return true;
+    if (s.ground(x, y - k)) return false;
+  }
+  return false;
+}
+
 export function* pendulums(rng: Rng, s: Site, o: PendulumOpts): Generator<Piece> {
   const arm = roll(rng, o.arm);
   const width = Math.round(roll(rng, o.width));
@@ -160,6 +176,7 @@ export function* pendulums(rng: Rng, s: Site, o: PendulumOpts): Generator<Piece>
       const hy = y + 0.5;
       if (s.zoneDist(x, Math.floor(hy + arm)) <= SAFE_TILES + Math.ceil(reachX)) continue;
       if (!s.freeRect(Math.floor(hx - reachX), Math.max(0, Math.floor(hy + top)), Math.floor(hx + reachX), Math.floor(hy + arm + 1.5))) continue;
+      if (o.support === 'ceiling' && !hangsFrom(s, x, y)) continue;
       let mast = x;
       const extra: Cell[] = [];
       if (o.support === 'mast') {
@@ -180,12 +197,7 @@ export function* pendulums(rng: Rng, s: Site, o: PendulumOpts): Generator<Piece>
   }
   const score = (c: { x: number; y: number }) => {
     const lowY = Math.floor(c.y + 0.5 + arm);
-    return (
-      (s.boardable(c.x, lowY, Math.ceil(reachX), 4, 1) ? 3 : 0) +
-      (s.overPit(c.x, lowY) ? 1.5 : 0) +
-      (o.support === 'ceiling' && s.ceilingAbove(c.x, c.y, 6) >= 0 ? 1.5 : 0) +
-      (o.support === 'ceiling' && c.y < 3 ? 0.7 : 0)
-    );
+    return (s.boardable(c.x, lowY, Math.ceil(reachX), 4, 1) ? 3 : 0) + (s.overPit(c.x, lowY) ? 1.5 : 0);
   };
   for (const c of best(rng, spots, score)) {
     yield {

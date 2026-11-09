@@ -12,14 +12,6 @@ import { best, makeStyle, type Piece, type Recipe, SAFE_TILES, type Site } from 
 
 const gilt = (rng: Rng) => makeStyle(rng, ['gold', 'brass', 'steel'], [40], { glowHue: rng.range(30, 45) });
 
-/** Only the candidates whose hub hangs under a ceiling within `rows`: a chain you can see the top of. */
-function* hung(s: Site, rows: number, gen: Iterable<Piece>): Generator<Piece> {
-  for (const p of gen) {
-    const r = p.modules[0];
-    if (r.type === 'rotor' && s.ceilingAbove(Math.floor(r.hub[0]), Math.floor(r.hub[1]), rows) >= 0) yield p;
-  }
-}
-
 /**
  * A broken window's glass (the `shards` module, world-only) standing out of a tall wall face: the wall
  * runs on above and below it like a frame, and it hangs clear of the floor, where you'd wall-jump.
@@ -170,21 +162,17 @@ export const CASTLE: Recipe[] = [
     weight: 2.5,
     role: 'build',
     candidates: (rng, s) =>
-      hung(
-        s,
-        3,
-        pendulums(rng, s, {
-          name: `${rng.pick(['Grand', 'Dusty', 'Load-Bearing', 'Wobbly'])} Chandelier`,
-          look: 'chandelier',
-          support: 'ceiling',
-          style: makeStyle(rng, ['gold', 'brass', 'steel'], [40], { glowHue: rng.range(30, 45) }),
-          arm: [3.5, 6],
-          swing: [0.35, 0.65],
-          width: [3, 4],
-          period: [220, 320],
-          material: 'metal',
-        }),
-      ),
+      pendulums(rng, s, {
+        name: `${rng.pick(['Grand', 'Dusty', 'Load-Bearing', 'Wobbly'])} Chandelier`,
+        look: 'chandelier',
+        support: 'ceiling',
+        style: makeStyle(rng, ['gold', 'brass', 'steel'], [40], { glowHue: rng.range(30, 45) }),
+        arm: [3.5, 6],
+        swing: [0.35, 0.65],
+        width: [3, 4],
+        period: [220, 320],
+        material: 'metal',
+      }),
   },
   {
     name: 'ram',
