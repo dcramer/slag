@@ -78,8 +78,12 @@ const BRAWL_ITEMS = [
  * A brawl's bodies (`RunRules.shove`): for putting each other off ledges, where a race's only jostle. Twice the race's
  * shove, and a check only from a real run-up (about 11 tiles/s; a run is 13.4): at three quarters, or a check from 150,
  * bots' rounds ran shorter (19 s with parts placed, 11 of 64 under 10 s) for no more deaths off the sides.
+ * A shove that moves someone is the shover's touch for 1.5 s (`touch`): the longest fall to the drop, off an arena's
+ * top board 9 rows over the stage at space's gravity, takes about 1.2 s, and a victim who has landed and walked off an
+ * edge on their own takes longer than that again, so it's theirs. A bonk's credit (2.5 s) outlasts its stars; a shove
+ * leaves you steering from the first frame.
  */
-const BRAWL_SHOVE: ShoveRules = { share: 0.5, carry: true, check: 180, stall: 180, footed: true, thrown: true };
+const BRAWL_SHOVE: ShoveRules = { share: 0.5, carry: true, check: 180, stall: 180, footed: true, thrown: true, touch: 90 };
 
 /**
  * A brawl's knocks bounce (`RunRules.bounce`, sim/physics.ts `Knocked`): a body seeing stars leaves a wall or a ceiling

@@ -9,8 +9,10 @@
  *
  * Cases: `levels` (every theme × size × a few seeds: tiles, set pieces, look, crate), `race-<theme>` (eight runners
  * with one of every archetype placed, weather rotated, held items on half of them, ~15 s of scripted input), `gravity`
- * (forced low and high gravity), and `match` (four players through pick, place, race and scoring for several rounds,
- * clicking at random). On a mismatch it prints the first frame that differs and the snapshot fields that differ there.
+ * (forced low and high gravity), `match` (four players through pick, place, race and scoring for several rounds,
+ * clicking at random), and `brawl` (four of the page's own bots on an arena, armed, pressing the fight through bouts,
+ * picks and placements, so knocks bounce off rock, swings sweep their dsin/dcos boxes, and bodies bump, check, shove
+ * and slip). On a mismatch it prints the first frame that differs and the snapshot fields that differ there.
  * Exits non-zero on any divergence or page error.
  */
 import { argReader, type Engine, engineList, launchEngine, startServer, watchdog } from './lib/server';
@@ -32,6 +34,8 @@ interface Case {
   inputSeed: number;
   /** Rules applied before the first frame (a full match needs timers, or nothing ever advances). */
   rules?: Record<string, number>;
+  /** The page's own bots play every seat (`?bots=N`): brawl's fighters, who press the fight as people do. */
+  bots?: boolean;
 }
 
 const RACE_FRAMES = 2400;
@@ -54,6 +58,14 @@ const cases: Case[] = [
     inputSeed: 5,
     rules: CYCLE,
   },
+  {
+    name: 'brawl',
+    query: 'mode=brawl&bots=4&race=spikeblock,bumper&seed=xebrawl',
+    frames: 4800,
+    inputSeed: 9,
+    rules: CYCLE,
+    bots: true,
+  },
 ];
 const LEVEL_SEEDS = [11, 2024, 90210];
 const LEVEL_SIZES = ['classic', 'wide', 'tall'] as const;
@@ -64,9 +76,11 @@ const LEVEL_SIZES = ['classic', 'wide', 'tall'] as const;
  * at that frame. Runners walk right mostly, jump, run, drop, use items and now and then hold alt; in pick and place
  * the pointer wanders and clicks.
  */
-function drive(o: { frames: number; seed: number; rules?: Record<string, number>; snapAt?: number }): {
+function drive(o: { frames: number; seed: number; rules?: Record<string, number>; snapAt?: number; bots?: boolean }): {
   hashes: number[];
   phases: Record<string, number>;
+  /** What the case got up to: item hits and bumps, deaths, and dazed bodies sent back the way they came (bounces). */
+  seen: Record<string, number>;
   snap?: string;
 } {
   const d = (window as any).slagDebug;
@@ -84,6 +98,8 @@ function drive(o: { frames: number; seed: number; rules?: Record<string, number>
   const state = new Map<string, { dir: number; dirLeft: number; jump: number; run: boolean; down: number; up: number; alt: number; px: number; py: number }>();
   const hashes: number[] = [];
   const phases: Record<string, number> = {};
+  const seen: Record<string, number> = {};
+  const lastVx = new Map<number, number>();
   for (let f = 1; f <= o.frames; f++) {
     phases[m.phase] = (phases[m.phase] ?? 0) + 1;
     const inputs: Record<string, unknown> = {};
@@ -132,12 +148,20 @@ function drive(o: { frames: number; seed: number; rules?: Record<string, number>
         pointer,
       };
     }
-    m.step(inputs);
-    m.drainEvents();
-    if (o.snapAt === f) return { hashes, phases, snap: JSON.stringify(d.snapshot()) };
+    m.step(o.bots ? d.botInputs() : inputs);
+    for (const e of m.drainEvents()) {
+      const k = e.type === 'item' && e.what === 'hit' ? `hit:${e.kind}` : e.type === 'death' ? 'death' : '';
+      if (k) seen[k] = (seen[k] ?? 0) + 1;
+    }
+    for (const r of m.run?.runners ?? []) {
+      const was = lastVx.get(r.slot) ?? 0;
+      if (r.items.daze > 0 && Math.abs(was) > 100 && r.body.vx * was < 0) seen.bounce = (seen.bounce ?? 0) + 1;
+      lastVx.set(r.slot, r.body.vx);
+    }
+    if (o.snapAt === f) return { hashes, phases, seen, snap: JSON.stringify(d.snapshot()) };
     hashes.push(d.hash());
   }
-  return { hashes, phases };
+  return { hashes, phases, seen };
 }
 
 /** Runs in the page: every theme × size × seed generated fresh, hashed over the whole level and the crate it deals. */
@@ -218,19 +242,17 @@ async function runCase(c: Case) {
   const results = await Promise.all(
     engines.map(async (e) => {
       const p = await open(e, c.query);
-      const r = await p.evaluate(drive, { frames: c.frames, seed: c.inputSeed, rules: c.rules });
+      const r = await p.evaluate(drive, { frames: c.frames, seed: c.inputSeed, rules: c.rules, bots: c.bots });
       const info = await p.evaluate(() => {
         const m = (window as any).slagDebug.match;
-        return `${m.level.theme.id} ${m.level.w}×${m.level.h} g${m.level.gravity ?? 1} ${m.level.weather?.kind ?? 'clear'}, ${m.players.length} players, ${m.placed.length} parts, round ${m.round}`;
+        return `${m.level.style} ${m.level.w}×${m.level.h} g${m.level.gravity ?? 1} ${m.level.weather?.kind ?? 'clear'}, ${m.players.length} players, ${m.placed.length} parts, round ${m.round}`;
       });
       await closePage(p);
       pet();
       return {
         e,
         hashes: r.hashes,
-        info: `${info}, ${Object.entries(r.phases)
-          .map(([k, n]) => `${k} ${n}`)
-          .join(' ')}`,
+        info: `${info}, ${[...Object.entries(r.phases), ...Object.entries(c.bots ? r.seen : {})].map(([k, n]) => `${k} ${n}`).join(' ')}`,
       };
     }),
   );
@@ -245,7 +267,7 @@ async function runCase(c: Case) {
     const snaps = await Promise.all(
       [ref.e, r.e].map(async (e) => {
         const p = await open(e, c.query);
-        const s = await p.evaluate(drive, { frames: c.frames, seed: c.inputSeed, rules: c.rules, snapAt: frame });
+        const s = await p.evaluate(drive, { frames: c.frames, seed: c.inputSeed, rules: c.rules, bots: c.bots, snapAt: frame });
         await closePage(p);
         return JSON.parse(s.snap ?? 'null');
       }),
