@@ -122,6 +122,12 @@ export interface ShoveRules {
    * hitter's (`bonkedBy`), or nobody's, never its own. Unset, a dazed body is a body like any other.
    */
   thrown?: boolean;
+  /**
+   * Frames a shove that moves someone marks its shover as the last rival to touch them (`bonkedBy`), so a death that
+   * soon after is the shover's knockout, as a platform fighter credits whoever touched you last. Only kill credit: no
+   * stars, and no hit for the build-up. Unset, a shove credits nobody.
+   */
+  touch?: number;
 }
 
 /** The race's shove: a quarter of a walk, nothing carried, no body checks. */
@@ -233,6 +239,7 @@ export function collideRunners(
   settleSides(order, world, shove);
   if (shove.carry) for (const m of order) carry(m);
   catchMissed(order, world, shove);
+  if (shove.touch) for (const m of order) touched(m, order, shove, shove.touch);
   for (const m of order) finish(m, order, shove);
   return order.flatMap((m): Bump[] => {
     if (m.bumpedBy) return [{ victim: m.r.slot, by: hitter(m.bumpedBy, shove), side: bumpSide(m, m.bumpedBy), stood: m.b.onGround }];
@@ -464,6 +471,32 @@ function check(l: Mover, r: Mover, shove: ShoveRules): void {
 function carry(m: Mover): void {
   if (m.b.onGround || !m.grouped || m.v * m.want < 0 || Math.abs(m.v) <= Math.abs(m.want) + 1e-9) return;
   m.b.vx = m.v / DT;
+}
+
+/**
+ * Under `ShoveRules.touch`, a body its group moved further than it was going, the way the group pushed it, was shoved,
+ * and whoever pushed hardest that way from behind it touched it last: their hit (`hitter`), or nobody's. Held back
+ * or merely slowed isn't moved; a bump or a check this frame credits through `bonk` instead, and a body seeing stars
+ * is still its knocker's. Credit only: the shover's own longer credit stands, and nothing here dazes or counts a hit,
+ * so a shove changes nobody's motion. Read from the group's motion, never its order.
+ */
+function touched(m: Mover, order: readonly Mover[], shove: ShoveRules, frames: number): void {
+  if (!m.grouped || m.bumpedBy || m.checkedBy || m.r.items.daze > 0) return;
+  const dx = m.x - m.start.x;
+  const s = Math.sign(dx - m.want);
+  if (Math.abs(dx - m.want) <= 1e-6 || dx * s <= 1e-6) return;
+  let by: Mover | null = null;
+  for (const p of order) {
+    if (p === m || p.group !== m.group || p.want * s <= 0 || (p.start.x - m.start.x) * s >= 0) continue;
+    const d = p.want * s - (by ? by.want * s : 0) || Math.abs(by ? by.start.x - m.start.x : 0) - Math.abs(p.start.x - m.start.x);
+    if (!by || d > 0 || (d === 0 && p.r.slot < by.r.slot)) by = p;
+  }
+  if (!by) return;
+  const credit = hitter(by, shove);
+  if (credit < 0 || credit === m.r.slot) return;
+  const it = m.r.items;
+  it.bonkCredit = it.bonkedBy === credit ? Math.max(it.bonkCredit, frames) : frames;
+  it.bonkedBy = credit;
 }
 
 /** What everyone does from time t on: its own motion, or its group's. */

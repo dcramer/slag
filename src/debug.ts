@@ -74,6 +74,8 @@ export interface SlagDebug {
   pause(on?: boolean): void;
   /** Advance the sim `n` frames with these per-device inputs (default none), then render once. */
   step(n?: number, inputs?: Record<string, InputFrame>): void;
+  /** What this page's bots press on the match's next frame, for a tool that steps the match itself (tools/determinism.ts). */
+  botInputs(): Record<string, InputFrame>;
   /** Render one frame at time `ms` (defaults to now). */
   render(ms?: number): void;
   /** Deterministic state hash of the confirmed match (peers in sync ⇔ equal hashes at equal frames). */
@@ -200,6 +202,10 @@ export function installDebug(match: Match, renderer: Renderer, loop: LoopControl
         match.step({ ...Object.fromEntries(Object.entries(own).map(([d, f]) => [dev(d), f])), ...inputs });
       }
       renderer.render(match, performance.now(), match.drainEvents());
+    },
+    botInputs() {
+      const own = bots.frames(match, dev);
+      return Object.fromEntries(Object.entries(own).map(([d, f]) => [dev(d), f]));
     },
     render(ms) {
       renderer.render(match, ms ?? performance.now(), match.drainEvents());

@@ -640,6 +640,39 @@ describe("a brawl's shove (RunRules.shove)", () => {
     expect(rs[1].items.bonkCredit).toBeLessThan(credit);
   });
 
+  it('a walk that shoves someone off a ledge is the shover knockout: no stars, no hit taken, and a race credits nobody', () => {
+    const shoved = (rules: RunRules) => {
+      const { run, rs, bs } = lineup(2, { level: ledge(), tx: EDGE - 2, spacing: 0, rules });
+      bs[0].x = bs[1].x - bs[0].w - 0.5;
+      for (let f = 0; f < 240 && rs[1].alive; f++) {
+        run.step([f < 60 ? walk(1) : NO_INPUT, NO_INPUT]);
+        expect(rs[1].items.daze).toBe(0);
+      }
+      return { run, victim: rs[1] };
+    };
+    const brawl = shoved(BRAWL);
+    expect(brawl.victim.alive).toBe(false);
+    expect(brawl.victim.items.hits).toBe(0);
+    expect(brawl.run.kills).toEqual([{ victim: 1, killer: 0 }]);
+    // A race's shove moves them too, more slowly, and touches nobody.
+    expect(shoved(RACE_RUN).run.kills).toEqual([]);
+  });
+
+  it('a lone walk off the ledge, or one long after a shove, credits nobody', () => {
+    const walkOff = (shove: boolean) => {
+      const { run, rs, bs } = lineup(2, { level: ledge(), tx: EDGE - 8, spacing: 0, rules: BRAWL });
+      bs[0].x = bs[1].x - bs[0].w - 0.5;
+      for (let f = 0; f < 20; f++) run.step([shove ? walk(1) : NO_INPUT, NO_INPUT]);
+      expect(rs[1].items.bonkedBy).toBe(shove ? 0 : -1);
+      // A breath, then off the edge on their own, the shover walking away.
+      for (let f = 0; f < 300 && rs[1].alive; f++) run.step([walk(-1), f < 60 ? NO_INPUT : walk(1)]);
+      expect(rs[1].alive).toBe(false);
+      return run.kills;
+    };
+    expect(walkOff(false)).toEqual([]);
+    expect(walkOff(true)).toEqual([]);
+  });
+
   it('a walk into a bystander, or a run into someone running back at you, is no check', () => {
     const walked = lineup(2, { spacing: 4 * TILE, rules: BRAWL });
     for (let f = 0; f < 60; f++) walked.run.step([walk(1), NO_INPUT]);
