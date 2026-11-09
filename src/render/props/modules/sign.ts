@@ -49,6 +49,8 @@ const PAINTS: readonly [HSL, HSL, HSL][] = [
 ];
 const SPARK: HSL = { h: 50, s: 100, l: 72 };
 const CHAIN: HSL = { h: 210, s: 6, l: 40 };
+/** The shortest chain a sign is drawn hanging on (px): a couple of links you can see. */
+const MIN_CHAIN = 5;
 
 const paintOf = (m: Sign) => PAINTS[m.seed % PAINTS.length];
 
@@ -157,11 +159,18 @@ function sparks(rc: RC, x: number, y: number, k: number) {
 function draw(rc: RC, m: Sign, d: DrawCtx) {
   const s = rc.s;
   const c = signCycle(m, rc.frame, d.r.phase);
-  const r = signRect(m, rc.frame, d.r.phase, d.off[0], d.off[1]);
   const lv = d.o.level ?? undefined;
   const mount = mountOf(lv, m, d.off[0], d.off[1]);
   const hx = m.at[0] + d.off[0];
   const hy = m.at[1] + d.off[1];
+  // A sign whose ceiling sits flush on it would hang on no chain at all, jammed against the rock: while it's harmless
+  // (hanging, warning, winched up) it's drawn a short chain lower, easing back onto the sim's box as it falls, so it
+  // lands and lies exactly where it kills.
+  const slack = mount.up ? Math.max(0, MIN_CHAIN - Math.min(hy - mount.up[0], hy - mount.up[1])) : 0;
+  const p = c.t / Math.max(1, c.len);
+  const ease = c.seg === SIGN_LIVE ? 0 : c.seg === SIGN_FALL ? 1 - p : c.seg === SIGN_LIFT ? p * p * (3 - 2 * p) : 1;
+  const box = signRect(m, rc.frame, d.r.phase, d.off[0], d.off[1]);
+  const r = { ...box, y: box.y + slack * ease };
   // The two hooks it hangs from: the underside over each end, or a bracket arm out of the wall.
   const top = hy - (mount.wall ? 6 : TILE);
   const hooks: [number, number][] = [
