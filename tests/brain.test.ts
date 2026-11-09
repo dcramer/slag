@@ -357,6 +357,52 @@ describe('the motor’s own moves', () => {
     expect(across(18, false).still).toBeGreaterThan(30);
   });
 
+  // A block's spikes pointing down into the floor it stands on: the strip lies a couple of pixels off a body standing
+  // flush against the block's side, inside its margin, where nothing ever reaches it; another spiked block hangs over
+  // it, so every jump meets spikes. Every walk from there starts as near as standing, so none has room to spare and
+  // none is hit later than standing (a brawl bot stood 12 s like that against a placed spiked jelly, seed 3's second
+  // round). It takes a walk with no room to spare and goes, in a fight or a race.
+  it.each([true, false])('flush against spikes that never reach it, it walks off rather than stand there (haste %s)', (haste) => {
+    const m = new Match(1, undefined, { ...DEFAULT_RULES, mode: haste ? 'brawl' : 'race' });
+    const { w, h } = m.level;
+    const floor = h - 6;
+    const tiles = new Uint8Array(w * h);
+    for (let y = floor + 1; y < h; y++) tiles.fill(T_SOLID, y * w, (y + 1) * w);
+    m.level = { ...m.level, tiles, setPieces: [], protectedRects: [], spawn: { tx: 2, ty: floor }, goal: { tx: w - 3, ty: floor }, spawns: [] };
+    const block = (uid: number, tx: number, ty: number): PlacedProp => ({
+      uid,
+      owner: -1,
+      tx: 0,
+      ty: 0,
+      rot: 0,
+      def: {
+        key: 'test',
+        name: 'test',
+        maker: 'test',
+        archetype: 'platform',
+        role: 'hazard',
+        style: { metal: 'steel', trim: 'none', hue: 0, glowHue: 0, woodHue: 30 },
+        motion: { type: 'none' },
+        footprint: [[tx, ty]],
+        modules: [
+          { type: 'body', cells: [[tx, ty]], material: 'stone', conveyor: 0, breakFrames: 0, respawnFrames: 0 },
+          { type: 'spikes', cells: [[tx, ty]], angle: Math.PI / 2 },
+        ],
+      },
+    });
+    const { p, run, r } = standing(m, 11, floor, [block(100_000, 10, floor), block(100_001, 11, floor - 3)]);
+    r.body.x = 11 * TILE;
+    const motor = new Motor({ ...rollPersonality(1, 'normal'), margin: 3, reaction: 0, slip: 0, think: 0, stray: 0 }, 1);
+    let there = -1;
+    for (let f = 0; f < 3 * 60 && r.alive && there < 0; f++) {
+      m.step({ kb: motor.drive(m, p, { do: 'goTo', tx: 16, ty: floor, haste }) });
+      if (Math.floor((r.body.x + r.body.w / 2) / TILE) === 16) there = f;
+    }
+    expect(r.alive, `${r.cause} at race frame ${run.frame}`).toBe(true);
+    expect(there, 'frames to get there').toBeGreaterThan(0);
+    expect(there).toBeLessThan(60);
+  });
+
   it('won’t hop into a flail swinging overhead: it waits for the swing to pass', () => {
     const m = new Match(4);
     // Open ground well clear of the spawn, open above, with a flail's pivot three rows up.
