@@ -442,36 +442,6 @@ export function knockKills(v: BrainView, x: number, y: number, vx: number, vy: n
   return fly(v, x, y, vx, vy, slag, undefined, slide) === 'dies';
 }
 
-/** Tiles round where a field starts that a knock lane keeps clear of: a part there would catch everyone at GO. */
-export const ENDS_CLEAR = 5;
-
-/**
- * Where a part does a brawl's work, best first: the cells (y * w + x) that a body knocked off any stand cell flies
- * through and still comes down safe, by how many knocks pass there, the rock a knock throws it against among them.
- * A hazard there turns a knock someone walks away from into a kill. Only air the knock flies through, never a stand
- * cell where everyone walks, and nothing near where the field starts (`ends`). Made once per level and parts.
- */
-export function knockLanes(v: BrainView, ends: readonly { tx: number; ty: number }[]): number[] {
-  const { w, h } = v.level;
-  const hits = new Map<number, number>();
-  const near = (tx: number, ty: number) => ends.some((e) => Math.abs(e.tx - tx) <= ENDS_CLEAR && Math.abs(e.ty - ty) <= ENDS_CLEAR);
-  const knock = KNOCKS.sword!;
-  for (let ty = 1; ty < h - 1; ty++)
-    for (let tx = 0; tx < w; tx++) {
-      if (tile(v, tx, ty) === T_SOLID || !floorAt(v, tx, ty + 1)) continue;
-      for (const d of [-1, 1] as const) {
-        const seen = new Set<number>();
-        const land = fly(v, tx + 0.5, ty + 1, d * knock.vx, knock.vy, Infinity, (cx, cy) => {
-          if (cx === tx || near(cx, cy) || (tile(v, cx, cy) !== T_SOLID && floorAt(v, cx, cy + 1))) return;
-          seen.add(cy * w + cx);
-        });
-        if (land === 'dies') continue;
-        for (const c of seen) hits.set(c, (hits.get(c) ?? 0) + 1);
-      }
-    }
-  return [...hits].sort((a, b) => b[1] - a[1] || a[0] - b[0]).map(([c]) => c);
-}
-
 /**
  * Whether a body check toward `dir` (a run-up into `r`, where the mode has them: `BrainView.shove`) throws them into
  * something that kills, as `me` reads the level: they leave at `CHECK.carry` times the closing speed, with a hop, and

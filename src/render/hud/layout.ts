@@ -1,4 +1,5 @@
 import type { Match } from '../../game/match';
+import { matchGoal } from '../../game/rules';
 import { FONT } from '../../ui/style';
 
 /** Fonts, phone scale limits and group transforms the HUD core and its phase painters share. */
@@ -6,7 +7,7 @@ import { FONT } from '../../ui/style';
 export const DISPLAY = FONT.display;
 export const UI = FONT.ui;
 
-export const roundLabel = (m: Match) => `ROUND ${m.round}/${m.rules.maxRounds}`;
+export const roundLabel = (m: Match) => `ROUND ${m.round}/${matchGoal(m.rules).maxRounds}`;
 
 export const FOOT_H = 22;
 /** Phones: the footer and page headings grow this much at most, or they eat the level. */

@@ -15,6 +15,8 @@
  *                                  --difficulty gentle|medium|hard
  *                                  --tide (a Rising Slag tower: game/modes.ts)
  *                                  --mode brawl (the level a mode asks for: game/modes.ts MODES)
+ *                                  --round 5 (with --mode: the knobs that round of a match asks for, where every
+ *                                  round is a fresh level: `ModeDef.fresh`)
  *
  * Legend: # solid  = one-way  S spawn  G goal  · reachable stand cell  P set-piece footprint
  *         B a bridge from the validator's solution (levels that need props)
@@ -50,7 +52,7 @@ const difficulty = DIFFICULTIES.find((d) => d === opt('difficulty'));
 if (difficulty) force.difficulty = difficulty;
 if (flag('tide')) Object.assign(force, MODES.slag.profile);
 // The forced knobs with the mode's over them, as a match asks (tools/lib/level-request.ts).
-const profile = levelProfile(force, opt('mode'));
+const profile = levelProfile(force, opt('mode'), Number(opt('round') ?? 1));
 
 /** Share of levels whose solution takes 0, 1, 2 and 3 parts. */
 function partShares(parts: number[], n: number): Record<string, string> {

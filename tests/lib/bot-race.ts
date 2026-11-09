@@ -14,7 +14,7 @@ import type { ModeId } from '../../src/game/modes';
 import type { Award } from '../../src/game/scoring';
 import { NO_INPUT } from '../../src/sim/types';
 import { MODES } from '../../src/game/modes';
-import { DEFAULT_RULES, withMode } from '../../src/game/rules';
+import { DEFAULT_RULES } from '../../src/game/rules';
 import type { ThemeId } from '../../src/themes';
 import { deadlyCells } from '../../src/gen/level/measure';
 
@@ -281,7 +281,7 @@ function watchFight(run: Run, f: Fight, credit: number[], apart: Set<number>, de
   for (const r of run.runners) credit[r.slot] = r.items.bonkCredit;
 }
 
-/** How `botRound` and `botRounds` play and measure a round. */
+/** How `botRound` plays and measures a round. */
 export interface BotRoundOptions {
   players?: number;
   level?: BotLevel;
@@ -291,40 +291,26 @@ export interface BotRoundOptions {
   /** Every `deal` frames from GO, every empty hand gets what a loop's box deals its rank (the mode's `boxes`): items reaching everyone, as boxes on the way would. */
   deal?: number;
   mode?: ModeId;
+  /** `botRound`: play round `round` of the match, on the level a match plays it on (`Match.roundLevel`): a fresh one, nastier, in a brawl or a climb. */
+  round?: number;
 }
 
 /**
  * `players` bots of `level` playing one round of `mode` (Rising Slag by default) on `seed`'s bare level (no parts
- * placed), to its end: who led `at` frames after GO (highest up, laps and all), and who outlasted everyone. Catch-up's
- * measure (tests/stats/slag-catch-up.test.ts).
+ * placed; round `round` of a match's, the first unless given), to its end: who led `at` frames after GO (highest up,
+ * laps and all), and who outlasted everyone. Catch-up's measure (tests/stats/slag-catch-up.test.ts).
  */
 export function botRound(seed: number, opts: BotRoundOptions = {}): BotRound {
-  const { players = 4, level = 'normal', hands = (p) => p, mode = 'slag' } = opts;
+  const { players = 4, level = 'normal', hands = (p) => p, mode = 'slag', round = 1 } = opts;
   const { m, bots } = botMatch(seed, undefined, undefined, players, level, undefined, hands, mode);
   m.startMatch();
-  m.startRun();
-  return playRound(seed, m, bots, opts);
-}
-
-/**
- * `players` bots of `level` playing the first `rounds` rounds of a `mode` match (Brawl by default) on `seed`'s level,
- * picking and placing their parts as a match does (bots take a few seconds; the timers catch one that finds no spot), each round measured as
- * `botRound` measures one: how a level gets nastier as its parts pile up.
- */
-export function botRounds(seed: number, rounds: number, opts: BotRoundOptions = {}): BotRound[] {
-  const { players = 4, level = 'normal', hands = (p) => p, mode = 'brawl' } = opts;
-  const { m, bots } = botMatch(seed, undefined, undefined, players, level, undefined, hands, mode);
-  m.rules = { ...m.rules, targetScore: 1e6, maxRounds: rounds };
-  m.startMatch();
-  const out: BotRound[] = [];
-  while (out.length < rounds) {
-    for (let f = 0; f < 120 * 60 && m.phase !== 'run'; f++) m.step(bots.frames(m));
-    if (m.phase !== 'run') break;
-    out.push(playRound(seed, m, bots, opts));
-    // The race's tail and the scoreboard, into the next round's pick.
-    for (let f = 0; f < 60 * 60 && m.phase === 'run'; f++) m.step(bots.frames(m));
+  if (round > 1) {
+    const r = m.roundLevel(round);
+    m.newLevel(r.seed, r.theme, r.profile);
+    m.round = round;
   }
-  return out;
+  if (m.phase !== 'run' || round > 1) m.startRun();
+  return playRound(seed, m, bots, opts);
 }
 
 /** `m`'s race played from where it stands to its end (or `limit`), measured. */
@@ -486,16 +472,9 @@ function playRound(seed: number, m: Match, bots: BotSeats, { at = 15 * 60, limit
 export interface BotMatchTime {
   /** Frames spent in each phase, lobby aside. */
   frames: Partial<Record<Phase, number>>;
-  /**
-   * The same, per placement in the order they came (0 the first): its pick and place, the bouts fought on it and their
-   * score cards. Victory is nobody's placement. What lets two matches be compared on the same parts.
-   */
-  byPlacement: Partial<Record<Phase, number>>[];
-  /** Bouts fought on each placement, as `byPlacement`. */
-  boutsOn: number[];
-  /** Rounds played (every bout is one) and placements (pick and place) made. */
+  /** Rounds played, and the distinct levels they were played on (one a match, or a fresh one a round). */
   rounds: number;
-  placements: number;
+  levels: number;
   /** It reached victory within the cap. */
   ended: boolean;
   /** The match's winners, by seat (join order). */
@@ -506,42 +485,30 @@ export interface BotMatchTime {
 }
 
 /**
- * `players` bots of `level` playing one whole `mode` match on `seed`'s level with the lobby's rules for it (`withMode`,
- * then `bouts` if given), from the first pick to victory: the frames each phase took, and who scored what. `idle` is a
- * seat that picks and places like the rest but stands still through every race: someone who only waits it out.
+ * `players` bots of `level` playing one whole `mode` match on `seed`'s level with the lobby's rules for it, from the
+ * first round to victory: the frames each phase took, and who scored what. `idle` is a seat that plays like the rest
+ * but stands still through every race: someone who only waits it out.
  */
 export function botMatchTime(
   seed: number,
-  {
-    players = 4,
-    level = 'normal',
-    mode = 'brawl',
-    bouts,
-    idle = -1,
-  }: { players?: number; level?: BotLevel; mode?: ModeId; bouts?: number; idle?: number } = {},
+  { players = 4, level = 'normal', mode = 'brawl', idle = -1 }: { players?: number; level?: BotLevel; mode?: ModeId; idle?: number } = {},
 ): BotMatchTime {
   const { m, bots } = botMatch(seed, undefined, undefined, players, level, undefined, undefined, mode);
-  m.rules = { ...withMode(m.rules, mode), ...(bouts ? { bouts } : {}) };
   m.startMatch();
   const seats = m.players.map((p) => p.slot);
   const frames: Partial<Record<Phase, number>> = {};
   const knockouts = seats.map(() => 0);
   const points: Partial<Record<Award['reason'], number>>[] = seats.map(() => ({}));
-  const byPlacement: Partial<Record<Phase, number>>[] = [];
-  const boutsOn: number[] = [];
-  let placements = 0;
+  const levels = new Set<number>();
   for (let f = 0; f < 4 * 60 * 60 * 60 && m.phase !== 'victory'; f++) {
-    if (m.phase === 'pick' && m.phaseFrame === 1) placements++; // a frame in: startMatch's pick starts on frame 0, the rest a step before we look
     frames[m.phase] = (frames[m.phase] ?? 0) + 1;
-    const mine = (byPlacement[Math.max(1, placements) - 1] ??= {});
-    mine[m.phase] = (mine[m.phase] ?? 0) + 1;
+    levels.add(m.seed);
     const inputs = bots.frames(m);
     if (idle >= 0 && m.phase === 'run') inputs[m.players[idle].device] = NO_INPUT;
     const was = m.phase;
     m.step(inputs);
     m.drainEvents();
     if (was !== 'run' || m.phase !== 'score') continue;
-    boutsOn[placements - 1] = (boutsOn[placements - 1] ?? 0) + 1;
     for (const k of m.run!.kills) if (k.killer !== k.victim) knockouts[seats.indexOf(k.killer)]++;
     for (const a of m.result!.awards) {
       const at = points[seats.indexOf(a.slot)];
@@ -550,10 +517,8 @@ export function botMatchTime(
   }
   return {
     frames,
-    byPlacement,
-    boutsOn,
     rounds: m.round,
-    placements,
+    levels: levels.size,
     ended: m.phase === 'victory',
     winners: m.winners.map((s) => seats.indexOf(s)),
     knockouts,

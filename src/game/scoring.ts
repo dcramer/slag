@@ -15,7 +15,7 @@ export const POINTS = {
   knockout: 5,
   /**
    * Brawl: the last one standing, one knockout's worth, so two knockouts beat hiding to the end. At 5 a match of four
-   * bots runs 7.5 to 8.5 bouts, as it did on the old 10 a win and 2 a kill (8.5); at 4 it ran 9.3 (docs/MODES.md → Brawl).
+   * bots ran 7.5 to 8.5 rounds, as it did on the old 10 a win and 2 a kill (8.5); at 4 it ran 9.3 (docs/MODES.md → Brawl).
    */
   lastStanding: 5,
 } as const;

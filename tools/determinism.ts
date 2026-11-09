@@ -10,9 +10,9 @@
  * Cases: `levels` (every theme × size × a few seeds: tiles, set pieces, look, crate), `race-<theme>` (eight runners
  * with one of every archetype placed, weather rotated, held items on half of them, ~15 s of scripted input), `gravity`
  * (forced low and high gravity), `match` (four players through pick, place, race and scoring for several rounds,
- * clicking at random), and `brawl` (four of the page's own bots on an arena, armed, pressing the fight through bouts,
- * picks and placements, so knocks bounce off rock, swings sweep their dsin/dcos boxes, and bodies bump, check, shove
- * and slip). On a mismatch it prints the first frame that differs and the snapshot fields that differ there.
+ * clicking at random), and `brawl` (four of the page's own bots on an arena, armed, pressing the fight round after
+ * round, each on a fresh arena, so knocks bounce off rock, swings sweep their dsin/dcos boxes, and bodies bump, check,
+ * shove and slip). On a mismatch it prints the first frame that differs and the snapshot fields that differ there.
  * Exits non-zero on any divergence or page error.
  */
 import { argReader, type Engine, engineList, launchEngine, startServer, watchdog } from './lib/server';
@@ -60,7 +60,7 @@ const cases: Case[] = [
   },
   {
     name: 'brawl',
-    query: 'mode=brawl&bots=4&race=spikeblock,bumper&seed=xebrawl',
+    query: 'mode=brawl&bots=4&race=,&seed=xebrawl',
     frames: 4800,
     inputSeed: 9,
     rules: CYCLE,

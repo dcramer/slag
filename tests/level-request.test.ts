@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { hashString, parseSeed } from '../src/core/rng';
 import { Match } from '../src/game/match';
-import { DEFAULT_RULES, withMode } from '../src/game/rules';
+import { DEFAULT_RULES } from '../src/game/rules';
 import { generateLevel, type ProfileOverride } from '../src/gen/level';
 import type { Level } from '../src/sim/level';
 import type { ThemeId } from '../src/themes';
@@ -19,7 +19,7 @@ function levelHash(l: Level): number {
  * (src/debug.ts), then `slagDebug.loadLevel(typed, theme)`.
  */
 function shotLevel(typed: string, theme: ThemeId, mode: ModeId, force: ProfileOverride): Level {
-  const m = new Match(parseSeed(typed), theme, withMode(DEFAULT_RULES, mode));
+  const m = new Match(parseSeed(typed), theme, { ...DEFAULT_RULES, mode });
   if (Object.keys(force).length) {
     m.forceProfile = force;
     m.newLevel(parseSeed(typed), theme);

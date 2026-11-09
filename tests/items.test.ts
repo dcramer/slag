@@ -685,14 +685,14 @@ describe('armed from GO', () => {
   const ARMED = { flag: false, lastStanding: true, ahead: 'none', armed: { deal: ['sword', 'bat', 'glove', 'clock'], uses: 1 } } as const;
   const start = (itemSeed: number) => new RunWorld(testLevel(), [], [0, 1, 2, 3], 0, itemSeed, [], true, ARMED);
 
-  it('every runner starts holding one of the deal, good for its uses, the same in two runs and different between bouts', () => {
+  it('every runner starts holding one of the deal, good for its uses, the same in two runs and different between rounds', () => {
     const a = start(5);
     expect(a.runners.every((r) => r.items.held !== null && ARMED.armed.deal.includes(r.items.held.kind as never) && r.items.held.uses === 1)).toBe(true);
     const kinds = (run: RunWorld) => run.runners.map((r) => r.items.held?.kind);
     expect(kinds(start(5))).toEqual(kinds(a));
-    // Each bout is a race of its own with its own item seed: across a few, not every seat gets the same thing every time.
-    const bouts = Array.from({ length: 6 }, (_, i) => kinds(start(100 + i)).join());
-    expect(new Set(bouts).size).toBeGreaterThan(1);
+    // Each round is a race of its own with its own item seed: across a few, not every seat gets the same thing every time.
+    const rounds = Array.from({ length: 6 }, (_, i) => kinds(start(100 + i)).join());
+    expect(new Set(rounds).size).toBeGreaterThan(1);
   });
 
   it('a race arms nobody', () => {

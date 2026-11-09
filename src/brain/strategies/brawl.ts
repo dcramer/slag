@@ -1,10 +1,10 @@
-import { checkedInto, ENDS_CLEAR, floorAt, hurtsAt, ITEM_TACTICS, KNOCKS, knockedInto, knockLanes, slagRow, tile } from '../tactics';
+import { checkedInto, floorAt, hurtsAt, ITEM_TACTICS, KNOCKS, knockedInto, slagRow, tile } from '../tactics';
 import { T_SOLID } from '../../sim/level';
 import type { ItemKind } from '../../sim/items/types';
-import type { BrainView, Cell, Intent, PropSense, RunnerSense, SelfSense } from '../types';
+import type { BrainView, Cell, Intent, RunnerSense, SelfSense } from '../types';
 import { aimOf } from './headway';
 import { type Errands, ItemPlay } from './items';
-import type { Lay, StrategyDef } from './types';
+import type { StrategyDef } from './types';
 
 /** Frames it sticks with a rival before looking round for a nearer one. */
 const MARK_FRAMES = 90;
@@ -117,24 +117,6 @@ function bumpable(v: BrainView, me: SelfSense, r: RunnerSense): boolean {
   return true;
 }
 
-/** Each arena's knock lanes, by its parts as they stand. */
-const lanes = new WeakMap<readonly PropSense[], readonly number[]>();
-
-/**
- * Where a brawl's parts go: where a knock throws someone and they'd still come down safe (tactics.ts `knockLanes`),
- * so the part turns that knock into a kill, and nowhere near where the field starts, where a part would only catch
- * someone walking off at GO. There's no route to block: everyone fights over the same screen.
- */
-function brawlLay(v: BrainView): Lay {
-  const ends = v.objective.kind === 'fight' ? v.objective.ends : [v.level.spawn];
-  let cells = lanes.get(v.props);
-  if (!cells) {
-    cells = knockLanes(v, ends);
-    lanes.set(v.props, cells);
-  }
-  return { cells, keeps: (tx, ty) => !ends.some((e) => Math.abs(e.tx - tx) <= ENDS_CLEAR && Math.abs(e.ty - ty) <= ENDS_CLEAR) };
-}
-
 /** Rivals still in it. */
 const rivals = (v: BrainView) => v.runners.filter((r) => r.alive && !r.finished);
 
@@ -225,7 +207,6 @@ function dodge(v: BrainView, me: SelfSense, t: Threat): Intent | null {
  * Once the slag pours and comes close, it climbs out of its way.
  */
 export const brawlStrategy: StrategyDef = {
-  lay: brawlLay,
   haste: true,
   make(rng, traits) {
     const items = new ItemPlay(rng, traits, BRAWL_ERRANDS);

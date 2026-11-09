@@ -1,6 +1,5 @@
 import {
   BLOOD_CHOICES,
-  BOUT_CHOICES,
   GRAVITY_CHOICES,
   gravityLabel,
   MATCH_LENGTHS,
@@ -10,6 +9,7 @@ import {
   type TimerRule,
   varietyLabel,
 } from '../../game/rules';
+import { MODES } from '../../game/modes';
 import type { InputManager } from '../../input/input';
 import { CanvasMenu } from '../kit/menu';
 import type { Ui } from '../kit/ui';
@@ -35,7 +35,7 @@ interface Group {
 }
 
 /**
- * Match rules. Timers, length, bouts and Secret Parts apply from the next match; gravity and weather rebuild the lobby level
+ * Match rules. Timers, length, Parts and Secret Parts apply from the next match; gravity and weather rebuild the lobby level
  * at once. Online (`listed`), the lobby's own row: Public or Private, which takes it off the lobby list at once.
  */
 export class RulesMenu extends CanvasMenu {
@@ -95,29 +95,31 @@ export class RulesMenu extends CanvasMenu {
         RULE_CHOICES[k].map((v) => ({ label: v === 0 ? 'Off' : `${v}s`, on: d[k] === v, apply: () => (d[k] = v) })),
       ),
     );
-    // Every mode shows it: choosing a mode sets it to the mode's own (rules.ts `withMode`), and any of them plays.
-    const bouts = group(
-      'bouts',
-      'Bouts per Pick',
-      BOUT_CHOICES.map((v) => ({ label: `${v}`, on: d.bouts === v, apply: () => (d.bouts = v) })),
+    const blood = group(
+      'blood',
+      'Blood Rounds',
+      BLOOD_CHOICES.map((v) => ({ label: v === 0 ? 'Off' : `${v}`, on: d.bloodRounds === v, apply: () => (d.bloodRounds = v) })),
     );
+    const world = [
+      group(
+        'gravity',
+        'Gravity',
+        GRAVITY_CHOICES.map((v) => ({ label: gravityLabel(v), on: d.gravity === v, apply: () => (d.gravity = v) })),
+      ),
+      group(
+        'weather',
+        'Weather',
+        [true, false].map((v) => ({ label: v ? 'On' : 'Off', on: d.weather === v, apply: () => (d.weather = v) })),
+      ),
+    ];
+    // A mode that builds nothing has no pick or place to time and no parts to deal (`ModeDef.crate`).
+    if (!MODES[d.mode].crate) return [lobby ? [length, lobby] : [length], [timers[2], blood], world];
     return [
       lobby ? [length, lobby] : [length],
-      // Pick and place share a row, so Parts fits on the card with no scrolling at 720p; the race and its bouts another.
+      // Pick and place share a row, so Parts fits on the card with no scrolling at 720p; the race and blood another.
       [timers[0], timers[1]],
-      [timers[2], bouts],
-      [
-        group(
-          'gravity',
-          'Gravity',
-          GRAVITY_CHOICES.map((v) => ({ label: gravityLabel(v), on: d.gravity === v, apply: () => (d.gravity = v) })),
-        ),
-        group(
-          'weather',
-          'Weather',
-          [true, false].map((v) => ({ label: v ? 'On' : 'Off', on: d.weather === v, apply: () => (d.weather = v) })),
-        ),
-      ],
+      [timers[2], blood],
+      world,
       [
         group(
           'parts',
@@ -128,13 +130,6 @@ export class RulesMenu extends CanvasMenu {
           'secret',
           'Secret Parts',
           [false, true].map((v) => ({ label: v ? 'On' : 'Off', on: d.secretParts === v, apply: () => (d.secretParts = v) })),
-        ),
-      ],
-      [
-        group(
-          'blood',
-          'Blood Rounds',
-          BLOOD_CHOICES.map((v) => ({ label: v === 0 ? 'Off' : `${v}`, on: d.bloodRounds === v, apply: () => (d.bloodRounds = v) })),
         ),
       ],
     ];

@@ -1,7 +1,7 @@
 /**
  * Playstyle modes (docs/DESIGN.md → Modes). A mode is data the match reads at its seams: what level it asks
- * worldgen for, what a race is played for, and how a round scores. Pick, place, props, items and art are
- * shared, so a new mode is an entry here, not a branch in the match.
+ * worldgen for, whether rounds pick and place parts and play on one level, what a race is played for, and how a
+ * round scores. Pick, place, props, items and art are shared, so a new mode is an entry here, not a branch in the match.
  */
 import type { ProfileOverride } from '../gen/level';
 import { type CrateMix, RACE_CRATE } from '../gen/props';
@@ -33,12 +33,24 @@ export interface ModeDef {
   profile: ProfileOverride;
   /** What a race is for (sim/run.ts). */
   run: RunRules;
-  /** How its crates are dealt (gen/props.ts `CrateMix`). */
-  crate: CrateMix;
+  /**
+   * How its crates are dealt (gen/props.ts `CrateMix`). None: the mode builds nothing, so a round has no pick or place,
+   * goes from the score straight to the next race, and its level holds only its own set pieces.
+   */
+  crate?: CrateMix;
   /** With more than one player, what the race camera frames (render/camera-follow.ts): the whole pack, or the leader and a screen behind them. */
   camera: 'pack' | 'leader';
-  /** Bouts per placement when the mode is chosen (MatchRules.bouts): fights on one level's parts before the next pick. One if unset. */
-  bouts?: number;
+  /**
+   * A fresh level every round, asked for with these knobs over the mode's `profile` for round `round` (2 on: round 1
+   * plays the lobby's level). Kept to knobs the generators already read, and bounded, so the last round still builds
+   * what the mode asks for. Unset, a match plays one level.
+   */
+  fresh?: (round: number) => ProfileOverride;
+  /**
+   * A match's points to win and round limit (MatchRules `targetScore`, `maxRounds`), times this: a mode whose rounds
+   * go by faster plays more of them in the same time. One if unset.
+   */
+  length?: number;
   /** Players (bots count) a match needs before it starts: a fight needs someone to fight. One if unset. */
   minPlayers?: number;
   /**
@@ -145,6 +157,30 @@ const BRAWL_ARMED: Armed = { deal: BRAWL_ITEMS, uses: 1 };
  */
 const BRAWL_TIDE = { wait: 25, speed: 0.4, gain: 0.04, deep: 2 };
 
+/**
+ * A brawl's arena for round `round` of a match, as the party brawler swaps the level every round: from the 6 set
+ * pieces at 0.9 danger every arena asks for (round 1, the lobby's), one more and 0.05 nastier every two rounds, up to
+ * 8 at 1 from round 5. Asking past 8 stood no more: the sets with the fewest recipes already stand 5 or 6.
+ */
+function brawlRound(round: number): ProfileOverride {
+  const step = Math.min(2, Math.floor((Math.max(1, round) - 1) / 2));
+  return { hazards: 6 + step, danger: (90 + 5 * step) / 100 };
+}
+
+/**
+ * A climb's shaft for round `round` of a match: round 1 is the lobby's, its set pieces and danger as rolled (2.6 and
+ * 0.53 on average); then 3 at 0.6, 3 at 0.7, 4 at 0.8 and 4 at 0.9 from round 5. The difficulty stays the curve's,
+ * lap by lap, so a lap passes as `PASS_BANDS` measures.
+ */
+function slagRound(round: number): ProfileOverride {
+  if (round < 2) return {};
+  return { hazards: Math.min(4, 2 + Math.floor(round / 2)), danger: Math.min(9, 4 + round) / 10 };
+}
+
+/** How much longer than a race's a match of these runs (`ModeDef.length`): measured in docs/MODES.md, What we measure. */
+const BRAWL_LENGTH = 1.4;
+const SLAG_LENGTH = 1.3;
+
 export const MODES: Record<ModeId, ModeDef> = {
   race: {
     label: 'Race',
@@ -157,8 +193,8 @@ export const MODES: Record<ModeId, ModeDef> = {
   },
   /**
    * Rising Slag: a level that climbs, slag rising under it from GO, no flag. The last one standing wins the
-   * round; the top is only the last place the slag reaches. Parts still go in every round, so the climb gets
-   * harder (or shorter) as the match goes on.
+   * round; the top is only the last place the slag reaches. Nobody builds (owner decision): every round climbs a fresh
+   * shaft, nastier as the match goes on.
    */
   slag: {
     label: 'Rising Slag',
@@ -179,10 +215,9 @@ export const MODES: Record<ModeId, ModeDef> = {
       tide: true,
     },
     run: { flag: false, lastStanding: true, ahead: 'height', screen: SLAG_SCREEN, parcels: SLAG_PARCELS },
-    // A loop climbs bare, so no bridge is owed: the crate leans to what you put in each other's way, and to
-    // utility, and away from building (a shortcut for whoever's ahead) and demolition (nothing needs clearing).
-    crate: { bridges: false, roles: { hazard: 1.6, utility: 1.3, build: 0.6, demolish: 0.35 } },
     camera: 'leader',
+    fresh: slagRound,
+    length: SLAG_LENGTH,
     // Every set builds a looping shaft: its tower kit (gen/level/sculptors/tall.ts).
     builds: () => true,
     score: ({ run, standings }) =>
@@ -196,8 +231,9 @@ export const MODES: Record<ModeId, ModeDef> = {
   /**
    * Brawl: a one-screen arena that owes no part, everyone starting from its two ends, and the last one standing takes
    * the round. Nothing kills on its own: items knock and bodies shove, on the race's own physics, and what kills is the
-   * level (its hazards, the parts placed in it each round, the drop, and late in the round the slag). Its own boxes
-   * hand out what to knock with. A round that runs out of time is a draw.
+   * level (its hazards, the drop, and late in the round the slag). Nobody builds (owner decision): every round is
+   * fought on a fresh arena, nastier as the match goes on. Its own stands hand out what to knock with. A round that
+   * runs out of time is a draw.
    */
   brawl: {
     label: 'Brawl',
@@ -226,12 +262,9 @@ export const MODES: Record<ModeId, ModeDef> = {
     // half a walk, whoever is shoved off goes out over the drop, and a run-up into someone who isn't pushing back knocks
     // them like a bump. Everyone in the brawl shares it; a race keeps its own.
     run: { flag: false, lastStanding: true, ahead: 'none', seconds: 60, shove: BRAWL_SHOVE, bounce: BRAWL_BOUNCE, buildup: BRAWL_BUILDUP, armed: BRAWL_ARMED },
-    // No gap to cross: the crate leans to hazards to knock people into and utility to throw them about.
-    crate: { bridges: false, roles: { hazard: 1.8, utility: 1.2, build: 0.4, demolish: 0.5 } },
     camera: 'pack',
-    // Three fights on each placement, as the party brawler plays rounds back to back: picking and placing (up to 30 s)
-    // would otherwise outlast a fight (about 28 s with bots).
-    bouts: 3,
+    fresh: brawlRound,
+    length: BRAWL_LENGTH,
     minPlayers: 2,
     builds: () => true,
     // Knockouts pay, and the last one standing one knockout's worth: hiding while the others fight doesn't win (owner decision).

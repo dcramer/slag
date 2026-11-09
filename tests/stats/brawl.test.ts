@@ -1,17 +1,16 @@
 import { describe, expect, it } from 'vitest';
 import { BRAWL_ROUNDS, type BrawlMeasure } from '../../src/game/expectations';
-import { type BotRound, botRound, botRounds, PAUSE } from '../lib/bot-race';
+import { type BotRound, botRound, PAUSE } from '../lib/bot-race';
 
 /**
  * Brawl with bots (src/game/expectations.ts `BRAWL_ROUNDS`, docs/MODES.md → Brawl): four Normal bots, how often a
  * round is a draw, how long rounds run, the share of deaths a rival's knock put there, and how hard it's fought:
- * how soon they meet and hit, how often they swing, and how much they stand still (and how often for half a second or more), back off or keep their distance. On the bare arena (round 1
- * before anyone has placed a part, `botRound`) and through the first rounds of a match, picking and placing, as the
- * parts pile up (`botRounds`).
+ * how soon they meet and hit, how often they swing, and how much they stand still (and how often for half a second or
+ * more), back off or keep their distance. On a match's first arena (round 1, the lobby's) and on the arena it fights
+ * round `LATE` on, at the top of its ramp (`ModeDef.fresh`), each on 48 seeds (`botRound`).
  */
-const BARE_SEEDS = Array.from({ length: 48 }, (_, i) => i + 1);
-const MATCH_SEEDS = Array.from({ length: 16 }, (_, i) => i + 1);
-const ROUNDS = 4;
+const SEEDS = Array.from({ length: 48 }, (_, i) => i + 1);
+const LATE = 5;
 /** Past the round's own 60 s cap: every round ends by itself. */
 const LIMIT = 61 * 60;
 
@@ -88,22 +87,17 @@ describe('Brawl with bots', () => {
   const get = (k: Arena) => {
     let m = measured.get(k);
     if (!m) {
-      m =
-        k === 'bare'
-          ? measure(
-              k,
-              BARE_SEEDS.map((s) => botRound(s, { mode: 'brawl', limit: LIMIT })),
-            )
-          : measure(
-              k,
-              MATCH_SEEDS.flatMap((s) => botRounds(s, ROUNDS, { limit: LIMIT })),
-            );
+      const round = k === 'first' ? 1 : LATE;
+      m = measure(
+        k,
+        SEEDS.map((s) => botRound(s, { mode: 'brawl', limit: LIMIT, round })),
+      );
       measured.set(k, m);
     }
     return m;
   };
 
-  for (const k of ['bare', 'placed'] as const)
+  for (const k of ['first', 'late'] as const)
     for (const what of Object.keys(BRAWL_ROUNDS.bands[k]) as BrawlMeasure[])
       it(`${k}: ${what} about as they were`, { timeout: 600_000 }, () => {
         const [lo, hi] = BRAWL_ROUNDS.bands[k][what];

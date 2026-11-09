@@ -1,4 +1,5 @@
 import type { Match } from '../game/match';
+import { MODES } from '../game/modes';
 import { popCountdown } from '../sim/run';
 import { RUN_COUNTDOWN, TILE } from '../sim/constants';
 import type { GameEvent } from '../sim/types';
@@ -251,7 +252,8 @@ export class WebAudioSystem implements AudioSystem {
 
   private onPhase(phase: string, m: Match) {
     const music = this.engine!.music;
-    if (phase === 'pick') music.roundSting();
+    // A round starts at its pick, or in a mode that builds nothing (`ModeDef.crate`) at its race.
+    if (phase === 'pick' || (phase === 'run' && !MODES[m.rules.mode].crate)) music.roundSting();
     else if (phase === 'victory') {
       music.fanfare();
       this.victoryAt = m.frame;

@@ -160,7 +160,7 @@ export interface RunRules {
 
 /**
  * What everyone starts a race holding: one of `deal`, drawn per runner from the race's item seed (`armedWith`), so each
- * bout hands each seat its own and every peer the same one, good for `uses` goes (a starter: fewer than a stand's).
+ * race hands each seat its own and every peer the same one, good for `uses` goes (a starter: fewer than a stand's).
  */
 export interface Armed {
   deal: readonly ItemKind[];
@@ -176,7 +176,7 @@ export function armedWith(armed: Armed, itemSeed: number, slot: number): ItemKin
  * Knockback that builds up, as a platform fighter's damage does: a rival's knock throws its victim `1 + per × hits` times
  * as hard, `hits` being the rivals' knocks it has taken this race, counted up to `max` (items/common.ts `bonk`). Only a
  * rival's hit counts and grows (an item, a bump, a body check); the level's own pushes (springs, fans, a launcher's rubber ball)
- * neither. It never wears off: the race is the bout, and a fresh one starts everyone at none.
+ * neither. It never wears off: the race is the round, and a fresh one starts everyone at none.
  */
 export interface BuildUp {
   per: number;

@@ -3,19 +3,8 @@ import { tidyName } from '../core/name';
 import { nameBlocked } from '../core/name-filter';
 import { type CharacterDef, generateCharacter } from '../gen/character';
 import type { BotLevel, Match, Player } from '../game/match';
-import { MODE_IDS, type ModeId } from '../game/modes';
-import {
-  BLOOD_CHOICES,
-  BOUT_CHOICES,
-  DEFAULT_RULES,
-  DIFFICULTY_CHOICES,
-  GRAVITY_CHOICES,
-  type MatchRules,
-  modeBouts,
-  nearestLength,
-  PART_VARIETIES,
-  RULE_CHOICES,
-} from '../game/rules';
+import { MODE_IDS } from '../game/modes';
+import { BLOOD_CHOICES, DEFAULT_RULES, DIFFICULTY_CHOICES, GRAVITY_CHOICES, type MatchRules, nearestLength, PART_VARIETIES, RULE_CHOICES } from '../game/rules';
 import { MAX_PLAYERS } from '../sim/constants';
 import type { ThemeId } from '../themes';
 
@@ -410,8 +399,6 @@ const RULE_CHECKS: { [K in keyof MatchRules]: (v: unknown, r: Partial<MatchRules
   mode: choice(MODE_IDS),
   targetScore: (v) => (typeof v === 'number' ? nearestLength(v).targetScore : undefined),
   maxRounds: (_v, r) => (typeof r.targetScore === 'number' ? nearestLength(r.targetScore).maxRounds : undefined),
-  // None on offer: the mode's own, as choosing the mode would give.
-  bouts: (v, r) => choice(BOUT_CHOICES)(v) ?? (MODE_IDS.includes(r.mode as ModeId) ? modeBouts(r.mode as ModeId) : undefined),
   pickSeconds: choice(RULE_CHOICES.pickSeconds),
   placeSeconds: choice(RULE_CHOICES.placeSeconds),
   raceSeconds: choice(RULE_CHOICES.raceSeconds),

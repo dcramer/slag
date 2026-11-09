@@ -21,7 +21,7 @@
 import { Rng } from '../../src/core/rng';
 import { Match } from '../../src/game/match';
 import { MODE_IDS } from '../../src/game/modes';
-import { DEFAULT_RULES, withMode } from '../../src/game/rules';
+import { DEFAULT_RULES } from '../../src/game/rules';
 import { ARCHETYPE_WEIGHTS, generateProp } from '../../src/gen/props';
 import { snapshotMatch } from '../../src/net/snapshot';
 import { RUN_COUNTDOWN } from '../../src/sim/constants';
@@ -116,7 +116,7 @@ function inputs(m: Match, f: number, use = false): Record<string, InputFrame> {
 }
 
 /**
- * The snapshots the shape is read from, one match per mode on a fixed seed: the pick screen, a part in
+ * The snapshots the shape is read from, one match per mode on a fixed seed: the pick screen (a mode that builds has one), a part in
  * hand, then a race with every archetype on the level, every ammo fired and every held item in hands, used
  * and loose, sampled as it plays out, and the score screen after it. Parts are dropped at fixed spots
  * without asking `canPlace`: the shape needs their state on the wire, not a fair level, and a generator
@@ -125,7 +125,7 @@ function inputs(m: Match, f: number, use = false): Record<string, InputFrame> {
 function sample(into: Map<string, Set<string>>): void {
   const keep = (m: Match) => walk(JSON.parse(JSON.stringify(snapshotMatch(m))), '', into);
   for (const mode of MODE_IDS) {
-    const m = new Match(SEED, undefined, { ...withMode(DEFAULT_RULES, mode), pickSeconds: 1, placeSeconds: 1, raceSeconds: 3 });
+    const m = new Match(SEED, undefined, { ...DEFAULT_RULES, mode, pickSeconds: 1, placeSeconds: 1, raceSeconds: 3 });
     for (const d of DEVICES) m.join(d);
     m.players[2].bot = 'hard';
     m.startMatch();

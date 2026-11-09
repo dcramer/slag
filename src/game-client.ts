@@ -7,7 +7,6 @@ import { installDebug } from './debug';
 import { type GenInfo, lastGenInfo } from './gen/level';
 import { BOT_LEVELS, botLevelLabel, Match, planMisses, rulesProfile } from './game/match';
 import { roomSeed } from './game/room';
-import { withMode } from './game/rules';
 import { InputManager } from './input/input';
 import { TOUCH_DEVICE, touchModeFor } from './input/touch';
 import { connectRoom, type RoomConnection } from './net/client';
@@ -261,7 +260,7 @@ function startGame(container: HTMLElement, room: string, params: URLSearchParams
           // A rule like any other: online it's the host's, and it's kept with the host's preferences.
           setMode: (mode) => {
             if (match.phase !== 'lobby' || !net.isHost) return;
-            const r = withMode(match.rules, mode);
+            const r = { ...match.rules, mode };
             net.act({ t: 'rules', rules: r });
             saveRules(r);
           },

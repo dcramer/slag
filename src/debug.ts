@@ -2,7 +2,6 @@ import type { BotSeats } from './brain/bots';
 import { parseSeed, Rng } from './core/rng';
 import type { BotLevel, Match } from './game/match';
 import { MODE_IDS } from './game/modes';
-import { withMode } from './game/rules';
 import { CAST, generateCharacter, type Kind } from './gen/character';
 import { ARCHETYPE_WEIGHTS, type Archetype, DEMOLISH, generateProp } from './gen/props';
 import type { NetSession } from './net/session';
@@ -35,7 +34,7 @@ import type { ThemeId } from './themes';
  *   ?density=0.9        force terrain density (0..1)
  *   ?gravity=0.7        force world gravity scale
  *   ?difficulty=hard    force the level's difficulty (gentle|medium|hard)
- *   ?mode=slag          the match's mode (game/modes.ts: race|slag|brawl), as the Mode card sets it (its bouts come with it)
+ *   ?mode=slag          the match's mode (game/modes.ts: race|slag|brawl), as the Mode card sets it
  *   ?weather=rain       force the weather (clear|wind|mist|rain|snow), skipping worldgen's solvability gate
  *   ?concept=id         force a stage concept of the theme's (gen/stage), or `plain`
  *   ?debug=1            open the dev overlay (see installDevtoolsHooks)
@@ -221,7 +220,7 @@ export function installDebug(match: Match, renderer: Renderer, loop: LoopControl
 
   const q = new URLSearchParams(location.search);
   const mode = MODE_IDS.find((id) => id === q.get('mode'));
-  if (mode) match.setRules(withMode(match.rules, mode));
+  if (mode) match.setRules({ ...match.rules, mode });
   const force: ProfileOverride = {};
   const size = q.get('size');
   if (size === 'classic' || size === 'wide' || size === 'tall') force.size = size;

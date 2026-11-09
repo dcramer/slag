@@ -665,16 +665,16 @@ describe('knockout scoring', () => {
   });
 });
 
-describe("a brawl's bouts", () => {
+describe("a brawl's rounds", () => {
   const BRAWL = { ...DEFAULT_RULES, mode: 'brawl' as const };
-  /** What each seat holds at GO in a brawl match's first `bouts` bouts on seed 4. */
-  function armed(bouts: number): string[] {
+  /** What each seat holds at GO in a brawl match's first `rounds` rounds on seed 4, on one level. */
+  function armed(rounds: number): string[] {
     const m = new Match(4, 'farm', BRAWL);
     for (const k of ['kb1', 'kb2', 'kb3']) m.join(k);
     m.startMatch();
     const out: string[] = [];
-    for (let b = 0; b < bouts; b++) {
-      // As the match's next bout does (`startBout`): a round of its own, so a race seed of its own.
+    for (let b = 0; b < rounds; b++) {
+      // A round of its own, so a race seed of its own.
       if (b) m.round++;
       m.startRun();
       out.push(m.run!.runners.map((r) => `${r.items.held?.kind}:${r.items.held?.uses}`).join());
@@ -682,11 +682,11 @@ describe("a brawl's bouts", () => {
     return out;
   }
 
-  it('start everyone holding a starter from the stands deal, the same in two matches, drawn again each bout', () => {
+  it('start everyone holding a starter from the stands deal, the same in two matches, drawn again each round', () => {
     const a = armed(4);
     expect(armed(4)).toEqual(a);
-    for (const bout of a)
-      for (const held of bout.split(',')) {
+    for (const round of a)
+      for (const held of round.split(',')) {
         const [kind, uses] = held.split(':');
         expect(MODES.brawl.run.armed!.deal).toContain(kind);
         expect(Number(uses)).toBe(MODES.brawl.run.armed!.uses);

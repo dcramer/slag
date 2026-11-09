@@ -1,7 +1,8 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { Match } from '../src/game/match';
-import { DEFAULT_RULES, MATCH_LENGTHS, type MatchRules, nearestLength, RULE_CHOICES, type TimerRule, withMode } from '../src/game/rules';
+import { DEFAULT_RULES, MATCH_LENGTHS, type MatchRules, matchGoal, nearestLength, RULE_CHOICES, type TimerRule } from '../src/game/rules';
 import { hashMatch } from '../src/net/snapshot';
+import { levelKey } from '../src/gen/level/pregen';
 import { POINTS } from '../src/game/scoring';
 import { RUN_COUNTDOWN, TILE, VIEW_W } from '../src/sim/constants';
 import { canPlace, footprint } from '../src/sim/props';
@@ -253,7 +254,6 @@ describe('match rules', () => {
       mode: 'race',
       targetScore: score,
       maxRounds,
-      bouts: 1,
       gravity: 'auto',
       weather: true,
       difficulty: 'varies',
@@ -278,7 +278,6 @@ describe('match rules', () => {
       mode: 'race',
       targetScore,
       maxRounds,
-      bouts: 1,
       gravity: 'auto',
       weather: true,
       difficulty: 'varies',
@@ -299,41 +298,34 @@ describe('match rules', () => {
 });
 
 /**
- * A two-player Brawl on short pick and place timers: each picks the first free card and places it at the first legal
- * spot, and in a race `popper` holds self-destruct from GO, so the other one is left standing. Phases as they happen.
+ * A two-player match of `mode`, one that builds nothing: in a race `popper` holds self-destruct from GO, so the other
+ * one is left standing. Phases as they happen, and the level each race was run on.
  */
-function brawl(rules: Partial<MatchRules>, popper = 1) {
-  const m = new Match(31, undefined, { ...withMode(DEFAULT_RULES, 'brawl'), pickSeconds: 10, placeSeconds: 15, ...rules });
+function freshMatch(mode: 'brawl' | 'slag', rules: Partial<MatchRules> = {}, popper = 1) {
+  const m = new Match(31, undefined, { ...DEFAULT_RULES, mode, ...rules });
   for (const d of ['p0', 'p1']) m.join(d);
   const phases: string[] = [];
-  const seen = { place: -1 };
+  const races: { round: number; seed: number; hazards: number; ahead: boolean }[] = [];
+  /** Whether the next round's level was asked for ahead (`upcoming`) on every frame of the round before it. */
+  let askedAhead = true;
   const step = () => {
     const inputs: Record<string, InputFrame> = {};
-    for (const p of m.players) {
-      let inp = NO_INPUT;
-      if (m.phase === 'pick' && p.claim < 0 && m.acceptsConfirm()) {
-        const free = m.crate.find((c) => c.claimedBy < 0)!;
-        p.cursor = { x: free.rect.x + 5, y: free.rect.y + 5 };
-        inp = press({ confirmPressed: true });
-      } else if (m.phase === 'place' && !p.placed && m.acceptsConfirm() && seen.place !== m.round * 10 + p.slot) {
-        seen.place = m.round * 10 + p.slot;
-        const def = m.crate[p.claim].def;
-        outer: for (let ty = 2; ty < m.level.h - 2; ty++)
-          for (let tx = 2; tx < m.level.w - 2; tx++)
-            if (canPlace(m.level, m.placed, def, 0, tx, ty, m.frame)) {
-              const cells = footprint(def, 0);
-              p.cursor = { x: (tx + Math.max(...cells.map((c) => c[0])) / 2) * 16 + 8, y: (ty + Math.max(...cells.map((c) => c[1])) / 2) * 16 + 8 };
-              break outer;
-            }
-        inp = press({ confirmPressed: true });
-      } else if (m.phase === 'run' && p.slot === popper) inp = press({ alt: true, altPressed: m.run!.frame === RUN_COUNTDOWN });
-      inputs[p.device] = inp;
+    for (const p of m.players)
+      inputs[p.device] = m.phase === 'run' && p.slot === popper ? press({ alt: true, altPressed: m.run!.frame === RUN_COUNTDOWN }) : NO_INPUT;
+    if (m.phase === 'run' || m.phase === 'score') {
+      const next = levelKey(m.roundLevel(m.round + 1));
+      if (m.round < matchGoal(m.rules).maxRounds && !m.upcoming().some((r) => levelKey(r) === next)) askedAhead = false;
     }
     m.step(inputs);
-    for (const e of m.drainEvents()) if (e.type === 'phase') phases.push(e.phase);
+    for (const e of m.drainEvents())
+      if (e.type === 'phase') {
+        phases.push(e.phase);
+        if (e.phase === 'run') races.push({ round: m.round, seed: m.seed, hazards: m.level.profile!.hazards, ahead: askedAhead });
+      }
   };
   m.startMatch();
   phases.push(m.phase);
+  races.push({ round: m.round, seed: m.seed, hazards: m.level.profile!.hazards, ahead: true });
   m.drainEvents();
   /** Step until `done`, or fail after `cap` frames. */
   const until = (done: () => boolean, cap = 60 * 60 * 3) => {
@@ -342,73 +334,55 @@ function brawl(rules: Partial<MatchRules>, popper = 1) {
       step();
     }
   };
-  return { m, phases, until };
+  return { m, phases, races, until };
 }
 
-describe('bouts', () => {
-  it('a brawl picks, places, then fights its bouts on the same parts, then picks again', () => {
-    const { m, phases, until } = brawl({});
-    expect(m.rules.bouts).toBe(3);
-    until(() => m.phase === 'run');
-    const parts = JSON.stringify(m.placed);
-    const first = { run: m.run!, props: JSON.stringify(m.run!.propState), spawn: m.run!.runners.map((r) => [r.body.x, r.body.y]), slag: m.run!.slag };
-    expect(m.placed.length).toBeGreaterThan(0);
-    for (let bout = 2; bout <= 3; bout++) {
-      // Hits built up in one bout don't follow anyone into the next.
-      for (const r of m.run!.runners) r.items.hits = 4;
-      until(() => m.phase === 'run' && m.bout === bout);
-      const run = m.run!;
-      expect(run.runners.every((r) => r.items.hits === 0)).toBe(true);
-      // A fresh race on the same parts: everyone home and standing, set pieces and parts as a run starts, the slag down.
-      expect(run).not.toBe(first.run);
-      expect(run.frame).toBe(0);
-      expect(JSON.stringify(m.placed)).toBe(parts);
-      expect(run.runners.every((r) => r.alive && !r.finished)).toBe(true);
-      expect(run.runners.map((r) => [r.body.x, r.body.y])).toEqual(first.spawn);
-      expect(JSON.stringify(run.propState)).toBe(first.props);
-      expect(run.slag).toBe(first.slag);
-      expect(m.round).toBe(bout);
-    }
-    until(() => m.phase === 'pick');
-    expect(phases).toEqual(['pick', 'place', 'run', 'score', 'run', 'score', 'run', 'score', 'pick']);
-    expect(m.round).toBe(4);
-    expect(m.bout).toBe(1);
-  }, 60_000);
+describe('a mode that builds nothing', () => {
+  it.each(['brawl', 'slag'] as const)(
+    '%s: runs, scores and runs again on a fresh level, nastier, with no pick or place, each built ahead',
+    (mode) => {
+      const { m, phases, races, until } = freshMatch(mode);
+      const lobby = m.seed;
+      expect(m.phase).toBe('run');
+      expect(m.crate).toEqual([]);
+      until(() => m.round === 4 && m.phase === 'run');
+      expect(phases).toEqual(['run', 'score', 'run', 'score', 'run', 'score', 'run']);
+      // Round 1 is the lobby's level; every round after it a new one, each asked for ahead all through the round before it.
+      expect(races[0].seed).toBe(lobby);
+      expect(new Set(races.map((r) => r.seed)).size).toBe(4);
+      expect(races.every((r) => r.ahead)).toBe(true);
+      expect(m.placed).toEqual([]);
+      // The level each round plays, the same on every peer: what `roundLevel` says from round 1.
+      const again = new Match(31, undefined, { ...DEFAULT_RULES, mode });
+      again.join('p0');
+      again.join('p1');
+      again.startMatch();
+      for (const r of races.slice(1)) expect(again.roundLevel(r.round).seed).toBe(r.seed);
+      // Danger ramps: round 4 asks at least as much of its level as round 1.
+      expect(races[3].hazards).toBeGreaterThanOrEqual(races[0].hazards);
+    },
+    60_000,
+  );
 
-  it('scores every bout, and a target reached mid-way ends the match there', () => {
-    const { m, until } = brawl({ targetScore: 2 * POINTS.lastStanding });
-    const after: number[][] = [];
-    for (let bout = 1; bout <= 2; bout++) {
-      until(() => m.phase === 'score' && m.bout === bout);
-      after.push(m.players.map((p) => p.score));
-    }
-    expect(after).toEqual([
-      [POINTS.lastStanding, 0],
-      [2 * POINTS.lastStanding, 0],
-    ]);
-    until(() => m.phase !== 'score');
-    expect(m.phase).toBe('victory');
-    expect(m.bout).toBe(2);
+  it('scores every round, and a target reached mid-way ends the match there', () => {
+    const { m, until } = freshMatch('brawl', { targetScore: 30 });
+    const goal = matchGoal(m.rules).targetScore;
+    until(() => m.phase === 'victory');
+    expect(m.players[0].score).toBeGreaterThanOrEqual(goal);
+    expect(m.round).toBe(Math.ceil(goal / POINTS.lastStanding));
     expect(m.winners).toEqual([0]);
   }, 60_000);
 
-  it('counts every bout toward the round limit, so a match still always ends', () => {
-    const { m, phases, until } = brawl({ maxRounds: 4 });
+  it('counts every round toward the round limit, so a match still always ends', () => {
+    const { m, phases, until } = freshMatch('slag', { maxRounds: 4 });
     until(() => m.phase === 'victory');
-    expect(phases.filter((p) => p === 'run')).toHaveLength(4);
-    expect(phases.filter((p) => p === 'pick')).toHaveLength(2);
-    expect(m.round).toBe(4);
+    expect(phases.filter((p) => p === 'run')).toHaveLength(matchGoal(m.rules).maxRounds);
+    expect(phases).not.toContain('pick');
   }, 60_000);
 
-  it('with one bout, picks and places before every race, as before', () => {
-    const { m, phases, until } = brawl({ bouts: 1 });
-    until(() => m.round === 3);
-    expect(phases).toEqual(['pick', 'place', 'run', 'score', 'pick', 'place', 'run', 'score', 'pick']);
-  }, 60_000);
-
-  it('plays the same bouts twice from the same seed and inputs', () => {
+  it('plays the same rounds twice from the same seed and inputs', () => {
     const play = () => {
-      const { m, until } = brawl({ maxRounds: 4 }, 0);
+      const { m, until } = freshMatch('brawl', { maxRounds: 3 }, 0);
       const hashes: number[] = [];
       until(() => {
         if (m.phaseFrame === 1) hashes.push(hashMatch(m)); // each phase, a frame in
@@ -417,9 +391,17 @@ describe('bouts', () => {
       return { hashes, end: hashMatch(m), scores: m.players.map((p) => p.score) };
     };
     const a = play();
-    expect(a.hashes.length).toBeGreaterThan(8);
+    expect(a.hashes.length).toBeGreaterThan(5);
     expect(play()).toEqual(a);
   }, 60_000);
+
+  it('a race still picks and places, on one level a match', () => {
+    const m = new Match(31, undefined, { ...DEFAULT_RULES, pickSeconds: 10, placeSeconds: 15 });
+    m.join('p0');
+    m.startMatch();
+    expect(m.phase).toBe('pick');
+    expect(m.upcoming()).toHaveLength(1);
+  });
 });
 
 describe('big lobbies', () => {
@@ -466,7 +448,7 @@ describe('lobby', () => {
   });
 
   it("waits for as many players as the mode needs: a brawl doesn't start alone", () => {
-    const m = new Match(2, undefined, withMode(DEFAULT_RULES, 'brawl'));
+    const m = new Match(2, undefined, { ...DEFAULT_RULES, mode: 'brawl' });
     m.step({ kb1: press({ confirmPressed: true }) });
     m.step({ kb1: press({ confirmPressed: true }) });
     expect(m.players[0].ready).toBe(true);

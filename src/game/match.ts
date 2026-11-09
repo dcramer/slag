@@ -37,7 +37,7 @@ import { RunWorld } from '../sim/run';
 import { type GameEvent, type InputFrame, NO_INPUT } from '../sim/types';
 import type { ThemeId } from '../themes';
 import { isBotDevice } from './device';
-import { DEFAULT_RULES, type MatchRules } from './rules';
+import { DEFAULT_RULES, type MatchRules, matchGoal } from './rules';
 import { overview, viewToWorld, worldToView } from './view';
 import { MODE_IDS, MODES, minPlayersOf } from './modes';
 import type { RoundResult } from './scoring';
@@ -163,6 +163,14 @@ export function rulesProfile(rules: MatchRules): ProfileOverride {
 }
 
 /**
+ * The knobs round `round` of a match asks its level for: the rules', and from round 2 the mode's for that round where
+ * every round is a fresh level (`ModeDef.fresh`). Round 1, and the lobby (round 0), are the lobby's level.
+ */
+export function roundProfile(rules: MatchRules, round: number): ProfileOverride {
+  return { ...rulesProfile(rules), ...(round > 1 ? MODES[rules.mode].fresh?.(round) : {}) };
+}
+
+/**
  * Rounds this page has started with no proven way to the flag on a level nothing has touched. Generation promises
  * one there, so any count is a broken guarantee, and the host reports it (src/game-client.ts). A level parts have
  * sealed is play, not a miss. Diagnostics only, like `lastGenInfo`: the sim never reads it, and it isn't match state.
@@ -170,19 +178,19 @@ export function rulesProfile(rules: MatchRules): ProfileOverride {
 export const planMisses = { count: 0 };
 
 /**
- * The full match state machine: lobby → (pick → place → (run → score)×bouts)* → victory.
+ * The full match state machine: lobby → (pick → place → run → score)* → victory, or in a mode that builds nothing
+ * (`ModeDef.crate`) lobby → (run → score)* → victory, on a fresh level every round where the mode asks (`fresh`).
  * Deterministic given the seed and per-device input stream; owns no DOM.
  */
 export class Match {
+  /** The level's seed: the lobby's, then each round's own where every round is a fresh level (`roundLevel`). */
   seed: number;
   level: Level;
   phase: Phase = 'lobby';
   phaseFrame = 0;
   frame = 0;
-  /** Rounds played, this one included: every bout is a round. */
+  /** Rounds played, this one included. */
   round = 0;
-  /** Which bout on this placement the round is (1 to `rules.bouts`); 0 in the lobby. */
-  bout = 0;
   /** Rounds in a row nobody finished; a stuck match gets more help from the crate. */
   dryRounds = 0;
   players: Player[] = [];
@@ -235,11 +243,17 @@ export class Match {
   /** Debug/tools: force level-profile knobs (size, route, density…) for every generated level. */
   forceProfile: ProfileOverride = {};
 
-  /** What the next few level changes could ask for, likeliest first, so they can be built ahead (gen/level/pregen.ts). */
+  /**
+   * What the next few level changes could ask for, likeliest first, so they can be built ahead (gen/level/pregen.ts):
+   * mid-match, the next round's fresh level while there is one to come, and the next match's.
+   */
   upcoming(): LevelRequest[] {
     const profile = this.profileOverride();
     const at = (seed: number, p = profile): LevelRequest => ({ seed, theme: this.themeOverride, profile: p });
-    if (this.phase !== 'lobby') return [at(deriveSeed(this.seed, 'next-match'))];
+    if (this.phase !== 'lobby') {
+      const next = this.phase !== 'victory' && MODES[this.rules.mode].fresh && this.round < matchGoal(this.rules).maxRounds;
+      return [...(next ? [this.roundLevel(this.round + 1)] : []), at(deriveSeed(this.seed, 'next-match'))];
+    }
     const rerolls = [deriveSeed(this.seed, 'reroll')];
     while (rerolls.length < REROLLS_AHEAD) rerolls.push(deriveSeed(rerolls[rerolls.length - 1], 'reroll'));
     // The Rules menu can change any one rule the level is built from, from the rules as they are.
@@ -416,13 +430,25 @@ export class Match {
     return this.hueGap(c, owner) >= MIN_HUE_APART && !this.nameTaken(c, owner) && !this.kindTaken(c.kind, owner);
   }
 
-  newLevel(seed: number, theme: ThemeId | undefined = this.themeOverride) {
+  newLevel(seed: number, theme: ThemeId | undefined = this.themeOverride, profile: ProfileOverride = this.profileOverride()) {
     this.seed = seed >>> 0;
     this.themeOverride = theme;
-    this.level = buildLevel(this.seed, theme, this.profileOverride());
+    this.level = buildLevel(this.seed, theme, profile);
     this.placed = [];
     this.plan = this.solution();
     this.blood = [];
+  }
+
+  /**
+   * The level round `round` (past this one) plays where every round is a fresh one (`ModeDef.fresh`): each round's seed
+   * follows from the one before it, so it's a pure function of the match's first level and the round, the same on
+   * every peer, and its knobs are the mode's for that round over the rules'. In a theme the host chose, every round
+   * stays in it; otherwise each round's seed picks its own.
+   */
+  roundLevel(round: number): LevelRequest {
+    let seed = this.seed;
+    for (let r = this.round + 1; r <= round; r++) seed = deriveSeed(seed, `round:${r}`);
+    return { seed, theme: this.themeOverride, profile: { ...this.forceProfile, ...roundProfile(this.rules, round) } };
   }
 
   /** The level's recorded solution, proven when it was generated: the plan a match starts from. */
@@ -516,7 +542,6 @@ export class Match {
   startMatch() {
     this.salt = this.nextSalt;
     this.round = 0;
-    this.bout = 0;
     this.dryRounds = 0;
     this.placed = [];
     this.plan = this.solution();
@@ -536,9 +561,16 @@ export class Match {
     // Chose to watch on the score screen: gone before the next crate, which is dealt for who's left.
     this.players = this.players.filter((p) => !p.leaving);
     if (!this.players.length) return this.toLobby();
+    const mode = MODES[this.rules.mode];
+    // A fresh level from round 2, built ahead while the round before it ran (`upcoming`).
+    if (this.round && mode.fresh) {
+      const next = this.roundLevel(this.round + 1);
+      this.newLevel(next.seed, next.theme, next.profile);
+    }
     this.round++;
-    this.bout = 1;
     this.run = null;
+    // Nothing to build: straight into the race.
+    if (!mode.crate) return this.startRun();
     const count = Math.max(3, this.players.length + 2);
     // Re-proven here, so bridges built from the plan shorten it. The crate offers every bridge it still has,
     // or, when the parts have sealed the level, a demolition card that clears them.
@@ -556,7 +588,7 @@ export class Match {
       !!lonePipe(this.placed),
       sealed,
       this.rules.parts,
-      MODES[this.rules.mode].crate,
+      mode.crate,
     );
     const way = sealed ? crate.find(clearsParts) : undefined;
     const defs = new Rng(deriveSeed(this.seed ^ this.salt, `crate-order:${this.round}`)).shuffle(crate);
@@ -798,16 +830,6 @@ export class Match {
 
   // ---------------------------------------------------------------- run
 
-  /**
-   * The next bout on this placement: a round of its own on the same level and parts, straight from the score screen.
-   * The race starts fresh (runners home, slag down, boxes full, parts as the run's start sets them).
-   */
-  private startBout() {
-    this.round++;
-    this.bout++;
-    this.startRun();
-  }
-
   /** Skip straight to the race with whatever is placed (used by pick/place flow and debug tools). */
   startRun() {
     this.detonateCharges();
@@ -885,7 +907,6 @@ export class Match {
     this.newLevel(deriveSeed(this.seed, 'next-match'));
     this.run = null;
     this.result = null;
-    this.bout = 0;
     for (const p of this.players) {
       p.ready = false;
       p.score = 0;
@@ -900,15 +921,12 @@ export class Match {
     const skip = this.phaseFrame > 90 && this.players.some((p) => this.input(p, inputs).confirmPressed);
     if (this.phaseFrame < SCORE_FRAMES && !skip) return;
     const best = Math.max(...this.players.map((p) => p.score));
-    if (best >= this.rules.targetScore || this.round >= this.rules.maxRounds) {
+    const goal = matchGoal(this.rules);
+    if (best >= goal.targetScore || this.round >= goal.maxRounds) {
       // Top score wins, ties are joint. At the limit with nobody on the board there is no winner, not a tie of everyone.
       this.winners = best > 0 ? this.players.filter((p) => p.score === best).map((p) => p.slot) : [];
       this.setPhase('victory');
-    } else if (this.bout < this.rules.bouts) {
-      this.startBout();
-    } else {
-      this.startRound();
-    }
+    } else this.startRound();
   }
 
   private stepVictory(inputs: Readonly<Record<string, InputFrame>>) {

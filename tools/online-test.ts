@@ -24,6 +24,8 @@
  *               and the room drops off once everyone has left
  *   view        real mouse input lands under the pointer, at every window shape, on every level size
  *   play        join, live cursors, claim race, a remote ghost, a race, refresh keeps the slot, next round
+ *   rounds      a brawl, which builds nothing: three peers and a bot race straight into round 2 on a fresh arena, every
+ *               peer on the same level; a guest refreshes into it; the host is killed and the room goes on to round 3's
  *   pick place run   the host's renderer is killed (no goodbye) in that phase
  *   duo         the same in a race with no third peer: the guest has nobody to ask
  *   leave       the host navigates away (goodbye path) mid-race
@@ -70,7 +72,7 @@ const GROUPS: Record<string, string[]> = {
   migration: ['pick', 'place', 'run', 'duo', 'leave', 'twice', 'double', 'hostwatch', 'hostwatch-match'],
   feel: ['latency', 'hidden', 'contact'],
   seats: ['observe', 'seatrace', 'idle', 'gone'],
-  misc: ['play', 'bc', 'unset'],
+  misc: ['play', 'rounds', 'bc', 'unset'],
 };
 const onlyArg = argv.includes('--only') ? argv[argv.indexOf('--only') + 1].split(',').flatMap((x) => GROUPS[x] ?? [x]) : null;
 const wanted = (name: string) => !onlyArg || onlyArg.includes(name);
@@ -95,6 +97,8 @@ type NetView = {
   phase: string;
   phaseFrame: number;
   round: number;
+  /** The level's seed: the lobby's, then each round's own in a mode with a fresh level a round. */
+  level: number;
   hash: number;
   players: {
     device: string;
@@ -145,6 +149,7 @@ async function view(p: Page): Promise<NetView> {
       phase: m.phase,
       phaseFrame: m.phaseFrame,
       round: m.round,
+      level: m.seed,
       hash: d.hash(),
       players: m.players.map((q: any) => ({
         device: q.device,
@@ -899,8 +904,14 @@ async function newRoom(
 
 const FAST_RULES = { targetScore: 80, maxRounds: 25, pickSeconds: 30, placeSeconds: 45, raceSeconds: 30 };
 
-/** n peers joined, seated and ready: the room is in `pick`. The first page is host. */
-async function startMatch(r: Room, n: number, rules: Record<string, number> = FAST_RULES, bots = 0): Promise<{ pages: Page[]; ids: string[] }> {
+/** n peers joined, seated and ready: the room is in `pick` (`first`: a mode that builds nothing starts with the race). The first page is host. */
+async function startMatch(
+  r: Room,
+  n: number,
+  rules: Record<string, number | string> = FAST_RULES,
+  bots = 0,
+  first = 'pick',
+): Promise<{ pages: Page[]; ids: string[] }> {
   const pages: Page[] = [];
   const ids: string[] = [];
   const tags = 'ABCDEFGH';
@@ -920,7 +931,7 @@ async function startMatch(r: Room, n: number, rules: Record<string, number> = FA
     await waitFor(pages[0], 'bot seated', (v) => v.players.length === n + i + 1);
   }
   await readyAndStart(pages);
-  for (const p of pages) await waitFor(p, 'match start', (v) => v.phase === 'pick');
+  for (const p of pages) await waitFor(p, 'match start', (v) => v.phase === first);
   return { pages, ids };
 }
 
@@ -1221,6 +1232,58 @@ async function playScenario(browser: Browser, base: string) {
   const desyncs = (await view(A)).stats.desyncs;
   check(desyncs === 0, `no desyncs detected (${desyncs})`);
   const real = r.errors.filter((e) => !/favicon/.test(e));
+  check(real.length === 0, `no page errors${real.length ? `:\n${real.join('\n')}` : ''}`);
+  await r.dispose();
+}
+
+/**
+ * A brawl across its round boundaries: it builds nothing, so the room goes from the score screen straight into the
+ * next race, every round on a fresh arena that every peer builds ahead from the same seed. Everyone holds
+ * self-destruct, so rounds end quickly.
+ */
+async function roundsScenario(browser: Browser, base: string) {
+  const r = await newRoom(browser, base, 'rounds', '');
+  const { pages, ids } = await startMatch(r, 3, { ...FAST_RULES, mode: 'brawl' }, 1, 'run');
+  const [A, B, C] = pages;
+  const first = await view(A);
+  const pop = async (ps: Page[]) => {
+    for (const p of ps) await p.keyboard.down('KeyR');
+  };
+  await pop(pages);
+  const second = await waitFor(A, 'round 2', (v) => v.round === 2 && v.phase === 'run', 180_000);
+  check(second.level !== first.level, `round 2 is a fresh level (${first.level} → ${second.level})`);
+  for (const p of [B, C]) await waitFor(p, 'round 2 on every peer', (v) => v.round === 2 && v.phase === 'run', 30_000);
+  const levels = (await Promise.all(pages.map(view))).map((v) => v.level);
+  check(new Set(levels).size === 1, `every peer on one level (${levels.join('/')})`);
+  await r.shot(B, 'round2');
+  await compareHashes(pages, 'round 2');
+
+  // --- a guest refreshes and comes back on the round's level, not the lobby's
+  await C.reload();
+  await C.waitForFunction(() => 'slagDebug' in window, null, { timeout: 60_000 });
+  const c2 = await waitFor(C, 'C rejoined', (v) => v.synced && v.status === 'online' && v.hostId === ids[0]);
+  const a2 = await view(A);
+  check(c2.level === a2.level, `a refreshed guest restores the round's level (${c2.level}, host ${a2.level})`);
+  await pop([C]);
+
+  // --- the host dies; the new host builds the next fresh arena and the room plays on to it
+  const before = await view(B);
+  const t0 = Date.now();
+  await crash(A);
+  const survivors = [B, C];
+  const secs = await recovery(survivors, t0, before.frame);
+  recoveries.push(`rounds (crash): ${secs.toFixed(1)}s`);
+  const next = await waitFor(B, 'the next round under the new host', (v) => v.round > before.round && v.phase === 'run', 180_000);
+  await waitFor(C, 'the next round on the other survivor', (v) => v.round === next.round && v.phase === 'run', 30_000);
+  const after = await Promise.all(survivors.map(view));
+  check(
+    after.every((v) => v.level === next.level) && next.level !== before.level,
+    `round ${next.round} is one fresh level on both (${after.map((v) => v.level).join('/')})`,
+  );
+  await compareHashes(survivors, `round ${next.round}`);
+  const desyncs = (await view(B)).stats.desyncs;
+  check(desyncs === 0, `no desyncs detected (${desyncs})`);
+  const real = r.errors.filter((e) => !/favicon|ERR_/.test(e));
   check(real.length === 0, `no page errors${real.length ? `:\n${real.join('\n')}` : ''}`);
   await r.dispose();
 }
@@ -2319,6 +2382,7 @@ try {
   }
   if (wanted('view') || wanted('view-tall')) await guarded(() => viewScenario(browser, server.base, 'tall', (_w, h) => h > 27));
   if (wanted('play')) await guarded(() => playScenario(browser, server.base));
+  if (wanted('rounds')) await guarded(() => roundsScenario(browser, server.base));
   if (wanted('pick')) await guarded(() => killScenario(browser, server.base, 'pick'));
   if (wanted('place')) await guarded(() => killScenario(browser, server.base, 'place'));
   if (wanted('run')) await guarded(() => killScenario(browser, server.base, 'run'));

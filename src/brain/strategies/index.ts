@@ -14,4 +14,4 @@ export const STRATEGIES: Record<ModeId, StrategyDef> = {
   brawl: brawlStrategy,
 };
 
-export type { Lay, Strategy, StrategyDef } from './types';
+export type { Strategy, StrategyDef } from './types';

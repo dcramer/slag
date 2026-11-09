@@ -72,7 +72,7 @@
  *          --bots N (lobby: bots after the players; race: seated first, so `race --players 0 --bots 3` races bots alone)
  *          --noui (hide the HUD, e.g. to review level shapes)
  *          --q high (pin the quality tier: slow software GL otherwise reads as a slow device and drops it)
- *          --bout N (race: play the bouts before it out first, `--game brawl` plays 3)
+ *          --round N (race: play the rounds before it out first, into round N's race: a fresh level in a brawl or a climb)
  *          --runframe N (race: stop on exact sim frame N)  --campin x,y,zoom (race: pin the view, for before/after sheets)
  *          --under N (race, with --runframe and --game slag: the lowest runner under the leader's screen, N frames into its grace)
  *          --underall (with --under: everyone but the leader under it, every color's mark at once)

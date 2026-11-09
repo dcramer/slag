@@ -6,11 +6,12 @@ import { screenEdges } from '../../sim/screen';
 import { MODES } from '../../game/modes';
 import { PAL, TYPE } from '../../ui/style';
 import { drawInkRunner } from '../ink-character';
-import { discPts, icon, inkShape, plate, standings } from '../hud-kit';
+import { icon, plate, standings, tag } from '../hud-kit';
 import { drawItemIcon } from '../items';
 import { glowDot } from '../kit';
 import type { Hud } from '../hud';
-import { DISPLAY, UI, MAX_CHIPS_H } from './layout';
+import { DISPLAY, UI, MAX_CHIPS_H, roundLabel } from './layout';
+import { THEME_LABELS } from '../../themes';
 
 /** The race: countdown, race timer and the standings chips. */
 
@@ -19,6 +20,7 @@ export function race(hud: Hud, m: Match, t: number) {
   const c = hud.ctx;
   screenEdge(hud, m, t);
   popRings(hud, m, t);
+  roundCard(hud, m, VIEW_H / 2 - 128);
   if (run.frame < RUN_COUNTDOWN + 30) {
     const left = RUN_COUNTDOWN - run.frame;
     const label = left > 0 ? String(Math.ceil((left / RUN_COUNTDOWN) * 3)) : 'GO!';
@@ -49,7 +51,6 @@ export function race(hud: Hud, m: Match, t: number) {
       400,
     );
   }
-  boutPips(c, m, hud.frame.safeY0 + (timed ? 34 : 6));
   done();
   const chips = chipGrid(hud, m.players.length);
   done = hud.grow(hud.frame.safeX0, hud.frame.safeY0, chips.s);
@@ -100,19 +101,29 @@ export function race(hud: Hud, m: Match, t: number) {
 }
 
 /**
- * Which bout on this placement the race is, when there's more than one: a pip per bout under the timer, the ones
- * fought ash, this one amber, the ones to come soot.
+ * Where no pick screen came before the race (a mode that builds nothing, `ModeDef.crate`), the round's card over the
+ * countdown: the round, and the level it's on, which in a mode with a fresh level a round is new. Gone after GO.
  */
-function boutPips(c: CanvasRenderingContext2D, m: Match, y: number) {
-  const n = m.rules.bouts;
-  if (n < 2) return;
-  const gap = 9;
-  const w = n * gap + 6;
-  plate(c, VIEW_W / 2 - w / 2, y, w, 11, { rivets: false, alpha: 0.92, seed: 71 });
-  for (let i = 0; i < n; i++) {
-    const fill = i + 1 < m.bout ? PAL.ash : i + 1 === m.bout ? PAL.amber : PAL.soot;
-    inkShape(c, discPts(VIEW_W / 2 + (i - (n - 1) / 2) * gap, y + 5.5, i + 1 === m.bout ? 2.9 : 2.4, 73 + i), fill, 79 + i, 0.8);
-  }
+function roundCard(hud: Hud, m: Match, y: number) {
+  const run = m.run!;
+  if (MODES[m.rules.mode].crate || run.frame >= RUN_COUNTDOWN + 30) return;
+  const c = hud.ctx;
+  const lv = m.level.theme;
+  c.save();
+  c.globalAlpha = run.frame < RUN_COUNTDOWN ? 1 : 1 - (run.frame - RUN_COUNTDOWN) / 30;
+  const w = 280;
+  plate(c, VIEW_W / 2 - w / 2, y, w, 46, { seed: 61 });
+  hud.text(roundLabel(m), VIEW_W / 2, y + 14, TYPE.label, PAL.amber, 'center', DISPLAY, 400, 3);
+  const theme = THEME_LABELS[lv.id].toUpperCase();
+  // The theme's tag and the level's name, centred as one: the tag's width as `tag` draws it.
+  c.font = `800 ${TYPE.caption}px ${UI}`;
+  const tw = Math.ceil((c.measureText(theme).width + TYPE.caption * 1.1) * 2) / 2;
+  c.font = `400 14px ${DISPLAY}`;
+  const room = w - 32 - tw;
+  const x0 = VIEW_W / 2 - (tw + 8 + Math.min(room, c.measureText(lv.name).width)) / 2;
+  tag(c, theme, x0, y + 32, PAL.hazard, PAL.ink, TYPE.caption);
+  hud.fitText(lv.name, x0 + tw + 8, y + 32.5, room, 14, 10, PAL.bone, DISPLAY, 400);
+  c.restore();
 }
 
 /**

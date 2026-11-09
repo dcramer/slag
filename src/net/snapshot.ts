@@ -1,6 +1,6 @@
 import type { ProfileOverride } from '../gen/level';
 import { levelAtHand, type LevelRequest, levelRecipe, pristineLevel } from '../gen/level/pregen';
-import { type CrateItem, type Match, type Phase, type Player, rulesProfile } from '../game/match';
+import { type CrateItem, type Match, type Phase, type Player, roundProfile } from '../game/match';
 import { MODES } from '../game/modes';
 import type { MatchRules } from '../game/rules';
 import type { RoundResult } from '../game/scoring';
@@ -65,8 +65,6 @@ export interface MatchSnap {
   phaseFrame: number;
   frame: number;
   round: number;
-  /** Which bout on this placement (Match.bout). */
-  bout: number;
   /** Rounds in a row nobody finished (it weights the next crate). */
   dryRounds: number;
   /**
@@ -182,13 +180,13 @@ export interface LevelSource {
 /**
  * Get a snapshot's level made off the main thread, so `restoreMatch` finds it instead of generating it there and
  * stalling the frame. The snapshot names the level by its recipe, while the worker builds what the match asks for
- * (the rules' profile): when it's already on that, the wait is for it rather than for a second build of the same level.
+ * (the rules' profile, and the round's): when it's already on that, the wait is for it rather than for a second build of the same level.
  * Resolves at once for a level this page already has. Only when it happens changes, not what the restore does.
  */
 export async function prepareSnapLevel(s: MatchSnap, levels: LevelSource): Promise<void> {
   const exact = snapLevel(s);
   if (levelAtHand(exact)) return;
-  const asked = { ...exact, profile: { ...s.force, ...rulesProfile(s.rules) } };
+  const asked = { ...exact, profile: { ...s.force, ...roundProfile(s.rules, s.phase === 'lobby' ? 0 : s.round) } };
   if (levels.building(asked)) await levels.first(asked);
   if (!levelAtHand(exact)) await levels.first(exact);
 }
@@ -226,7 +224,6 @@ export function snapshotMatch(m: Match): MatchSnap {
     phaseFrame: m.phaseFrame,
     frame: m.frame,
     round: m.round,
-    bout: m.bout,
     dryRounds: m.dryRounds,
     profile: levelRecipe(m.level, m.profileOverride()),
     force: { ...m.forceProfile },
@@ -303,7 +300,6 @@ export function restoreMatch(m: Match, s: MatchSnap): void {
   m.phaseFrame = s.phaseFrame;
   m.frame = s.frame;
   m.round = s.round;
-  m.bout = s.bout;
   m.dryRounds = s.dryRounds;
   m.forceProfile = { ...s.force };
   m.players = fromWire(s.players) as Player[];

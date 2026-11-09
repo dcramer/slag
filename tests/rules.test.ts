@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 import { Match } from '../src/game/match';
-import { DEFAULT_RULES, type MatchRules, restoreRules, withMode } from '../src/game/rules';
+import { DEFAULT_RULES, type MatchRules, matchGoal, restoreRules } from '../src/game/rules';
 import { rollKind } from '../src/gen/level/weather';
 import { applyAction, newNetState, sanitizeRules } from '../src/net/actions';
 import { cloneSnap, hashMatch, restoreMatch, snapshotMatch } from '../src/net/snapshot';
@@ -15,7 +15,6 @@ const CHANGED: MatchRules = {
   mode: 'slag',
   targetScore: 80,
   maxRounds: 25,
-  bouts: 2,
   pickSeconds: 20,
   placeSeconds: 30,
   raceSeconds: 60,
@@ -65,20 +64,16 @@ describe('sanitizeRules', () => {
   });
 });
 
-describe('bouts per placement', () => {
-  it("come with a mode: Brawl's three, one elsewhere, and whatever the host chose after", () => {
-    expect(withMode(DEFAULT_RULES, 'brawl').bouts).toBe(3);
-    expect(withMode({ ...DEFAULT_RULES, bouts: 5 }, 'race').bouts).toBe(1);
-    expect(withMode(DEFAULT_RULES, 'slag').bouts).toBe(1);
-    expect(sanitizeRules({ ...withMode(DEFAULT_RULES, 'brawl'), bouts: 5 }).bouts).toBe(5);
+describe('match length', () => {
+  it("is the length's, longer in points and rounds for a mode that builds nothing (`ModeDef.length`), on fives", () => {
+    expect(matchGoal(DEFAULT_RULES)).toEqual({ targetScore: 50, maxRounds: 15 });
+    expect(matchGoal({ ...DEFAULT_RULES, mode: 'brawl' })).toEqual({ targetScore: 70, maxRounds: 21 });
+    expect(matchGoal({ ...DEFAULT_RULES, mode: 'slag' })).toEqual({ targetScore: 65, maxRounds: 20 });
+    for (const mode of ['race', 'slag', 'brawl'] as const) expect(matchGoal({ ...DEFAULT_RULES, mode }).targetScore % 5).toBe(0);
   });
 
-  it("are the mode's own when a packet or a save has none on offer", () => {
-    expect(sanitizeRules({ mode: 'brawl' }).bouts).toBe(3);
-    expect(sanitizeRules({ mode: 'brawl', bouts: 4 }).bouts).toBe(3);
-    expect(sanitizeRules({ mode: 'race', bouts: 99 }).bouts).toBe(1);
-    expect(restoreRules({ mode: 'brawl' }).bouts).toBe(3);
-    expect(restoreRules({ mode: 'brawl', bouts: 2 }).bouts).toBe(2);
+  it("drops a rule an old save has and this build doesn't (Bouts per Pick)", () => {
+    expect(restoreRules({ mode: 'brawl', bouts: 3 } as Partial<MatchRules>)).toEqual({ ...DEFAULT_RULES, mode: 'brawl' });
   });
 });
 

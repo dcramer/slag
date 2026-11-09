@@ -138,7 +138,7 @@ export const MAX_PLAYERS = 8;
 export const RUN_COUNTDOWN = FPS; // frozen frames before GO
 /**
  * Frames from GO the spawn zones shield whoever touches them (5 s), the same in every mode, and then for nobody: long
- * enough to get clear of the start, too short to camp in. Each race (each bout too) counts from its own GO.
+ * enough to get clear of the start, too short to camp in. Each race counts from its own GO.
  */
 export const SHIELD_FRAMES = 5 * FPS;
 /**

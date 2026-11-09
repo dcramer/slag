@@ -2,7 +2,9 @@ import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import { MODE_IDS, MODES } from '../../src/game/modes';
 import { decorFaults, placeDecor } from '../../src/gen/decor';
-import { generateLevel } from '../../src/gen/level';
+import { generateLevel, lastGenInfo } from '../../src/gen/level';
+import { roundProfile } from '../../src/game/match';
+import { DEFAULT_RULES } from '../../src/game/rules';
 import { BUILDERS, type BuilderId } from '../../src/gen/level/builders';
 import { THEME_IDS } from '../../src/themes';
 import { botRound } from '../lib/bot-race';
@@ -10,7 +12,8 @@ import { botRound } from '../lib/bot-race';
 /**
  * The mode contract (AGENTS.md → Extension points → Playstyle mode): every mode in `MODES` is listed, has its section
  * in docs/MODES.md against its reference game, builds the level it asks for (each of `ModeDef.profile`'s asks, in a
- * theme that takes turns by mode, its decor kept off its boxes and stands), and plays a round of bots to its end. The registries keyed by mode (bot strategies
+ * theme that takes turns by mode, its decor kept off its boxes and stands), ramps a fresh level a round within bounds
+ * its builder keeps its promises to (`fresh`), and plays a round of bots to its end. The registries keyed by mode (bot strategies
  * and objectives, the difficulty bands, the emblem) are typecheck's: a mode missing from one doesn't compile.
  */
 
@@ -45,6 +48,21 @@ describe('every mode', () => {
         ).toBe(true);
       expect(decorFaults(lv, placeDecor(lv, lv.theme)), 'decor off its spawn, flag, boxes and stands').toEqual([]);
     });
+
+    if (mode.fresh) {
+      const fresh = mode.fresh;
+      it(`${id}: ramps its fresh levels round by round, never easing off, up to a bound (${theme})`, () => {
+        for (let r = 2; r < 30; r++)
+          for (const [k, v] of Object.entries(fresh(r + 1)))
+            if (typeof v === 'number') expect(v, `${k} from round ${r} to ${r + 1}`).toBeGreaterThanOrEqual(fresh(r)[k as keyof typeof fresh] as number);
+        expect(fresh(60), 'bounded').toEqual(fresh(30));
+        // The top of the ramp still builds what the mode asks for, keeping its builder's promises.
+        const lv = generateLevel(1, theme, roundProfile({ ...DEFAULT_RULES, mode: id }, 30));
+        expect(lastGenInfo.fallback, 'no fallback').toBe(false);
+        expect(lastGenInfo.contractFaults ?? [], 'contract faults').toEqual([]);
+        if (mode.profile.bare) expect(lv.solution, 'owes no part').toEqual([]);
+      });
+    }
 
     it(`${id}: plays a round of bots to its end`, { timeout: 60_000 }, () => {
       const r = botRound(1, { mode: id, players: 3, limit: 60 * 60 });

@@ -102,9 +102,9 @@ describe('bots', () => {
   });
 
   it('never holds up an untimed place phase: a legal spot the cursor can’t reach is no spot', () => {
-    // Brawl seed 30, round 2: a bot's spikes were legal hanging half off the bottom row, aimed below where the cursor
-    // stops, and it pressed down against the edge forever.
-    const m = new Match(30, undefined, { ...DEFAULT_RULES, mode: 'brawl' });
+    // Found on a brawl's seed 30, round 2, when brawls placed parts: a bot's spikes were legal hanging half off the
+    // bottom row, aimed below where the cursor stops, and it pressed down against the edge forever. Races place still.
+    const m = new Match(30);
     const bots = new BotSeats();
     for (let i = 0; i < 4; i++) m.join(bots.add(m));
     m.rules = { ...m.rules, pickSeconds: 0, placeSeconds: 0, targetScore: 1e6 };

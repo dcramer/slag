@@ -1,5 +1,6 @@
 import { css, type HSL } from '../../core/color';
 import type { Match } from '../../game/match';
+import { matchGoal } from '../../game/rules';
 import type { Award } from '../../game/scoring';
 import { VIEW_H, VIEW_W } from '../../sim/constants';
 import { PAL, TYPE } from '../../ui/style';
@@ -79,7 +80,7 @@ export function score(hud: Hud, m: Match, t: number) {
   c.fillStyle = 'rgba(18,10,7,0.72)';
   hud.wash();
   const res = m.result!;
-  const target = m.rules.targetScore;
+  const target = matchGoal(m.rules).targetScore;
   const normal = res.verdict === 'normal';
   const n = m.players.length;
   const L = n <= 2 ? ROOMY : n <= 4 ? NORMAL : COMPACT;

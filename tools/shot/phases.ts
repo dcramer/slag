@@ -116,16 +116,15 @@ export const shots: Scenarios = {
     const race = opt('race') || ',';
     // `--bots N` seats bots first, and with `--players 0` they race alone.
     await open(`seed=${seed}&players=${players}&race=${race}&propseed=${opt('propseed', '1')}${opt('bots') ? `&bots=${opt('bots')}` : ''}`);
-    // `--bout N`: play the bouts before it out (the runners as they are: bots, or players standing still) into bout N's race.
-    const bout = Number(opt('bout', '1'));
-    if (bout > 1) {
+    // `--round N`: play the rounds before it out (the runners as they are: bots, or players standing still) into round N's race.
+    const round = Number(opt('round', '1'));
+    if (round > 1) {
       const got = await page.evaluate((n) => {
         const d = (window as any).slagDebug;
-        for (let f = 0; f < 600 && !(d.match.phase === 'run' && d.match.bout >= n); f++) d.step(30);
-        return d.match.phase === 'run' ? d.match.bout : -1;
-      }, bout);
-      if (got !== bout)
-        throw new Error(`never reached bout ${bout} (the rules give ${await page.evaluate(() => (window as any).slagDebug.match.rules.bouts)})`);
+        for (let f = 0; f < 1200 && !(d.match.phase === 'run' && d.match.round >= n); f++) d.step(30);
+        return d.match.phase === 'run' ? d.match.round : -1;
+      }, round);
+      if (got !== round) throw new Error(`never reached round ${round}'s race`);
       // The HUD's phase wipe runs on the clock, which stood still while the frames were stepped: let it finish.
       await page.waitForTimeout(600);
       await page.evaluate(() => (window as any).slagDebug.render());
@@ -329,7 +328,7 @@ export const shots: Scenarios = {
             swing.length,
           ),
         );
-      await snap(`race-${seed}${bout > 1 ? `-bout${bout}` : ''}-${exact}`);
+      await snap(`race-${seed}${round > 1 ? `-round${round}` : ''}-${exact}`);
       return;
     }
     const pop = Number(opt('pop', '0'));
@@ -363,7 +362,7 @@ export const shots: Scenarios = {
     }
     for (const f of [frames, 40, 40]) {
       await step(f);
-      await snap(`race-${seed}-${await page.evaluate(() => (window as any).slagDebug.match.run?.frame ?? 0)}`);
+      await snap(`race-${seed}${round > 1 ? `-round${round}` : ''}-${await page.evaluate(() => (window as any).slagDebug.match.run?.frame ?? 0)}`);
     }
   },
   async score() {

@@ -75,8 +75,8 @@ export const LEAD_HOLDS = {
 } as const satisfies { at: number; bands: Record<string, readonly [number, number]>; leads: readonly [number, number] };
 
 /**
- * Brawl with bots (tests/stats/brawl.test.ts, docs/MODES.md → Brawl): four Normal bots on the bare arena (round 1
- * before any part, seeds 1–48) and through the first four rounds of a match as the parts pile up (seeds 1–16).
+ * Brawl with bots (tests/stats/brawl.test.ts, docs/MODES.md → Brawl): four Normal bots on a match's first arena
+ * (`first`, round 1, seeds 1–48) and on the arena round 5 is fought on, the top of its ramp (`late`, `ModeDef.fresh`).
  * `draws`: the share of rounds nobody wins (the last ones out on one frame, or the time out). `seconds`: a round's
  * mean length from GO. `knocked`: the share of deaths with a rival's knock still credited (sim/items/common.ts
  * `BONK_CREDIT`), thrown or bumped into the level. How hard it's fought (tests/lib/bot-race.ts `Fight`): `contact`
@@ -89,7 +89,12 @@ export const LEAD_HOLDS = {
  * target, 5 and 16 under 10 s; 26 and 48 deaths to hazards, 34 and 41 off the sides, 80 and 92 into the drop, 6 and 10
  * to the slag). Before (boxes, bare hands at GO, the slag pooled in the drop from GO): bare 0%, 20.0 s, 67%, 1.6 s,
  * 4.0 s, 26.7 uses a minute, 0.37 pauses; placed 2%, 17.0 s, 64%, 1.3 s, 3.9 s, 25.1; 101 and 106 deaths to the slag,
- * nearly all of them falls into its pool. The targets are the owner's, from the party
+ * nearly all of them falls into its pool. Since nobody builds and every round is a fresh arena (owner decision), first
+ * 2%, 15.2 s, 83%, 0.8 s, 2.4 s, 41.0 uses a minute, 6%, 19%, 5.1 tiles, 0.62 pauses (14 of 48 in 15–30 s, 18 under
+ * 10 s); late 0%, 12.9 s, 85%, 1.1 s, 2.5 s, 44.0, 5%, 16%, 4.2 tiles, 0.65 (10 of 48 in 15–30 s, 21 under 10 s).
+ * `late` keeps the old placed bands, and its rounds run under the target's floor: on round 5's seeds with round 1's
+ * knobs they ran 13.9 s (round 3's 13.9 s, 13.2 with its knobs), so it's the arenas a match deals, not the ramp, that
+ * run short; seeds 1–48's first arenas are the long end. The targets are the owner's, from the party
  * brawler: draws rare, rounds of 15–30 s. Earlier or faster pours shortened rounds and added draws. The bands only catch
  * a regression: the bots before `press` fail the first bonk, uses, retreat and gap bands, the motor before `haste` the
  * still bands and the bots before they kept at something the pauses bands, so a return to turtling does too.
@@ -97,7 +102,7 @@ export const LEAD_HOLDS = {
 export const BRAWL_ROUNDS = {
   targets: { draws: 0.2, seconds: [15, 30] },
   bands: {
-    bare: {
+    first: {
       draws: [0, 0.2],
       seconds: [15, 22],
       knocked: [0.65, 0.88],
@@ -109,7 +114,7 @@ export const BRAWL_ROUNDS = {
       gap: [0, 6],
       pauses: [0, 1],
     },
-    placed: {
+    late: {
       draws: [0, 0.2],
       seconds: [15, 22],
       knocked: [0.65, 0.88],
@@ -139,3 +144,17 @@ export type BrawlMeasure = 'draws' | 'seconds' | 'knocked' | 'contact' | 'hit' |
  * the field started spread out.
  */
 export const SLAG_ROUNDS = { early: 0.15, median: [20, 40] } as const;
+
+/**
+ * How long a whole match of a mode that builds nothing runs, four Normal bots from the first race to victory under the
+ * lobby's rules (tests/stats/match-length.test.ts, seeds 1–6): `minutes` a match, and `racing`, the share of it spent
+ * in races rather than on the score screen. With picking and placing, a brawl ran 3.20 min (7.2 rounds), 71% of it
+ * fighting and 14% picking and placing, and a climb 4.62 min (7.3 rounds), 66% racing and 24% picking and placing.
+ * Without them, on the race's 50 points, a brawl ran 2.54 min (7.7 rounds) and at 1.5 times them 3.44 (10.5); at 1.4
+ * times (`ModeDef.length`) 3.18 min (9.3 rounds), 80% racing; a climb at 1.3, 4.58 min (9.0 rounds), 87% racing. Brawl's band is the
+ * owner's (2.8–3.9 min); the climb's is around what it measured.
+ */
+export const MATCH_MINUTES = {
+  brawl: { minutes: [2.8, 3.9], racing: [0.74, 0.86] },
+  slag: { minutes: [3.9, 5.3], racing: [0.82, 0.92] },
+} as const satisfies Partial<Record<ModeId, { minutes: readonly [number, number]; racing: readonly [number, number] }>>;
