@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { generateLevel, lastGenInfo, withBridges } from '../src/gen/level';
 import { rollProfile } from '../src/gen/level/profile';
+import { MODES } from '../src/game/modes';
 import { rollConcept } from '../src/gen/stage';
 import { waysOf } from '../src/gen/stage/kit';
 import { TILE } from '../src/sim/constants';
@@ -156,6 +157,24 @@ describe('rooftops hazards', () => {
       }
     }
     expect(hit).toBe(40);
+  });
+
+  it('a falling sign hangs from a ceiling over each end, or a bracket off the wall beside it, never a chain into air', () => {
+    // Brawl stages, where a sign under an arch's beam once overhung it with one chain hooked on nothing.
+    let signs = 0;
+    for (const seed of [8, 11, 15]) {
+      const l = generateLevel(seed, 'rooftops', MODES.brawl.profile);
+      for (const m of l.setPieces.flatMap((pp) => resolveProp(pp).mods).filter((m): m is ModuleOf<'sign'> => m.type === 'sign')) {
+        signs++;
+        const x0 = Math.floor(m.at[0] / TILE);
+        const x1 = Math.floor((m.at[0] + m.w - 1) / TILE);
+        const y = Math.floor(m.at[1] / TILE);
+        const held = (x: number) => [1, 2, 3].some((k) => tileAt(l, x, y - k) !== T_EMPTY);
+        const bracket = tileAt(l, x0 - 1, y) === T_SOLID || tileAt(l, x1 + 1, y) === T_SOLID;
+        expect(bracket || (held(x0) && held(x1)), `seed ${seed}: sign at ${x0}..${x1}, ${y}`).toBe(true);
+      }
+    }
+    expect(signs).toBeGreaterThan(0);
   });
 
   it('neon letters are live one after another, never all at once, and only while lit', () => {

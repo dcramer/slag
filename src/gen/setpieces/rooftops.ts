@@ -53,9 +53,22 @@ export const signPiece = (rng: Rng, m: Module): Piece => ({
   modules: [m],
 });
 
+/** Rows over a sign's top its chains may climb to what holds them (the art looks as far: render/props/modules/sign.ts). */
+const CHAIN_ROWS = 3;
+
+/**
+ * Whether a chain from column x can hang the sign whose top is row y: a tile (rock or a board) within CHAIN_ROWS over
+ * it. Each end has its own chain, so each needs its own ceiling: one over the middle, or over one end, leaves the
+ * other chain hanging from air.
+ */
+function chainHolds(s: Site, x: number, y: number): boolean {
+  for (let k = 1; k <= CHAIN_ROWS; k++) if (s.ground(x, y - k)) return true;
+  return false;
+}
+
 /**
  * Signs over the route: a box `w`×2 of free air with SIGN_CLEAR rows under it down to flat ground, held up
- * by a ceiling a few rows over it (it hangs on chains) or a wall beside its top (a bracket off the wall).
+ * by a ceiling a few rows over both its ends (it hangs on two chains) or a wall beside its top (a bracket off the wall).
  */
 function* fallingSigns(rng: Rng, s: Site): Generator<Piece> {
   const h = 2;
@@ -67,8 +80,7 @@ function* fallingSigns(rng: Rng, s: Site): Generator<Piece> {
         for (let y = floor - SIGN_CLEAR - h; y >= Math.max(1, floor - SIGN_CLEAR - h - 3); y--) {
           if (!s.freeRect(x, y, x + w - 1, floor - 1)) break;
           if (s.zoneDist(x, y) <= SAFE_TILES + 1 || s.zoneDist(x + w - 1, floor - 1) <= SAFE_TILES + 1) continue;
-          let hung = false;
-          for (let k = 1; k <= 3 && !hung; k++) for (let i = 0; i < w; i++) if (s.solid(x + i, y - k)) hung = true;
+          const hung = chainHolds(s, x, y) && chainHolds(s, x + w - 1, y);
           const bracket = s.solid(x - 1, y) || s.solid(x + w, y);
           if (!hung && !bracket) continue;
           let under = 0;
