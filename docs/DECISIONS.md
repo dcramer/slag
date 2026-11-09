@@ -126,6 +126,8 @@ Every game design decision, preference and direction the owner has given, groupe
 - **A Brawl round aims for 12–30 s (from 15–30): on fighter stages with a fresh arena every round, rounds run 13–14 s, and with no picking between them short rounds keep the pace (the reference game's run 8–10 s).** "Lower floor to 12 s"
   2026-11-08 · `done` (first rounds 15.2 s, round 5 12.9 s) · MODES.md → Brawl, `BRAWL_ROUNDS` (src/game/expectations.ts)
   Changed: 15–30 s (2026-11-06).
+- **A late Brawl round asks for 8 set pieces and stands what fits: a set that has room for only 5 or 6 keeps that, with no more recipes or room made for it.** Asked after round 5's arenas stood 5.3–5.9 of 8 on farm, factory, castle, jungle and mine. "its fine if we cant fit 8 i guess"
+  2026-11-08 · `done` (nothing to build) · MODES.md → Brawl
 - **Brawl is won by knocking people out, not by hiding: knockouts pay, each hit you take throws you farther (fresh each bout), and a couple of weapons reach from range.** "you shouldn't be able to win by just standing around" / "maybe just make it easier to get knocked out" / "or we need more weapons or something?" / "Yes, all three"
   2026-11-06 · `in progress`: knockouts pay 5 and the last one standing 5 (`scoreKnockouts`; a still seat wins 0 of 6 matches, from 2) `done`; hits build up a quarter each, up to six (`RunRules.buildup`) `done`; two ranged weapons `done` (Rude Awakening, a lobbed alarm clock that blasts rivals outward; Catch of the Day, a rod that reels one in; brawl boxes only). An earlier slag waits on these · MODES.md → Brawl
 - **Brawl's hazards are amped up: its set pieces are things that kill or knock, more of them, near the ledges.** "we may need to amp up the hazards in brawl"
