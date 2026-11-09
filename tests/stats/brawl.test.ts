@@ -66,7 +66,7 @@ function measure(name: Arena, rounds: BotRound[]): Measure {
   // A quick round nobody was knocked or shoved out of: the field walked into the level by itself.
   const blind = quick.filter((r) => r.fight.shoved === 0 && !Object.keys(r.causes).some((k) => k.endsWith('+'))).length;
   console.log(
-    `${name}: ${rounds.length} rounds, ${Math.round(m.draws * 100)}% draws, ${m.seconds.toFixed(1)} s a round (${within} in ${BRAWL_ROUNDS.targets.seconds[0]}–${BRAWL_ROUNDS.targets.seconds[1]} s, ${rounds.filter((r) => r.frames < 15 * 60).length} under 15 s, ${quick.length} under 10 s, ${blind} with nobody knocked or shoved), ${Math.round(m.knocked * 100)}% of ${deaths} deaths knocked into it, ${pushed} shoved in with the shover credited; ${JSON.stringify(causes)}`,
+    `${name}: ${rounds.length} rounds, ${Math.round(m.draws * 100)}% draws, ${m.seconds.toFixed(1)} s a round (${within} in ${BRAWL_ROUNDS.targets.seconds[0]}–${BRAWL_ROUNDS.targets.seconds[1]} s, ${rounds.filter((r) => r.frames < BRAWL_ROUNDS.targets.seconds[0] * 60).length} under ${BRAWL_ROUNDS.targets.seconds[0]} s, ${quick.length} under 10 s, ${blind} with nobody knocked or shoved), ${Math.round(m.knocked * 100)}% of ${deaths} deaths knocked into it, ${pushed} shoved in with the shover credited; ${JSON.stringify(causes)}`,
   );
   console.log(
     `${name}: first contact ${m.contact.toFixed(1)} s, first bonk ${m.hit.toFixed(1)} s, ${(sum((r) => r.fight.bonks) / rounds.length).toFixed(1)} bonks a round, ${m.uses.toFixed(1)} uses a minute of fighting, ${Math.round(m.still * 100)}% still, ${Math.round(m.retreat * 100)}% retreating, ${m.gap.toFixed(1)} tiles to the nearest rival, ${sum((r) => r.fight.shoved)} deaths shoved, ${Math.round(

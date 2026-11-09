@@ -90,21 +90,21 @@ export const LEAD_HOLDS = {
  * to the slag). Before (boxes, bare hands at GO, the slag pooled in the drop from GO): bare 0%, 20.0 s, 67%, 1.6 s,
  * 4.0 s, 26.7 uses a minute, 0.37 pauses; placed 2%, 17.0 s, 64%, 1.3 s, 3.9 s, 25.1; 101 and 106 deaths to the slag,
  * nearly all of them falls into its pool. Since nobody builds and every round is a fresh arena (owner decision), first
- * 2%, 15.2 s, 83%, 0.8 s, 2.4 s, 41.0 uses a minute, 6%, 19%, 5.1 tiles, 0.62 pauses (14 of 48 in 15–30 s, 18 under
- * 10 s); late 0%, 12.9 s, 85%, 1.1 s, 2.5 s, 44.0, 5%, 16%, 4.2 tiles, 0.65 (10 of 48 in 15–30 s, 21 under 10 s).
- * `late` keeps the old placed bands, and its rounds run under the target's floor: on round 5's seeds with round 1's
- * knobs they ran 13.9 s (round 3's 13.9 s, 13.2 with its knobs), so it's the arenas a match deals, not the ramp, that
- * run short; seeds 1–48's first arenas are the long end. The targets are the owner's, from the party
- * brawler: draws rare, rounds of 15–30 s. Earlier or faster pours shortened rounds and added draws. The bands only catch
+ * 2%, 15.2 s, 83%, 0.8 s, 2.4 s, 41.0 uses a minute, 6%, 19%, 5.1 tiles, 0.62 pauses (22 of 48 in 12–30 s, 18 under
+ * 10 s); late 0%, 12.9 s, 85%, 1.1 s, 2.5 s, 44.0, 5%, 16%, 4.2 tiles, 0.65 (19 of 48 in 12–30 s, 21 under 10 s).
+ * On round 5's seeds with round 1's knobs rounds ran 13.9 s (round 3's 13.9 s, 13.2 with its knobs): it's the arenas a
+ * match deals, not the ramp, that run under 15 s, seeds 1–48's first arenas the long end. So the owner lowered the floor
+ * to 12 s (owner decision: with no picking between rounds short rounds keep the pace), and both bands with it. The
+ * targets are the owner's, from the party brawler: draws rare, rounds of 12–30 s (15–30 s until 2026-11-08). Earlier or faster pours shortened rounds and added draws. The bands only catch
  * a regression: the bots before `press` fail the first bonk, uses, retreat and gap bands, the motor before `haste` the
  * still bands and the bots before they kept at something the pauses bands, so a return to turtling does too.
  */
 export const BRAWL_ROUNDS = {
-  targets: { draws: 0.2, seconds: [15, 30] },
+  targets: { draws: 0.2, seconds: [12, 30] },
   bands: {
     first: {
       draws: [0, 0.2],
-      seconds: [15, 22],
+      seconds: [12, 22],
       knocked: [0.65, 0.88],
       contact: [0, 1.5],
       hit: [0, 3.2],
@@ -116,7 +116,7 @@ export const BRAWL_ROUNDS = {
     },
     late: {
       draws: [0, 0.2],
-      seconds: [15, 22],
+      seconds: [12, 22],
       knocked: [0.65, 0.88],
       contact: [0, 1.5],
       hit: [0, 3.2],
