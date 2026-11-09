@@ -100,7 +100,7 @@ Every game design decision, preference and direction the owner has given, groupe
 - **Brawl has no safe areas and knocks throw people off ledges: bots don't pause, nearly everywhere to stand has a way to die next to it, and a hit near an edge sends you over.** "also the ai pauses too much on brawl" / "theres too many safe areas, and its hard to push people off ledges etc"
   2026-11-06 · `done` (pauses of 30+ frames 1.9 → 0.3 a bot-minute; a body check in `BRAWL_SHOVE` and bots that charge it; stand cells with no way to die near 52 → 14%) · MODES.md → Brawl
 - **A brawl round aims for 15–30 s (from 20–40), and item use counts per minute of fighting, not per round.** "Yes, 15–30 s"
-  2026-11-06 · `done` (bare 16.5 s, placed 18.2 s; uses 24.1 / 20.5 a minute) · MODES.md → Brawl, `BRAWL_ROUNDS` (src/game/expectations.ts)
+  2026-11-06 · `replaced` (round length 12–30 s, 2026-11-08); was `done` (bare 16.5 s, placed 18.2 s; uses 24.1 / 20.5 a minute) · MODES.md → Brawl, `BRAWL_ROUNDS` (src/game/expectations.ts)
 - **Each mode may change mechanics to play well: Brawl leans on items with hazards built into its arenas (still placed procedurally), and Rising Slag may get mechanics of its own.** "Its ok if each gamestyle slightly changes mechanics. Like brawl is more item focus, maybe hazards are more baked in (but still prcoedurally placed). Rising Slag could also have its own variants to mechanics to ensure gameplay is fun and competitive"
   2026-11-07 · `in progress` · DESIGN.md → Modes
 - **Brawl: weapons on mirrored stands that respawn, everyone starts a bout armed, arenas built around one or two centrepiece hazards, and the slag only ends a stalemate.** "Yeah lets work through that"
@@ -123,6 +123,9 @@ Every game design decision, preference and direction the owner has given, groupe
 - **Brawl and Rising Slag place no parts: no pick or place, only the level's own procedurally placed hazards, and a fresh level every round, its hazards ramping as the match goes on. Race keeps picking and placing.** "maybe we shouldn't allow placed parts in brawl? maybe not even in rising slag? just a bunch of procedurally placed hazards?" / "Both, new level a round"
   2026-11-08 · `in progress` · MODES.md, DESIGN.md → Modes, `src/game/modes.ts`, `src/game/match.ts`
   Changed: Brawl fought three bouts on each placement's parts (`bouts`), and both modes played one level a match with parts piling up.
+- **A Brawl round aims for 12–30 s (from 15–30): on fighter stages with a fresh arena every round, rounds run 13–14 s, and with no picking between them short rounds keep the pace (the reference game's run 8–10 s).** "Lower floor to 12 s"
+  2026-11-08 · `in progress` · MODES.md → Brawl, `BRAWL_ROUNDS` (src/game/expectations.ts)
+  Changed: 15–30 s (2026-11-06).
 - **Brawl is won by knocking people out, not by hiding: knockouts pay, each hit you take throws you farther (fresh each bout), and a couple of weapons reach from range.** "you shouldn't be able to win by just standing around" / "maybe just make it easier to get knocked out" / "or we need more weapons or something?" / "Yes, all three"
   2026-11-06 · `in progress`: knockouts pay 5 and the last one standing 5 (`scoreKnockouts`; a still seat wins 0 of 6 matches, from 2) `done`; hits build up a quarter each, up to six (`RunRules.buildup`) `done`; two ranged weapons `done` (Rude Awakening, a lobbed alarm clock that blasts rivals outward; Catch of the Day, a rod that reels one in; brawl boxes only). An earlier slag waits on these · MODES.md → Brawl
 - **Brawl's hazards are amped up: its set pieces are things that kill or knock, more of them, near the ledges.** "we may need to amp up the hazards in brawl"
