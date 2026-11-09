@@ -90,6 +90,8 @@ function buildGirders(g: Grid, rng: Rng, at: TileRect, parts: number): Landmark 
   }
   // A bay left out of the lower decks here and there: a hop across, or a drop to the storey under it.
   const holes: Vec[] = [];
+  // The first deck's missing bay, if it has one: the safety sign hangs from that deck, a chain over each end.
+  let hole0: Vec = [-1, 0];
   for (let k = 0; k < n - 1; k++) {
     if (!rng.chance(0.7)) continue;
     const w = rng.int(2, 3);
@@ -101,6 +103,7 @@ function buildGirders(g: Grid, rng: Rng, at: TileRect, parts: number): Landmark 
     if (busy) continue;
     g.clear(x, decks[k], x + w - 1, decks[k]);
     holes.push([x, w]);
+    if (k === 0) hole0 = [x, w];
   }
   // The wrecking ball swings over the top deck, somewhere along its middle, from the crane's jib, never
   // over the hoist's shaft.
@@ -120,6 +123,7 @@ function buildGirders(g: Grid, rng: Rng, at: TileRect, parts: number): Landmark 
       ground: [G, P],
       hoist: [sx, top],
       decks: [d0, d1],
+      hole0,
       ball: [bx, arm],
       ...record(
         'deck',
@@ -192,11 +196,15 @@ function* girderPieces(rng: Rng, l: Landmark): Generator<Piece> {
     // It runs flush through the decks and parks in the roof's slot: its push clearance would refuse both.
     crushOk: true,
   };
-  // The safety sign, hung from the first deck over the roof, waiting to prove its point.
+  // The safety sign, hung from the first deck over the roof, waiting to prove its point: never with an end under
+  // the bay left out of that deck, where its chain would hang from nothing.
   const lo = d0 + 3;
   const hi = d1 - 4;
-  if (hi >= lo && P - 2 >= 2) {
-    const x = rng.int(lo, hi);
+  const [hx, hw] = l.anchors.hole0;
+  const decked = (c: number) => c < hx || c >= hx + hw;
+  const xs = Array.from({ length: Math.max(0, hi - lo + 1) }, (_, i) => lo + i).filter((x) => decked(x) && decked(x + 2));
+  if (xs.length && P - 2 >= 2) {
+    const x = rng.pick(xs);
     yield {
       ...signPiece(rng, signModule(rng, x, decks[0] + 1, 3, 1, G)),
       name: rng.pick(['Safety First', 'Hard Hat Area', 'Zero Accidents', 'Days Without Incident']),

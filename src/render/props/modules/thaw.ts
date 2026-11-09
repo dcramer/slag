@@ -1,7 +1,6 @@
 import { css, type HSL } from '../../../core/color';
 import { hash2 } from '../../../core/rng';
 import { TILE } from '../../../sim/constants';
-import { T_SOLID, tileAt } from '../../../sim/level';
 import { type ModuleOf, THAW_OPEN, THAW_WARN, thawCycle, thawSolid, thawWater, WATERLINE } from '../../../sim/props';
 import { inkFor, line } from '../../ink';
 import { boxPts, glint, part, pen, poly, tick, tone } from '../../ink-props';
@@ -15,10 +14,11 @@ import { type DrawCtx, defineArt } from '../common';
  * Open: the hole is water to the waterline, broken plates of the old ice bobbing in it and shrinking; near the
  * end a skin of new ice creeps in from the edges, the moment before it holds again.
  *
- * Water stands only where rock holds it, on both sides all the way down. Over a gap (a seam between a brawl stage's
- * slabs, which float over the drop) the ice is a sheet across thin air, icicles under it: the hole it leaves is the
- * gap itself, its broken edges on the lips and its plates falling away. Painting water there stood a blue pillar in
- * the seam, and the open hole, brim-full, read as one more floor block. The sim's water is a fall either way.
+ * Water stands only where rock holds it, on both sides all the way down (gen/setpieces/glacier.ts, `walled`). Over a
+ * gap (a seam between a brawl stage's slabs, which float over the drop) there's none, `depth` 0: the ice is a sheet
+ * across thin air, icicles under it, and the hole it leaves is the gap itself, its broken edges on the lips and its
+ * plates falling away, a fall with nothing in it that drowns. Painting water there stood a blue pillar in the seam,
+ * and the open hole, brim-full, read as one more floor block.
  */
 
 type Thaw = ModuleOf<'thaw'>;
@@ -45,17 +45,8 @@ function span(m: Thaw, d: DrawCtx) {
   return { x0: x0 * TILE + d.off[0], x1: x1 * TILE + d.off[0], y: y * TILE + d.off[1] };
 }
 
-/** Whether the hole is a gap rather than a pool: a row of it with no rock on one side (see the module comment). */
-function overGap(m: Thaw, d: DrawCtx): boolean {
-  const lv = d.o.level;
-  if (!lv) return false;
-  const { x0, x1, y } = span(m, d);
-  const a = Math.floor(x0 / TILE) - 1;
-  const b = Math.floor(x1 / TILE);
-  const top = Math.floor(y / TILE);
-  for (let r = top + 1; r < Math.min(lv.h, top + m.depth); r++) if (tileAt(lv, a, r) !== T_SOLID || tileAt(lv, b, r) !== T_SOLID) return true;
-  return false;
-}
+/** Whether the hole is a gap rather than a pool: the sim's own word, no water under it (`depth` 0, set by the recipe where rock doesn't wall it in). */
+const overGap = (m: Thaw): boolean => m.depth <= 0;
 
 /** A few icicles under a sheet over a gap, from its underside at `y`: thin, so it reads as a sheet with air under it. */
 function icicles(s: CanvasRenderingContext2D, m: Thaw, x0: number, x1: number, y: number) {
@@ -122,7 +113,7 @@ function sheet(rc: RC, m: Thaw, d: DrawCtx, k: number) {
   // Only the cells that hold (one held open over a runner stays water).
   const held = m.cells.every((_, ci) => thawSolid(m, rc.frame, d.r.phase, d.o.state, d.mi, ci));
   if (!held) return open(rc, m, d, 0, 0);
-  const gap = overGap(m, d);
+  const gap = overGap(m);
   if (gap) icicles(s, m, x0 + dx, x1 + dx, y + TILE);
   else water(rc, m, d, y + TILE);
   const pts = boxPts(x0 + dx, y, x1 - x0, TILE, 1.2, m.seed, 0.06);
@@ -178,7 +169,7 @@ function hole(rc: RC, m: Thaw, d: DrawCtx, k: number, t: number) {
 
 /** Open water: its surface at the sim's waterline, plates of broken ice bobbing and melting, new ice creeping in at the end (`k` 0..1 through the open spell, `t` frames in). */
 function open(rc: RC, m: Thaw, d: DrawCtx, k: number, t: number) {
-  if (overGap(m, d)) return hole(rc, m, d, k, t);
+  if (overGap(m)) return hole(rc, m, d, k, t);
   const s = rc.s;
   const { x0, x1, y } = span(m, d);
   const top = y + WATERLINE;

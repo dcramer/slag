@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { generateLevel, lastGenInfo, withBridges } from '../src/gen/level';
 import { rollProfile } from '../src/gen/level/profile';
+import { MODES } from '../src/game/modes';
 import { rollConcept } from '../src/gen/stage';
 import { rectsOf } from '../src/gen/stage/kit';
 import { TILE } from '../src/sim/constants';
@@ -186,6 +187,36 @@ describe('thin ice (thaw)', () => {
       }
     }
     expect(open).toBe(60);
+  });
+
+  it("holds water only where rock walls it in: over a brawl stage's seam it's a hole, with nothing below its lips that drowns", () => {
+    let seams = 0;
+    for (const seed of [9]) {
+      const l = generateLevel(seed, 'glacier', MODES.brawl.profile);
+      for (const pp of l.setPieces) {
+        const r = resolveProp(pp);
+        r.mods.forEach((m, mi) => {
+          if (m.type !== 'thaw') return;
+          const x0 = Math.min(...m.cells.map(([x]) => x));
+          const x1 = Math.max(...m.cells.map(([x]) => x));
+          const y = m.cells[0][1];
+          const walled = (row: number) => tileAt(l, x0 - 1, row) === T_SOLID && tileAt(l, x1 + 1, row) === T_SOLID;
+          let f = 0;
+          while (thawCycle(m, f, r.phase).seg !== THAW_OPEN) f++;
+          const out: Contrib = { solids: [], hazards: [], springs: [], winds: [] };
+          moduleSim('thaw').build!(m as never, { r, off: [0, 0], prev: [0, 0], frame: f, mi, state: newPropState(), live: true } as unknown as PropCtx, out);
+          for (const h of out.hazards) {
+            if (h.kind !== 'rect') continue;
+            for (let row = y + 1; row * TILE < h.r.y + h.r.h; row++) expect(walled(row), `seed ${seed}: water at row ${row} beside air`).toBe(true);
+          }
+          if (Array.from({ length: l.h - y - 1 }, (_, k) => y + 1 + k).some((row) => !walled(row)) && m.depth === 0) {
+            seams++;
+            expect(out.hazards).toEqual([]);
+          }
+        });
+      }
+    }
+    expect(seams).toBeGreaterThan(0);
   });
 
   it('never skins over a runner: ice due back waits until they are clear of it', () => {

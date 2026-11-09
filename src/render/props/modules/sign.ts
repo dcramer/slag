@@ -1,10 +1,11 @@
 import { css, type HSL } from '../../../core/color';
 import { hash2 } from '../../../core/rng';
 import { TILE } from '../../../sim/constants';
-import { type Level, T_EMPTY, T_SOLID, tileAt } from '../../../sim/level';
+import { type Level, T_EMPTY, T_ONEWAY, T_SOLID, tileAt } from '../../../sim/level';
 import { type ModuleOf, SIGN_FALL, SIGN_LIFT, SIGN_LIVE, SIGN_WARN, signCycle, signRect } from '../../../sim/props';
 import { blob, inkFor, line, stroke } from '../../ink';
 import { barLine, boxPts, part, sprite, stamp, tick, tone } from '../../ink-props';
+import { BOARD_H } from '../../ink-terrain';
 import { glowDot, light, type RC, zap } from '../../kit';
 import { letterPts } from './neon';
 import { type DrawCtx, defineArt } from '../common';
@@ -53,16 +54,21 @@ const paintOf = (m: Sign) => PAINTS[m.seed % PAINTS.length];
 
 /**
  * Where the sign hangs from: the underside of whatever is over each end, where its two chains hook (`up`, left and
- * right), else a bracket off the wall beside it. The spot search (gen/setpieces/rooftops.ts, `chainHolds`) asks for a
- * ceiling within three rows over both ends; this looks one further.
+ * right, px), else a bracket off the wall beside it. Rock's underside is its tile's bottom; a board's is its plank's,
+ * drawn only `BOARD_H` deep (ink-terrain.ts). The spot search (gen/setpieces/rooftops.ts, `chainHolds`) asks for a
+ * ceiling within three rows over both ends; this looks one further. Exported for tests/stage-rooftops.test.ts.
  */
-function mountOf(level: Level | undefined, m: Sign, ox: number, oy: number): { up: readonly [number, number] | null; wall: -1 | 0 | 1 } {
+export function mountOf(level: Level | undefined, m: Sign, ox = 0, oy = 0): { up: readonly [number, number] | null; wall: -1 | 0 | 1 } {
   if (!level) return { up: null, wall: 0 };
   const x0 = Math.floor((m.at[0] + ox) / TILE);
   const x1 = Math.floor((m.at[0] + ox + m.w - 1) / TILE);
   const y0 = Math.floor((m.at[1] + oy) / TILE);
   const over = (x: number) => {
-    for (let k = 1; k <= 4; k++) if (tileAt(level, x, y0 - k) !== T_EMPTY) return (y0 - k + 1) * TILE;
+    for (let k = 1; k <= 4; k++) {
+      const t = tileAt(level, x, y0 - k);
+      if (t === T_ONEWAY) return (y0 - k) * TILE + BOARD_H;
+      if (t !== T_EMPTY) return (y0 - k + 1) * TILE;
+    }
     return null;
   };
   const a = over(x0);

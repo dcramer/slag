@@ -684,7 +684,8 @@ export type Module =
        * flush with the floor either side. Frozen for `frozen` frames (an ice floor you can skate), cracking
        * for `warn` (still solid: the cracks spread and it creaks), then it's open water for `open` frames:
        * the ice is gone and whoever's in the water under it, down `depth` rows, drowns. Then it skins
-       * over again.
+       * over again. A `depth` of 0 is ice over a gap with no rock to hold water (a brawl stage's seam): open,
+       * it's only a hole, and whoever goes through falls.
        */
       type: 'thaw';
       cells: Cell[];

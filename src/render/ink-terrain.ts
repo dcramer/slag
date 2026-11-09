@@ -979,7 +979,9 @@ interface Run {
   tx: number;
 }
 
-const H = 5.4;
+/** How deep a board's plank is drawn from its tile's top (px): what hangs under a board hooks on here, not the tile's bottom. */
+export const BOARD_H = 5.4;
+const H = BOARD_H;
 
 function shape(g: CanvasRenderingContext2D, a: readonly P[], b: readonly P[], fill: string) {
   g.fillStyle = fill;
