@@ -486,6 +486,13 @@ function playRound(seed: number, m: Match, bots: BotSeats, { at = 15 * 60, limit
 export interface BotMatchTime {
   /** Frames spent in each phase, lobby aside. */
   frames: Partial<Record<Phase, number>>;
+  /**
+   * The same, per placement in the order they came (0 the first): its pick and place, the bouts fought on it and their
+   * score cards. Victory is nobody's placement. What lets two matches be compared on the same parts.
+   */
+  byPlacement: Partial<Record<Phase, number>>[];
+  /** Bouts fought on each placement, as `byPlacement`. */
+  boutsOn: number[];
   /** Rounds played (every bout is one) and placements (pick and place) made. */
   rounds: number;
   placements: number;
@@ -520,21 +527,36 @@ export function botMatchTime(
   const frames: Partial<Record<Phase, number>> = {};
   const knockouts = seats.map(() => 0);
   const points: Partial<Record<Award['reason'], number>>[] = seats.map(() => ({}));
+  const byPlacement: Partial<Record<Phase, number>>[] = [];
+  const boutsOn: number[] = [];
   let placements = 0;
   for (let f = 0; f < 4 * 60 * 60 * 60 && m.phase !== 'victory'; f++) {
     if (m.phase === 'pick' && m.phaseFrame === 1) placements++; // a frame in: startMatch's pick starts on frame 0, the rest a step before we look
     frames[m.phase] = (frames[m.phase] ?? 0) + 1;
+    const mine = (byPlacement[Math.max(1, placements) - 1] ??= {});
+    mine[m.phase] = (mine[m.phase] ?? 0) + 1;
     const inputs = bots.frames(m);
     if (idle >= 0 && m.phase === 'run') inputs[m.players[idle].device] = NO_INPUT;
     const was = m.phase;
     m.step(inputs);
     m.drainEvents();
     if (was !== 'run' || m.phase !== 'score') continue;
+    boutsOn[placements - 1] = (boutsOn[placements - 1] ?? 0) + 1;
     for (const k of m.run!.kills) if (k.killer !== k.victim) knockouts[seats.indexOf(k.killer)]++;
     for (const a of m.result!.awards) {
       const at = points[seats.indexOf(a.slot)];
       at[a.reason] = (at[a.reason] ?? 0) + a.points;
     }
   }
-  return { frames, rounds: m.round, placements, ended: m.phase === 'victory', winners: m.winners.map((s) => seats.indexOf(s)), knockouts, points };
+  return {
+    frames,
+    byPlacement,
+    boutsOn,
+    rounds: m.round,
+    placements,
+    ended: m.phase === 'victory',
+    winners: m.winners.map((s) => seats.indexOf(s)),
+    knockouts,
+    points,
+  };
 }
